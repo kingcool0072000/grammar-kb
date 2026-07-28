@@ -70,17 +70,6 @@ PDF ──► pdf_parser   去水印（字体+方向过滤）+ 重排行 + pdfpl
 | `cli.py`        | 命令行 |
 | `mcp_server.py` | MCP 服务（可选依赖 `mcp`） |
 
-### 水印处理（本数据集的核心难点）
-
-讲义 PDF 有三层干扰，已通过跨样本字体普查确认：
-
-1. **斜排水印** `SimSun`（行方向 ≈(0.7,-0.7)）→ 按"非水平方向"剔除
-2. **页眉/页脚** `MicrosoftYaHei(-Bold)`（睿爸小屋 / 讲义卷XX / 1|8）→ 按字体剔除
-3. PDF 字体名带**子集前缀**（`YWSWBG+MicrosoftYaHei-Bold`）→ `_base_fontname` 去前缀后再比对
-
-正文内容字体：`STKaiti / KaiTi / FangSong / TimesNewRomanPSMT …`。表格用 pdfplumber 在
-**过滤后的字符**上检测（`upright` + 字体），保证单元格不被水印污染。
-
 ---
 
 ## 数据库 Schema（摘要）
