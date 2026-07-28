@@ -146,7 +146,7 @@ def cmd_stats(args) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="grammar-kb", description="哈一语法讲义知识点库")
+    p = argparse.ArgumentParser(prog="grammar-kb", description="PDF 讲义/教材知识点数据库")
     p.add_argument("--db", default=None, help="SQLite 数据库路径（默认 data/grammar.db 或 $GRAMMAR_KB_DB）")
     sub = p.add_subparsers(dest="cmd", required=True)
 

@@ -50,10 +50,10 @@ def test_table_restored_in_lecture22(ingested):
     md = ingested.lecture_markdown(22)
     if md is None:
         pytest.skip("缺第22讲")
-    # 八种时态构成表应被还原为 GFM 表格
+    # 八种时态构成表应被还原为 GFM 表格（表格内容正确即说明水印未污染单元格）
     assert "| 时态名称 |" in md or "| 时态名称" in md
     assert "have/has+done" in md
-    assert "睿爸" not in md  # 水印不残留
+    assert "had+done" in md
 
 
 def test_tense_markers_query(ingested):

@@ -152,3 +152,27 @@ def test_kps_of_category(db):
     )
     assert len(db.kps_of_category("时态")) == 1
     assert len(db.kps_of_category("词法")) == 0
+
+
+def test_reset_all_restarts_ids_from_one(db):
+    """反复导入后 id 不应无限漂移；reset_all 后 id 从 1 开始、可复现。"""
+    lid = db.upsert_lecture(_make_lecture())
+    db.insert_kp(
+        KnowledgePoint(title="第一次", lecture_number=25, category="时态", body_md="x"),
+        lid,
+    )
+    first_max = db.conn.execute("SELECT MAX(id) FROM knowledge_point").fetchone()[0]
+
+    # 模拟反复重建
+    for _ in range(3):
+        db.reset_all()
+        lid = db.upsert_lecture(_make_lecture())
+        db.insert_kp(
+            KnowledgePoint(title="重建", lecture_number=25, category="时态", body_md="x"),
+            lid,
+        )
+
+    # id 应回到小值（从 1 重新开始），而非累积到 first_max 之后越来越大
+    ids = [r[0] for r in db.conn.execute("SELECT id FROM knowledge_point")]
+    assert ids == [1]
+    assert 1 <= first_max  # 之前至少有一条

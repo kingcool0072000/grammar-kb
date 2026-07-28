@@ -3,7 +3,7 @@
 水印有三层（已通过跨样本字体普查确认）：
 1. 斜排水印 ``SimSun``（行方向非水平，dir≈(0.7,-0.7)）
 2. 页眉/页脚 chrome ``MicrosoftYaHei`` / ``MicrosoftYaHei-Bold``
-   （"睿爸小屋""哈一（初中语法）""讲义卷XX""1 | 8"）
+   （机构名 / 卷号 / 页码等版式元素）
 
 正文内容字体：STKaiti / KaiTi / FangSong / TimesNewRomanPSMT 等。
 

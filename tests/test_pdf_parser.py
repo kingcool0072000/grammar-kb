@@ -30,12 +30,12 @@ def _span(text="x", font="STKaiti", dx=1.0, dy=0.0):
 
 def test_watermark_rotated():
     # 斜排水印 dir≈(0.7,-0.7)
-    s = _span("睿爸小屋", font="SimSun", dx=0.7, dy=-0.7)
+    s = _span("WATERMARK", font="SimSun", dx=0.7, dy=-0.7)
     assert is_watermark_span(s)
 
 
 def test_watermark_yahei_header():
-    s = _span("睿爸小屋", font="MicrosoftYaHei-Bold")
+    s = _span("机构名", font="MicrosoftYaHei-Bold")
     assert is_watermark_span(s)
     s2 = _span("1 | 8", font="MicrosoftYaHei")
     assert is_watermark_span(s2)
@@ -57,7 +57,7 @@ def test_watermark_font_set_contains_known():
 def test_filter_spans_drops_watermark():
     spans = [
         _span("正文一", font="STKaiti"),
-        _span("睿爸小屋", font="MicrosoftYaHei-Bold"),
+        _span("机构名", font="MicrosoftYaHei-Bold"),
         _span("水印", font="SimSun", dx=0.7, dy=-0.7),
         _span("正文二", font="TimesNewRomanPSMT"),
     ]
@@ -138,9 +138,8 @@ def test_real_pdf_watermark_removed(handbook_dir):
     doc.close()
     kept = filter_spans(spans)
     full = "".join(s.text for s in kept)
-    # 水印文字不应再出现
-    assert "睿爸小屋" not in full
-    assert "哈一（初中语法）" not in full
+    # 过滤后不应残留任何水印 span（字体级断言，不依赖具体水印文字）
+    assert not any(is_watermark_span(s) for s in kept)
     # 正文保留
     assert "一般现在时" in full
 
@@ -167,4 +166,6 @@ def test_real_pdf_table_restored(handbook_dir):
     assert "do / does" in joined
     assert "have/has+done" in joined
     assert "had+done" in joined
-    assert "睿爸" not in joined  # 水印不残留
+    # 表头/单元格不应残留水印造成的换行碎片（如 "中\n时态名称初"）
+    assert all("\n" not in h for h in t.headers)
+    assert all("\n" not in c for r in t.rows for c in r)

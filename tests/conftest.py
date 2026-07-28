@@ -12,21 +12,18 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-# 真实讲义目录（集成测试用）；可用环境变量覆盖
-HANDBOOK_DIR = os.environ.get(
-    "GRAMMAR_TEST_PDF_DIR",
-    "/Users/maxiangyu/Desktop/哈1语法课/讲义",
-)
+# 真实讲义目录（集成测试用）；仅从环境变量读取，不内置任何默认路径
+HANDBOOK_DIR = os.environ.get("GRAMMAR_TEST_PDF_DIR")
 
 
 def handbook_path(name: str) -> str:
-    return os.path.join(HANDBOOK_DIR, name)
+    return os.path.join(HANDBOOK_DIR, name) if HANDBOOK_DIR else ""
 
 
 @pytest.fixture(scope="session")
 def handbook_dir():
-    if not os.path.isdir(HANDBOOK_DIR):
-        pytest.skip(f"讲义目录不存在：{HANDBOOK_DIR}")
+    if not HANDBOOK_DIR or not os.path.isdir(HANDBOOK_DIR):
+        pytest.skip("未设置 GRAMMAR_TEST_PDF_DIR 或目录不存在，跳过真实 PDF 集成测试")
     return HANDBOOK_DIR
 
 

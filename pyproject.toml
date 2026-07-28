@@ -5,17 +5,19 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "grammar-kb"
 version = "0.1.0"
-description = "哈一初中语法讲义 PDF → 结构化知识点数据库（可检索、可溯源、表格还原，为 MCP 服务做准备）"
+description = "把 PDF 教材/讲义清洗并结构化为可检索、可溯源的知识点数据库（去水印、还原表格、FTS5 全文检索，CLI + MCP 就绪）"
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "PyMuPDF>=1.23,<2.0",
-    "pdfplumber>=0.11",
+    "PyMuPDF>=1.23,<2.0",   # fitz：span 级抽取（字体/位置/方向），用于水印过滤
+    "pdfplumber>=0.11",     # 表格检测（在过滤后的字符上工作）
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=8.0"]
-mcp = ["mcp>=1.2"]
-cli = ["typer>=0.12"]
+mcp = ["mcp>=1.2"]          # MCP 服务（可选）
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
 
 [project.scripts]
 grammar-kb = "grammar_kb.cli:main"
@@ -29,5 +31,5 @@ testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q"
 markers = [
-    "integration: 需要真实讲义 PDF 的端到端测试",
+    "integration: 需要真实 PDF 的端到端测试",
 ]

@@ -51,8 +51,16 @@ def ingest_dir(
     db: GrammarDB,
     directory: str,
     pattern: str = "*.pdf",
+    rebuild: bool = True,
 ) -> list[IngestResult]:
-    """导入目录下所有 PDF（按文件名排序，保证讲号顺序）。"""
+    """导入目录下所有 PDF（按文件名排序，保证讲号顺序）。
+
+    ``rebuild=True`` 时先 :meth:`reset_all` 清空整个库再导入，使 id 从 1
+    开始、可复现（避免反复导入造成 id 漂移）。单文件 :func:`ingest_pdf`
+    只清对应讲，不影响其它讲 id。
+    """
+    if rebuild:
+        db.reset_all()
     files = sorted(glob.glob(os.path.join(directory, pattern)))
     results: list[IngestResult] = []
     for f in files:

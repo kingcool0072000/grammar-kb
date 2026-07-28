@@ -21,7 +21,7 @@ SCHEMA = """
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS lecture (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    id            INTEGER PRIMARY KEY,
     number        INTEGER UNIQUE NOT NULL,
     title         TEXT NOT NULL,
     full_title    TEXT,
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS lecture (
 );
 
 CREATE TABLE IF NOT EXISTS knowledge_point (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    id            INTEGER PRIMARY KEY,
     lecture_id    INTEGER NOT NULL REFERENCES lecture(id) ON DELETE CASCADE,
     lecture_number INTEGER NOT NULL,
     title         TEXT NOT NULL,
@@ -53,7 +53,7 @@ CREATE INDEX IF NOT EXISTS idx_kp_lecture ON knowledge_point(lecture_number);
 CREATE INDEX IF NOT EXISTS idx_kp_category ON knowledge_point(category);
 
 CREATE TABLE IF NOT EXISTS marker (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    id            INTEGER PRIMARY KEY,
     kp_id         INTEGER NOT NULL REFERENCES knowledge_point(id) ON DELETE CASCADE,
     lecture_number INTEGER,
     marker        TEXT NOT NULL,
@@ -65,7 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_marker_tense ON marker(tense);
 CREATE INDEX IF NOT EXISTS idx_marker_marker ON marker(marker);
 
 CREATE TABLE IF NOT EXISTS relation (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    id            INTEGER PRIMARY KEY,
     kp_id         INTEGER NOT NULL REFERENCES knowledge_point(id) ON DELETE CASCADE,
     type          TEXT NOT NULL,
     to_kp_id      INTEGER,
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS relation (
 CREATE INDEX IF NOT EXISTS idx_relation_kp ON relation(kp_id);
 
 CREATE TABLE IF NOT EXISTS lecture_block (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    id            INTEGER PRIMARY KEY,
     lecture_id    INTEGER NOT NULL REFERENCES lecture(id) ON DELETE CASCADE,
     page          INTEGER,
     seq           INTEGER,
@@ -111,6 +111,18 @@ class GrammarDB:
     def init_schema(self) -> None:
         self.conn.executescript(SCHEMA)
         self.conn.commit()
+
+    def reset_all(self) -> None:
+        """清空整个库并重建 schema（全量重建用，让 id 从 1 开始、可复现）。
+
+        解决反复 ``clear + 重新插入`` 导致自增 id 单调漂移、旧 id 失效的问题。
+        """
+        with self.transaction() as c:
+            # 先删 FTS 与子表，再删主表（注意外键顺序）
+            for t in ("kp_fts", "lecture_block", "relation", "marker",
+                      "knowledge_point", "lecture"):
+                c.execute(f"DROP TABLE IF EXISTS {t}")
+        self.init_schema()
 
     def close(self) -> None:
         self.conn.close()
