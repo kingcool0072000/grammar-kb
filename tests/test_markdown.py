@@ -1,5 +1,10 @@
 """markdown 渲染单测。"""
-from grammar_kb.markdown import render_knowledge_point, render_lecture, table_to_markdown
+from grammar_kb.markdown import (
+    markdown_to_html,
+    render_knowledge_point,
+    render_lecture,
+    table_to_markdown,
+)
 from grammar_kb.models import Block, KnowledgePoint, Lecture, Marker, Relation, TableData
 
 
@@ -64,3 +69,28 @@ def test_render_lecture_with_table_block():
     assert "# 第25讲 动词时态3" in md
     assert "## I.过去将来时" in md
     assert "| 陈述句 | He would go. |" in md  # 表格还原
+
+
+def test_markdown_to_html_basic():
+    md = "# 标题\n\n正文段落。\n"
+    html = markdown_to_html(md, title="测试")
+    assert html.startswith("<!DOCTYPE html>")
+    assert "<title>测试</title>" in html
+    assert "<h1>标题</h1>" in html
+    assert "<p>正文段落。</p>" in html
+
+
+def test_markdown_to_html_table():
+    md = (
+        "| 时态 | 构成 |\n| --- | --- |\n| 一般现在时 | do / does |\n"
+    )
+    html = markdown_to_html(md)
+    assert "<table>" in html
+    assert "<th>时态</th>" in html
+    assert "<td>do / does</td>" in html
+
+
+def test_markdown_to_html_default_title():
+    html = markdown_to_html("hello")
+    assert "<title>文档</title>" in html
+    assert "hello" in html

@@ -4,6 +4,7 @@
     grammar-kb ingest /path/讲义                    # 导入整个目录
     grammar-kb ingest /path/讲义/22.动词时态1....pdf # 导入单讲
     grammar-kb lecture 25                            # 输出第25讲 markdown（表格已还原）
+    grammar-kb lecture 25 --format html              # 输出第25讲 HTML（表格渲染为 <table>）
     grammar-kb kp 142                                # 输出某知识点 markdown
     grammar-kb search "主将从现"                     # 全文检索知识点
     grammar-kb search "already" --category 时态      # 限定类别检索
@@ -53,12 +54,15 @@ def cmd_ingest(args) -> int:
 def cmd_lecture(args) -> int:
     db = open_db(args.db)
     q = Query(db)
-    md = q.lecture_markdown(args.number)
-    if md is None:
+    if args.format == "html":
+        out = q.lecture_html(args.number)
+    else:
+        out = q.lecture_markdown(args.number)
+    if out is None:
         print(f"未找到第 {args.number} 讲。", file=sys.stderr)
         db.close()
         return 1
-    _print(md)
+    _print(out)
     db.close()
     return 0
 
@@ -66,12 +70,15 @@ def cmd_lecture(args) -> int:
 def cmd_kp(args) -> int:
     db = open_db(args.db)
     q = Query(db)
-    md = q.kp_markdown(args.id)
-    if md is None:
+    if args.format == "html":
+        out = q.kp_html(args.id)
+    else:
+        out = q.kp_markdown(args.id)
+    if out is None:
         print(f"未找到知识点 id={args.id}。", file=sys.stderr)
         db.close()
         return 1
-    _print(md)
+    _print(out)
     db.close()
     return 0
 
@@ -154,12 +161,14 @@ def build_parser() -> argparse.ArgumentParser:
     pi.add_argument("target", help="PDF 文件或目录路径")
     pi.set_defaults(func=cmd_ingest)
 
-    pl = sub.add_parser("lecture", help="输出某讲 markdown")
+    pl = sub.add_parser("lecture", help="输出某讲 markdown/html")
     pl.add_argument("number", type=int)
+    pl.add_argument("--format", "-f", choices=["markdown", "html"], default="markdown")
     pl.set_defaults(func=cmd_lecture)
 
-    pk = sub.add_parser("kp", help="输出某知识点 markdown")
+    pk = sub.add_parser("kp", help="输出某知识点 markdown/html")
     pk.add_argument("id", type=int)
+    pk.add_argument("--format", "-f", choices=["markdown", "html"], default="markdown")
     pk.set_defaults(func=cmd_kp)
 
     ps = sub.add_parser("search", help="全文检索知识点")

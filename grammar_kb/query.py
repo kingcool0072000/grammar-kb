@@ -9,7 +9,7 @@ import sqlite3
 from typing import Optional
 
 from .db import GrammarDB, _row_to_kp
-from .markdown import render_knowledge_point, render_lecture
+from .markdown import markdown_to_html, render_knowledge_point, render_lecture
 from .models import Block, KnowledgePoint, Lecture
 
 
@@ -32,6 +32,15 @@ class Query:
             # 退路：从知识点拼
             blocks = self._blocks_from_kps(number)
         return render_lecture(lec, blocks)
+
+    def lecture_html(self, number: int) -> Optional[str]:
+        """整讲还原为 HTML（表格渲染为 <table>）。"""
+        md = self.lecture_markdown(number)
+        if md is None:
+            return None
+        lec = self.get_lecture(number)
+        title = f"第{number}讲 {lec.title}" if lec else f"第{number}讲"
+        return markdown_to_html(md, title=title)
 
     def _blocks_from_kps(self, number: int) -> list[Block]:
         """没有 lecture_block 时，从知识点反推块（兜底）。"""
@@ -67,6 +76,13 @@ class Query:
         if not kp:
             return None
         return render_knowledge_point(kp)
+
+    def kp_html(self, kp_id: int) -> Optional[str]:
+        """单个知识点渲染为 HTML。"""
+        kp = self.db.get_kp(kp_id)
+        if not kp:
+            return None
+        return markdown_to_html(render_knowledge_point(kp), title=kp.title)
 
     def kps_of_lecture(self, number: int) -> list[KnowledgePoint]:
         return self.db.kps_of_lecture(number)

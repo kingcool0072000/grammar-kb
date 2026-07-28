@@ -99,3 +99,23 @@ def test_kp_markdown(q):
 
 def test_lecture_missing(q):
     assert q.lecture_markdown(999) is None
+
+
+def test_lecture_html(q):
+    html = q.lecture_html(25)
+    assert html is not None
+    assert html.startswith("<!DOCTYPE html>")
+    assert "<title>第25讲 动词时态3</title>" in html
+    assert "过去将来时" in html
+
+
+def test_kp_html(q):
+    kps = q.search_kps("过去将来时")
+    html = q.kp_html(kps[0].id)
+    assert html is not None
+    assert "<html" in html
+    assert kps[0].title in html
+
+
+def test_lecture_html_missing(q):
+    assert q.lecture_html(999) is None

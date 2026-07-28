@@ -108,3 +108,54 @@ def render_lecture(
             parts.append(text)
             parts.append("")
     return "\n".join(parts).rstrip() + "\n"
+
+
+# --------------------------------------------------------------------------- #
+# Markdown → HTML
+# --------------------------------------------------------------------------- #
+
+_HTML_TEMPLATE = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title}</title>
+<style>
+  body {{ font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+         "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
+         max-width: 900px; margin: 2rem auto; padding: 0 1rem;
+         line-height: 1.75; color: #24292f; }}
+  h1 {{ border-bottom: 2px solid #ddd; padding-bottom: .3em; }}
+  h2 {{ border-bottom: 1px solid #eee; padding-bottom: .2em; margin-top: 1.8em; }}
+  h3 {{ margin-top: 1.4em; }}
+  table {{ border-collapse: collapse; width: 100%; margin: 1em 0; font-size: .95em; }}
+  th, td {{ border: 1px solid #d0d7de; padding: 6px 13px; text-align: left;
+           vertical-align: top; }}
+  th {{ background: #f6f8fa; font-weight: 600; }}
+  tr:nth-child(2n) td {{ background: #fafbfc; }}
+  code {{ background: #eff1f3; padding: 1px 5px; border-radius: 4px; font-size: .9em; }}
+  pre {{ background: #f6f8fa; padding: .8em; border-radius: 6px; overflow-x: auto; }}
+  pre code {{ background: none; padding: 0; }}
+  blockquote {{ color: #57606a; border-left: 3px solid #d0d7de;
+               margin: .5em 0; padding: .2em 1em; background: #f6f8fa; }}
+  a {{ color: #0969da; }}
+</style>
+</head>
+<body>
+{body}
+</body>
+</html>"""
+
+
+def markdown_to_html(md: str, title: str = "文档") -> str:
+    """把 Markdown 字符串转为带样式的完整 HTML 文档。
+
+    支持 GFM 管道表格、标题、列表、代码块（依赖纯 Python 的 ``markdown`` 包）。
+    """
+    import markdown as _mk  # 延迟导入，仅在需要 HTML 时依赖
+
+    body = _mk.markdown(
+        md,
+        extensions=["tables", "fenced_code", "sane_lists", "attr_list"],
+    )
+    return _HTML_TEMPLATE.format(title=title or "文档", body=body)
