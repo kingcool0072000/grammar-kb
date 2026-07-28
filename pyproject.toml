@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grammar-kb"
+version = "0.1.0"
+description = "哈一初中语法讲义 PDF → 结构化知识点数据库（可检索、可溯源、表格还原，为 MCP 服务做准备）"
+requires-python = ">=3.10"
+dependencies = [
+    "PyMuPDF>=1.23,<2.0",
+    "pdfplumber>=0.11",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0"]
+mcp = ["mcp>=1.2"]
+cli = ["typer>=0.12"]
+
+[project.scripts]
+grammar-kb = "grammar_kb.cli:main"
+grammar-kb-mcp = "grammar_kb.mcp_server:main"
+
+[tool.setuptools.packages.find]
+include = ["grammar_kb*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+markers = [
+    "integration: 需要真实讲义 PDF 的端到端测试",
+]

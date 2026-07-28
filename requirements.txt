@@ -1,0 +1,10 @@
+# PDF 解析
+PyMuPDF>=1.23,<2.0     # fitz：span 级抽取（字体/位置/方向），用于水印过滤
+pdfplumber>=0.11       # 表格检测（在过滤后的字符上工作）
+
+# 数据库（Python 自带 sqlite3，无需额外依赖；以下仅 CLI/MCP 预留）
+# typer>=0.12          # CLI（后续可选）
+# mcp>=1.2             # MCP 服务（后续阶段）
+
+# 测试
+pytest>=8.0
