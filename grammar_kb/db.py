@@ -107,7 +107,9 @@ class GrammarDB:
 
     def __init__(self, path: str):
         self.path = path
-        self.conn = sqlite3.connect(path)
+        # check_same_thread=False：HTTP 服务在工作线程中只读访问同一连接；
+        # 写入（ingest）在 CLI 离线单线程进行，不会并发写。
+        self.conn = sqlite3.connect(path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON;")
         self.init_schema()

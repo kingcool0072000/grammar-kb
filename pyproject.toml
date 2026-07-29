@@ -16,12 +16,14 @@ dependencies = [
 
 [project.optional-dependencies]
 mcp = ["mcp>=1.2"]          # MCP 服务（可选）
+server = ["fastapi>=0.110", "uvicorn>=0.27"]  # HTTP 服务（可选）
 
 [dependency-groups]
 dev = ["pytest>=8.0"]
 
 [project.scripts]
 grammar-kb = "grammar_kb.cli:main"
+grammar-kb-server = "grammar_kb.server:main"
 grammar-kb-mcp = "grammar_kb.mcp_server:main"
 
 [tool.setuptools.packages.find]

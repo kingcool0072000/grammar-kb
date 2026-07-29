@@ -14,6 +14,7 @@
 - 🏷️ **分类与关系**：按主题分类，抽取关键词/标志词与知识点间关系（如"主将从现""时态呼应"）
 - 🔍 **可溯源**：每个知识点带 `讲次 · 节路径 · 页码`，可定位回原文
 - 🗄️ **不截断**：正文存 SQLite `TEXT`（无长度上限），FTS 仅用于命中
+- 🌐 **HTTP API**：内置 REST 服务（FastAPI，自带 `/docs` 交互文档）
 - 🔌 **MCP 就绪**：内置 MCP 服务，Claude 等客户端可直接查询
 
 ## 快速开始
@@ -39,6 +40,7 @@ uv run grammar-kb markers --category 时态      # 列出某类下所有关键�
 uv run grammar-kb markers --tense 现在完成时   # 列出某时态的标志词
 uv run grammar-kb relation 主将从现            # 按关系类型查知识点
 uv run grammar-kb stats                        # 统计
+uv run grammar-kb serve --port 8000            # 启动 HTTP 查询服务（见 http://127.0.0.1:8000/docs）
 ```
 
 默认数据库为运行目录下的 `data/grammar.db`，可用 `--db` 或环境变量 `GRAMMAR_KB_DB` 覆盖。
@@ -66,6 +68,7 @@ PDF ──► pdf_parser   去水印（字体+方向过滤）+ 重排行 + 还�
 | `query.py`      | 面向调用的查询 API |
 | `ingest.py`     | PDF → 落库（目录导入 = 全量重建，id 可复现） |
 | `cli.py`        | 命令行 |
+| `server.py`     | HTTP 服务（可选 extra） |
 | `mcp_server.py` | MCP 服务（可选 extra） |
 
 ---
@@ -98,6 +101,33 @@ CREATE VIRTUAL TABLE kp_fts USING fts5(title, body_md, examples_md, table_md,
 - **分类规则** —— `classify.py` 的 `_TITLE_RULES`：按标题关键字映射主题分类。
 - **关键词词典** —— `classify.py` 的 `TENSE_MARKERS`（或自定义同类词典）。
 - **版式正则** —— `structure.py`：若你的标题层级用不同记号（如 `一、` / `（一）`），调整对应正则即可。
+
+## 作为 HTTP 服务
+
+```bash
+uv sync --extra server                       # 安装 server 依赖（fastapi + uvicorn）
+uv run grammar-kb serve --port 8000          # 经由 CLI
+# 或独立入口：
+uv run grammar-kb-server --host 0.0.0.0 --port 8000
+```
+
+启动后访问 `http://127.0.0.1:8000/docs` 查看交互式 API 文档。端点（均只读）：
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/stats` | 统计与数据集元信息 |
+| GET | `/lectures` | 讲次列表 |
+| GET | `/lectures/{number}?format=markdown\|html` | 某讲内容（表格还原） |
+| GET | `/kp/{id}?format=markdown\|html` | 某知识点 |
+| GET | `/search?q=...&category=...&limit=...` | 全文检索 |
+| GET | `/markers?category=时态&tense=...` | 标志词 |
+| GET | `/relation?type=主将从现` | 按关系查 |
+
+示例：
+```bash
+curl "http://127.0.0.1:8000/search?q=现在完成时&limit=3"
+curl "http://127.0.0.1:8000/lectures/25?format=html"
+```
 
 ## 作为 MCP 服务
 

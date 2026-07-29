@@ -12,6 +12,7 @@
     grammar-kb markers --tense 现在完成时            # 某时态的标志词
     grammar-kb relation 主将从现                     # 含某关系的知识点
     grammar-kb stats                                 # 统计
+    grammar-kb serve --port 8000                     # 启动 HTTP 查询服务（见 /docs）
 """
 from __future__ import annotations
 
@@ -159,6 +160,17 @@ def cmd_stats(args) -> int:
     return 0
 
 
+def cmd_serve(args) -> int:
+    try:
+        from .server import run_app
+    except ImportError as e:
+        print(f"启动 HTTP 服务需要 server 依赖：{e}\n请运行 `uv sync --extra server` 后重试。", file=sys.stderr)
+        return 1
+    print(f"grammar-kb HTTP 服务启动：http://{args.host}:{args.port}/docs")
+    run_app(host=args.host, port=args.port, db_path=args.db)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="grammar-kb", description="PDF 讲义/教材知识点数据库")
     p.add_argument("--db", default=None, help="SQLite 数据库路径（默认 data/grammar.db 或 $GRAMMAR_KB_DB）")
@@ -195,6 +207,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     pst = sub.add_parser("stats", help="统计")
     pst.set_defaults(func=cmd_stats)
+
+    pse = sub.add_parser("serve", help="启动 HTTP 查询服务")
+    pse.add_argument("--host", default="127.0.0.1")
+    pse.add_argument("--port", type=int, default=8000)
+    pse.set_defaults(func=cmd_serve)
 
     return p
 
