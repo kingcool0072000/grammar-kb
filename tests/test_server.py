@@ -1,4 +1,7 @@
-"""HTTP 服务端点测试（需要 server extra：``uv sync --extra server``）。"""
+"""HTTP 服务端点测试（需要 server extra：``uv sync --extra server``）。
+
+响应统一为 {code, message, data}；并校验 CORS 头。
+"""
 import os
 import tempfile
 
@@ -49,81 +52,101 @@ def client():
                     Block(kind="para", text_md="正文段落。", page=1, seq=1),
                 ],
             )
-        # 用临时库构造 app
         app = create_app(db_path)
         with TestClient(app) as c:
             yield c
 
 
-def test_root(client):
-    r = client.get("/")
-    assert r.status_code == 200
-    assert r.json()["service"] == "grammar-kb"
-
-
-def test_stats(client):
+def test_envelope_success(client):
     r = client.get("/stats")
     assert r.status_code == 200
-    assert r.json()["knowledge_points"] >= 1
+    body = r.json()
+    assert body["code"] == 0
+    assert body["message"] == "ok"
+    assert body["data"]["knowledge_points"] >= 1
+
+
+def test_root(client):
+    body = client.get("/").json()
+    assert body["code"] == 0
+    assert body["data"]["service"] == "grammar-kb"
 
 
 def test_lectures_list(client):
-    r = client.get("/lectures")
-    assert r.status_code == 200
-    data = r.json()
-    assert any(l["number"] == 25 for l in data)
+    items = client.get("/lectures").json()["data"]
+    assert any(l["number"] == 25 for l in items)
 
 
 def test_lecture_markdown(client):
-    r = client.get("/lectures/25")
-    assert r.status_code == 200
-    body = r.json()
+    body = client.get("/lectures/25").json()["data"]
     assert body["format"] == "markdown"
     assert "过去将来时" in body["content"]
 
 
 def test_lecture_html(client):
-    r = client.get("/lectures/25?format=html")
-    assert r.status_code == 200
-    content = r.json()["content"]
+    content = client.get("/lectures/25?format=html").json()["data"]["content"]
     assert content.startswith("<!DOCTYPE html>")
     assert "过去将来时" in content
 
 
 def test_lecture_404(client):
-    assert client.get("/lectures/999").status_code == 404
+    r = client.get("/lectures/999")
+    assert r.status_code == 404
+    body = r.json()
+    assert body["code"] == 404
+    assert "999" in body["message"]
+    assert body["data"] is None
 
 
 def test_kp(client):
-    r = client.get("/kp/1")
-    assert r.status_code == 200
-    assert "过去将来时的定义" in r.json()["content"]
+    body = client.get("/kp/1").json()["data"]
+    assert "过去将来时的定义" in body["content"]
 
 
 def test_kp_html(client):
-    r = client.get("/kp/1?format=html")
-    assert r.status_code == 200
-    assert "<html" in r.json()["content"]
+    content = client.get("/kp/1?format=html").json()["data"]["content"]
+    assert "<html" in content
+
+
+def test_kp_404(client):
+    r = client.get("/kp/99999")
+    assert r.status_code == 404
+    assert r.json()["code"] == 404
 
 
 def test_search(client):
-    r = client.get("/search?q=过去将来时")
-    assert r.status_code == 200
-    assert r.json()["count"] >= 1
+    body = client.get("/search?q=过去将来时").json()["data"]
+    assert body["count"] >= 1
 
 
 def test_search_with_category(client):
-    assert client.get("/search?q=过去将来时&category=时态").json()["count"] >= 1
-    assert client.get("/search?q=过去将来时&category=词法").json()["count"] == 0
+    assert client.get("/search?q=过去将来时&category=时态").json()["data"]["count"] >= 1
+    assert client.get("/search?q=过去将来时&category=词法").json()["data"]["count"] == 0
 
 
 def test_markers(client):
-    r = client.get("/markers?category=时态")
-    assert r.status_code == 200
-    assert any(it["marker"] == "would" for it in r.json()["items"])
+    items = client.get("/markers?category=时态").json()["data"]["items"]
+    assert any(it["marker"] == "would" for it in items)
 
 
 def test_relation(client):
-    r = client.get("/relation?type=主将从现")
+    assert "items" in client.get("/relation?type=主将从现").json()["data"]
+
+
+def test_cors_header_present(client):
+    """OPTIONS 预检或普通 GET 都应带 CORS 允许头。"""
+    r = client.get("/stats", headers={"Origin": "http://example.com"})
+    assert r.headers.get("access-control-allow-origin") in ("*", "http://example.com")
+
+
+def test_cors_preflight(client):
+    r = client.options(
+        "/search",
+        headers={
+            "Origin": "http://example.com",
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
     assert r.status_code == 200
-    assert "items" in r.json()
+    assert r.headers.get("access-control-allow-origin") in ("*", "http://example.com")

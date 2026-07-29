@@ -129,6 +129,17 @@ curl "http://127.0.0.1:8000/search?q=现在完成时&limit=3"
 curl "http://127.0.0.1:8000/lectures/25?format=html"
 ```
 
+**统一响应格式**：所有端点返回 `{code, message, data}`。
+```jsonc
+// 成功（HTTP 200）
+{ "code": 0, "message": "ok", "data": { "knowledge_points": 359, ... } }
+// 错误（HTTP 与 code 一致）
+{ "code": 404, "message": "第 99 讲不存在", "data": null }
+```
+
+**CORS**：默认允许所有来源（`Access-Control-Allow-Origin: *`），前端可直接跨域调用。
+收紧白名单：`GRAMMAR_KB_CORS_ORIGINS=https://a.com,https://b.com grammar-kb-server`。
+
 ## 作为 MCP 服务
 
 ```bash

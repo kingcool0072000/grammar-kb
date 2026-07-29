@@ -2,6 +2,9 @@
 
 把 :class:`grammar_kb.query.Query` 的能力以 REST API 暴露，与 CLI / MCP 共用同一查询层。
 
+- 统一响应格式：成功 ``{code:0, message:"ok", data:<...>}``；错误 ``{code:<http>, message, data:null}``
+- 默认开启 CORS（可用环境变量 ``GRAMMAR_KB_CORS_ORIGINS`` 收紧，逗号分隔；默认 ``*``）
+
 启动：
     grammar-kb-server                     # 默认 127.0.0.1:8000
     grammar-kb-server --port 8080 --host 0.0.0.0
@@ -12,17 +15,25 @@
 """
 from __future__ import annotations
 
+import os
 from dataclasses import asdict
-from typing import Optional
+from typing import Any, Optional
 
 from . import __version__
 from .ingest import open_db
 from .query import Query
 
 
+def _ok(data: Any = None, message: str = "ok") -> dict:
+    """统一成功响应包装。"""
+    return {"code": 0, "message": message, "data": data}
+
+
 def create_app(db_path: Optional[str] = None):
     """构造 FastAPI 应用。``db_path`` 为 None 时走默认库（GRAMMAR_KB_DB 或 data/grammar.db）。"""
     from fastapi import FastAPI, HTTPException, Query as FQuery
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.responses import JSONResponse
 
     kbq = Query(open_db(db_path))
     app = FastAPI(
@@ -31,30 +42,59 @@ def create_app(db_path: Optional[str] = None):
         description="PDF 讲义/教材知识点库的只读查询服务",
     )
 
+    # ---- CORS ----
+    raw = os.environ.get("GRAMMAR_KB_CORS_ORIGINS", "*").strip()
+    allow_origins = ["*"] if raw == "*" else [o.strip() for o in raw.split(",") if o.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allow_origins,
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # ---- 统一错误响应 ----
+    @app.exception_handler(HTTPException)
+    async def _http_exc(_, exc):  # noqa: ANN001
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"code": exc.status_code, "message": str(exc.detail), "data": None},
+        )
+
+    @app.exception_handler(Exception)
+    async def _unhandled(_, exc):  # noqa: ANN001
+        return JSONResponse(
+            status_code=500,
+            content={"code": 500, "message": f"内部错误: {exc}", "data": None},
+        )
+
+    # ---- 端点 ----
     @app.get("/")
     def root():
-        return {
-            "service": "grammar-kb",
-            "version": __version__,
-            "endpoints": [
-                "GET /stats",
-                "GET /lectures",
-                "GET /lectures/{number}?format=markdown|html",
-                "GET /kp/{id}?format=markdown|html",
-                "GET /search?q=...&category=...&limit=...",
-                "GET /markers?category=时态&tense=...",
-                "GET /relation?type=主将从现",
-                "GET /docs (Swagger UI)",
-            ],
-        }
+        return _ok(
+            {
+                "service": "grammar-kb",
+                "version": __version__,
+                "endpoints": [
+                    "GET /stats",
+                    "GET /lectures",
+                    "GET /lectures/{number}?format=markdown|html",
+                    "GET /kp/{id}?format=markdown|html",
+                    "GET /search?q=...&category=...&limit=...",
+                    "GET /markers?category=时态&tense=...",
+                    "GET /relation?type=主将从现",
+                    "GET /docs (Swagger UI)",
+                ],
+            }
+        )
 
     @app.get("/stats")
     def stats():
-        return kbq.stats()
+        return _ok(kbq.stats())
 
     @app.get("/lectures")
     def lectures():
-        return [asdict(l) for l in kbq.list_lectures()]
+        return _ok([asdict(l) for l in kbq.list_lectures()])
 
     @app.get("/lectures/{number}")
     def lecture(number: int, format: str = "markdown"):
@@ -62,20 +102,22 @@ def create_app(db_path: Optional[str] = None):
         if content is None:
             raise HTTPException(status_code=404, detail=f"第 {number} 讲不存在")
         lec = kbq.get_lecture(number)
-        return {
-            "number": number,
-            "title": lec.title if lec else "",
-            "category": lec.category if lec else "",
-            "format": format,
-            "content": content,
-        }
+        return _ok(
+            {
+                "number": number,
+                "title": lec.title if lec else "",
+                "category": lec.category if lec else "",
+                "format": format,
+                "content": content,
+            }
+        )
 
     @app.get("/kp/{kp_id}")
     def kp(kp_id: int, format: str = "markdown"):
         content = kbq.kp_html(kp_id) if format == "html" else kbq.kp_markdown(kp_id)
         if content is None:
             raise HTTPException(status_code=404, detail=f"知识点 id={kp_id} 不存在")
-        return {"id": kp_id, "format": format, "content": content}
+        return _ok({"id": kp_id, "format": format, "content": content})
 
     @app.get("/search")
     def search(
@@ -84,22 +126,19 @@ def create_app(db_path: Optional[str] = None):
         limit: int = 20,
     ):
         items = kbq.search_kps(q, category=category, limit=limit)
-        return {
-            "query": q,
-            "category": category,
-            "count": len(items),
-            "items": [asdict(k) for k in items],
-        }
+        return _ok(
+            {"query": q, "category": category, "count": len(items), "items": [asdict(k) for k in items]}
+        )
 
     @app.get("/markers")
     def markers(category: str = "时态", tense: Optional[str] = None):
         rows = kbq.markers_by_tense(tense) if tense else kbq.markers_by_category(category)
-        return {"category": category, "tense": tense, "count": len(rows), "items": rows}
+        return _ok({"category": category, "tense": tense, "count": len(rows), "items": rows})
 
     @app.get("/relation")
     def relation(type: str = "主将从现"):
         items = kbq.kps_by_relation(type)
-        return {"type": type, "count": len(items), "items": [asdict(k) for k in items]}
+        return _ok({"type": type, "count": len(items), "items": [asdict(k) for k in items]})
 
     return app
 
