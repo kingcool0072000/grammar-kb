@@ -68,6 +68,15 @@ def ingest_dir(
             continue
         r = ingest_pdf(db, f)
         results.append(r)
+
+    # 写入数据集元信息（版本/来源/生成时间），用于溯源与复现
+    from . import DATA_VERSION, __version__
+
+    db.set_meta("dataset_version", os.environ.get("GRAMMAR_KB_DATA_VERSION", DATA_VERSION))
+    db.set_meta("code_version", __version__)
+    db.set_meta("generated_at", _now())
+    db.set_meta("source_pdf_count", str(len(files)))
+    db.set_meta("lecture_count", str(sum(1 for r in results if r.ok)))
     return results
 
 

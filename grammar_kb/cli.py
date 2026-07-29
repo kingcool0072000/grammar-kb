@@ -142,6 +142,13 @@ def cmd_stats(args) -> int:
     db = open_db(args.db)
     q = Query(db)
     s = q.stats()
+    ds = s.get("dataset") or {}
+    if ds:
+        print(
+            f"数据集：{ds.get('dataset_version', '?')} · 生成于 {ds.get('generated_at', '?')} · "
+            f"{ds.get('lecture_count', '?')}讲/{ds.get('source_pdf_count', '?')}PDF · "
+            f"代码 {ds.get('code_version', '?')}"
+        )
     print(f"讲次：{s['lectures']}")
     print(f"知识点：{s['knowledge_points']}")
     print(f"标志词：{s['markers']}")

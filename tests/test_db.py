@@ -176,3 +176,14 @@ def test_reset_all_restarts_ids_from_one(db):
     ids = [r[0] for r in db.conn.execute("SELECT id FROM knowledge_point")]
     assert ids == [1]
     assert 1 <= first_max  # 之前至少有一条
+
+
+def test_meta_roundtrip(db):
+    db.set_meta("dataset_version", "data-v1")
+    db.set_meta("generated_at", "2026-07-29")
+    db.set_meta("dataset_version", "data-v2")  # 覆盖
+    meta = db.get_meta_all()
+    assert meta["dataset_version"] == "data-v2"
+    assert meta["generated_at"] == "2026-07-29"
+    # stats 应带上 dataset 字段
+    assert db.stats()["dataset"]["dataset_version"] == "data-v2"

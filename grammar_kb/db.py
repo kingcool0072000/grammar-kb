@@ -20,6 +20,12 @@ from .models import Block, KnowledgePoint, Lecture, Marker, Relation, TableData
 SCHEMA = """
 PRAGMA foreign_keys = ON;
 
+-- 数据集元信息（版本、生成时间、来源等，用于溯源/复现）
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+);
+
 CREATE TABLE IF NOT EXISTS lecture (
     id            INTEGER PRIMARY KEY,
     number        INTEGER UNIQUE NOT NULL,
@@ -120,9 +126,29 @@ class GrammarDB:
         with self.transaction() as c:
             # 先删 FTS 与子表，再删主表（注意外键顺序）
             for t in ("kp_fts", "lecture_block", "relation", "marker",
-                      "knowledge_point", "lecture"):
+                      "knowledge_point", "lecture", "meta"):
                 c.execute(f"DROP TABLE IF EXISTS {t}")
         self.init_schema()
+        # 物理回收空间，清除旧数据碎片（避免本地路径等旧值残留在 db 文件里）
+        try:
+            self.conn.commit()
+            self.conn.execute("VACUUM")
+        except Exception:
+            pass
+
+    def set_meta(self, key: str, value: str) -> None:
+        with self.transaction() as c:
+            c.execute(
+                "INSERT INTO meta(key, value) VALUES(?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (key, value),
+            )
+
+    def get_meta_all(self) -> dict:
+        return {
+            r["key"]: r["value"]
+            for r in self.conn.execute("SELECT key, value FROM meta")
+        }
 
     def close(self) -> None:
         self.conn.close()
@@ -330,6 +356,7 @@ class GrammarDB:
             "knowledge_points": n_kp,
             "markers": n_mk,
             "by_category": {r["category"]: r["c"] for r in cats},
+            "dataset": self.get_meta_all(),
         }
 
 

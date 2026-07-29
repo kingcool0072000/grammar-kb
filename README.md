@@ -43,6 +43,10 @@ uv run grammar-kb stats                        # 统计
 
 默认数据库为运行目录下的 `data/grammar.db`，可用 `--db` 或环境变量 `GRAMMAR_KB_DB` 覆盖。
 
+### 直接用预构建数据集（可选）
+
+不想自己 ingest，可从 [GitHub Releases](https://github.com/kingcool0072000/grammar-kb/releases) 下载对应版本的 `grammar.db`，放到 `data/grammar.db`（或用 `GRAMMAR_KB_DB` 指定路径）即可直接查询。数据集版本号见 release tag（如 `data-v1`），库内 `meta` 表也记录了版本与生成时间。
+
 ## 架构
 
 ```

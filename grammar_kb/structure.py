@@ -298,8 +298,13 @@ def _enrich(kps: list[KnowledgePoint], lecture: Lecture) -> None:
 
 
 def structure_from_file(pdf_path: str) -> StructuredLecture:
-    """端到端：PDF 路径 → 结构化讲次。"""
+    """端到端：PDF 路径 → 结构化讲次。
+
+    ``source_file`` 只记录文件名（不含目录），避免本地绝对路径随数据集外泄。
+    """
+    import os
+
     from .pdf_parser import parse_pdf
 
     parsed = parse_pdf(pdf_path)
-    return structure(parsed, source_file=pdf_path)
+    return structure(parsed, source_file=os.path.basename(pdf_path))
