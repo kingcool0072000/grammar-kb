@@ -139,6 +139,48 @@ def cmd_relation(args) -> int:
     return 0
 
 
+def cmd_exam_signal(args) -> int:
+    db = open_db(args.db)
+    q = Query(db)
+    if args.list:
+        print("考点信号维度：")
+        for s in q.list_exam_signals():
+            print(f"  - {s}")
+        db.close()
+        return 0
+    kps = q.kps_by_exam_signal(args.signal)
+    if not kps:
+        print("（无）")
+        db.close()
+        return 0
+    print(f"考点信号【{args.signal}】关联的知识点（{len(kps)}）：")
+    for kp in kps:
+        sigs = " ".join(f"#{s}" for s in kp.exam_signals)
+        print(f"  [#{kp.id}] 第{kp.lecture_number}讲 · {kp.title}  {sigs}")
+    db.close()
+    return 0
+
+
+def cmd_words(args) -> int:
+    db = open_db(args.db)
+    q = Query(db)
+    entries = q.vocabulary(limit=args.limit, min_freq=args.min_freq)
+    if not entries:
+        print("（单词表为空，请先 ingest）")
+        db.close()
+        return 0
+    for e in entries:
+        pos = "/".join(e["pos"]) or "?"
+        meanings = "；".join(e["meanings"]) if e["meanings"] else "—"
+        forms = " ".join(f"{k}={v}" for k, v in e["forms"].items())
+        print(f"- {e['word']} [{pos}] (×{e['freq']})  释义：{meanings}")
+        if forms:
+            print(f"    变化：{forms}")
+    print(f"\n共 {len(entries)} 词。")
+    db.close()
+    return 0
+
+
 def cmd_stats(args) -> int:
     db = open_db(args.db)
     q = Query(db)
@@ -204,6 +246,16 @@ def build_parser() -> argparse.ArgumentParser:
     pr = sub.add_parser("relation", help="按关系类型查知识点")
     pr.add_argument("type", help="如 主将从现 / 时态呼应")
     pr.set_defaults(func=cmd_relation)
+
+    pes = sub.add_parser("exam-signal", help="考点信号：按考点维度反查知识点")
+    pes.add_argument("signal", nargs="?", default="时态", help="如 时态/语态/从句/拼写")
+    pes.add_argument("--list", action="store_true", help="列出所有考点信号维度")
+    pes.set_defaults(func=cmd_exam_signal)
+
+    pw = sub.add_parser("words", help="基于讲义语料的单词表")
+    pw.add_argument("--limit", type=int, default=100)
+    pw.add_argument("--min-freq", type=int, default=2)
+    pw.set_defaults(func=cmd_words)
 
     pst = sub.add_parser("stats", help="统计")
     pst.set_defaults(func=cmd_stats)

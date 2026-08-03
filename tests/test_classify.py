@@ -140,3 +140,39 @@ def test_guess_tense():
     assert guess_tense_of_kp("现在完成时的用法") == "现在完成时"
     assert guess_tense_of_kp("定义", body="本节讲一般过去时") == "一般过去时"
     assert guess_tense_of_kp("名词的复数") is None
+
+
+# --------------------------------------------------------------------------- #
+# 考点信号
+# --------------------------------------------------------------------------- #
+
+from grammar_kb.classify import exam_signals_for_kp, EXAM_SIGNALS
+
+
+def test_exam_signal_tense():
+    assert exam_signals_for_kp("时态", "现在完成时的用法") == ["时态"]
+
+
+def test_exam_signal_clause():
+    sigs = exam_signals_for_kp("句法", "宾语从句的语序")
+    assert "从句" in sigs
+
+
+def test_exam_signal_morphology_implies_spelling():
+    sigs = exam_signals_for_kp("词法", "名词的复数变化")
+    assert "词形变化" in sigs
+    assert "拼写" in sigs  # 词形变化连带拼写
+
+
+def test_exam_signal_default_by_category():
+    # 无关键字命中时，按 category 兜底给一个信号
+    assert exam_signals_for_kp("词法", "代词概述") == ["词法"]
+
+
+def test_exam_signal_multi():
+    sigs = exam_signals_for_kp("句法", "状语从句中的时态与主谓一致")
+    assert "从句" in sigs and "时态" in sigs and "主谓一致" in sigs
+
+
+def test_exam_signals_canonical_list():
+    assert "时态" in EXAM_SIGNALS and "拼写" in EXAM_SIGNALS

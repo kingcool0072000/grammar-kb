@@ -119,3 +119,18 @@ def test_kp_html(q):
 
 def test_lecture_html_missing(q):
     assert q.lecture_html(999) is None
+
+
+def test_exam_signal_in_kp(q):
+    kps = q.search_kps("过去将来时")
+    assert kps and "时态" in kps[0].exam_signals
+
+
+def test_kps_by_exam_signal(q):
+    kps = q.kps_by_exam_signal("时态")
+    assert any(kp.title == "过去将来时的定义" for kp in kps)
+
+
+def test_list_exam_signals(q):
+    sigs = q.list_exam_signals()
+    assert "时态" in sigs

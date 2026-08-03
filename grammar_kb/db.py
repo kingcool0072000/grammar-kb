@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS knowledge_point (
     source_page   INTEGER DEFAULT 1,
     source_bbox   TEXT,
     tags_json     TEXT DEFAULT '[]',
+    exam_signals_json TEXT DEFAULT '[]',
     ord           INTEGER DEFAULT 0,
     ingested_at   TEXT
 );
@@ -229,14 +230,21 @@ class GrammarDB:
     # ---- 知识点 ---------------------------------------------------------- #
 
     def insert_kp(self, kp: KnowledgePoint, lecture_id: int) -> int:
-        """写入知识点及其标志词/关系，并同步 FTS。返回 kp id。"""
+        """写入知识点及其标志词/关系/考点信号，并同步 FTS。返回 kp id。"""
+        # 兜底：未显式标注考点信号时按内容推断（保证任何写入的 kp 都带信号）
+        if not kp.exam_signals:
+            from .classify import exam_signals_for_kp
+
+            kp.exam_signals = exam_signals_for_kp(
+                kp.category, kp.title, kp.section_path, kp.body_md, kp.examples_md
+            )
         with self.transaction() as c:
             cur = c.execute(
                 """INSERT INTO knowledge_point(
                        lecture_id, lecture_number, title, category, section_path,
                        body_md, examples_md, table_md, is_table, source_page,
-                       source_bbox, tags_json, ord, ingested_at)
-                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                       source_bbox, tags_json, exam_signals_json, ord, ingested_at)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     lecture_id,
                     kp.lecture_number,
@@ -250,6 +258,7 @@ class GrammarDB:
                     kp.source_page,
                     kp.source_bbox,
                     json.dumps(kp.tags, ensure_ascii=False),
+                    json.dumps(kp.exam_signals, ensure_ascii=False),
                     kp.ord,
                     _now(),
                 ),
@@ -403,6 +412,10 @@ def _row_to_kp(r: sqlite3.Row, conn: sqlite3.Connection) -> KnowledgePoint:
         tags = json.loads(r["tags_json"] or "[]")
     except Exception:
         tags = []
+    try:
+        exam_signals = json.loads(r["exam_signals_json"] or "[]")
+    except Exception:
+        exam_signals = []
     return KnowledgePoint(
         id=r["id"],
         title=r["title"],
@@ -416,6 +429,7 @@ def _row_to_kp(r: sqlite3.Row, conn: sqlite3.Connection) -> KnowledgePoint:
         source_page=r["source_page"],
         source_bbox=r["source_bbox"],
         tags=tags,
+        exam_signals=exam_signals,
         ord=r["ord"],
         markers=markers,
         relations=relations,

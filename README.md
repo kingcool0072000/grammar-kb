@@ -12,6 +12,8 @@
 - 📊 **表格还原**：自动检测有框线表格并还原为 GFM Markdown 表格
 - 🧩 **知识点切分**：按标题层级（章/节/小节/子项/例句/练习）拆成可独立检索单元
 - 🏷️ **分类与关系**：按主题分类，抽取关键词/标志词与知识点间关系（如"主将从现""时态呼应"）
+- 🎯 **考点信号**：每个知识点标注考点维度（时态/语态/拼写/从句…），支持"按考点反查知识点"
+- 📖 **单词表**：基于讲义语料生成单词表（释义/词性/词形变化/来源溯源）
 - 🔍 **可溯源**：每个知识点带 `讲次 · 节路径 · 页码`，可定位回原文
 - 🗄️ **不截断**：正文存 SQLite `TEXT`（无长度上限），FTS 仅用于命中
 - 🌐 **HTTP API**：内置 REST 服务（FastAPI，自带 `/docs` 交互文档）
@@ -39,6 +41,9 @@ uv run grammar-kb search "since" --category 时态
 uv run grammar-kb markers --category 时态      # 列出某类下所有关键词/标志词
 uv run grammar-kb markers --tense 现在完成时   # 列出某时态的标志词
 uv run grammar-kb relation 主将从现            # 按关系类型查知识点
+uv run grammar-kb exam-signal 从句             # 按考点信号反查知识点（反之亦然）
+uv run grammar-kb exam-signal --list           # 列出所有考点信号维度
+uv run grammar-kb words --limit 100            # 单词表（释义/词性/词形变化/来源）
 uv run grammar-kb stats                        # 统计
 uv run grammar-kb serve --port 8000            # 启动 HTTP 查询服务（见 http://127.0.0.1:8000/docs）
 ```
@@ -62,7 +67,8 @@ PDF ──► pdf_parser   去水印（字体+方向过滤）+ 重排行 + 还�
 |---|---|
 | `pdf_parser.py` | fitz 抽 span（字体/位置/方向）→ 过滤水印 → 重排行；pdfplumber 在过滤后字符上还原表格 |
 | `structure.py`  | 行分类（节/小节/子项/例句/练习）→ 知识点切分 |
-| `classify.py`   | 分类规则、关键词词典、关系检测（**纯函数**） |
+| `classify.py`   | 分类规则、关键词词典、关系检测、**考点信号**（**纯函数**） |
+| `vocabulary.py` | 基于语料的单词表（释义/词性/词形变化） |
 | `markdown.py`   | 表格 → GFM、知识点与整讲渲染 |
 | `db.py`         | schema + CRUD + FTS5(trigram, external-content)，无截断 |
 | `query.py`      | 面向调用的查询 API |
@@ -122,6 +128,9 @@ uv run grammar-kb-server --host 0.0.0.0 --port 8000
 | GET | `/search?q=...&category=...&limit=...` | 全文检索 |
 | GET | `/markers?category=时态&tense=...` | 标志词 |
 | GET | `/relation?type=主将从现` | 按关系查 |
+| GET | `/exam-signals` | 所有考点信号维度 |
+| GET | `/exam-signal?signal=时态` | 按考点反查知识点 |
+| GET | `/vocabulary?limit=300&min_freq=2` | 单词表（释义/词性/词形变化） |
 
 示例：
 ```bash

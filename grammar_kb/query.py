@@ -179,7 +179,42 @@ class Query:
         ).fetchall()
         return [_row_to_kp(r, self.db.conn) for r in rows]
 
+    # ---- 考点信号 -------------------------------------------------------- #
+
+    def list_exam_signals(self) -> list[str]:
+        """数据里实际出现过的考点信号（去重排序）。"""
+        rows = self.db.conn.execute(
+            """SELECT DISTINCT e.value AS v FROM knowledge_point k,
+               json_each(k.exam_signals_json) e
+               WHERE e.value IS NOT NULL ORDER BY e.value"""
+        ).fetchall()
+        return [r["v"] for r in rows]
+
+    def kps_by_exam_signal(self, signal: str) -> list[KnowledgePoint]:
+        """反查：给定考点信号，返回会考该信号的所有知识点（反之亦然）。"""
+        rows = self.db.conn.execute(
+            """SELECT k.* FROM knowledge_point k, json_each(k.exam_signals_json) e
+               WHERE e.value = ? ORDER BY k.lecture_number, k.ord""",
+            (signal,),
+        ).fetchall()
+        return [_row_to_kp(r, self.db.conn) for r in rows]
+
     # ---- 统计 ------------------------------------------------------------ #
 
     def stats(self) -> dict:
         return self.db.stats()
+
+    # ---- 单词表 ---------------------------------------------------------- #
+
+    def vocabulary(self, limit: int = 300, min_freq: int = 2) -> list[dict]:
+        """基于讲义语料的单词表（释义/词性/词形变化/来源）。"""
+        from dataclasses import asdict
+
+        from .vocabulary import build_vocabulary
+
+        kps = self.db.conn.execute(
+            "SELECT * FROM knowledge_point ORDER BY lecture_number, ord"
+        ).fetchall()
+        objects = [_row_to_kp(r, self.db.conn) for r in kps]
+        entries = build_vocabulary(objects, limit=limit, min_freq=min_freq)
+        return [asdict(e) for e in entries]

@@ -70,6 +70,9 @@ def render_knowledge_point(kp: "KnowledgePoint", with_source: bool = True) -> st
     if kp.relations:
         parts.append("**关系**：" + "；".join(r.type for r in kp.relations))
         parts.append("")
+    if kp.exam_signals:
+        parts.append("**考点信号**：" + "、".join(kp.exam_signals))
+        parts.append("")
     if kp.tags:
         parts.append("**标签**：" + " ".join(f"#{t}" for t in kp.tags))
         parts.append("")

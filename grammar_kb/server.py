@@ -83,6 +83,9 @@ def create_app(db_path: Optional[str] = None):
                     "GET /search?q=...&category=...&limit=...",
                     "GET /markers?category=时态&tense=...",
                     "GET /relation?type=主将从现",
+                    "GET /exam-signals",
+                    "GET /exam-signal?signal=时态",
+                    "GET /vocabulary?limit=300&min_freq=2",
                     "GET /docs (Swagger UI)",
                 ],
             }
@@ -139,6 +142,22 @@ def create_app(db_path: Optional[str] = None):
     def relation(type: str = "主将从现"):
         items = kbq.kps_by_relation(type)
         return _ok({"type": type, "count": len(items), "items": [asdict(k) for k in items]})
+
+    @app.get("/exam-signals")
+    def exam_signals():
+        """列出数据中实际出现的所有考点信号维度。"""
+        return _ok(kbq.list_exam_signals())
+
+    @app.get("/exam-signal")
+    def exam_signal(signal: str = "时态"):
+        """反查：给定考点信号，返回会考该信号的知识点（反之亦然）。"""
+        items = kbq.kps_by_exam_signal(signal)
+        return _ok({"signal": signal, "count": len(items), "items": [asdict(k) for k in items]})
+
+    @app.get("/vocabulary")
+    def vocabulary(limit: int = 300, min_freq: int = 2):
+        """基于讲义语料的单词表（释义/词性/词形变化/来源）。"""
+        return _ok(kbq.vocabulary(limit=limit, min_freq=min_freq))
 
     return app
 

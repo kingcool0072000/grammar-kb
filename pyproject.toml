@@ -12,6 +12,7 @@ dependencies = [
     "PyMuPDF>=1.23,<2.0",   # fitz：span 级抽取（字体/位置/方向），用于水印过滤
     "pdfplumber>=0.11",     # 表格检测（在过滤后的字符上工作）
     "markdown>=3.6",        # Markdown → HTML（lecture/kp 的 --format html）
+    "inflect>=7.0",         # 名词复数等词形变化（单词表用）
 ]
 
 [project.optional-dependencies]

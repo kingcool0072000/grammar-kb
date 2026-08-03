@@ -21,6 +21,7 @@ from typing import Optional
 from .classify import (
     classify_lecture_title,
     detect_relations,
+    exam_signals_for_kp,
     extract_markers,
     guess_tense_of_kp,
     make_full_title,
@@ -289,6 +290,9 @@ def _enrich(kps: list[KnowledgePoint], lecture: Lecture) -> None:
         tense = guess_tense_of_kp(kp.title, kp.body_md)
         kp.markers = extract_markers(text, tense=tense)
         kp.relations = detect_relations(text)
+        kp.exam_signals = exam_signals_for_kp(
+            kp.category, kp.title, kp.section_path, kp.body_md, kp.examples_md
+        )
         tags: list[str] = [lecture.category]
         if lecture.subcategory:
             tags.append(lecture.subcategory)

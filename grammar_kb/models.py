@@ -137,6 +137,7 @@ class KnowledgePoint:
     markers: list[Marker] = field(default_factory=list)
     relations: list[Relation] = field(default_factory=list)
     tags: list[str] = field(default_factory=list)
+    exam_signals: list[str] = field(default_factory=list)
     source_page: int = 1
     source_bbox: Optional[str] = None  # "[x0,y0,x1,y1]"
     ord: int = 0

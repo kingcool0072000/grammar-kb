@@ -250,3 +250,83 @@ def guess_tense_of_kp(title: str, body: str = "") -> Optional[str]:
         if name in title or name in (body or "")[:200]:
             return name
     return None
+
+
+# --------------------------------------------------------------------------- #
+# 考点信号（exam signals）
+# --------------------------------------------------------------------------- #
+# "一旦出现该知识点，就要考……"——给知识点标注它关联的考点维度；
+# 反之给定维度可反查知识点（见 query.kps_by_exam_signal）。
+
+# 全部考点维度（供 /exam-signals 列出、前端做选择器）
+EXAM_SIGNALS: list[str] = [
+    "时态",
+    "语态",
+    "非谓语",
+    "从句",
+    "词法",
+    "词形变化",
+    "拼写",
+    "主谓一致",
+    "句式",
+    "冠词用法",
+    "介词搭配",
+    "连词",
+]
+
+# 关键字 → 考点信号（顺序无关，命中即加）
+_SIGNAL_RULES: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"时态"), "时态"),
+    (re.compile(r"被动|语态"), "语态"),
+    (re.compile(r"不定式|动名词|分词|非谓语"), "非谓语"),
+    (re.compile(r"宾语从句|状语从句|定语从句|主语从句|表语从句|同位语从句|从句"), "从句"),
+    (re.compile(r"复数|过去式|过去分词|现在分词|三单|第三人称单数|比较级|最高级|词形|单复数|变形|变化规则"), "词形变化"),
+    (re.compile(r"拼写|字母大小写|双写"), "拼写"),
+    (re.compile(r"主谓一致"), "主谓一致"),
+    (re.compile(r"感叹句|倒装|疑问句|反义疑问|反意疑问|特殊疑问|陈述句|there be|句型|句式"), "句式"),
+    (re.compile(r"冠词"), "冠词用法"),
+    (re.compile(r"介词"), "介词搭配"),
+    (re.compile(r"连词"), "连词"),
+]
+
+# category → 默认考点信号（兜底，保证每个知识点至少一个信号）
+_CATEGORY_SIGNAL: dict[str, str] = {
+    "时态": "时态",
+    "语态": "语态",
+    "非谓语": "非谓语",
+    "句法": "句式",
+    "词法": "词法",
+    "综合复习": "词法",
+}
+
+
+def exam_signals_for_kp(
+    category: str,
+    title: str,
+    section_path: str = "",
+    body: str = "",
+    examples: str = "",
+) -> list[str]:
+    """推断一个知识点的考点信号（可多个）。
+
+    >>> exam_signals_for_kp("时态", "现在完成时的用法")
+    ['时态']
+    >>> "从句" in exam_signals_for_kp("句法", "宾语从句的语序")
+    True
+    >>> "词形变化" in exam_signals_for_kp("词法", "名词的复数变化")
+    True
+    """
+    text = " ".join([title or "", section_path or "", body or "", examples or ""])
+    sigs: set[str] = set()
+    for pat, sig in _SIGNAL_RULES:
+        if pat.search(text):
+            sigs.add(sig)
+    # 词形变化往往同时是拼写考点
+    if "词形变化" in sigs:
+        sigs.add("拼写")
+    # 兜底：若没命中任何关键字信号，按 category 给一个默认
+    if not sigs:
+        default = _CATEGORY_SIGNAL.get(category)
+        if default:
+            sigs.add(default)
+    return sorted(sigs)
