@@ -225,8 +225,19 @@ export function createDrawer(ctx = {}) {
     )
 
     let html = ''
-    if (e.gloss) {
-      html += `<h4>词典释义</h4><div class="gloss">${escapeHtml(e.gloss)}</div>`
+    const glossLines = (e.gloss_lines && e.gloss_lines.length)
+      ? e.gloss_lines
+      : (e.gloss ? [{ pos: '', text: e.gloss }] : [])
+    if (glossLines.length) {
+      html +=
+        `<h4>词典释义</h4><div class="gloss">` +
+        glossLines
+          .map(
+            (g) =>
+              `<div class="gloss-line">${g.pos ? `<span class="gloss-pos">${escapeHtml(g.pos)}</span>` : ''}<span class="gloss-text">${escapeHtml(g.text)}</span></div>`,
+          )
+          .join('') +
+        `</div>`
     }
     if (e.examples && e.examples.length) {
       const seenForms = Object.values(e.forms || {})

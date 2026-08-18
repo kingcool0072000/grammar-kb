@@ -667,3 +667,23 @@ main {
   font-weight: 800;
 }
 .ex-zh { font-size: 13px; color: var(--ink-soft); }
+
+/* 词典释义按词性分行 */
+.gloss { display: flex; flex-direction: column; gap: 7px; }
+.gloss-line {
+  display: flex;
+  gap: 9px;
+  align-items: baseline;
+  line-height: 1.65;
+}
+.gloss-pos {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--brand-ink);
+  background: color-mix(in srgb, var(--brand) 14%, white);
+  border-radius: 6px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+.gloss-text { font-size: 14px; }

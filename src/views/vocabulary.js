@@ -92,7 +92,9 @@ export function mountVocabulary(el, { vocab, openWord }) {
 
 function cardHtml(e) {
   const pos = (e.pos || []).map((p) => `<span class="vocab-pos">${escapeHtml(p)}</span>`).join('')
-  const meaning = e.gloss || (e.meanings || [])[0] || '—'
+  const meaning =
+    (e.gloss_lines && e.gloss_lines[0] && e.gloss_lines[0].text) ||
+    e.gloss || (e.meanings || [])[0] || '—'
   const formsBrief = Object.values(e.forms || {})
     .slice(0, 2)
     .map((v) => `<span class="vocab-form">${escapeHtml(v)}</span>`)
