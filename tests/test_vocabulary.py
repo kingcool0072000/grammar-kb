@@ -263,3 +263,17 @@ def test_ecdict_gloss_phonetic_examples():
         set(x) >= {"en", "zh"} for x in music.examples
     )
     assert any("Music" in x["en"] or "music" in x["en"] for x in music.examples)
+
+
+def test_gloss_lines_per_pos():
+    """词典释义按词性分行：gloss_lines = [{pos:'名词', text:'…'}, …]。"""
+    kps = [_kp("a", "I like English.\n我喜欢英语。")]
+    voc = build_vocabulary(kps, limit=20, min_freq=1)
+    eng = next(e for e in voc if e.word == "english")
+    assert eng.gloss_lines, "english 应有分词性释义"
+    poses = [g["pos"] for g in eng.gloss_lines]
+    texts = [g["text"] for g in eng.gloss_lines]
+    assert "名词" in poses and "英语" in texts
+    assert all("n." not in t and "a." not in t for t in texts), "text 不应残留词性前缀"
+    # gloss 兼容字段仍可用（纯文本拼接）
+    assert "英语" in eng.gloss

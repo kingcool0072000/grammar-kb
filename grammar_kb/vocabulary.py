@@ -407,7 +407,8 @@ class WordEntry:
     forms_note: str = ""  # 词形变化的可靠性说明
     sources: list[dict] = field(default_factory=list)
     phonetic: str = ""   # ECDICT 音标
-    gloss: str = ""      # ECDICT 简明中文释义（n. 音乐, 乐曲）
+    gloss: str = ""      # ECDICT 简明中文释义（兼容字段，按行拼接）
+    gloss_lines: list = field(default_factory=list)  # [{pos:'名词', text:'英语'}] 按词性分行
     examples: list = field(default_factory=list)  # [{en, zh}] 语料中英对照例句
 
 
@@ -611,6 +612,47 @@ def _meaning_ok(zh: str) -> bool:
     return True
 
 
+# ECDICT 释义行的词性缩写 → 中文标签
+_GLOSS_POS_CN = {
+    "n": "名词", "v": "动词", "vi": "不及物动词", "vt": "及物动词", "aux": "助动词",
+    "a": "形容词", "ad": "副词", "adv": "副词", "p": "介词", "prep": "介词",
+    "conj": "连词", "pron": "代词", "num": "数词", "int": "感叹词",
+}
+
+
+def _gloss_split(raw) -> list[str]:
+    """词典 t 字段兼容两种格式：list（分行）或 str（含字面 \n 或 ' / ' 分隔）。"""
+    if not raw:
+        return []
+    if isinstance(raw, list):
+        return [str(x).strip() for x in raw if str(x).strip()]
+    return [
+        ln.strip()
+        for ln in raw.replace("\\n", "\n").split("\n")
+        if ln.strip()
+    ]
+
+
+def _gloss_lines(raw) -> list[dict]:
+    """释义行 "n. 英语" → {pos:"名词", text:"英语"}；无词性前缀的行 text 原样。"""
+    out = []
+    for ln in _gloss_split(raw)[:3]:
+        m = re.match(r"^(vi|vt|aux|int|adv|ad|prep|conj|pron|num|n|v|a|p|m|u|c)\.\s*(.+)$", ln)
+        if m:
+            tag = m.group(1)
+            pos_cn = _GLOSS_POS_CN.get(tag, tag)
+            text = m.group(2).strip()
+            if text:
+                out.append({"pos": pos_cn, "text": text})
+        else:
+            out.append({"pos": "", "text": ln})
+    return out
+
+
+def _gloss_join(raw) -> str:
+    return " / ".join(x["text"] for x in _gloss_lines(raw))
+
+
 def build_vocabulary(
     kps: list[KnowledgePoint],
     limit: int = 300,
@@ -686,7 +728,8 @@ def build_vocabulary(
                 forms_note=note,
                 sources=list(d["sources"].values())[:5],
                 phonetic=ec.get("ph", ""),
-                gloss=ec.get("t", ""),
+                gloss=_gloss_join(ec.get("t", "")),
+                gloss_lines=_gloss_lines(ec.get("t", "")),
                 examples=d["examples"][:3],
             )
         )
