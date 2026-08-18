@@ -181,6 +181,14 @@ def cmd_words(args) -> int:
     return 0
 
 
+def cmd_import_ecdict(args) -> int:
+    from .dict_db import import_ecdict
+
+    n = import_ecdict(args.csv)
+    print(f"已导入 {n:,} 词条 → data/ecdict.db")
+    return 0
+
+
 def cmd_stats(args) -> int:
     db = open_db(args.db)
     q = Query(db)
@@ -256,6 +264,10 @@ def build_parser() -> argparse.ArgumentParser:
     pw.add_argument("--limit", type=int, default=100)
     pw.add_argument("--min-freq", type=int, default=2)
     pw.set_defaults(func=cmd_words)
+
+    pie = sub.add_parser("import-ecdict", help="导入 ECDICT 词典 CSV 为 data/ecdict.db")
+    pie.add_argument("csv", help="ecdict.csv 路径")
+    pie.set_defaults(func=cmd_import_ecdict)
 
     pst = sub.add_parser("stats", help="统计")
     pst.set_defaults(func=cmd_stats)

@@ -560,11 +560,13 @@ def regular_est(word: str) -> str:
     return word + "est"
 
 
-def word_forms(word: str, pos: Iterable[str], eng=None) -> tuple[dict, str]:
-    """按词性返回词形变化与可靠性说明。ECDICT exchange 优先，内置规则兜底。"""
+def word_forms(word: str, pos: Iterable[str], eng=None, dict_entry=None) -> tuple[dict, str]:
+    """按词性返回词形变化与可靠性说明。词典 exchange 优先，内置规则兜底。"""
     pos = set(pos)
     if word in NO_INFLECT:
         return {}, ""
+    if dict_entry and dict_entry.get("forms"):
+        return dict(dict_entry["forms"]), "词典实测词形（ECDICT）"
     forms: dict = {}
     note = ""
 
@@ -700,14 +702,24 @@ def build_vocabulary(
     kps: list[KnowledgePoint],
     limit: int = 300,
     min_freq: int = 2,
+    dict_db=None,
 ) -> list[WordEntry]:
-    """从知识点语料构建单词表。"""
+    """从知识点语料构建单词表。
+
+    词条词典信息（音标/释义/词形/词性）优先来自 ``dict_db``（ECDICT 全量），
+    未提供或未命中时退回内置 slim 词典与规则推断——保证单测无词典环境可跑。
+    """
     try:
         import inflect
 
         eng = inflect.engine()
     except Exception:
         eng = None
+
+    if dict_db is not None and getattr(dict_db, "available", False):
+        dlookup = dict_db.lookup
+    else:
+        dlookup = None
 
     # capital 记录该词以"非句首大写"出现的次数与总次数，用于专名检测：
     # 语料里始终大写（如 Tom/Mike/Canada）→ 专有名词；仅句首大写 → 普通词
@@ -759,27 +771,48 @@ def build_vocabulary(
     out: list[WordEntry] = []
     ecdict = load_ecdict()
     for w, d in items[:limit]:
-        pos = infer_pos(w, d)
-        forms, note = word_forms(w, pos, eng)
-        ec = ecdict.get(w) or {}
+        # 词典条目：全量 dict_db 优先，slim json 兜底（{ph,t,pos,ex}）
+        ec = dlookup(w) if dlookup else None
+        if ec is None:
+            raw = ecdict.get(w) or {}
+            if raw:
+                from .dict_db import EX_KEY as _EK
+
+                forms_d = {}
+                for part in (raw.get("ex") or "").split("/"):
+                    c, _, v = part.partition(":")
+                    k = _EK.get(c)
+                    if k and v and v != w and k not in forms_d:
+                        forms_d[k] = v
+                ec = {
+                    "phonetic": raw.get("ph", ""),
+                    "gloss_lines": _gloss_lines(raw.get("t", "")),
+                    "pos": raw.get("pos", []),
+                    "forms": forms_d,
+                }
+        pos = infer_pos(w, d, ec)
+        forms, note = word_forms(w, pos, eng, dict_entry=ec)
+        ec = ec or {}
         # 展示形式：取语料中最常见的拼写（专名语料里多大写 → Beijing/Tom）
         display = max(d["spellings"], key=d["spellings"].get) if d["spellings"] else w
-        # 专名释义：只保留人名（…名）或地名义行；词典的普通名词义（jack=插座、
-        # mike=话筒、tom=雄猫）对专名是噪声，宁缺勿错
-        gloss_raw = ec.get("t", "")
+        # 词典释义行（gloss_lines）；专名只留人名/地名义行（jack=插座 是噪声）
+        gloss_lines = ec.get("gloss_lines") or []
         if "proper" in pos:
-            lines = gloss_raw if isinstance(gloss_raw, list) else _gloss_split(gloss_raw)
-            def _bare(ln: str) -> str:
-                # 剥掉 "n. " 词性前缀后比对地名白名单
-                m = re.match(r"^[a-z]+\.\s*(.+)$", ln)
-                return (m.group(1) if m else ln).replace(" ", "")
+            def _bare(ln: dict) -> str:
+                return ln.get("text", "").replace(" ", "")
 
             named = [
-                ln for ln in lines
-                if ("（" in ln and "名" in ln) or "位于" in ln
+                ln for ln in gloss_lines
+                if ("（" in ln.get("text", "") and "名" in ln.get("text", ""))
+                or "位于" in ln.get("text", "")
                 or _bare(ln) in PROPER_GLOSS
             ]
-            gloss_raw = named[:1] if named else PROPER_GLOSS_OVERRIDE.get(w, "")
+            if named:
+                gloss_lines = named[:1]
+            elif w in PROPER_GLOSS_OVERRIDE:
+                gloss_lines = [{"pos": "", "text": PROPER_GLOSS_OVERRIDE[w]}]
+            else:
+                gloss_lines = []
         out.append(
             WordEntry(
                 word=w,
@@ -790,9 +823,9 @@ def build_vocabulary(
                 forms=forms,
                 forms_note=note,
                 sources=list(d["sources"].values())[:5],
-                phonetic=ec.get("ph", ""),
-                gloss=_gloss_join(gloss_raw),
-                gloss_lines=_gloss_lines(gloss_raw),
+                phonetic=ec.get("phonetic", "") or ec.get("ph", ""),
+                gloss=" / ".join(x["text"] for x in gloss_lines),
+                gloss_lines=gloss_lines,
                 examples=d["examples"][:3],
             )
         )
@@ -808,7 +841,7 @@ CAP_NOT_PROPER = frozenset(
 )
 
 
-def infer_pos(word: str, d: dict) -> list[str]:
+def infer_pos(word: str, d: dict, dict_entry=None) -> list[str]:
     """词性推断：ECDICT > 人工词表 > 不规则表 > 后缀规则 > 专名大写检测。
 
     绝不按"所在讲次细分"推断（错标根因：数词课里的 before 被标成数词）。
@@ -825,7 +858,9 @@ def infer_pos(word: str, d: dict) -> list[str]:
         and d["cap"] * 2 >= d["freq"]
     ):
         return ["proper"]
-    # ECDICT 词性（词典人工校对，覆盖绝大多数词）
+    # 词典词性（dict_db 全量优先；slim json 兜底）
+    if dict_entry and dict_entry.get("pos"):
+        return list(dict_entry["pos"])
     ec = load_ecdict().get(word)
     if ec and ec.get("pos"):
         return list(ec["pos"])

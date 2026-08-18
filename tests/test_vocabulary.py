@@ -307,3 +307,43 @@ def test_proper_display_capital_gloss():
         assert mk.display == "Mike"
         assert "话筒" not in mk.gloss and "扩音器" not in mk.gloss
         assert "迈克" in mk.gloss
+
+
+def test_dict_fallback_and_vocabulary_source(tmp_path):
+    """build_vocabulary 无词典环境可用（slim 兜底）；dict_db 传入时词条信息来自词典。"""
+    from grammar_kb.dict_db import DictDB, import_ecdict
+    from grammar_kb.vocabulary import build_vocabulary
+
+    kps = [
+        _kp("a", "I see an elephant.\n我看见一头大象。"),
+        _kp("b", "The elephant is big.\n这头大象很大。"),
+    ]
+    # 1) 无词典：不崩，走 slim/规则兜底
+    voc = build_vocabulary(kps, limit=20, min_freq=1)
+    assert any(e.word == "elephant" for e in voc)
+
+    # 2) 有全量词典：词条释义/词形来自 dict
+    d = DictDB()
+    if not d.available:
+        import pytest
+        pytest.skip("data/ecdict.db 未导入")
+    voc2 = build_vocabulary(kps, limit=20, min_freq=1, dict_db=d)
+    ele = next(e for e in voc2 if e.word == "elephant")
+    assert "象" in ele.gloss
+    assert ele.forms.get("plural") == "elephants"
+
+
+def test_dict_db_lookup():
+    """DictDB.lookup：释义行清理、词形译码、词性解析。"""
+    from grammar_kb.dict_db import DictDB
+
+    d = DictDB()
+    if not d.available:
+        import pytest
+        pytest.skip("data/ecdict.db 未导入")
+    apple = d.lookup("apple")
+    assert apple and "苹果" in apple["gloss"]
+    assert apple["forms"]["plural"] == "apples"
+    assert "n" in apple["pos"]
+    # 未命中与空串
+    assert d.lookup("") is None

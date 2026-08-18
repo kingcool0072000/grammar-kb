@@ -9,13 +9,23 @@ import sqlite3
 from typing import Optional
 
 from .db import GrammarDB, _row_to_kp
+from .dict_db import DictDB
 from .markdown import markdown_to_html, render_knowledge_point, render_lecture
 from .models import Block, KnowledgePoint, Lecture
 
 
 class Query:
-    def __init__(self, db: GrammarDB):
+    def __init__(self, db: GrammarDB, dict_db: "DictDB | None" = None):
         self.db = db
+        self.dict = dict_db or DictDB()
+
+    # ---- 词典（ECDICT）--------------------------------------------------- #
+
+    def dict_lookup(self, word: str) -> Optional[dict]:
+        """查任意单词的词典条目（音标/分行释义/词形/词性）。"""
+        if not self.dict.available:
+            return None
+        return self.dict.lookup(word)
 
     # ---- 讲次 ------------------------------------------------------------ #
 
@@ -216,5 +226,9 @@ class Query:
             "SELECT * FROM knowledge_point ORDER BY lecture_number, ord"
         ).fetchall()
         objects = [_row_to_kp(r, self.db.conn) for r in kps]
-        entries = build_vocabulary(objects, limit=limit, min_freq=min_freq)
+        # 词条词典信息（音标/释义/词形/词性）来自 ECDICT 全量词典（/dict 同源），
+        # 语料层只贡献 freq/sources/examples/display 等增强
+        entries = build_vocabulary(
+            objects, limit=limit, min_freq=min_freq, dict_db=self.dict
+        )
         return [asdict(e) for e in entries]

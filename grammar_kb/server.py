@@ -154,6 +154,14 @@ def create_app(db_path: Optional[str] = None):
         items = kbq.kps_by_exam_signal(signal)
         return _ok({"signal": signal, "count": len(items), "items": [asdict(k) for k in items]})
 
+    @app.get("/dict/{word}")
+    def dict_lookup(word: str):
+        """查任意单词（ECDICT 全量词典，不限于讲义语料）。"""
+        entry = kbq.dict_lookup(word)
+        if entry is None:
+            raise HTTPException(status_code=404, detail=f"词典未收录：{word}")
+        return _ok(entry)
+
     @app.get("/vocabulary")
     def vocabulary(limit: int = 300, min_freq: int = 2):
         """基于讲义语料的单词表（释义/词性/词形变化/来源）。"""
