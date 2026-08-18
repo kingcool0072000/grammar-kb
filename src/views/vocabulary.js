@@ -1,4 +1,5 @@
 import { escapeHtml } from '../render.js'
+import { api } from '../api.js'
 
 // 词汇表视图：基于后端 /vocabulary（讲义语料中英对照例句提取的单词表）。
 // 支持词性筛选、关键词搜索、按词频/字母排序；点击单词在抽屉里看释义、词形变化与来源知识点。
@@ -8,7 +9,7 @@ const POS_CN = {
   conj: '连', pron: '代', num: '数', proper: '专名', 其它: '其它',
 }
 
-export function mountVocabulary(el, { vocab, openWord }) {
+export function mountVocabulary(el, { vocab, openWord, openDictWord }) {
   // 给每个词条打上原数组下标，卡片点击后用它回查
   vocab.forEach((e, i) => { e.__i = i })
 
@@ -54,7 +55,8 @@ export function mountVocabulary(el, { vocab, openWord }) {
       sort === 'freq' ? b.freq - a.freq || a.word.localeCompare(b.word) : a.word.localeCompare(b.word),
     )
     if (!list.length) {
-      $list.innerHTML = '<div class="empty">没有匹配的单词。</div>'
+      // 语料词表无命中 → 查全量词典（任意单词都可查）
+      renderDictFallback(ql)
       return
     }
     $list.innerHTML = `<div class="vocab-grid">${list.map(cardHtml).join('')}</div>`
@@ -81,6 +83,44 @@ export function mountVocabulary(el, { vocab, openWord }) {
     }
   })
 
+  // 语料无命中时查词典；把词条包装成 openWord 可渲染的形状
+  async function renderDictFallback(qRaw) {
+    const q = qRaw.trim()
+    if (!/^[a-zA-Z][a-zA-Z'-]*$/.test(q)) {
+      $list.innerHTML = '<div class="empty">没有匹配的单词。</div>'
+      return
+    }
+    $list.innerHTML = '<div class="loading"><div class="spinner"></div>查词典中…</div>'
+    let d = null
+    try {
+      d = await api.dict(q)
+    } catch {
+      $list.innerHTML = '<div class="empty">没有匹配的单词。</div>'
+      return
+    }
+    const entry = {
+      word: d.word,
+      display: d.word,
+      freq: 0,
+      pos: d.pos || [],
+      phonetic: d.phonetic || '',
+      gloss: d.gloss || '',
+      gloss_lines: d.gloss_lines || [],
+      forms: d.forms || {},
+      examples: [],
+      meanings: [],
+      sources: [],
+      inCorpus: false,
+    }
+    $list.innerHTML =
+      `<div class="view-head" style="margin-bottom:12px"><p>「${escapeHtml(q)}」不在讲义词汇表中，来自词典：</p></div>` +
+      `<div class="vocab-grid">${
+        entry.gloss || Object.keys(entry.forms).length ? dictCardHtml(entry) : '<div class="empty">词典未收录。</div>'
+      }</div>`
+    const card = $list.querySelector('[data-dict]')
+    if (card) card.addEventListener('click', () => openWord(entry))
+  }
+
   let timer
   $search.addEventListener('input', (e) => {
     clearTimeout(timer)
@@ -88,6 +128,23 @@ export function mountVocabulary(el, { vocab, openWord }) {
   })
 
   render()
+}
+
+function dictCardHtml(e) {
+  const pos = (e.pos || [])
+    .slice(0, 3)
+    .map((p) => `<span class="vocab-pos">${escapeHtml(p)}</span>`)
+    .join('')
+  const text = (e.gloss_lines && e.gloss_lines[0] && e.gloss_lines[0].text) || e.gloss || '—'
+  return `
+    <article class="vocab-card" data-dict="1">
+      <div class="vocab-top">
+        <span class="vocab-word">${escapeHtml(e.word)}</span>
+        <span class="vocab-freq" title="词典条目">词典</span>
+      </div>
+      <div class="vocab-posrow">${pos}</div>
+      <div class="vocab-meaning">${escapeHtml(text)}</div>
+    </article>`
 }
 
 function cardHtml(e) {

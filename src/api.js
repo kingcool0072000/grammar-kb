@@ -34,6 +34,8 @@ export const api = {
   relation: (type) => req('/relation', { searchParams: { type } }),
   vocabulary: ({ limit = 2000, min_freq = 2 } = {}) =>
     req('/vocabulary', { searchParams: { limit, min_freq } }),
+  // 全量词典（ECDICT）：任意单词可查，不限于讲义语料
+  dict: (word) => req(`/dict/${encodeURIComponent(word)}`),
 }
 
 // 规整单个知识点，保证集合字段为数组
