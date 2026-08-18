@@ -4,6 +4,7 @@ import { mountCourses } from './views/courses.js'
 import { mountPoints } from './views/points.js'
 import { mountNetwork } from './views/network.js'
 import { mountVocabulary } from './views/vocabulary.js'
+import { mountTaxonomy } from './views/taxonomy.js'
 import { createDrawer } from './components/drawer.js'
 
 const app = document.getElementById('app')
@@ -13,6 +14,7 @@ const VIEWS = [
   { key: 'points', label: '知识点' },
   { key: 'network', label: '关系网络' },
   { key: 'vocab', label: '词汇表' },
+  { key: 'taxonomy', label: '知识体系' },
 ]
 
 function h(tag, cls, html) {
@@ -129,6 +131,7 @@ async function bootstrap() {
   const viewEl = h('div')
   main.append(viewEl)
 
+  const pointsById = new Map(state.points.map((p) => [p.id, p]))
   const ctx = {
     get points() { return state.points },
     get lectures() { return state.lectures },
@@ -151,6 +154,8 @@ async function bootstrap() {
       currentUnbind = mountNetwork(viewEl, { points: state.points, openKp: ctx.openKp })
     } else if (route === 'vocab') {
       mountVocabulary(viewEl, { vocab: state.vocab, openWord: (e) => drawer.showWord(e) })
+    } else if (route === 'taxonomy') {
+      mountTaxonomy(viewEl, { pointsById, openKp: ctx.openKp })
     }
     window.scrollTo(0, 0)
   }

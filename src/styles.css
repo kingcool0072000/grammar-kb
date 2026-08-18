@@ -687,3 +687,25 @@ main {
   white-space: nowrap;
 }
 .gloss-text { font-size: 14px; }
+
+/* 知识体系树 */
+.tax-group { margin-bottom: 16px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.tax-group-head {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px; border: 0; background: transparent; cursor: pointer;
+  font-size: 16px; font-weight: 800; color: var(--ink); text-align: left;
+}
+.tax-group-head:hover { background: var(--bg-soft); }
+.tax-group-body { padding: 4px 18px 14px; display: flex; flex-direction: column; gap: 8px; }
+.tax-theme { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.tax-theme-head {
+  width: 100%; display: flex; align-items: center; gap: 9px;
+  padding: 9px 13px; border: 0; background: var(--bg-soft); cursor: pointer;
+  font-size: 13.5px; font-weight: 700; color: var(--ink); text-align: left;
+}
+.tax-theme-head:hover { background: var(--line); }
+.tax-arrow { color: var(--ink-faint); font-size: 11px; width: 12px; }
+.tax-theme-name { flex: 1; }
+.tax-count { font-size: 11.5px; color: var(--ink-faint); font-weight: 700; background: var(--card); border-radius: 999px; padding: 1px 9px; }
+.tax-theme-body { padding: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.tax-kp { padding: 10px 13px; }
