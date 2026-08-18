@@ -1,18 +1,19 @@
 """单词表构建（基于讲义语料，纯函数，便于单测）。
 
-数据来源：知识点的 ``examples_md`` / ``body_md`` 里的中英对照例句。
-- 词频：英文 token 统计（去停用词/标点/数字）；屈折变形先还原成原形再计数
-  （went/going/goes 合并进 go），词条词形变化因此天然正确
-- 词性：人工词表 > 内置不规则动词/形容词表 > 后缀规则 > 专名大写检测；
-  不按"所在讲次细分"推断（曾把 mike/before/out 标成数词、happy 标成代词、
-  now 标成冠词，属系统性错标）
-- 释义：英文句紧跟的中文句配对（取出现该词的例句翻译，去重取前几条）
-- 词形变化：名词复数用 ``inflect``（含常见不规则）；动词用内置不规则表 + 规则；
-  形容词用规则比较级/最高级
-- 来源：溯源到知识点/讲次
+数据来源：知识点 ``examples_md`` / ``body_md`` 的中英对照例句 + ECDICT 精简词典
+（``data/ecdict-slim.json``，取自 https://github.com/skywind3000/ECDICT ，仅收录语料词）。
 
-说明：词形变化对未命中不规则表的动词按规则推断（可能不准），故在 entry 里标注
-``forms_note``；释义来自例句配对，可能包含整句翻译而非词典式精炼释义。
+- 词频：英文 token 统计（去停用词/标点/数字）；屈折变形先还原成原形再计数
+  （went/going/goes 合并进 go）
+- 词性：ECDICT 词性 > 人工词表 > 不规则表 > 后缀规则（多音节/专名词保护）>
+  专名大写检测。绝不按"所在讲次细分"推断（曾把 music/picnic/english 标成
+  形容词、mike/before/out 标成数词，属系统性错标）
+- 词形变化：优先 ECDICT exchange（p:过去式 d:过去分词 i:进行时 3:三单
+  s:复数 r:比较级 t:最高级）；缺失才用内置规则；多音节形容词不给 er/est
+  （interestinger 之类是错误形式，正确是 more interesting）
+- 释义：``gloss`` 取 ECDICT 简明中文释义，``examples`` 为语料中英对照例句对；
+  ``meanings``（例句整句中文）保留以兼容旧前端
+- 音标/来源：phonetic 取 ECDICT；来源溯源到知识点/讲次
 """
 from __future__ import annotations
 
@@ -22,6 +23,64 @@ from dataclasses import dataclass, field
 from typing import Iterable, Optional
 
 from .models import KnowledgePoint
+
+# ECDICT 精简词典：word → {ph, t(中文释义), pos[], ex(词形变化编码)}
+_ECDICT: dict | None = None
+_ECDICT_PATHS = (
+    __import__("pathlib").Path(__file__).resolve().parent.parent / "data" / "ecdict-slim.json",
+    __import__("pathlib").Path(__file__).resolve().parent / "data" / "ecdict-slim.json",
+)
+
+
+def load_ecdict() -> dict:
+    """惰性加载 ECDICT 精简词典（约 270KB，随库分发）；不可用时返回空表。"""
+    global _ECDICT
+    if _ECDICT is not None:
+        return _ECDICT
+    import json
+
+    for path in _ECDICT_PATHS:
+        try:
+            if path.exists():
+                with open(path, encoding="utf-8") as f:
+                    _ECDICT = json.load(f)
+                return _ECDICT
+        except Exception:
+            continue
+    _ECDICT = {}
+    return _ECDICT
+
+
+# ECDICT exchange 编码 → 我们的 forms 键
+_EX_KEY = {"p": "past", "d": "past_participle", "i": "present_participle",
+           "3": "third_singular", "s": "plural", "r": "comparative", "t": "superlative"}
+
+# 多音节形容词/副词不用 er/est（正确形式是 more/most + adj）：
+# 依据：以 -ing/-ed/-ful/-ous/-ive/-able/-ible/-ant/-ent/-less/-ish(专名除外) 结尾，
+# 或 3 音节以上（粗略用 元音组数>2 判定）
+_NO_ER_EST_SUFFIXES = ("ing", "ed", "ful", "ous", "ive", "able", "ible", "ant", "ent", "less", "some")
+
+
+def _can_take_er_est(word: str) -> bool:
+    """是否允许给该形容词生成规则比较级/最高级。"""
+    if len(word) <= 2:
+        return False
+    for suf in _NO_ER_EST_SUFFIXES:
+        if word.endswith(suf):
+            return False
+    # 音节粗估：相邻元音合并成组，>2 组视为多音节
+    groups = 0
+    prev_vowel = False
+    for ch in word:
+        if ch in VOWELS:
+            if not prev_vowel:
+                groups += 1
+            prev_vowel = True
+        else:
+            prev_vowel = False
+    if word.endswith("e") and word[-2:-1] and word[-2] not in VOWELS:
+        groups += 0  # 词尾哑 e 不计音节
+    return groups <= 2
 
 WORD_RE = re.compile(r"[A-Za-z]+(?:'[a-z])?")
 
@@ -122,15 +181,33 @@ IRREGULAR_ADJ: dict[str, tuple[str, str]] = {
     "little": ("less", "least"), "far": ("farther", "farthest"),
 }
 
-# 后缀 → 词性（pos 推不出时兜底）
+# 后缀 → 词性（兜底，已大幅收紧）。
+# 删除了 ic/ish/al 等误判重灾区（music/picnic 是名词、english 是专名），
+# 且要求最小长度，避免 "go+ly" 之类碎片误命中。
 _SUFFIX_POS = [
     ("ly", "adv"),
     ("tion", "n"), ("sion", "n"), ("ment", "n"), ("ness", "n"),
     ("ity", "n"), ("ance", "n"), ("ence", "n"), ("ist", "n"),
     ("ful", "adj"), ("ous", "adj"), ("ive", "adj"), ("able", "adj"),
-    ("ible", "adj"), ("al", "adj"), ("ic", "adj"), ("ish", "adj"),
+    ("ible", "adj"),
     ("ize", "v"), ("ise", "v"), ("ify", "v"),
 ]
+
+# 后缀规则排出的例外（仍按名词/不动处理）
+_SUFFIX_EXCLUDE = frozenset(
+    "music picnic magic traffic plastic electric english spanish".split()
+)
+
+# 不可数名词（无复数）与语言/国名形容词（无比较级最高级）
+UNCOUNTABLE_NOUNS = frozenset(
+    "music water coffee milk tea rice bread money news advice information "
+    "furniture luggage homework housework traffic weather fun luck time "
+    "english chinese japanese french german spanish".split()
+)
+NO_COMPARATIVE = frozenset(
+    "english chinese japanese french german spanish american british "
+    "alive asleep awake alone afraid wooden daily".split()
+)
 
 # --------------------------------------------------------------------------- #
 # 词性人工词表
@@ -329,6 +406,9 @@ class WordEntry:
     forms: dict = field(default_factory=dict)
     forms_note: str = ""  # 词形变化的可靠性说明
     sources: list[dict] = field(default_factory=list)
+    phonetic: str = ""   # ECDICT 音标
+    gloss: str = ""      # ECDICT 简明中文释义（n. 音乐, 乐曲）
+    examples: list = field(default_factory=list)  # [{en, zh}] 语料中英对照例句
 
 
 # --------------------------------------------------------------------------- #
@@ -441,21 +521,36 @@ def regular_est(word: str) -> str:
 
 
 def word_forms(word: str, pos: Iterable[str], eng=None) -> tuple[dict, str]:
-    """按词性返回词形变化与可靠性说明。"""
+    """按词性返回词形变化与可靠性说明。ECDICT exchange 优先，内置规则兜底。"""
     pos = set(pos)
     forms: dict = {}
     note = ""
-    if "n" in pos or not pos:
-        try:
-            if eng is None:
-                import inflect
 
-                eng = inflect.engine()
-            pl = eng.plural_noun(word)
-            if pl and pl != word:
-                forms["plural"] = pl
-        except Exception:
-            pass
+    # --- ECDICT exchange 优先（词典实测形式，最可靠）---
+    ec = load_ecdict().get(word)
+    if ec and ec.get("ex"):
+        for part in ec["ex"].split("/"):
+            code, _, val = part.partition(":")
+            key = _EX_KEY.get(code)
+            if key == "plural" and word in UNCOUNTABLE_NOUNS:
+                continue
+            if key and val and val != word and key not in forms:
+                forms[key] = val
+        if forms:
+            return forms, "词典实测词形（ECDICT）"
+
+    if "n" in pos or not pos:
+        if word not in UNCOUNTABLE_NOUNS:
+            try:
+                if eng is None:
+                    import inflect
+
+                    eng = inflect.engine()
+                pl = eng.plural_noun(word)
+                if pl and pl != word:
+                    forms["plural"] = pl
+            except Exception:
+                pass
     if "v" in pos or not pos:
         if word in IRREGULAR_VERBS:
             past, pp = IRREGULAR_VERBS[word]
@@ -474,9 +569,10 @@ def word_forms(word: str, pos: Iterable[str], eng=None) -> tuple[dict, str]:
     if "adj" in pos or not pos:
         if word in IRREGULAR_ADJ:
             forms["comparative"], forms["superlative"] = IRREGULAR_ADJ[word]
-        else:
+        elif word not in NO_COMPARATIVE and _can_take_er_est(word):
             forms["comparative"] = regular_er(word)
             forms["superlative"] = regular_est(word)
+        # 多音节形容词不给 er/est：正确形式是 more/most + adj，不属于词形变化表
     # pos 为空时只保留名词/动词变化，避免每个词都给一整套
     if not pos:
         note = (note + "；词性未确定，仅给出常见变化").strip("；")
@@ -484,6 +580,8 @@ def word_forms(word: str, pos: Iterable[str], eng=None) -> tuple[dict, str]:
 
 
 def guess_pos(word: str) -> list[str]:
+    if word in _SUFFIX_EXCLUDE:
+        return []
     for suf, p in _SUFFIX_POS:
         if word.endswith(suf):
             return [p]
@@ -529,38 +627,55 @@ def build_vocabulary(
     # capital 记录该词以"非句首大写"出现的次数与总次数，用于专名检测：
     # 语料里始终大写（如 Tom/Mike/Canada）→ 专有名词；仅句首大写 → 普通词
     stats: dict = defaultdict(
-        lambda: {"freq": 0, "sources": {}, "meanings": [], "cap": 0}
+        lambda: {"freq": 0, "sources": {}, "meanings": [], "cap": 0,
+                 "examples": [], "forms_seen": set()}
     )
+    # 语料词 → 该词条允许的变形集合（例句高亮时把 went/going/goes 都认作 go）
+    lemma_forms: dict = defaultdict(set)
     mapping, ambiguous = _get_inflect_maps()
 
     for kp in kps:
         src = {"kp_id": kp.id, "lecture": kp.lecture_number, "title": kp.title}
         for en_line, zh in pair_sentences(kp.examples_md + "\n" + kp.body_md):
+            # 第一遍：token 归并（变形→原形），记录命中本句的词条
+            hit_lemmas: set = set()
             for m in WORD_RE.finditer(en_line):
                 w = m.group(0)
                 wl = w.lower()
                 if len(wl) < 2 or wl in STOP_WORDS or wl in STOP_FRAGMENTS:
                     continue
-                if wl in ambiguous:  # 多个可能原形的变形（如 left），不还原
-                    pass
-                else:
-                    wl = mapping.get(wl, wl)
-                s = stats[wl]
+                token = wl
+                if wl not in ambiguous:  # 歧义变形（如 left）不还原
+                    token = mapping.get(wl, wl)
+                s = stats[token]
                 s["freq"] += 1
                 s["sources"][src["kp_id"]] = src
+                if token != wl:
+                    s["forms_seen"].add(wl)
+                hit_lemmas.add(token)
                 # 非句首位置仍大写 → 专名证据
                 if m.start() > 0 and w[0].isupper():
                     s["cap"] += 1
-                if _meaning_ok(zh) and zh not in s["meanings"] and len(s["meanings"]) < 5:
-                    s["meanings"].append(zh)
+            # 第二遍：为命中词条收集中英例句对（去重，最多 3 条）与释义句
+            if _meaning_ok(zh):
+                for lemma in hit_lemmas:
+                    s = stats[lemma]
+                    if len(s["examples"]) < 3 and not any(
+                        p["en"] == en_line for p in s["examples"]
+                    ):
+                        s["examples"].append({"en": en_line, "zh": zh})
+                    if zh not in s["meanings"] and len(s["meanings"]) < 5:
+                        s["meanings"].append(zh)
 
     items = [(w, d) for w, d in stats.items() if d["freq"] >= min_freq]
     items.sort(key=lambda x: (-x[1]["freq"], x[0]))
 
     out: list[WordEntry] = []
+    ecdict = load_ecdict()
     for w, d in items[:limit]:
         pos = infer_pos(w, d)
         forms, note = word_forms(w, pos, eng)
+        ec = ecdict.get(w) or {}
         out.append(
             WordEntry(
                 word=w,
@@ -570,30 +685,41 @@ def build_vocabulary(
                 forms=forms,
                 forms_note=note,
                 sources=list(d["sources"].values())[:5],
+                phonetic=ec.get("ph", ""),
+                gloss=ec.get("t", ""),
+                examples=d["examples"][:3],
             )
         )
     return out
 
 
 def infer_pos(word: str, d: dict) -> list[str]:
-    """词性推断：人工词表 > 不规则动词/形容词表 > 后缀规则 > 专名检测。
+    """词性推断：ECDICT > 人工词表 > 不规则表 > 后缀规则 > 专名大写检测。
 
-    绝不按"所在讲次细分"推断（错标根因）。推不出就留空（前端显示为"其它"），
-    错误的词性比没有词性更糟。
+    绝不按"所在讲次细分"推断（错标根因：数词课里的 before 被标成数词）。
+    推不出就留空（前端显示为"其它"），错误的词性比没有词性更糟。
     """
+    # 语料专名白名单最优先（ECDICT 对人名会给 n.雄猫 之类的名词义）
+    lex_all = LEXICON.get(word)
+    if lex_all and "proper" in lex_all:
+        return ["proper"]
+    # ECDICT 词性（词典人工校对，覆盖绝大多数词）
+    ec = load_ecdict().get(word)
+    if ec and ec.get("pos"):
+        return list(ec["pos"])
+
     lex = LEXICON.get(word)
     if lex:
-        # proper 与 n 并存时保留两者（前端把 proper 显示为专名标记）
         return list(lex)
     if word in IRREGULAR_VERBS:
         return ["v"]
     if word in IRREGULAR_ADJ:
         return ["adj"]
+    # 后缀规则已收紧（见 _SUFFIX_POS 注释），仍推不出再走大写检测
     suf = guess_pos(word)
     if suf:
         return suf
-    # 专名检测：非句首大写占多数（≥2 次且过半）→ 专有名词。
-    # 不能要求全部大写：Tom 偶尔落在句首时首字母大写不构成专名证据。
+    # 专名检测：非句首大写占多数（≥2 次且过半）→ 专有名词
     if d.get("cap", 0) >= 2 and d["cap"] * 2 >= d["freq"]:
-        return ["n", "proper"]  # proper 标记专有名词，前端可显示为人名/地名
+        return ["n", "proper"]
     return []

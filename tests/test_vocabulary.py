@@ -2,6 +2,7 @@
 from grammar_kb.models import KnowledgePoint
 from grammar_kb.vocabulary import (
     build_vocabulary,
+    infer_pos,
     pair_sentences,
     regular_ing,
     regular_past,
@@ -47,13 +48,14 @@ def test_word_forms_irregular_verb():
     forms, note = word_forms("go", ["v"])
     assert forms["past"] == "went"
     assert forms["past_participle"] == "gone"
-    assert "不规则" in note
+    # go 命中 ECDICT exchange（词典实测），内置不规则表作为无词典时的兜底
+    assert "ECDICT" in note or "不规则" in note
 
 
 def test_word_forms_regular_verb():
     forms, note = word_forms("play", ["v"])
     assert forms["past"] == "played"
-    assert "规则" in note
+    assert "ECDICT" in note or "规则" in note
 
 
 def test_word_forms_noun_plural():
@@ -218,3 +220,46 @@ def test_regular_past_no_false_doubling():
     assert regular_past("happen") == "happened"
     # 双写规则本身仍生效
     assert regular_past("stop") == "stopped"
+
+
+def test_pos_from_ecdict_not_suffix():
+    """回归：music/picnic/english 曾被后缀规则(ic/ish)误判为形容词。"""
+    d = {"freq": 5, "cap": 0}
+    # 无 ECDICT 数据时后缀规则也不应把 music 判成 adj（_SUFFIX_EXCLUDE）
+    pos = infer_pos("music", d)
+    assert "adj" not in pos
+
+
+def test_no_interestinger():
+    """回归：多音节形容词不得生成 er/est（interestinger 是错误形式）。"""
+    forms, _ = word_forms("interesting", ["adj"])
+    assert "comparative" not in forms and "superlative" not in forms
+    forms2, _ = word_forms("expensive", ["adj"])
+    assert "comparative" not in forms2
+    # 单/双音节仍正常
+    forms3, _ = word_forms("happy", ["adj"])
+    assert forms3["comparative"] == "happier"
+
+
+def test_uncountable_and_language_no_plural_or_er():
+    """不可数名词无复数；语言/国名形容词无比较级。"""
+    forms, _ = word_forms("music", ["n"])
+    assert "plural" not in forms
+    forms, _ = word_forms("english", ["adj", "n"])
+    assert "comparative" not in forms and "plural" not in forms
+
+
+def test_ecdict_gloss_phonetic_examples():
+    """词条带 ECDICT 音标/释义与语料中英例句对。"""
+    kps = [
+        _kp("a", "Music brings people pleasure.\n音乐给人们带来快乐。"),
+        _kp("b", "We enjoy music every day.\n我们每天享受音乐。"),
+    ]
+    voc = build_vocabulary(kps, limit=20, min_freq=1)
+    music = next(e for e in voc if e.word == "music")
+    assert "音乐" in music.gloss
+    assert music.phonetic  # 'mju:zik
+    assert music.examples and all(
+        set(x) >= {"en", "zh"} for x in music.examples
+    )
+    assert any("Music" in x["en"] or "music" in x["en"] for x in music.examples)
