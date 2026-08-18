@@ -119,6 +119,102 @@ def test_build_vocabulary_freq_and_sources():
     kps[0].id = 1
     kps[1].id = 2
     voc = build_vocabulary(kps, limit=20, min_freq=1)
-    runs = next(e for e in voc if e.word == "runs")
-    assert runs.freq == 2
-    assert len(runs.sources) == 2
+    # 屈折变形合并进原形：runs → run，词频与来源随之合并
+    run = next(e for e in voc if e.word == "run")
+    assert run.freq == 2
+    assert len(run.sources) == 2
+    assert "third_singular" in run.forms
+
+
+def test_pos_not_from_lecture_subcat():
+    """回归：词性绝不按所在讲次细分推断。
+
+    此前"数词"讲里的 before/out/mike 被标成数词、"代词"讲里的 happy 被标成
+    代词、"冠词"讲里的 now 被标成冠词——系统性错标。
+    """
+    kps = [
+        KnowledgePoint(
+            title="数词",
+            lecture_number=7,
+            category="词法",
+            tags=["词法", "数词"],
+            examples_md="Mike got out before two.\n迈克在两点之前出去了。",
+        ),
+        KnowledgePoint(
+            title="代词",
+            lecture_number=2,
+            category="词法",
+            tags=["词法", "代词"],
+            examples_md="Happy now!\n现在开心了！",
+        ),
+    ]
+    voc = build_vocabulary(kps, limit=50, min_freq=1)
+    by = {e.word: e for e in voc}
+    # 推不出的词性宁缺勿错
+    assert "num" not in (by.get("before", _e()).pos)
+    assert "num" not in (by.get("mike", _e()).pos)
+    assert "pron" not in (by.get("happy", _e()).pos)
+    assert "art" not in (by.get("now", _e()).pos)
+
+
+def _e():
+    from dataclasses import dataclass
+
+    @dataclass
+    class _X:
+        pos: list = None
+
+    _X.pos = []
+    return _X()
+
+
+def test_pos_closed_classes():
+    """封闭类词性来自人工词表。"""
+    kps = [
+        _kp("例", "Go out now because two are happy.\n现在出去因为两个人很开心。")
+    ]
+    voc = build_vocabulary(kps, limit=50, min_freq=1)
+    by = {e.word: e for e in voc}
+    assert "prep" in by["out"].pos
+    assert "adv" in by["now"].pos
+    assert "conj" in by["because"].pos
+    assert "num" in by["two"].pos
+    assert "adj" in by["happy"].pos
+    assert "v" in by["go"].pos
+
+
+def test_lemmatize_merges_inflections():
+    """变形合并进原形再计数，词条词形变化因此天然正确。"""
+    kps = [
+        _kp("a", "He goes home.\n他回家。"),
+        _kp("b", "He went home.\n他回家了。"),
+        _kp("c", "He is going home.\n他正在回家。"),
+        _kp("d", "He goes out.\n他出去。"),
+    ]
+    voc = build_vocabulary(kps, limit=50, min_freq=1)
+    by = {e.word: e for e in voc}
+    assert "goes" not in by and "went" not in by and "going" not in by
+    assert by["go"].freq == 4
+    assert by["go"].forms["past"] == "went"
+    assert by["go"].forms["third_singular"] == "goes"
+
+
+def test_proper_noun_detection():
+    """非句首大写占多数 → 专有名词。"""
+    kps = [
+        _kp("a", "I saw Tom.\n我看见了汤姆。"),
+        _kp("b", "Tom and Tom again.\n汤姆和汤姆。"),
+    ]
+    voc = build_vocabulary(kps, limit=50, min_freq=1)
+    tom = next(e for e in voc if e.word == "tom")
+    assert "proper" in tom.pos
+
+
+def test_regular_past_no_false_doubling():
+    """重音在前的动词不双写辅音。"""
+    assert regular_past("visit") == "visited"
+    assert regular_past("listen") == "listened"
+    assert regular_past("open") == "opened"
+    assert regular_past("happen") == "happened"
+    # 双写规则本身仍生效
+    assert regular_past("stop") == "stopped"
