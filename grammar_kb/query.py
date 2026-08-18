@@ -19,6 +19,35 @@ class Query:
         self.db = db
         self.dict = dict_db or DictDB()
 
+    # ---- 主题体系（知识点聚合）-------------------------------------------- #
+
+    def taxonomy(self) -> dict:
+        """主题体系树：大类 → 主题 → 知识点列表（含每个主题的小结）。"""
+        from .taxonomy import THEME_ORDER, classify
+
+        kps = self.db.conn.execute(
+            "SELECT * FROM knowledge_point ORDER BY lecture_number, ord"
+        ).fetchall()
+        objects = [_row_to_kp(r, self.db.conn) for r in rows] if False else [_row_to_kp(r, self.db.conn) for r in kps]
+
+        tree: dict = {}
+        for kp in objects:
+            group, theme = classify(kp)
+            tree.setdefault(group, {}).setdefault(theme, []).append(
+                {"id": kp.id, "title": kp.title, "lecture": kp.lecture_number}
+            )
+        # 展示顺序
+        out = []
+        for group, themes in tree.items():
+            order = THEME_ORDER.get(group, [])
+            theme_list = sorted(themes.items(), key=lambda kv: order.index(kv[0]) if kv[0] in order else 99)
+            out.append({
+                "group": group,
+                "themes": [{"theme": t, "count": len(items), "items": items} for t, items in theme_list],
+                "count": sum(len(v) for v in themes.values()),
+            })
+        return {"groups": out, "total": len(objects)}
+
     # ---- 词典（ECDICT）--------------------------------------------------- #
 
     def dict_lookup(self, word: str) -> Optional[dict]:

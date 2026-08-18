@@ -154,6 +154,11 @@ def create_app(db_path: Optional[str] = None):
         items = kbq.kps_by_exam_signal(signal)
         return _ok({"signal": signal, "count": len(items), "items": [asdict(k) for k in items]})
 
+    @app.get("/taxonomy")
+    def taxonomy():
+        """知识点主题体系树（大类 → 主题 → 知识点），聚合零散知识点。"""
+        return _ok(kbq.taxonomy())
+
     @app.get("/dict/{word}")
     def dict_lookup(word: str):
         """查任意单词（ECDICT 全量词典，不限于讲义语料）。"""
