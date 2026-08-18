@@ -102,7 +102,7 @@ function cardHtml(e) {
   return `
     <article class="vocab-card" data-i="${e.__i}">
       <div class="vocab-top">
-        <span class="vocab-word">${escapeHtml(e.word)}</span>
+        <span class="vocab-word">${escapeHtml(e.display || e.word)}</span>
         <span class="vocab-freq" title="在讲义中出现次数">${e.freq}</span>
       </div>
       <div class="vocab-posrow">${pos}</div>

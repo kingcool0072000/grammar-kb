@@ -218,7 +218,7 @@ export function createDrawer(ctx = {}) {
       .map((p) => `<span class="tag" style="--cat-color:#64748b">${escapeHtml(POS_CN[p] || p)}</span>`)
       .join('')
     setHead(
-      e.word,
+      e.display || e.word,
       (e.phonetic ? `<span class="phonetic">/${escapeHtml(e.phonetic)}/</span>` : '') +
         `<span>词频 ${e.freq}</span>` + posTags,
       null,
