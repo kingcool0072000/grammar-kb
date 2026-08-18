@@ -277,3 +277,33 @@ def test_gloss_lines_per_pos():
     assert all("n." not in t and "a." not in t for t in texts), "text 不应残留词性前缀"
     # gloss 兼容字段仍可用（纯文本拼接）
     assert "英语" in eng.gloss
+
+
+def test_num_no_er_est():
+    """回归：数词/功能词不做屈折（thousander/nower/aller 曾出现）。"""
+    forms, _ = word_forms("thousand", ["num", "adj", "n"])
+    assert forms == {}
+    for w in ["more", "now", "all", "first", "each", "such", "every"]:
+        f2, _ = word_forms(w, ["adj", "adv", "pron"])
+        assert f2 == {}, f"{w} 不应有词形变化: {f2}"
+
+
+def test_proper_display_capital_gloss():
+    """回归：专有名词大写展示、无复数、释义取人名/地名义而非器具义。"""
+    kps = [
+        _kp("a", "I like Beijing.\n我喜欢北京。"),
+        _kp("b", "Welcome to Beijing!\n欢迎来到北京！"),
+        _kp("c", "Mike and Jack play in Beijing.\n迈克和杰克在北京玩。"),
+    ]
+    voc = build_vocabulary(kps, limit=30, min_freq=1)
+    by = {e.word: e for e in voc}
+    bj = by.get("beijing")
+    assert bj is not None
+    assert bj.display == "Beijing"
+    assert bj.pos == ["proper"]
+    assert "plural" not in bj.forms          # Beijing 无复数
+    mk = by.get("mike")
+    if mk is not None:
+        assert mk.display == "Mike"
+        assert "话筒" not in mk.gloss and "扩音器" not in mk.gloss
+        assert "迈克" in mk.gloss

@@ -209,6 +209,7 @@ NO_COMPARATIVE = frozenset(
     "alive asleep awake alone afraid wooden daily".split()
 )
 
+
 # --------------------------------------------------------------------------- #
 # 词性人工词表
 #
@@ -324,7 +325,44 @@ def _build_lexicon() -> dict[str, tuple[str, ...]]:
             lex[w] = merged
     return lex
 
+# 地名/国名词典释义行（精确匹配，去掉空格后比对）
+# 专名兜底释义（词典缺失或首义为器具/动物等噪声时）
+PROPER_GLOSS_OVERRIDE = {
+    "beijing": "北京（中国首都）",
+    "china": "中国",
+    "alice": "爱丽丝（女子名）",
+    "jack": "杰克（男子名）",
+    "mike": "迈克（男子名）",
+    "tom": "汤姆（男子名）",
+}
+
+PROPER_GLOSS = frozenset(
+    ["北京(中华人民共和国首都)", "加拿大", "中国", "美国", "英国", "澳大利亚",
+     "法国", "日本", "山东(位于中国东部沿海、黄河下游)", "电视", " Television的简称",
+     "伦敦", "巴黎", "纽约"]
+)
+
 LEXICON = _build_lexicon()
+# 完全不做屈折变化的词：功能词（限定词/代词/连词/副词小品词）、数词、专名。
+# 这些词即使词典给了 a./n. 义也不该生成 thousander/nower/alls 之类的形式
+NO_INFLECT = (
+    NUM_WORDS
+    | PRON_WORDS
+    | CONJ_WORDS
+    | PREP_WORDS
+    | frozenset(
+        "now here there all some any no none every each both either neither "
+        "such more most much many little few less least good well better best "
+        "not very too also only just even still yet again first last next "
+        "up down out off back home away china beijing shandong canada "
+        "tom mary jack jane joe jill kate alice mike tim tv "
+        "enough abroad quite rather almost still already soon honest "
+        "earlier faster harder nearest further farther lovely friendly lively "
+        "sunday monday tuesday wednesday thursday friday saturday "
+        "january february march april may june july august september "
+        "october november december".split()
+    )
+)
 
 # --------------------------------------------------------------------------- #
 # 屈折还原（lemmatize）：把 went/going/goes 等还原成原形 go 再计数
@@ -406,6 +444,7 @@ class WordEntry:
     forms: dict = field(default_factory=dict)
     forms_note: str = ""  # 词形变化的可靠性说明
     sources: list[dict] = field(default_factory=list)
+    display: str = ""    # 展示形式（专名大写：beijing → Beijing；空 = 同 word）
     phonetic: str = ""   # ECDICT 音标
     gloss: str = ""      # ECDICT 简明中文释义（兼容字段，按行拼接）
     gloss_lines: list = field(default_factory=list)  # [{pos:'名词', text:'英语'}] 按词性分行
@@ -524,6 +563,8 @@ def regular_est(word: str) -> str:
 def word_forms(word: str, pos: Iterable[str], eng=None) -> tuple[dict, str]:
     """按词性返回词形变化与可靠性说明。ECDICT exchange 优先，内置规则兜底。"""
     pos = set(pos)
+    if word in NO_INFLECT:
+        return {}, ""
     forms: dict = {}
     note = ""
 
@@ -573,6 +614,8 @@ def word_forms(word: str, pos: Iterable[str], eng=None) -> tuple[dict, str]:
         elif word not in NO_COMPARATIVE and _can_take_er_est(word):
             forms["comparative"] = regular_er(word)
             forms["superlative"] = regular_est(word)
+        # 注：形容词不做复数（lovelies/friendlies 不是形容词词形）——
+        # 名词分支只在 pos 含 n 时给复数，此处不加
         # 多音节形容词不给 er/est：正确形式是 more/most + adj，不属于词形变化表
     # pos 为空时只保留名词/动词变化，避免每个词都给一整套
     if not pos:
@@ -670,7 +713,7 @@ def build_vocabulary(
     # 语料里始终大写（如 Tom/Mike/Canada）→ 专有名词；仅句首大写 → 普通词
     stats: dict = defaultdict(
         lambda: {"freq": 0, "sources": {}, "meanings": [], "cap": 0,
-                 "examples": [], "forms_seen": set()}
+                 "examples": [], "forms_seen": set(), "spellings": {}}
     )
     # 语料词 → 该词条允许的变形集合（例句高亮时把 went/going/goes 都认作 go）
     lemma_forms: dict = defaultdict(set)
@@ -692,6 +735,7 @@ def build_vocabulary(
                 s = stats[token]
                 s["freq"] += 1
                 s["sources"][src["kp_id"]] = src
+                s["spellings"][w] = s["spellings"].get(w, 0) + 1
                 if token != wl:
                     s["forms_seen"].add(wl)
                 hit_lemmas.add(token)
@@ -718,9 +762,28 @@ def build_vocabulary(
         pos = infer_pos(w, d)
         forms, note = word_forms(w, pos, eng)
         ec = ecdict.get(w) or {}
+        # 展示形式：取语料中最常见的拼写（专名语料里多大写 → Beijing/Tom）
+        display = max(d["spellings"], key=d["spellings"].get) if d["spellings"] else w
+        # 专名释义：只保留人名（…名）或地名义行；词典的普通名词义（jack=插座、
+        # mike=话筒、tom=雄猫）对专名是噪声，宁缺勿错
+        gloss_raw = ec.get("t", "")
+        if "proper" in pos:
+            lines = gloss_raw if isinstance(gloss_raw, list) else _gloss_split(gloss_raw)
+            def _bare(ln: str) -> str:
+                # 剥掉 "n. " 词性前缀后比对地名白名单
+                m = re.match(r"^[a-z]+\.\s*(.+)$", ln)
+                return (m.group(1) if m else ln).replace(" ", "")
+
+            named = [
+                ln for ln in lines
+                if ("（" in ln and "名" in ln) or "位于" in ln
+                or _bare(ln) in PROPER_GLOSS
+            ]
+            gloss_raw = named[:1] if named else PROPER_GLOSS_OVERRIDE.get(w, "")
         out.append(
             WordEntry(
                 word=w,
+                display=display if display != w else "",
                 freq=d["freq"],
                 pos=pos,
                 meanings=d["meanings"][:3],
@@ -728,12 +791,21 @@ def build_vocabulary(
                 forms_note=note,
                 sources=list(d["sources"].values())[:5],
                 phonetic=ec.get("ph", ""),
-                gloss=_gloss_join(ec.get("t", "")),
-                gloss_lines=_gloss_lines(ec.get("t", "")),
+                gloss=_gloss_join(gloss_raw),
+                gloss_lines=_gloss_lines(gloss_raw),
                 examples=d["examples"][:3],
             )
         )
     return out
+
+
+# 语料里常见大写但并非专名的词（专有短语成分 the Great Wall / the Yangtze River、
+# 星期/月份句首、机构通名 museum/palace）。大写证据对它们不构成 proper 判定
+CAP_NOT_PROPER = frozenset(
+    "river wall sunday friday saturday monday tuesday wednesday thursday "
+    "museum palace amazon greens smiths english french german england france "
+    "december january february march april june july august september october november".split()
+)
 
 
 def infer_pos(word: str, d: dict) -> list[str]:
@@ -742,9 +814,16 @@ def infer_pos(word: str, d: dict) -> list[str]:
     绝不按"所在讲次细分"推断（错标根因：数词课里的 before 被标成数词）。
     推不出就留空（前端显示为"其它"），错误的词性比没有词性更糟。
     """
-    # 语料专名白名单最优先（ECDICT 对人名会给 n.雄猫 之类的名词义）
+    # 大写证据优先（白名单或语料实测非句首大写过半）：一律判专有名词，
+    # 不再混入词典的名词/形容词义（mike 不再显示"话筒"、beijing 不再有复数）
     lex_all = LEXICON.get(word)
     if lex_all and "proper" in lex_all:
+        return ["proper"]
+    if (
+        word not in CAP_NOT_PROPER
+        and d.get("cap", 0) >= 2
+        and d["cap"] * 2 >= d["freq"]
+    ):
         return ["proper"]
     # ECDICT 词性（词典人工校对，覆盖绝大多数词）
     ec = load_ecdict().get(word)
@@ -762,7 +841,4 @@ def infer_pos(word: str, d: dict) -> list[str]:
     suf = guess_pos(word)
     if suf:
         return suf
-    # 专名检测：非句首大写占多数（≥2 次且过半）→ 专有名词
-    if d.get("cap", 0) >= 2 and d["cap"] * 2 >= d["freq"]:
-        return ["n", "proper"]
     return []
