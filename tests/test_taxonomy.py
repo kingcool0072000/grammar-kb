@@ -52,8 +52,6 @@ def test_theme_notes_cover_all_populated_themes():
     missing = []
     for g in t["groups"]:
         for th in g["themes"]:
-            if g["group"] == "综合复习":
-                continue  # 综合练习主题允许无讲义
             note = th.get("note")
             if not note or not note.get("points"):
                 missing.append(f"{g['group']}·{th['theme']}")
@@ -78,3 +76,27 @@ def test_theme_examples_use_corpus():
             for ex in th["examples"]:
                 assert ex["en"][:1].isupper() and ex["en"][-1] in ".!?"
                 assert 4 <= len(ex["zh"]) <= 45
+
+
+def test_review_routed_to_grammar_themes():
+    """综合复习不是知识点：全部按考察主题分流，体系里不再有综合复习组。"""
+    from grammar_kb.db import GrammarDB
+    from grammar_kb.query import Query
+
+    t = Query(GrammarDB("data/grammar.db")).taxonomy()
+    groups = [g["group"] for g in t["groups"]]
+    assert "综合复习" not in groups
+    # 知识点总数不丢
+    assert t["total"] == 359
+
+
+def test_items_have_brief():
+    """每个知识点条目带一句话释义。"""
+    from grammar_kb.db import GrammarDB
+    from grammar_kb.query import Query
+
+    t = Query(GrammarDB("data/grammar.db")).taxonomy()
+    for g in t["groups"]:
+        for th in g["themes"]:
+            for it in th["items"]:
+                assert it.get("brief"), f"{th['theme']}/{it['title']} 缺 brief"

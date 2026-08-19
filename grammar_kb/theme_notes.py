@@ -395,15 +395,4 @@ THEME_NOTES: dict[tuple[str, str], dict] = {
         "mnemonic": "「也是 so，也不 neither，后面助动词提前跑」",
         "tips": ["So he does（确实如此）与 So does he（他也是）之分必考"],
     },
-    ("综合复习", "综合练习"): {
-        "summary": "综合复习按主题回炉：先过错题，再横向对比易混点。",
-        "points": [
-            "复习路径：本主题错题 → 对应语法主题的讲义 → 举一反三",
-            "易混对比：a/an 与 the；some/any；too…to 与 so…that；宾语从句与定语从句",
-            "做题三步：判断考点 → 找标志词 → 代入验证",
-        ],
-        "formula": "错题归类 → 回讲义 → 变式再练",
-        "mnemonic": "",
-        "tips": ["把每道错题标注考点主题，按主题集中攻克"],
-    },
 }

@@ -23,7 +23,7 @@ class Query:
 
     def taxonomy(self) -> dict:
         """主题体系树：大类 → 主题（讲义 + 教材例句 + 知识点列表）。"""
-        from .taxonomy import THEME_ORDER, classify
+        from .taxonomy import THEME_ORDER, brief_of, classify
         from .theme_notes import THEME_NOTES
 
         kps = self.db.conn.execute(
@@ -49,7 +49,17 @@ class Query:
                     "note": note,
                     "examples": self._theme_examples(group, t, theme_kps),
                     "items": [
-                        {"id": kp.id, "title": kp.title, "lecture": kp.lecture_number}
+                        {
+                            "id": kp.id,
+                            "title": kp.title,
+                            "lecture": kp.lecture_number,
+                            # 一句话释义：正文首句；习题（原综合复习）取题干
+                            "brief": (
+                                "练习：" + kp.title[:44]
+                                if kp.category == "综合复习"
+                                else brief_of(kp)
+                            ),
+                        }
                         for kp in theme_kps
                     ],
                 })
@@ -58,7 +68,7 @@ class Query:
                 "themes": out_themes,
                 "count": sum(len(v) for v in themes.values()),
             })
-        return {"groups": out, "total": len(objects)}
+        return {"groups": [g for g in out if g["themes"]], "total": len(objects)}
 
     def _theme_examples(self, group: str, theme: str, theme_kps, limit: int = 3) -> list[dict]:
         """从该主题的教材语料提取中英对照例句（尽力使用教材原文）。
