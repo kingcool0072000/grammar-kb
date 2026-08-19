@@ -121,6 +121,35 @@ _reg("固定搭配", "介词固定搭配", body=[
 
 
 # --------------------------------------------------------------------------- #
+# 固定搭配：密集出现搭配模式的知识点聚入固定搭配大类
+# --------------------------------------------------------------------------- #
+
+_ALL_COLLOCATION_PATTERNS = [
+    p for _, _, rule in _RULES if "body" in rule for p in rule["body"]
+]
+
+
+def _collocation_hits(kp: KnowledgePoint) -> int:
+    text = f"{kp.body_md or ''}\n{kp.examples_md or ''}"
+    return sum(1 for p in _ALL_COLLOCATION_PATTERNS if p in text)
+
+
+def _collocation_theme(kp: KnowledgePoint) -> tuple[str, str]:
+    """密集搭配知识点 → 动词/介词固定搭配（按命中的模式类别）。"""
+    text = f"{kp.body_md or ''}\n{kp.examples_md or ''}"
+    for _, _, rule in _RULES:
+        if "body" not in rule or rule["body"][0] not in text:
+            continue
+    # 动词类模式特征：sb/spend/had better/used to；介词类：be+adj+prep
+    verb_marks = ("sb.", "sb ", "spend", "had better", "would rather", "used to", "worth doing")
+    prep_marks = ("be good at", "be interested in", "be afraid of", "be full of",
+                  "belong to", "listen to", "arrive at", "depend on", "take care of")
+    n_verb = sum(1 for m in verb_marks if m in text)
+    n_prep = sum(1 for m in prep_marks if m in text)
+    return "固定搭配", ("动词固定搭配" if n_verb >= n_prep else "介词固定搭配")
+
+
+# --------------------------------------------------------------------------- #
 # 综合复习分流：习题不是知识点，按考察主题归入对应语法主题
 # --------------------------------------------------------------------------- #
 
@@ -238,13 +267,16 @@ def brief_of(kp: KnowledgePoint) -> str:
 def classify(kp: KnowledgePoint) -> tuple[str, str]:
     """知识点 → (大类, 主题)。
 
-    大类以讲次 category 为准；主题匹配只在同大类的规则内进行，
-    唯固定搭配（第三轮）与标志词密集（第四轮）可跨大类。
+    优先级：密集搭配（≥2 个搭配模式 → 固定搭配）> 综合复习分流 >
+    subcategory > title > body 搭配 > 标志词密集。
     """
     cat = kp.category or "其它"
-    # 综合复习不是知识点：按考察主题分流进对应语法主题
+    # 综合复习不是知识点：先按考察主题分流（习题的主要考点优先）
     if cat == "综合复习":
         return _classify_review(kp)
+    # 真正讲搭配的知识点（正文密集出现 ≥2 个搭配模式）→ 固定搭配
+    if _collocation_hits(kp) >= 2:
+        return _collocation_theme(kp)
     subcat = kp.tags[1] if len(kp.tags) > 1 else ""
     title = kp.title or ""
     body = f"{kp.body_md or ''}\n{kp.examples_md or ''}"

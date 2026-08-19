@@ -396,3 +396,161 @@ THEME_NOTES: dict[tuple[str, str], dict] = {
         "tips": ["So he does（确实如此）与 So does he（他也是）之分必考"],
     },
 }
+
+
+# 固定搭配清单：table 字段为分类搭配表（模式 | 释义），前端渲染为速查表
+THEME_NOTES[("固定搭配", "动词固定搭配")] = {
+    "summary": "动词搭配考三张清单：接 sb do（省 to）、接 to do、接 doing，外加双义搭配辨析。",
+    "points": [
+        "判断口诀：看见 make/let/see/hear/watch 接 sb，后面动词用原形",
+        "want/ask/tell/decide/hope 等 + to do；enjoy/finish/practice/mind/keep + doing",
+        "look forward to / be used to / be worth 的 to 是介词，必须接 doing",
+        "双义搭配必考：stop to do（停下来去做另一事）≠ stop doing（停止正在做的事）",
+    ],
+    "formula": "省 to 口诀：一感二听三让四看半帮助（feel; hear/listen to; let/make/have; see/watch/look at; help）",
+    "mnemonic": "「喜欢享受又完成，练习介意保持 suggest——后面全接 doing」",
+    "tips": ["主动 make sb do，被动必须 be made TO do（还原 to）"],
+    "table": [
+        {"cat": "动词 + sb + do（省 to）", "items": [
+            ["make sb. do sth.", "让某人做某事"], ["let sb. do sth.", "让某人做某事"],
+            ["have sb. do sth.", "叫某人做某事"], ["see sb. do/doing", "看见某人做/正在做"],
+            ["hear sb. do/doing", "听见某人做/正在做"], ["watch sb. do/doing", "观看某人做/正在做"],
+            ["feel sb. do", "感觉到某人做"], ["help sb. (to) do", "帮助某人做"],
+        ]},
+        {"cat": "动词 + sb + to do", "items": [
+            ["ask sb. to do", "叫某人做"], ["tell sb. to do", "告诉某人做"],
+            ["want sb. to do", "想要某人做"], ["allow sb. to do", "允许某人做"],
+            ["invite sb. to do", "邀请某人做"], ["teach sb. to do", "教某人做"],
+            ["advise sb. to do", "建议某人做"], ["warn sb. not to do", "警告某人别做"],
+        ]},
+        {"cat": "动词 + to do", "items": [
+            ["want to do", "想要做"], ["decide to do", "决定做"], ["hope to do", "希望做"],
+            ["plan to do", "计划做"], ["agree to do", "同意做"], ["refuse to do", "拒绝做"],
+            ["learn to do", "学会做"], ["offer to do", "主动提出做"],
+            ["promise to do", "承诺做"], ["can't wait to do", "迫不及待做"],
+            ["would like to do", "愿意做"], ["It takes sb. time to do", "花某人时间做"],
+        ]},
+        {"cat": "动词 + doing", "items": [
+            ["enjoy doing", "喜欢做"], ["finish doing", "完成做"], ["practice doing", "练习做"],
+            ["mind doing", "介意做"], ["keep doing", "保持做"], ["suggest doing", "建议做"],
+            ["avoid doing", "避免做"], ["can't help doing", "禁不住做"],
+            ["feel like doing", "想要做"], ["be worth doing", "值得做"],
+            ["be busy doing", "忙于做"], ["look forward to doing", "期待做"],
+            ["be used to doing", "习惯于做"], ["spend...(in) doing", "花费…做"],
+        ]},
+        {"cat": "双义搭配（to do ≠ doing）", "items": [
+            ["stop to do / stop doing", "停下来去做 / 停止做"],
+            ["remember to do / doing", "记得要去做（未做）/ 记得做过"],
+            ["forget to do / doing", "忘记要做 / 忘记做过"],
+            ["try to do / doing", "努力做 / 尝试做"],
+            ["go on to do / doing", "接着做另一事 / 继续做同一事"],
+        ]},
+        {"cat": "常用动词短语", "items": [
+            ["had better do", "最好做"], ["would rather do", "宁愿做"],
+            ["why not do", "为什么不做"], ["put on / take off", "穿上 / 脱下"],
+            ["turn on / turn off", "打开 / 关闭"], ["give up doing", "放弃做"],
+            ["pick up", "捡起；接人"], ["look after", "照顾"], ["look for", "寻找"],
+            ["look up", "查阅"], ["get on / get off", "上/下车"], ["wake up", "醒来"],
+            ["grow up", "长大"], ["come true", "实现"], ["take part in", "参加"],
+            ["catch up with", "赶上"], ["make friends with", "与…交朋友"],
+        ]},
+    ],
+}
+
+THEME_NOTES[("固定搭配", "介词固定搭配")] = {
+    "summary": "介词搭配考 be + 形容词 + 介词 与动词 + 介词 两张清单，接错介词全句错。",
+    "points": [
+        "be + adj + prep 固定：be good at / be interested in / be afraid of",
+        "动词 + 宾语 + 介词：take care of / pay attention to / catch up with",
+        "近义介词对比：listen to（听）vs hear（听见）；look at（看）vs see（看见）",
+        "arrive at 小地点 / arrive in 大地点",
+    ],
+    "formula": "at 小 in 大（arrive）；for 为了（wait/pay/ask）；of 所属（take care/be full）",
+    "mnemonic": "「善于 good at，感兴趣 interested in，害怕 afraid of」",
+    "tips": ["be made of（看得出原料）/ be made from（看不出原料）之分必考"],
+    "table": [
+        {"cat": "be + 形容词 + 介词", "items": [
+            ["be good at", "擅长于"], ["be interested in", "对…感兴趣"],
+            ["be afraid of", "害怕"], ["be proud of", "为…自豪"],
+            ["be full of", "充满"], ["be late for", "迟到"],
+            ["be different from", "与…不同"], ["be famous for", "因…出名"],
+            ["be angry with sb.", "生某人的气"], ["be worried about", "担心"],
+            ["be strict with sb.", "对某人严格"], ["be surprised at", "对…惊讶"],
+            ["be friendly to", "对…友好"], ["be kind to", "对…和善"],
+        ]},
+        {"cat": "动词 + 介词", "items": [
+            ["listen to", "听"], ["look at", "看"], ["look for", "寻找"],
+            ["wait for", "等待"], ["pay for", "付款"], ["ask for",  "请求"],
+            ["agree with", "同意（某人）"], ["depend on", "依靠"],
+            ["belong to", "属于"], ["hear from", "收到…来信"],
+            ["hear of", "听说"], ["laugh at", "嘲笑"],
+            ["learn from", "向…学习"], ["think about / of", "思考 / 想起"],
+            ["worry about", "担心"], ["spend...on", "在…花费"],
+            ["thank...for", "因…感谢"], ["arrive at / in", "到达（小/大地点）"],
+            ["get on with", "与…相处"], ["talk about", "谈论"],
+        ]},
+        {"cat": "动词 + 宾语 + 介词", "items": [
+            ["take care of", "照顾"], ["pay attention to", "注意"],
+            ["look forward to", "期待"], ["catch up with", "赶上"],
+            ["get on well with", "与…相处融洽"], ["make fun of", "取笑"],
+            ["say goodbye to", "向…告别"], ["say hello to", "向…问好"],
+            ["take pride in", "以…为荣"], ["make use of", "利用"],
+        ]},
+        {"cat": "其他高频介词短语", "items": [
+            ["borrow...from", "向…借"], ["lend...to", "把…借给"],
+            ["be made of / from", "由…制成（看得出/看不出原料）"],
+            ["be made in", "在…制造"], ["on one's way to", "在去…的路上"],
+            ["in front of / in the front of", "在…前面（外部/内部）"],
+            ["at the end of", "在…末尾"], ["by the way", "顺便说"],
+            ["in a hurry", "匆忙"], ["on time / in time", "按时 / 及时"],
+        ]},
+    ],
+}
+
+THEME_NOTES[("固定搭配", "固定句型")] = {
+    "summary": "固定句型考结果、程度、并列三大系列，认出句型直接套结构。",
+    "points": [
+        "结果句型：so + adj + that / such + n + that / too...to / enough to",
+        "并列句型：both...and（复数谓语）；either...or / neither...nor（就近）",
+        "It 句型：It is adj for/of sb to do；It takes sb time to do",
+        "越…越…：the + 比较级, the + 比较级",
+    ],
+    "formula": "so + 形/副 + that ｜ such + 名词 + that ｜ too + adj + to do（太…而不能）",
+    "mnemonic": "「so 后形副 such 后名，too…to 否定听」",
+    "tips": ["not...until：直到…才（主句动词一般是短暂性动词）"],
+    "table": [
+        {"cat": "结果 / 程度句型", "items": [
+            ["so + adj./adv. + that", "如此…以至于"],
+            ["such + (a) + n. + that", "如此…以至于"],
+            ["too + adj. + to do", "太…而不能"],
+            ["adj. + enough to do", "足够…能做"],
+            ["so that", "以便；结果"],
+        ]},
+        {"cat": "并列句型", "items": [
+            ["both...and", "…和…都（谓语复数）"],
+            ["either...or", "要么…要么（就近）"],
+            ["neither...nor", "既不…也不（就近）"],
+            ["not only...but also", "不仅…而且（就近）"],
+            ["not...but", "不是…而是"],
+        ]},
+        {"cat": "It 句型", "items": [
+            ["It is + adj. + for sb. to do", "对某人来说做…如何"],
+            ["It is + adj. + of sb. to do", "某人做…真…（品质类形容词）"],
+            ["It takes sb. time to do", "花某人时间做"],
+            ["It is said that...", "据说"],
+            ["find it + adj. + to do", "发现做…如何"],
+        ]},
+        {"cat": "时间 / 条件句型", "items": [
+            ["not...until", "直到…才"],
+            ["as soon as", "一…就…"],
+            ["hardly...when", "刚…就…"],
+            ["祈使句 + and/or + 句子", "做…那么/否则"],
+        ]},
+        {"cat": "比较句型", "items": [
+            ["as + adj. + as", "和…一样"],
+            ["not so/as...as", "不如…"],
+            ["the + 比较级, the + 比较级", "越…越…"],
+            ["比较级 + and + 比较级", "越来越…"],
+        ]},
+    ],
+}

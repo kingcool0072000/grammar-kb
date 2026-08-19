@@ -36,6 +36,13 @@ class Query:
             group, theme = classify(kp)
             tree.setdefault(group, {}).setdefault(theme, []).append(kp)
 
+        # 有讲义（尤其搭配清单）但暂无知识点的主题也输出——清单即内容
+        for group, order_themes in THEME_ORDER.items():
+            if group in tree:
+                for tname in order_themes:
+                    if tname not in tree[group] and THEME_NOTES.get((group, tname)):
+                        tree[group][tname] = []
+
         out = []
         for group, themes in tree.items():
             order = THEME_ORDER.get(group, [])
