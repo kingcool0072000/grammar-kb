@@ -38,16 +38,19 @@ export async function mountTaxonomy(el, { pointsById, openKp }) {
           <div class="tax-theme-body" style="display:none">
             ${noteHtml(t.note)}
             ${examplesHtml(t.examples)}
-            <div class="tax-raw-head">教材原文（${t.count}）</div>
+            <div class="tax-raw-head">教材原文 · ${t.count} 条（点击查看全文）</div>
+            <div class="tax-kp-list">
             ${t.items
               .map(
                 (it) => `
-              <article class="kp-card tax-kp" data-kp="${it.id}">
-                <div class="kp-title">${escapeHtml(it.title)}</div>
-                <div class="kp-foot"><span class="kp-lecture">第 ${it.lecture} 讲</span></div>
+              <article class="tax-kp" data-kp="${it.id}">
+                <div class="tax-kp-title">${escapeHtml(it.title)}</div>
+                ${it.brief ? `<div class="tax-kp-brief">${escapeHtml(it.brief)}</div>` : ''}
+                <div class="tax-kp-meta">第 ${it.lecture} 讲</div>
               </article>`,
               )
               .join('')}
+            </div>
           </div>
         </div>`,
         )
@@ -95,15 +98,22 @@ function noteHtml(n) {
   if (!n) return ''
   let h = '<div class="note-card">'
   h += `<div class="note-summary">🎯 ${escapeHtml(n.summary || '')}</div>`
+  h += '<div class="note-body">'
   if (n.points && n.points.length) {
+    h += '<div class="note-sec">核心规则</div>'
     h += '<ol class="note-points">' + n.points.map((p) => `<li>${escapeHtml(p)}</li>`).join('') + '</ol>'
   }
-  if (n.formula) h += `<div class="note-formula"><span class="note-tag">公式</span>${escapeHtml(n.formula)}</div>`
-  if (n.mnemonic) h += `<div class="note-mnemonic"><span class="note-tag">口诀</span>${escapeHtml(n.mnemonic)}</div>`
+  if (n.formula || n.mnemonic) {
+    h += '<div class="note-fm-row">'
+    if (n.formula) h += `<div class="note-formula"><span class="note-tag">公式</span>${escapeHtml(n.formula)}</div>`
+    if (n.mnemonic) h += `<div class="note-mnemonic"><span class="note-tag">口诀</span>${escapeHtml(n.mnemonic)}</div>`
+    h += '</div>'
+  }
   if (n.tips && n.tips.length) {
+    h += '<div class="note-sec">易错提醒</div>'
     h += '<div class="note-tips">' + n.tips.map((t) => `<div>⚠️ ${escapeHtml(t)}</div>`).join('') + '</div>'
   }
-  h += '</div>'
+  h += '</div></div>'
   return h
 }
 
