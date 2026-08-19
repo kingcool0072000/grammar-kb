@@ -764,3 +764,17 @@ main {
 /* 主题展开区统一阅读宽度 */
 .tax-theme-body { padding: 12px; display: flex; flex-direction: column; }
 .tax-theme-body .ex-list, .tax-theme-body .tax-kp-list { max-width: 780px; }
+/* 搭配速查表 */
+.collo-table { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+.collo-group {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 14px 12px;
+}
+.collo-cat {
+  font-size: 12.5px; font-weight: 800; color: var(--brand-ink);
+  margin-bottom: 7px; padding-bottom: 5px; border-bottom: 1px dashed var(--line);
+}
+.collo-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2px 18px; }
+.collo-row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 2px; border-bottom: 1px dotted color-mix(in srgb, var(--line) 60%, white); }
+.collo-en { font-weight: 600; font-size: 13px; white-space: nowrap; }
+.collo-zh { font-size: 12.5px; color: var(--ink-soft); text-align: right; }

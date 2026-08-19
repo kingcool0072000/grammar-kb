@@ -113,7 +113,28 @@ function noteHtml(n) {
     h += '<div class="note-sec">易错提醒</div>'
     h += '<div class="note-tips">' + n.tips.map((t) => `<div>⚠️ ${escapeHtml(t)}</div>`).join('') + '</div>'
   }
+  if (n.table && n.table.length) {
+    h += tableHtml(n.table)
+  }
   h += '</div></div>'
+  return h
+}
+
+// 分类搭配速查表：每组一节，两列（搭配 | 释义）
+function tableHtml(table) {
+  let h = '<div class="note-sec">搭配清单</div><div class="collo-table">'
+  for (const g of table) {
+    h += `<div class="collo-group"><div class="collo-cat">${escapeHtml(g.cat)}</div>`
+    h += '<div class="collo-items">'
+    h += g.items
+      .map(
+        ([a, b]) =>
+          `<div class="collo-row"><span class="collo-en">${escapeHtml(a)}</span><span class="collo-zh">${escapeHtml(b)}</span></div>`,
+      )
+      .join('')
+    h += '</div></div>'
+  }
+  h += '</div>'
   return h
 }
 
