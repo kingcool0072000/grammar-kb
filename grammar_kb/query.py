@@ -22,31 +22,85 @@ class Query:
     # ---- 主题体系（知识点聚合）-------------------------------------------- #
 
     def taxonomy(self) -> dict:
-        """主题体系树：大类 → 主题 → 知识点列表（含每个主题的小结）。"""
+        """主题体系树：大类 → 主题（讲义 + 教材例句 + 知识点列表）。"""
         from .taxonomy import THEME_ORDER, classify
+        from .theme_notes import THEME_NOTES
 
         kps = self.db.conn.execute(
             "SELECT * FROM knowledge_point ORDER BY lecture_number, ord"
         ).fetchall()
-        objects = [_row_to_kp(r, self.db.conn) for r in rows] if False else [_row_to_kp(r, self.db.conn) for r in kps]
+        objects = [_row_to_kp(r, self.db.conn) for r in kps]
 
         tree: dict = {}
         for kp in objects:
             group, theme = classify(kp)
-            tree.setdefault(group, {}).setdefault(theme, []).append(
-                {"id": kp.id, "title": kp.title, "lecture": kp.lecture_number}
-            )
-        # 展示顺序
+            tree.setdefault(group, {}).setdefault(theme, []).append(kp)
+
         out = []
         for group, themes in tree.items():
             order = THEME_ORDER.get(group, [])
             theme_list = sorted(themes.items(), key=lambda kv: order.index(kv[0]) if kv[0] in order else 99)
+            out_themes = []
+            for t, theme_kps in theme_list:
+                note = THEME_NOTES.get((group, t))
+                out_themes.append({
+                    "theme": t,
+                    "count": len(theme_kps),
+                    "note": note,
+                    "examples": self._theme_examples(group, t, theme_kps),
+                    "items": [
+                        {"id": kp.id, "title": kp.title, "lecture": kp.lecture_number}
+                        for kp in theme_kps
+                    ],
+                })
             out.append({
                 "group": group,
-                "themes": [{"theme": t, "count": len(items), "items": items} for t, items in theme_list],
+                "themes": out_themes,
                 "count": sum(len(v) for v in themes.values()),
             })
         return {"groups": out, "total": len(objects)}
+
+    def _theme_examples(self, group: str, theme: str, theme_kps, limit: int = 3) -> list[dict]:
+        """从该主题的教材语料提取中英对照例句（尽力使用教材原文）。
+
+        过滤：英文须为完整句；中文须像翻译（排除「先行词/分析/句2」等语法讲解行）。
+        优先选包含主题关键词的短句。
+        """
+        from .vocabulary import pair_sentences
+
+        keywords = {
+            "宾语从句": ("that", "if", "whether", "know", "told"),
+            "定语从句": ("who", "which", "that", "whose", "whom"),
+            "状语从句": ("if", "when", "because", "although", "while"),
+            "感叹句": ("what", "how"),
+            "反义疑问句": ("isn't", "doesn't", "didn't", "aren't"),
+            "被动语态": ("been", "was ", "were ", "is ", "are ", "be "),
+        }.get(theme, ())
+
+        zh_noise = (
+            "分析", "先行词", "句2", "句1", "代词", "结构", "语序", "表示", "用法",
+            "主语", "谓语", "连接词", "表语", "从句", "引导词", "动词", "名词", "时态",
+        )
+        picked: list[dict] = []
+        for kp in theme_kps:
+            for en, zh in pair_sentences((kp.body_md or "") + "\n" + (kp.examples_md or "")):
+                if len(picked) >= limit:
+                    break
+                en = en.strip()
+                zh = zh.strip()
+                if not (en[:1].isupper() and en[-1:] in ".!?"):
+                    continue
+                if not (4 <= len(zh) <= 45) or any(n in zh for n in zh_noise):
+                    continue
+                if any(p["en"] == en for p in picked):
+                    continue
+                picked.append({"en": en, "zh": zh})
+            if len(picked) >= limit:
+                break
+        # 含主题关键词的例句优先
+        if keywords:
+            picked.sort(key=lambda p: 0 if any(k in p["en"].lower() for k in keywords) else 1)
+        return picked[:limit]
 
     # ---- 词典（ECDICT）--------------------------------------------------- #
 

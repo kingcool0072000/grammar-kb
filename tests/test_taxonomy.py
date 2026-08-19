@@ -39,3 +39,42 @@ def test_sentence_type_by_title():
 def test_other_fallback():
     g, t = classify(_kp("完全无法归类的内容标题", cat="句法"))
     assert t == "其它"
+
+
+def test_theme_notes_cover_all_populated_themes():
+    """每个有知识点的主题都配有讲义（统一讲解形式：summary/points/formula/tips）。"""
+    from grammar_kb.db import GrammarDB
+    from grammar_kb.query import Query
+    from grammar_kb.theme_notes import THEME_NOTES
+
+    q = Query(GrammarDB("data/grammar.db"))
+    t = q.taxonomy()
+    missing = []
+    for g in t["groups"]:
+        for th in g["themes"]:
+            if g["group"] == "综合复习":
+                continue  # 综合练习主题允许无讲义
+            note = th.get("note")
+            if not note or not note.get("points"):
+                missing.append(f"{g['group']}·{th['theme']}")
+            else:
+                # 讲义形式统一性：summary 一句话 + points 条目 + formula 或 tips
+                assert note.get("summary"), f"{th['theme']} 缺 summary"
+                assert note.get("formula") or note.get("tips"), f"{th['theme']} 缺 formula/tips"
+    assert not missing, f"缺讲义的主题: {missing}"
+
+
+def test_theme_examples_use_corpus():
+    """主题例句来自教材语料（中英对、完整句、非语法标注行）。"""
+    from grammar_kb.db import GrammarDB
+    from grammar_kb.query import Query
+
+    q = Query(GrammarDB("data/grammar.db"))
+    t = q.taxonomy()
+    total = sum(len(th["examples"]) for g in t["groups"] for th in g["themes"])
+    assert total >= 40, f"教材例句过少: {total}"
+    for g in t["groups"]:
+        for th in g["themes"]:
+            for ex in th["examples"]:
+                assert ex["en"][:1].isupper() and ex["en"][-1] in ".!?"
+                assert 4 <= len(ex["zh"]) <= 45
