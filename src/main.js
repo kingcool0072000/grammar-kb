@@ -1,8 +1,6 @@
 import './styles.css'
 import { api, fetchAllPoints } from './api.js'
 import { mountCourses } from './views/courses.js'
-import { mountPoints } from './views/points.js'
-import { mountNetwork } from './views/network.js'
 import { mountVocabulary } from './views/vocabulary.js'
 import { mountTaxonomy } from './views/taxonomy.js'
 import { createDrawer } from './components/drawer.js'
@@ -11,8 +9,6 @@ const app = document.getElementById('app')
 
 const VIEWS = [
   { key: 'courses', label: '课程' },
-  { key: 'points', label: '知识点' },
-  { key: 'network', label: '关系网络' },
   { key: 'vocab', label: '词汇表' },
   { key: 'taxonomy', label: '知识体系' },
 ]
@@ -127,7 +123,6 @@ async function bootstrap() {
   boot.remove()
 
   // 路由
-  let currentUnbind = null
   const viewEl = h('div')
   main.append(viewEl)
 
@@ -144,14 +139,9 @@ async function bootstrap() {
     headerInner.querySelectorAll('.tab').forEach((t) =>
       t.classList.toggle('active', t.dataset.view === route),
     )
-    if (currentUnbind) { try { currentUnbind() } catch {} currentUnbind = null }
     viewEl.innerHTML = ''
     if (route === 'courses') {
       mountCourses(viewEl, { lectures: state.lectures, openLecture: ctx.openLecture })
-    } else if (route === 'points') {
-      mountPoints(viewEl, { points: state.points, openKp: ctx.openKp })
-    } else if (route === 'network') {
-      currentUnbind = mountNetwork(viewEl, { points: state.points, openKp: ctx.openKp })
     } else if (route === 'vocab') {
       mountVocabulary(viewEl, { vocab: state.vocab, openWord: (e) => drawer.showWord(e) })
     } else if (route === 'taxonomy') {

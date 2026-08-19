@@ -312,58 +312,6 @@ main {
   font-weight: 600;
 }
 
-/* ---------- 网络图 ---------- */
-.network-wrap {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 18px;
-  align-items: start;
-}
-#network-chart {
-  width: 100%;
-  height: 70vh;
-  min-height: 520px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-}
-.net-panel {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 18px;
-  position: sticky;
-  top: 88px;
-}
-.net-panel h3 { margin: 0 0 6px; font-size: 15px; }
-.net-panel .help { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 14px; }
-.edge-mode {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-.edge-mode label {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  font-size: 13px;
-  color: var(--ink);
-  cursor: pointer;
-  padding: 7px 9px;
-  border-radius: 9px;
-  border: 1px solid var(--line);
-}
-.edge-mode label:hover { background: var(--bg-soft); }
-.edge-mode input { margin-top: 3px; }
-.edge-mode label small {
-  display: block;
-  color: var(--ink-faint);
-  font-weight: 500;
-}
-.legend { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
-.legend-row { display: flex; align-items: center; gap: 8px; }
-
 @media (max-width: 860px) {
   .network-wrap { grid-template-columns: 1fr; }
   .net-panel { position: static; }
