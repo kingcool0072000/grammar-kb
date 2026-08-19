@@ -709,3 +709,30 @@ main {
 .tax-count { font-size: 11.5px; color: var(--ink-faint); font-weight: 700; background: var(--card); border-radius: 999px; padding: 1px 9px; }
 .tax-theme-body { padding: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
 .tax-kp { padding: 10px 13px; }
+
+/* 主题讲义 */
+.note-card {
+  background: color-mix(in srgb, var(--brand) 5%, white);
+  border: 1px solid color-mix(in srgb, var(--brand) 25%, white);
+  border-radius: 12px;
+  padding: 14px 17px;
+  margin-bottom: 10px;
+}
+.note-summary { font-weight: 800; font-size: 14.5px; color: var(--brand-ink); margin-bottom: 8px; }
+.note-points { margin: 6px 0 10px; padding-left: 20px; }
+.note-points li { font-size: 13.5px; margin: 4px 0; line-height: 1.55; }
+.note-formula, .note-mnemonic {
+  font-size: 13px; margin: 6px 0; padding: 7px 11px;
+  background: var(--card); border-radius: 8px; line-height: 1.5;
+}
+.note-mnemonic { color: #7c3aed; }
+.note-tag {
+  display: inline-block; font-size: 11px; font-weight: 800; color: #fff;
+  background: var(--brand); border-radius: 5px; padding: 1px 7px; margin-right: 8px;
+}
+.note-mnemonic .note-tag { background: #7c3aed; }
+.note-tips { font-size: 12.5px; color: #b45309; margin-top: 6px; line-height: 1.6; }
+.tax-raw-head {
+  font-size: 12px; font-weight: 800; color: var(--ink-faint);
+  margin: 10px 0 6px; letter-spacing: .05em;
+}

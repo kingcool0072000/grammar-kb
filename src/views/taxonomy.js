@@ -36,6 +36,9 @@ export async function mountTaxonomy(el, { pointsById, openKp }) {
             <span class="tax-count">${t.count}</span>
           </button>
           <div class="tax-theme-body" style="display:none">
+            ${noteHtml(t.note)}
+            ${examplesHtml(t.examples)}
+            <div class="tax-raw-head">教材原文（${t.count}）</div>
             ${t.items
               .map(
                 (it) => `
@@ -85,6 +88,34 @@ export async function mountTaxonomy(el, { pointsById, openKp }) {
     }
   })
 
+}
+
+// 老师讲义：定位一句话 → 核心规则 → 公式 → 口诀 → 易错
+function noteHtml(n) {
+  if (!n) return ''
+  let h = '<div class="note-card">'
+  h += `<div class="note-summary">🎯 ${escapeHtml(n.summary || '')}</div>`
+  if (n.points && n.points.length) {
+    h += '<ol class="note-points">' + n.points.map((p) => `<li>${escapeHtml(p)}</li>`).join('') + '</ol>'
+  }
+  if (n.formula) h += `<div class="note-formula"><span class="note-tag">公式</span>${escapeHtml(n.formula)}</div>`
+  if (n.mnemonic) h += `<div class="note-mnemonic"><span class="note-tag">口诀</span>${escapeHtml(n.mnemonic)}</div>`
+  if (n.tips && n.tips.length) {
+    h += '<div class="note-tips">' + n.tips.map((t) => `<div>⚠️ ${escapeHtml(t)}</div>`).join('') + '</div>'
+  }
+  h += '</div>'
+  return h
+}
+
+// 教材原文例句（中英对照）
+function examplesHtml(exs) {
+  if (!exs || !exs.length) return ''
+  return (
+    '<div class="tax-raw-head">教材例句</div>' +
+    '<div class="ex-list">' +
+    exs.map((x) => `<div class="ex-item"><p class="ex-en">${escapeHtml(x.en)}</p><p class="ex-zh">${escapeHtml(x.zh)}</p></div>`).join('') +
+    '</div>'
+  )
 }
 
 const GROUP_COLOR = {
