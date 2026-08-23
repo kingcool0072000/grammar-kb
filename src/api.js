@@ -37,6 +37,26 @@ export const api = {
   // 全量词典（ECDICT）：任意单词可查，不限于讲义语料
   dict: (word) => req(`/dict/${encodeURIComponent(word)}`),
   taxonomy: () => req('/taxonomy'),
+  // 作业成绩（后端 exam.db 持久化）
+  examsList: () => req('/exams'),
+  examsAdd: (rec) =>
+    fetch(new URL(BASE + '/exams', location.origin), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rec),
+    }).then(async (r) => {
+      const j = await r.json()
+      if (!r.ok || j.code !== 0) throw new Error(j.detail || j.message || `HTTP ${r.status}`)
+      return j.data
+    }),
+  examsDelete: (id) =>
+    fetch(new URL(`${BASE}/exams/${id}`, location.origin), { method: 'DELETE' }).then(
+      async (r) => {
+        const j = await r.json()
+        if (!r.ok || j.code !== 0) throw new Error(j.detail || j.message || `HTTP ${r.status}`)
+        return j.data
+      },
+    ),
 }
 
 // 规整单个知识点，保证集合字段为数组

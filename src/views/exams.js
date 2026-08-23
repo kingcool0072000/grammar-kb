@@ -1,26 +1,34 @@
 import { escapeHtml } from '../render.js'
+import { api } from '../api.js'
 
 // 作业成绩记录：每讲一份作业卷（35 题，1~5 每题 2 分、6~35 每题 3 分，满分 100）。
 // 孩子每卷会做多次：全部记录存 localStorage，错题按「讲次+题号」汇总方便回查。
-const STORE_KEY = 'gkb-exam-records-v1'
+const STORE_KEY = 'gkb-exam-records-v1'   // 旧 localStorage 记录，首启迁移到后端
+const MIGRATED_KEY = 'gkb-exam-migrated-v1'
 const TOTAL = 35
 
 // 题号 → 分值（1~5 题 2 分，6~35 题 3 分）
 const scoreOf = (q) => (q <= 5 ? 2 : 3)
 const fullScore = Array.from({ length: TOTAL }, (_, i) => scoreOf(i + 1)).reduce((a, b) => a + b, 0)
 
-function loadRecords() {
+// 记录持久化于后端 exam.db；首次启动把 localStorage 旧记录迁移上去
+async function migrateOnce() {
+  if (localStorage.getItem(MIGRATED_KEY)) return
+  localStorage.setItem(MIGRATED_KEY, '1')
   try {
-    const raw = localStorage.getItem(STORE_KEY)
-    const arr = raw ? JSON.parse(raw) : []
-    return Array.isArray(arr) ? arr : []
-  } catch {
-    return []
-  }
-}
-
-function saveRecords(list) {
-  localStorage.setItem(STORE_KEY, JSON.stringify(list))
+    const remote = await api.examsList()
+    if (remote.length) return
+    let old = []
+    try {
+      old = JSON.parse(localStorage.getItem(STORE_KEY) || '[]')
+    } catch { /* 忽略坏数据 */ }
+    for (const r of old) {
+      if (r && r.lecture && r.date != null) {
+        await api.examsAdd({ lecture: r.lecture, date: r.date, score: r.score || 0, wrong: r.wrong || [] })
+      }
+    }
+    if (old.length) console.info(`已迁移 ${old.length} 条本地成绩到后端`)
+  } catch { /* 后端不可用时下次再迁移 */ }
 }
 
 export function mountExams(el, { lectures }) {
@@ -111,29 +119,32 @@ export function mountExams(el, { lectures }) {
     paintQ()
     paintLive()
   })
-  el.querySelector('#ex-save').addEventListener('click', () => {
+  el.querySelector('#ex-save').addEventListener('click', async () => {
     const lost = [...wrong].reduce((s, q) => s + scoreOf(q), 0)
-    const rec = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      lecture: Number($lec.value),
-      date: $date.value || new Date().toISOString().slice(0, 10),
-      score: fullScore - lost,
-      wrong: [...wrong].sort((a, b) => a - b),
+    const btn = el.querySelector('#ex-save')
+    btn.disabled = true
+    try {
+      await api.examsAdd({
+        lecture: Number($lec.value),
+        date: $date.value || new Date().toISOString().slice(0, 10),
+        score: fullScore - lost,
+        wrong: [...wrong].sort((a, b) => a - b),
+      })
+      wrong.clear()
+      paintQ()
+      paintLive()
+      await refresh()
+    } catch (e) {
+      alert(`保存失败：${e.message}（请确认后端服务在运行）`)
+    } finally {
+      btn.disabled = false
     }
-    const list = loadRecords()
-    list.push(rec)
-    saveRecords(list)
-    wrong.clear()
-    paintQ()
-    paintLive()
-    renderWrong()
-    renderHistory()
   })
   paintLive()
 
   // ---------- 错题本 ----------
-  function renderWrong() {
-    const list = loadRecords()
+  async function renderWrong() {
+    const list = await fetchRecords(el)
     // (讲次, 题号) → 错误次数
     const agg = new Map()
     for (const r of list) {
@@ -170,8 +181,8 @@ export function mountExams(el, { lectures }) {
   }
 
   // ---------- 全部成绩 ----------
-  function renderHistory() {
-    const list = loadRecords().slice().sort((a, b) => a.lecture - b.lecture || (a.date < b.date ? 1 : -1))
+  async function renderHistory() {
+    const list = (await fetchRecords(el)).slice().sort((a, b) => a.lecture - b.lecture || (a.date < b.date ? 1 : -1))
     const $h = el.querySelector('#ex-history')
     if (!list.length) {
       $h.innerHTML = '<div class="empty">还没有作答记录，先在上方记一次。</div>'
@@ -210,18 +221,21 @@ export function mountExams(el, { lectures }) {
   }
 
   // 删除单条
-  el.querySelector('#ex-history').addEventListener('click', (e) => {
+  el.querySelector('#ex-history').addEventListener('click', async (e) => {
     const del = e.target.closest('.his-del')
     if (!del) return
     const id = del.closest('.his-row').dataset.id
-    saveRecords(loadRecords().filter((r) => r.id !== id))
-    renderWrong()
-    renderHistory()
+    try {
+      await api.examsDelete(id)
+      await refresh()
+    } catch (err) {
+      alert(`删除失败：${err.message}`)
+    }
   })
 
   // 导出
-  el.querySelector('#ex-export').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(loadRecords(), null, 2)], { type: 'application/json' })
+  el.querySelector('#ex-export').addEventListener('click', async () => {
+    const blob = new Blob([JSON.stringify(await fetchRecords(el), null, 2)], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
     a.download = `作业成绩-${new Date().toISOString().slice(0, 10)}.json`
@@ -229,6 +243,24 @@ export function mountExams(el, { lectures }) {
     URL.revokeObjectURL(a.href)
   })
 
-  renderWrong()
-  renderHistory()
+  // 统一刷新：迁移旧数据 → 拉后端记录 → 重渲染
+  async function refresh() {
+    await migrateOnce()
+    await Promise.all([renderWrong(), renderHistory()])
+  }
+  refresh()
+}
+
+// 拉记录（带错误提示）；挂载时 el 已在 DOM
+async function fetchRecords(el) {
+  try {
+    return await api.examsList()
+  } catch (e) {
+    const tip = el.querySelector('.view-head p')
+    if (tip && !tip.dataset.err) {
+      tip.dataset.err = '1'
+      tip.innerHTML += `<br><span style="color:#b91c1c">⚠ 成绩服务连接失败（${escapeHtml(e.message)}），检查后端是否在运行。</span>`
+    }
+    return []
+  }
 }
