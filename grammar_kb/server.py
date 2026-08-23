@@ -36,6 +36,9 @@ def create_app(db_path: Optional[str] = None):
     from fastapi.responses import JSONResponse
 
     kbq = Query(open_db(db_path))
+    from .exam_db import ExamStore
+
+    exam_store = ExamStore()
     app = FastAPI(
         title="grammar-kb 题库 API",
         version=__version__,
@@ -153,6 +156,32 @@ def create_app(db_path: Optional[str] = None):
         """反查：给定考点信号，返回会考该信号的知识点（反之亦然）。"""
         items = kbq.kps_by_exam_signal(signal)
         return _ok({"signal": signal, "count": len(items), "items": [asdict(k) for k in items]})
+
+    @app.get("/exams")
+    def exams_list():
+        """全部作业成绩记录。"""
+        return _ok(exam_store.list())
+
+    @app.post("/exams")
+    async def exams_add(payload: dict):
+        """新增一条作答记录 {lecture, date, score, wrong:[题号]}。"""
+        try:
+            rec = exam_store.add(
+                lecture=int(payload["lecture"]),
+                date=str(payload["date"]),
+                score=int(payload["score"]),
+                wrong=payload.get("wrong") or [],
+            )
+        except (KeyError, TypeError, ValueError) as e:
+            raise HTTPException(status_code=422, detail=f"参数不完整：{e}")
+        return _ok(rec)
+
+    @app.delete("/exams/{record_id}")
+    def exams_delete(record_id: str):
+        """删除一条作答记录。"""
+        if not exam_store.delete(record_id):
+            raise HTTPException(status_code=404, detail="记录不存在")
+        return _ok({"deleted": record_id})
 
     @app.get("/taxonomy")
     def taxonomy():
