@@ -117,7 +117,7 @@ uv run grammar-kb serve --port 8000          # 经由 CLI
 uv run grammar-kb-server --host 0.0.0.0 --port 8000
 ```
 
-启动后访问 `http://127.0.0.1:8000/docs` 查看交互式 API 文档。端点（均只读）：
+启动后访问 `http://127.0.0.1:8000/docs` 查看交互式 API 文档。端点（除作业成绩外均只读）：
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -128,6 +128,11 @@ uv run grammar-kb-server --host 0.0.0.0 --port 8000
 | GET | `/search?q=...&category=...&limit=...` | 全文检索 |
 | GET | `/markers?category=时态&tense=...` | 标志词 |
 | GET | `/relation?type=主将从现` | 按关系查 |
+| GET | `/dict/{word}` | ECDICT 全量词典查词 |
+| GET | `/taxonomy` | 知识点主题体系树 |
+| GET | `/exams` | 作业成绩记录列表 |
+| POST | `/exams` | 新增成绩记录 {lecture,date,score,wrong} |
+| DELETE | `/exams/{id}` | 删除成绩记录 |
 | GET | `/exam-signals` | 所有考点信号维度 |
 | GET | `/exam-signal?signal=时态` | 按考点反查知识点 |
 | GET | `/vocabulary?limit=300&min_freq=2` | 单词表（释义/词性/词形变化） |
@@ -148,6 +153,8 @@ curl "http://127.0.0.1:8000/lectures/25?format=html"
 
 **CORS**：默认允许所有来源（`Access-Control-Allow-Origin: *`），前端可直接跨域调用。
 收紧白名单：`GRAMMAR_KB_CORS_ORIGINS=https://a.com,https://b.com grammar-kb-server`。
+
+作业成绩存独立的 `data/exam.db`（与 grammar.db 分离：语料库由 ingest 全量重建，成绩库持续追加、不受重建影响）。
 
 ## 作为 MCP 服务
 
