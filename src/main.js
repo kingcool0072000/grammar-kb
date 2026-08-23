@@ -3,6 +3,7 @@ import { api, fetchAllPoints } from './api.js'
 import { mountCourses } from './views/courses.js'
 import { mountVocabulary } from './views/vocabulary.js'
 import { mountTaxonomy } from './views/taxonomy.js'
+import { mountExams } from './views/exams.js'
 import { createDrawer } from './components/drawer.js'
 
 const app = document.getElementById('app')
@@ -11,6 +12,7 @@ const VIEWS = [
   { key: 'courses', label: '课程' },
   { key: 'vocab', label: '词汇表' },
   { key: 'taxonomy', label: '知识体系' },
+  { key: 'exams', label: '作业成绩' },
 ]
 
 function h(tag, cls, html) {
@@ -146,6 +148,8 @@ async function bootstrap() {
       mountVocabulary(viewEl, { vocab: state.vocab, openWord: (e) => drawer.showWord(e) })
     } else if (route === 'taxonomy') {
       mountTaxonomy(viewEl, { pointsById, openKp: ctx.openKp })
+    } else if (route === 'exams') {
+      mountExams(viewEl, { lectures: state.lectures })
     }
     window.scrollTo(0, 0)
   }

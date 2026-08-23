@@ -726,3 +726,72 @@ main {
 .collo-row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 2px; border-bottom: 1px dotted color-mix(in srgb, var(--line) 60%, white); }
 .collo-en { font-weight: 600; font-size: 13px; white-space: nowrap; }
 .collo-zh { font-size: 12.5px; color: var(--ink-soft); text-align: right; }
+
+/* ---------- 作业成绩 ---------- */
+.exam-sec { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 18px; }
+.exam-sec h3 { margin: 0 0 14px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; }
+.sec-sub { font-size: 12.5px; font-weight: 500; color: var(--ink-faint); }
+.exam-form-row { display: flex; gap: 18px; align-items: end; flex-wrap: wrap; margin-bottom: 12px; }
+.exam-form label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+.exam-form select, .exam-form input[type="date"] {
+  border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px;
+  font-size: 14px; color: var(--ink); background: var(--card); min-width: 200px;
+}
+.ex-live { font-size: 15px; color: var(--ink); padding: 6px 0; }
+.ex-live b { color: var(--brand-ink); font-size: 22px; }
+.ex-detail { font-size: 12px; color: var(--ink-faint); }
+.ex-tip { font-size: 12.5px; color: var(--ink-soft); margin: 4px 0 10px; }
+.q-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 7px; margin-bottom: 14px; }
+.q-btn {
+  border: 1px solid var(--line); background: var(--card); border-radius: 9px;
+  padding: 9px 0; font-size: 14.5px; font-weight: 700; color: var(--ink-soft); cursor: pointer;
+  transition: all .12s;
+}
+.q-btn:hover { border-color: var(--brand); }
+.q-btn.wrong { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
+.q-btn.wrong::after { content: " ✗"; }
+.ex-tip .q-btn { padding: 1px 9px; cursor: default; }
+.ex-tip .q-btn.right { background: #dcfce7; border-color: #86efac; color: #15803d; }
+.exam-actions { display: flex; gap: 10px; }
+.btn-primary {
+  border: 0; background: var(--brand); color: #fff; font-weight: 700; font-size: 14px;
+  border-radius: 10px; padding: 10px 22px; cursor: pointer;
+}
+.btn-primary:hover { background: var(--brand-ink); }
+.btn-ghost {
+  border: 1px solid var(--line); background: var(--card); color: var(--ink-soft);
+  font-weight: 600; font-size: 13.5px; border-radius: 10px; padding: 10px 16px; cursor: pointer;
+}
+.btn-ghost:hover { border-color: var(--ink-faint); color: var(--ink); }
+.wrong-stats { font-size: 13px; color: var(--ink-soft); margin-bottom: 10px; }
+.wrong-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.wrong-item {
+  display: flex; align-items: center; gap: 9px; background: var(--bg-soft);
+  border-radius: 9px; padding: 8px 11px; font-size: 13px;
+}
+.wrong-item.hot { background: #fef2f2; border: 1px solid #fecaca; }
+.wrong-n { font-weight: 800; color: #b91c1c; font-size: 13px; }
+.wrong-item.hot .wrong-n { color: #dc2626; }
+.wrong-lq { font-weight: 700; white-space: nowrap; }
+.wrong-t { color: var(--ink-faint); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exam-toolbar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+.his-group { border: 1px solid var(--line); border-radius: 11px; margin-bottom: 10px; overflow: hidden; }
+.his-head { background: var(--bg-soft); padding: 9px 14px; font-size: 13.5px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.his-meta { font-size: 12px; color: var(--ink-faint); font-weight: 600; }
+.his-row {
+  display: flex; align-items: center; gap: 12px; padding: 8px 14px;
+  border-top: 1px solid var(--line); font-size: 13px;
+}
+.his-date { color: var(--ink-faint); font-weight: 600; min-width: 92px; }
+.his-score { font-weight: 800; min-width: 58px; }
+.his-score.good { color: #15803d; }
+.his-score.mid { color: #b45309; }
+.his-score.bad { color: #b91c1c; }
+.his-wrong { display: flex; gap: 5px; flex-wrap: wrap; flex: 1; }
+.wrong-chip { font-size: 11.5px; background: #fee2e2; color: #b91c1c; border-radius: 6px; padding: 2px 8px; font-weight: 700; }
+.all-right { color: #15803d; font-weight: 700; }
+.his-del {
+  border: 0; background: transparent; color: var(--ink-faint); font-size: 15px;
+  cursor: pointer; padding: 2px 7px; border-radius: 6px;
+}
+.his-del:hover { background: #fee2e2; color: #b91c1c; }
