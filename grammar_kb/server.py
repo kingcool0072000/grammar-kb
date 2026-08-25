@@ -29,13 +29,32 @@ def _ok(data: Any = None, message: str = "ok") -> dict:
     return {"code": 0, "message": message, "data": data}
 
 
-def create_app(db_path: Optional[str] = None):
-    """构造 FastAPI 应用。``db_path`` 为 None 时走默认库（GRAMMAR_KB_DB 或 data/grammar.db）。"""
+try:
+    from pydantic import BaseModel, Field
+
+    class ExamRecordIn(BaseModel):
+        """作业成绩请求体（模块级定义：本文件启用延迟注解，闭包内模型无法被 FastAPI 解析）。"""
+
+        lecture: int = Field(ge=1, le=99, description="讲次")
+        date: str = Field(description="作答日期 YYYY-MM-DD")
+        score: int = Field(default=0, ge=0, le=100)
+        wrong: list[int] = Field(default_factory=list, description="错题题号")
+
+except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
+    ExamRecordIn = None
+
+
+def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None):
+    """构造 FastAPI 应用。``db_path`` 为 None 时走默认库（GRAMMAR_KB_DB 或 data/grammar.db）；
+    ``exam_db_path`` 为成绩库路径（默认 iCloud Drive 或 data/exam.db）。"""
     from fastapi import FastAPI, HTTPException, Query as FQuery
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
 
+    from .exam_store import ExamStore
+
     kbq = Query(open_db(db_path))
+    exams = ExamStore(exam_db_path)
     app = FastAPI(
         title="grammar-kb 题库 API",
         version=__version__,
@@ -86,6 +105,7 @@ def create_app(db_path: Optional[str] = None):
                     "GET /exam-signals",
                     "GET /exam-signal?signal=时态",
                     "GET /vocabulary?limit=300&min_freq=2",
+                    "GET/POST /exams · PUT/DELETE /exams/{id}",
                     "GET /docs (Swagger UI)",
                 ],
             }
@@ -172,6 +192,29 @@ def create_app(db_path: Optional[str] = None):
         """基于讲义语料的单词表（释义/词性/词形变化/来源）。"""
         return _ok(kbq.vocabulary(limit=limit, min_freq=min_freq))
 
+    # ---- 作业成绩（可写；独立 exam.db，默认放 iCloud Drive 跨设备同步） ----
+
+    @app.get("/exams")
+    def exams_list():
+        return _ok(exams.list())
+
+    @app.post("/exams")
+    def exams_add(rec: ExamRecordIn):
+        return _ok(exams.add(**rec.model_dump()))
+
+    @app.put("/exams/{exam_id}")
+    def exams_update(exam_id: int, rec: ExamRecordIn):
+        updated = exams.update(exam_id, **rec.model_dump())
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"成绩记录 id={exam_id} 不存在")
+        return _ok(updated)
+
+    @app.delete("/exams/{exam_id}")
+    def exams_delete(exam_id: int):
+        if not exams.delete(exam_id):
+            raise HTTPException(status_code=404, detail=f"成绩记录 id={exam_id} 不存在")
+        return _ok({"id": exam_id})
+
     return app
 
 
@@ -186,10 +229,11 @@ def run_app(
     host: str = "127.0.0.1",
     port: int = 8000,
     db_path: Optional[str] = None,
+    exam_db_path: Optional[str] = None,
 ) -> None:
     import uvicorn
 
-    uvicorn.run(create_app(db_path), host=host, port=port)
+    uvicorn.run(create_app(db_path, exam_db_path), host=host, port=port)
 
 
 def main() -> None:
@@ -199,8 +243,13 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--db", default=None, help="数据库路径（默认 data/grammar.db 或 $GRAMMAR_KB_DB）")
+    parser.add_argument(
+        "--exam-db",
+        default=None,
+        help="作业成绩库路径（默认 $GRAMMAR_KB_EXAM_DB，iCloud Drive 可用时用 iCloud，否则 data/exam.db）",
+    )
     args = parser.parse_args()
-    run_app(host=args.host, port=args.port, db_path=args.db)
+    run_app(host=args.host, port=args.port, db_path=args.db, exam_db_path=args.exam_db)
 
 
 if __name__ == "__main__":
