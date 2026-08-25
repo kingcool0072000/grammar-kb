@@ -1,8 +1,12 @@
 # grammar-kb
 
-把 **PDF 教材 / 讲义 / 手册** 清洗并结构化为**可检索、可溯源的知识点数据库**：
-自动去水印、还原表格、切分知识点、抽取关键词与关系，存入本地 SQLite（FTS5 全文检索），
-提供 CLI 与 MCP 服务。
+英语语法教学讲义的**知识库 + 学习前端**单仓项目，分两层：
+
+- **`grammar_kb/`（Python 后端）**：把 PDF 教材/讲义清洗并结构化为**可检索、可溯源的知识点数据库**——
+  自动去水印、还原表格、切分知识点、抽取关键词与关系，存入本地 SQLite（FTS5 全文检索），
+  提供 CLI、HTTP API 与 MCP 服务。
+- **`web/`（Vite 前端）**：面向学生的学习界面——按课程 / 词汇表 / 知识体系三种方式浏览讲义，
+  外加作业成绩记录（增删改查，持久化于 iCloud Drive，跨设备同步）。
 
 适用于任何"版式相对统一、带页眉页脚水印、含表格"的教学/技术 PDF。
 
@@ -73,9 +77,11 @@ PDF ──► pdf_parser   去水印（字体+方向过滤）+ 重排行 + 还�
 | `db.py`         | schema + CRUD + FTS5(trigram, external-content)，无截断 |
 | `query.py`      | 面向调用的查询 API |
 | `ingest.py`     | PDF → 落库（目录导入 = 全量重建，id 可复现） |
+| `exam_store.py` | 作业成绩独立 SQLite 库（增删改查；默认放 iCloud Drive） |
 | `cli.py`        | 命令行 |
 | `server.py`     | HTTP 服务（可选 extra） |
 | `mcp_server.py` | MCP 服务（可选 extra） |
+| `web/`          | 学习前端（Vite，详见下文「Web 学习前端」与 `web/README.md`） |
 
 ---
 
@@ -117,7 +123,7 @@ uv run grammar-kb serve --port 8000          # 经由 CLI
 uv run grammar-kb-server --host 0.0.0.0 --port 8000
 ```
 
-启动后访问 `http://127.0.0.1:8000/docs` 查看交互式 API 文档。端点（均只读）：
+启动后访问 `http://127.0.0.1:8000/docs` 查看交互式 API 文档。端点：
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -131,6 +137,20 @@ uv run grammar-kb-server --host 0.0.0.0 --port 8000
 | GET | `/exam-signals` | 所有考点信号维度 |
 | GET | `/exam-signal?signal=时态` | 按考点反查知识点 |
 | GET | `/vocabulary?limit=300&min_freq=2` | 单词表（释义/词性/词形变化） |
+| GET | `/taxonomy` | 知识点主题体系树（大类→主题） |
+| GET | `/dict/{word}` | 查任意单词（ECDICT 全量词典） |
+| GET/POST | `/exams` | 作业成绩：列表 / 新增 |
+| PUT/DELETE | `/exams/{id}` | 作业成绩：修改 / 删除 |
+
+### 作业成绩数据存在哪
+
+成绩存在**独立**的 SQLite 库（与讲义库 `data/grammar.db` 分开），路径按顺序解析：
+
+1. 环境变量 `GRAMMAR_KB_EXAM_DB`
+2. **iCloud Drive**：`~/Library/Mobile Documents/com~apple~CloudDocs/grammar-kb/exam.db`（macOS 且 iCloud 可用时）——数据量小，放云端由 iCloud 在多台设备间同步
+3. 兜底 `data/exam.db`
+
+库刻意不用 WAL 模式（单文件自包含，iCloud 整文件同步更可靠）；其他设备装好本仓库、登录同一 iCloud 账号后启动服务，读到的就是同一份成绩。
 
 示例：
 ```bash
@@ -171,6 +191,32 @@ Claude Desktop 配置示例：
   }
 }
 ```
+
+---
+
+## Web 学习前端（`web/`）
+
+面向学生的学习界面，依赖本地运行的后端服务（默认 `http://127.0.0.1:8000``，开发期由 Vite 把 `/api/*` 代理过去）。
+
+```bash
+# 终端 1：先起后端
+uv sync --extra server && uv run grammar-kb-server
+
+# 终端 2：再起前端
+cd web && npm install && npm run dev     # http://localhost:5180
+```
+
+功能：
+
+- **按课程浏览**：48 讲按语法体系（词法/时态/语态/非谓语/句法/综合复习）分组，点开看整讲内容
+- **词汇表**：600+ 高频词（释义/词性/词形变化/讲义出处），按词性筛选、搜索、排序
+- **知识体系**：359 个零散知识点聚合为「语法大类 → 主题」两级树，含固定搭配速查表
+- **🎯 考点信号（双向）**：知识点 ↔ 标志词/时态 双向跳转——「看到这个词，就是在考哪些知识点」
+- **📝 作业成绩**：每讲一份作业卷（35 题，满分 100）。点题号记对错、分数自动算；
+  多次作答全部保留、可修改可删除；错题本按「讲次+题号」汇总错误次数；
+  数据经后端 `/exams` 存 iCloud（见上文），跨浏览器/设备不丢，旧 localStorage 记录首次打开自动迁移
+
+技术栈：Vite + 原生 ES Modules · marked（Markdown 渲染），无框架依赖。更多细节见 [`web/README.md`](web/README.md)。
 
 ## 测试
 

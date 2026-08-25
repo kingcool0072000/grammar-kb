@@ -23,3 +23,6 @@ data/*.db-shm
 
 # OS
 .DS_Store
+
+# Web frontend
+web/node_modules/
