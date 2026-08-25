@@ -100,3 +100,28 @@ def test_items_have_brief():
         for th in g["themes"]:
             for it in th["items"]:
                 assert it.get("brief"), f"{th['theme']}/{it['title']} 缺 brief"
+
+
+def test_exam_store_crud(tmp_path):
+    """作业成绩库：增、查、改、删（独立 exam.db，不随 ingest 重建丢失）。"""
+    from grammar_kb.exam_store import ExamStore
+
+    s = ExamStore(tmp_path / "exam.db")
+    r1 = s.add(lecture=22, date="2026-08-23", score=92, wrong=[10, 3, 7, 3])
+    assert r1["score"] == 92 and r1["wrong"] == [3, 7, 10]  # 排序去重
+    s.add(lecture=22, date="2026-08-24", score=94, wrong=[7, 20])
+    s.add(lecture=1, date="2026-08-25", score=100, wrong=[])
+
+    all_ = s.list()
+    assert len(all_) == 3
+    # 日期倒序
+    assert all_[0]["date"] == "2026-08-25"
+
+    # 整条更新；不存在返回 None
+    up = s.update(r1["id"], lecture=22, date="2026-08-23", score=96, wrong=[7])
+    assert up["score"] == 96 and up["wrong"] == [7]
+    assert s.update(999, lecture=1, date="2026-01-01") is None
+
+    assert s.delete(r1["id"]) is True
+    assert s.delete(r1["id"]) is False  # 再删不存在
+    assert len(s.list()) == 2

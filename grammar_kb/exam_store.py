@@ -80,7 +80,7 @@ class ExamStore:
         with self._conn() as con:
             cur = con.execute(
                 "INSERT INTO exam_records (lecture, date, score, wrong) VALUES (?, ?, ?, ?)",
-                (lecture, date, score, json.dumps(sorted(wrong or []))),
+                (lecture, date, score, json.dumps(sorted(set(wrong or [])))),
             )
             row = con.execute(
                 "SELECT * FROM exam_records WHERE id = ?", (cur.lastrowid,)
@@ -100,7 +100,7 @@ class ExamStore:
             cur = con.execute(
                 "UPDATE exam_records SET lecture = ?, date = ?, score = ?, wrong = ?,"
                 " updated_at = datetime('now') WHERE id = ?",
-                (lecture, date, score, json.dumps(sorted(wrong or [])), id),
+                (lecture, date, score, json.dumps(sorted(set(wrong or []))), id),
             )
             if cur.rowcount == 0:
                 return None
