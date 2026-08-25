@@ -795,3 +795,8 @@ main {
   cursor: pointer; padding: 2px 7px; border-radius: 6px;
 }
 .his-del:hover { background: #fee2e2; color: #b91c1c; }
+.his-edit {
+  border: 0; background: transparent; color: var(--ink-faint); font-size: 12px;
+  font-weight: 700; cursor: pointer; padding: 2px 8px; border-radius: 6px;
+}
+.his-edit:hover { background: #dbeafe; color: #1d4ed8; }

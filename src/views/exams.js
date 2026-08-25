@@ -44,7 +44,7 @@ export function mountExams(el, { lectures }) {
     </div>
 
     <section class="exam-sec">
-      <h3>📝 记一次</h3>
+      <h3 id="ex-form-title">📝 记一次</h3>
       <div class="exam-form">
         <div class="exam-form-row">
           <label>讲次
@@ -64,6 +64,7 @@ export function mountExams(el, { lectures }) {
         <div class="exam-actions">
           <button class="btn-primary" id="ex-save">保存这次成绩</button>
           <button class="btn-ghost" id="ex-clear">清空重选</button>
+          <button class="btn-ghost" id="ex-cancel" hidden>取消修改</button>
         </div>
       </div>
     </section>
@@ -94,6 +95,24 @@ export function mountExams(el, { lectures }) {
     .map((q) => `<button class="q-btn" data-q="${q}">${q}</button>`)
     .join('')
   let wrong = new Set()
+  let editingId = null   // 非 null 时表单处于「修改已有记录」模式
+  const $title = el.querySelector('#ex-form-title')
+  const $save = el.querySelector('#ex-save')
+  const $cancel = el.querySelector('#ex-cancel')
+  const paintEditState = () => {
+    $title.textContent = editingId == null ? '📝 记一次' : `✏️ 修改记录 #${editingId}`
+    $save.textContent = editingId == null ? '保存这次成绩' : '保存修改'
+    $cancel.hidden = editingId == null
+  }
+  $cancel.addEventListener('click', () => {
+    editingId = null
+    wrong.clear()
+    $lec.value = $lec.querySelector('option')?.value
+    $date.value = new Date().toISOString().slice(0, 10)
+    paintQ()
+    paintLive()
+    paintEditState()
+  })
   const paintQ = () =>
     $grid.querySelectorAll('.q-btn').forEach((b) => {
       b.classList.toggle('wrong', wrong.has(Number(b.dataset.q)))
@@ -121,18 +140,25 @@ export function mountExams(el, { lectures }) {
   })
   el.querySelector('#ex-save').addEventListener('click', async () => {
     const lost = [...wrong].reduce((s, q) => s + scoreOf(q), 0)
+    const rec = {
+      lecture: Number($lec.value),
+      date: $date.value || new Date().toISOString().slice(0, 10),
+      score: fullScore - lost,
+      wrong: [...wrong].sort((a, b) => a - b),
+    }
     const btn = el.querySelector('#ex-save')
     btn.disabled = true
     try {
-      await api.examsAdd({
-        lecture: Number($lec.value),
-        date: $date.value || new Date().toISOString().slice(0, 10),
-        score: fullScore - lost,
-        wrong: [...wrong].sort((a, b) => a - b),
-      })
+      if (editingId == null) {
+        await api.examsAdd(rec)
+      } else {
+        await api.examsUpdate(editingId, rec)
+      }
+      editingId = null
       wrong.clear()
       paintQ()
       paintLive()
+      paintEditState()
       await refresh()
     } catch (e) {
       alert(`保存失败：${e.message}（请确认后端服务在运行）`)
@@ -141,6 +167,7 @@ export function mountExams(el, { lectures }) {
     }
   })
   paintLive()
+  paintEditState()
 
   // ---------- 错题本 ----------
   async function renderWrong() {
@@ -211,6 +238,7 @@ export function mountExams(el, { lectures }) {
               <span class="his-wrong">${
                 r.wrong.length ? r.wrong.map((q) => `<span class="wrong-chip">第${q}题</span>`).join('') : '<span class="all-right">全对 🎉</span>'
               }</span>
+              <button class="his-edit" title="修改这条记录">改</button>
               <button class="his-del" title="删除这条记录">×</button>
             </div>`,
             )
@@ -220,16 +248,35 @@ export function mountExams(el, { lectures }) {
       .join('')
   }
 
-  // 删除单条
+  // 删除单条 / 修改单条（填回上方表单）
   el.querySelector('#ex-history').addEventListener('click', async (e) => {
     const del = e.target.closest('.his-del')
-    if (!del) return
-    const id = del.closest('.his-row').dataset.id
-    try {
-      await api.examsDelete(id)
-      await refresh()
-    } catch (err) {
-      alert(`删除失败：${err.message}`)
+    const edit = e.target.closest('.his-edit')
+    if (!del && !edit) return
+    const row = e.target.closest('.his-row')
+    if (!row) return
+    const id = row.dataset.id
+    if (del) {
+      if (!confirm('确定删除这条记录吗？')) return
+      try {
+        await api.examsDelete(id)
+        if (editingId === Number(id)) editingId = null
+        paintEditState()
+        await refresh()
+      } catch (err) {
+        alert(`删除失败：${err.message}`)
+      }
+    } else if (edit) {
+      const rec = (await fetchRecords(el)).find((r) => r.id === Number(id))
+      if (!rec) return
+      editingId = rec.id
+      $lec.value = rec.lecture
+      $date.value = rec.date
+      wrong = new Set(rec.wrong)
+      paintQ()
+      paintLive()
+      paintEditState()
+      el.querySelector('.exam-sec').scrollIntoView({ behavior: 'smooth' })
     }
   })
 

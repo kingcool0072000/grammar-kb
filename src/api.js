@@ -49,6 +49,16 @@ export const api = {
       if (!r.ok || j.code !== 0) throw new Error(j.detail || j.message || `HTTP ${r.status}`)
       return j.data
     }),
+  examsUpdate: (id, rec) =>
+    fetch(new URL(`${BASE}/exams/${id}`, location.origin), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rec),
+    }).then(async (r) => {
+      const j = await r.json()
+      if (!r.ok || j.code !== 0) throw new Error(j.detail || j.message || `HTTP ${r.status}`)
+      return j.data
+    }),
   examsDelete: (id) =>
     fetch(new URL(`${BASE}/exams/${id}`, location.origin), { method: 'DELETE' }).then(
       async (r) => {
