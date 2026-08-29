@@ -37,6 +37,10 @@ export const api = {
   // 全量词典（ECDICT）：任意单词可查，不限于讲义语料
   dict: (word) => req(`/dict/${encodeURIComponent(word)}`),
   taxonomy: () => req('/taxonomy'),
+  // 作业卷题干（后端 grammar.db homework_question 表）
+  homework: (lecture) => req(`/homework/${lecture}`),
+  homeworkBatch: (lectures) =>
+    req('/homework', { searchParams: { lectures: lectures.join(',') } }),
   // 作业成绩（后端 exam.db 持久化）
   examsList: () => req('/exams'),
   examsAdd: (rec) =>
