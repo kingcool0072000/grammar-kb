@@ -23,6 +23,10 @@ from . import __version__
 from .ingest import open_db
 from .query import Query
 
+# 闭包内端点用 fastapi.Request 注解（本文件启用延迟注解，字符串注解只能在
+# 模块命名空间求值——闭包局部名 Request 不可见会报 422）
+import fastapi
+
 
 def _ok(data: Any = None, message: str = "ok") -> dict:
     """统一成功响应包装。"""
@@ -40,21 +44,49 @@ try:
         score: int = Field(default=0, ge=0, le=100)
         wrong: list[int] = Field(default_factory=list, description="错题题号")
 
+    class LoginIn(BaseModel):
+        """登录请求体。"""
+
+        user: str = Field(min_length=1, max_length=32)
+        password: str = Field(min_length=1, max_length=64)
+
+    class FceSubmissionIn(BaseModel):
+        """FCE 大题练习提交（模块级定义：延迟注解下闭包内模型无法被解析）。"""
+
+        test_id: int = Field(ge=1, le=4)
+        paper: str
+        part: int = Field(ge=0, le=7)
+        answers: dict = Field(default_factory=dict)
+        duration_sec: Optional[int] = Field(default=None, ge=0, le=24 * 3600)
+
+    class FceGradeIn(BaseModel):
+        """教师批改作文。"""
+
+        teacher_score: Optional[int] = Field(default=None, ge=0, le=100)
+        teacher_comment: str = ""
+
 except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
     ExamRecordIn = None
+    FceSubmissionIn = None
+    FceGradeIn = None
 
 
 def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None):
     """构造 FastAPI 应用。``db_path`` 为 None 时走默认库（GRAMMAR_KB_DB 或 data/grammar.db）；
     ``exam_db_path`` 为成绩库路径（默认 iCloud Drive 或 data/exam.db）。"""
-    from fastapi import FastAPI, HTTPException, Query as FQuery
+    from fastapi import FastAPI, HTTPException, Query as FQuery, Request
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
 
     from .exam_store import ExamStore
+    from .auth import UserStore, make_token, read_token
+    from .fce_query import FcePaperStore, FceSubmissionStore
 
     kbq = Query(open_db(db_path))
     exams = ExamStore(exam_db_path)
+    users = UserStore()
+    fce_papers = FcePaperStore()
+    fce_submissions = FceSubmissionStore()
     app = FastAPI(
         title="grammar-kb 题库 API",
         version=__version__,
@@ -87,6 +119,55 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             content={"code": 500, "message": f"内部错误: {exc}", "data": None},
         )
 
+    # ---- 认证 ----
+    # 白名单路径免登录：根信息、API 文档、登录本身
+    _AUTH_OPEN = frozenset({"/", "/docs", "/redoc", "/openapi.json", "/auth/login"})
+    # 学生角色可访问的 (method, path 前缀)：背单词所需数据 + 提交成绩 + FCE 真题练习
+    _STUDENT_ALLOW = (
+        ("GET", "/stats"),
+        ("GET", "/vocabulary"),
+        ("GET", "/dict/"),
+        ("POST", "/exams"),
+        ("GET", "/fce-papers"),
+        ("POST", "/fce-submissions"),
+        ("GET", "/fce-submissions"),
+    )
+
+    @app.middleware("http")
+    async def _auth(request, call_next):  # noqa: ANN001
+        path = request.url.path.rstrip("/") or "/"
+        if path in _AUTH_OPEN:
+            return await call_next(request)
+        auth_header = request.headers.get("Authorization", "")
+        token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
+        payload = read_token(token) if token else None
+        if payload is None:
+            return JSONResponse(
+                status_code=401,
+                content={"code": 401, "message": "未登录或登录已过期", "data": None},
+            )
+        request.state.user = payload["user"]
+        request.state.role = payload["role"]
+        if payload["role"] != "teacher" and not any(
+            request.method == m and path.startswith(p) for m, p in _STUDENT_ALLOW
+        ):
+            return JSONResponse(
+                status_code=403,
+                content={"code": 403, "message": "该功能仅教师账号可用", "data": None},
+            )
+        return await call_next(request)
+
+    def _request_user(request) -> str:
+        """从 auth 中间件注入的 state 取用户名。"""
+        return getattr(request.state, "user", "")
+
+    @app.post("/auth/login")
+    def auth_login(rec: LoginIn):
+        role = users.verify(rec.user, rec.password)
+        if role is None:
+            raise HTTPException(status_code=401, detail="用户名或密码错误")
+        return _ok({"user": rec.user, "role": role, "token": make_token(rec.user, role)})
+
     # ---- 端点 ----
     @app.get("/")
     def root():
@@ -95,6 +176,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
                 "service": "grammar-kb",
                 "version": __version__,
                 "endpoints": [
+                    "POST /auth/login",
                     "GET /stats",
                     "GET /lectures",
                     "GET /lectures/{number}?format=markdown|html",
@@ -105,6 +187,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
                     "GET /exam-signals",
                     "GET /exam-signal?signal=时态",
                     "GET /vocabulary?limit=300&min_freq=2",
+                    "GET /fce-papers · GET /fce-papers/{test_id}",
                     "GET /homework · GET /homework/{lecture}",
                     "GET/POST /exams · PUT/DELETE /exams/{id}",
                     "GET /docs (Swagger UI)",
@@ -212,6 +295,69 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     def vocabulary(limit: int = 300, min_freq: int = 2):
         """基于讲义语料的单词表（释义/词性/词形变化/来源）。"""
         return _ok(kbq.vocabulary(limit=limit, min_freq=min_freq))
+
+    # ---- FCE 真题（只读；独立 data/fce.db，由 fce_paper 模块入库） ----
+
+    @app.get("/fce-papers")
+    def fce_papers_list():
+        """FCE 青少版模拟卷概览：4 套 Test 各 paper/part 的题数。"""
+        return _ok(fce_papers.list_papers())
+
+    @app.get("/fce-papers/{test_id}")
+    def fce_paper_detail(test_id: int, request: "fastapi.Request"):
+        """单套 FCE Test 全部内容。学生版剥离答案/关键词（练习用），教师版完整。"""
+        data = fce_papers.get_paper(test_id)
+        if data is None:
+            raise HTTPException(status_code=404, detail=f"FCE Test {test_id} 不存在")
+        if getattr(request.state, "role", "teacher") != "teacher":
+            for sec in data["sections"]:
+                for q in sec["questions"]:
+                    q["answer"] = ""
+        return _ok(data)
+
+    @app.post("/fce-submissions")
+    def fce_submit(rec: FceSubmissionIn, request: "fastapi.Request"):
+        """提交一次大题练习：客观题自动批改；作文转待教师批改。"""
+        user = _request_user(request)
+        try:
+            data = fce_submissions.submit(
+                user, rec.test_id, rec.paper, rec.part, rec.answers,
+                duration_sec=rec.duration_sec,
+            )
+        except KeyError as e:
+            raise HTTPException(status_code=404, detail=str(e).strip("'"))
+        return _ok(data)
+
+    @app.get("/fce-submissions")
+    def fce_submissions_list(
+        request: "fastapi.Request",
+        user: Optional[str] = None,
+        status: Optional[str] = None,
+        limit: int = 100,
+    ):
+        """练习历史。学生只能看自己的；教师可看全部（?status=pending 拉待批改作文）。"""
+        if request.state.role != "teacher":
+            user = request.state.user
+        return _ok(
+            fce_submissions.list(
+                user=(user or None), status=(status or None), limit=limit
+            )
+        )
+
+    @app.get("/fce-submissions/{sub_id}")
+    def fce_submission_detail(sub_id: int):
+        data = fce_submissions.get(sub_id)
+        if data is None:
+            raise HTTPException(status_code=404, detail=f"提交记录 id={sub_id} 不存在")
+        return _ok(data)
+
+    @app.put("/fce-submissions/{sub_id}")
+    def fce_grade(sub_id: int, rec: FceGradeIn):
+        """教师批改作文（打分 + 评语）。"""
+        data = fce_submissions.grade(sub_id, rec.teacher_score, rec.teacher_comment)
+        if data is None:
+            raise HTTPException(status_code=404, detail=f"提交记录 id={sub_id} 不存在")
+        return _ok(data)
 
     # ---- 作业成绩（可写；独立 exam.db，默认放 iCloud Drive 跨设备同步） ----
 
