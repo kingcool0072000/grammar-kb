@@ -17,7 +17,11 @@ dependencies = [
 
 [project.optional-dependencies]
 mcp = ["mcp>=1.2"]          # MCP 服务（可选）
-server = ["fastapi>=0.110", "uvicorn>=0.27"]  # HTTP 服务（可选）
+server = [
+    "fastapi>=0.110",
+    "httpx>=0.28.1",
+    "uvicorn>=0.27",
+]  # HTTP 服务（可选）
 
 [dependency-groups]
 dev = ["pytest>=8.0"]
