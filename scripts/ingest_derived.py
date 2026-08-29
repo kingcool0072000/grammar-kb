@@ -40,7 +40,7 @@ def main() -> None:
     conn = sqlite3.connect(db)
     # 幂等：按 url 去重（source 字段存 url）
     existing = {
-        r[0] for r in conn.execute(
+        r[0].rsplit(" · ", 1)[-1] for r in conn.execute(
             "SELECT source FROM reading_article WHERE kind='derived'"
         )
     }
