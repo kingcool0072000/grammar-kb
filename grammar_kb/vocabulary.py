@@ -446,6 +446,7 @@ class WordEntry:
     sources: list[dict] = field(default_factory=list)
     display: str = ""    # 展示形式（专名大写：beijing → Beijing；空 = 同 word）
     phonetic: str = ""   # ECDICT 音标
+    special_spellings: list = field(default_factory=list)  # 特殊拼写点（辅音双写/ie→ying…）
     gloss: str = ""      # ECDICT 简明中文释义（兼容字段，按行拼接）
     gloss_lines: list = field(default_factory=list)  # [{pos:'名词', text:'英语'}] 按词性分行
     examples: list = field(default_factory=list)  # [{en, zh}] 语料中英对照例句
@@ -558,6 +559,62 @@ def regular_est(word: str) -> str:
     if _cvc_doubles(word):
         return word + word[-1] + "est"
     return word + "est"
+
+
+# --------------------------------------------------------------------------- #
+# 特殊拼写判定：词形"直接加后缀"会写错的地方（背单词功能用）
+# --------------------------------------------------------------------------- #
+
+# 词形键 → 天真的拼接后缀（word + suffix 就是拼写难点本身）
+_NAIVE_SUFFIX = {
+    "past": "ed", "past_participle": "ed", "present_participle": "ing",
+    "third_singular": "s", "plural": "s", "comparative": "er", "superlative": "est",
+}
+
+
+def _spell_reason(word: str, key: str, got: str, suf: str) -> str:
+    """给一个"非天真拼接"的词形归类出拼写原因。"""
+    if key in ("past", "past_participle") and word in IRREGULAR_VERBS:
+        return "不规则动词"
+    if key == "plural" and got in IRREGULAR_PLURAL:
+        return "不规则复数"
+    if key in ("comparative", "superlative") and word in IRREGULAR_ADJ:
+        return "不规则比较级"
+    # 辅音双写：swimming / stopped —— 词形以原形开头且紧接着重复了末字母
+    if got.startswith(word) and len(got) > len(word) and got[len(word)] == word[-1]:
+        return "辅音双写"
+    if word.endswith("ie") and got.startswith(word[:-2] + "y"):
+        return "ie→ying"
+    if word.endswith("f") and got.startswith(word[:-1] + "ves"):
+        return "f→ves"
+    if word.endswith("y") and got.startswith(word[:-1] + "i"):
+        return "y→i"
+    if got == word + "es":
+        return "加es"
+    if word.endswith("e") and got.startswith(word[:-1]):
+        return f"去e加{suf}"
+    if got == word:
+        return "原形不变"
+    return "不规则变化"
+
+
+def spelling_specials(word: str, forms: dict) -> list[str]:
+    """返回该词需要专门记的拼写点（空列表 = 词形都能直接加后缀拼出）。
+
+    >>> spelling_specials("swim", {"past": "swam", "present_participle": "swimming"})
+    ['不规则动词', '辅音双写']
+    >>> spelling_specials("book", {"plural": "books"})
+    []
+    """
+    reasons: list[str] = []
+    for key, suf in _NAIVE_SUFFIX.items():
+        got = forms.get(key)
+        if not got or got == word + suf:
+            continue
+        r = _spell_reason(word, key, got, suf)
+        if r not in reasons:
+            reasons.append(r)
+    return reasons
 
 
 def word_forms(word: str, pos: Iterable[str], eng=None, dict_entry=None) -> tuple[dict, str]:
@@ -792,9 +849,14 @@ def build_vocabulary(
                 }
         pos = infer_pos(w, d, ec)
         forms, note = word_forms(w, pos, eng, dict_entry=ec)
+        specials = spelling_specials(w, forms)
         ec = ec or {}
-        # 展示形式：取语料中最常见的拼写（专名语料里多大写 → Beijing/Tom）
+        # 展示形式：取语料中最常见的拼写（专名语料里多大写 → Beijing/Tom）。
+        # 仅允许大小写差异的覆盖——变形拼写（returns/lived/made 出现更多时）
+        # 不是该词条的展示形式，否则背单词中→英题会把变形当标准答案
         display = max(d["spellings"], key=d["spellings"].get) if d["spellings"] else w
+        if display.lower() != w:
+            display = w
         # 词典释义行（gloss_lines）；专名只留人名/地名义行（jack=插座 是噪声）
         gloss_lines = ec.get("gloss_lines") or []
         if "proper" in pos:
@@ -822,6 +884,7 @@ def build_vocabulary(
                 meanings=d["meanings"][:3],
                 forms=forms,
                 forms_note=note,
+                special_spellings=specials,
                 sources=list(d["sources"].values())[:5],
                 phonetic=ec.get("phonetic", "") or ec.get("ph", ""),
                 gloss=" / ".join(x["text"] for x in gloss_lines),

@@ -347,3 +347,45 @@ def test_dict_db_lookup():
     assert "n" in apple["pos"]
     # 未命中与空串
     assert d.lookup("") is None
+
+
+def test_spelling_specials():
+    """特殊拼写判定：实际词形 ≠ 直接加后缀 → 标出拼写点。"""
+    from grammar_kb.vocabulary import spelling_specials
+
+    # 规则词：直接加后缀就能拼对，无特殊点
+    assert spelling_specials("book", {"plural": "books"}) == []
+    assert spelling_specials("play", {"past": "played", "present_participle": "playing"}) == []
+    # 不规则动词
+    assert "不规则动词" in spelling_specials(
+        "go", {"past": "went", "past_participle": "gone"})
+    # 原形不变的不规则动词也算特殊
+    assert spelling_specials("put", {"past": "put", "past_participle": "put"}) == ["不规则动词"]
+    # 辅音双写
+    assert "辅音双写" in spelling_specials("swim", {"present_participle": "swimming"})
+    assert "辅音双写" in spelling_specials("stop", {"past": "stopped"})
+    # ie→ying / y→i / 去e
+    assert spelling_specials("lie", {"present_participle": "lying"}) == ["ie→ying"]
+    assert spelling_specials("study", {"past": "studied", "third_singular": "studies"}) == ["y→i"]
+    assert spelling_specials("dance", {"past": "danced", "present_participle": "dancing"}) == [
+        "去e加ed", "去e加ing"]
+    # 不规则复数 / 不规则比较级 / o 结尾加 es
+    assert spelling_specials("child", {"plural": "children"}) == ["不规则复数"]
+    assert spelling_specials("good", {"comparative": "better", "superlative": "best"}) == [
+        "不规则比较级"]
+    assert "加es" in spelling_specials("go", {"third_singular": "goes"})
+
+
+def test_display_only_case_diff():
+    """display 只允许大小写差异：变形拼写（returns）不能当词条展示形式。"""
+    kps = [
+        KnowledgePoint(
+            id=1, title="t", lecture_number=1, category="词法", section_path="",
+            examples_md="He returns home.\n他回家。\nHe returns the book.\n他归还书。",
+            source_page=1,
+        ),
+    ]
+    voc = build_vocabulary(kps, limit=10, min_freq=1)
+    r = next(e for e in voc if e.word == "return")
+    # 语料里 return 只以 returns 出现过，展示形式仍应是原形
+    assert (r.display or r.word) == "return"
