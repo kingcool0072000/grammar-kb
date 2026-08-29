@@ -90,6 +90,20 @@ CREATE TABLE IF NOT EXISTS lecture_block (
 );
 CREATE INDEX IF NOT EXISTS idx_block_lecture ON lecture_block(lecture_id, seq);
 
+-- 作业卷题目（哈一作业卷 PDF 解析入库；qnum 为全卷连续题号，与测验平台一致）
+CREATE TABLE IF NOT EXISTS homework_question (
+    id            INTEGER PRIMARY KEY,
+    lecture_number INTEGER NOT NULL,
+    qnum          INTEGER NOT NULL,
+    section       TEXT,
+    stem          TEXT,
+    options_json  TEXT DEFAULT '[]',
+    is_cell       INTEGER DEFAULT 0,
+    source_file   TEXT,
+    ord           INTEGER DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_hw_lecture ON homework_question(lecture_number, qnum);
+
 -- 全文检索（external-content + trigram，中文友好、子串命中）
 CREATE VIRTUAL TABLE IF NOT EXISTS kp_fts USING fts5(
     title, body_md, examples_md, table_md,
@@ -129,7 +143,7 @@ class GrammarDB:
         with self.transaction() as c:
             # 先删 FTS 与子表，再删主表（注意外键顺序）
             for t in ("kp_fts", "lecture_block", "relation", "marker",
-                      "knowledge_point", "lecture", "meta"):
+                      "knowledge_point", "homework_question", "lecture", "meta"):
                 c.execute(f"DROP TABLE IF EXISTS {t}")
         self.init_schema()
         # 物理回收空间，清除旧数据碎片（避免本地路径等旧值残留在 db 文件里）
@@ -352,6 +366,47 @@ class GrammarDB:
                 )
             )
         return out
+
+    # ---- 作业卷 ---------------------------------------------------------- #
+
+    def replace_homework(self, lecture_number: int, questions: list) -> None:
+        """整卷替换某讲的作业题（幂等：先清后写）。questions 为 HwQuestion 列表。"""
+        with self.transaction() as c:
+            c.execute(
+                "DELETE FROM homework_question WHERE lecture_number=?", (lecture_number,)
+            )
+            c.executemany(
+                """INSERT INTO homework_question(
+                       lecture_number, qnum, section, stem, options_json,
+                       is_cell, source_file, ord)
+                   VALUES(?,?,?,?,?,?,?,?)""",
+                [
+                    (
+                        lecture_number,
+                        q.qnum,
+                        q.section,
+                        q.stem,
+                        json.dumps(q.options, ensure_ascii=False),
+                        1 if q.is_cell else 0,
+                        getattr(q, "source_file", ""),
+                        i,
+                    )
+                    for i, q in enumerate(questions)
+                ],
+            )
+
+    def homework_questions(self, lecture_number: int) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT * FROM homework_question WHERE lecture_number=? ORDER BY qnum",
+            (lecture_number,),
+        ).fetchall()
+
+    def homework_lectures(self) -> list[sqlite3.Row]:
+        """已导入作业卷的讲次及题数。"""
+        return self.conn.execute(
+            """SELECT lecture_number, COUNT(*) AS n, MAX(source_file) AS source_file
+               FROM homework_question GROUP BY lecture_number ORDER BY lecture_number"""
+        ).fetchall()
 
     # ---- 统计 ------------------------------------------------------------ #
 

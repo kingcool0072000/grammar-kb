@@ -105,6 +105,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
                     "GET /exam-signals",
                     "GET /exam-signal?signal=时态",
                     "GET /vocabulary?limit=300&min_freq=2",
+                    "GET /homework · GET /homework/{lecture}",
                     "GET/POST /exams · PUT/DELETE /exams/{id}",
                     "GET /docs (Swagger UI)",
                 ],
@@ -178,6 +179,26 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     def taxonomy():
         """知识点主题体系树（大类 → 主题 → 知识点），聚合零散知识点。"""
         return _ok(kbq.taxonomy())
+
+    @app.get("/homework")
+    def homework_list(lectures: Optional[str] = None):
+        """已导入作业卷的讲次列表；?lectures=2,3 批量取多讲题目（题干+选项）。"""
+        if not lectures:
+            return _ok(kbq.homework_list())
+        nums = []
+        for part in lectures.split(","):
+            part = part.strip()
+            if part.isdigit():
+                nums.append(int(part))
+        return _ok({n: (kbq.homework(n) or {}).get("items", []) for n in nums})
+
+    @app.get("/homework/{lecture}")
+    def homework(lecture: int):
+        """某讲作业卷全部题目（题干 + 选项，题号与测验平台一致）。"""
+        data = kbq.homework(lecture)
+        if data is None:
+            raise HTTPException(status_code=404, detail=f"第 {lecture} 讲的作业卷未导入")
+        return _ok(data)
 
     @app.get("/dict/{word}")
     def dict_lookup(word: str):

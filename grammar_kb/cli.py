@@ -210,6 +210,53 @@ def cmd_stats(args) -> int:
     return 0
 
 
+def cmd_ingest_homework(args) -> int:
+    import os
+
+    from .homework import ingest_homework_dir, ingest_homework_pdf
+
+    db = open_db(args.db)
+    if os.path.isdir(args.target):
+        results = ingest_homework_dir(db, args.target)
+    else:
+        try:
+            n, t, c = ingest_homework_pdf(db, args.target)
+            results = [(n, t, c, "")]
+        except Exception as e:  # noqa: BLE001
+            results = [(0, os.path.basename(args.target), 0, f"{type(e).__name__}: {e}")]
+    ok = fail = 0
+    for n, t, c, err in results:
+        if err:
+            print(f"✗ {t}  ERR: {err}")
+            fail += 1
+        else:
+            print(f"✓ 第{n:>2}讲 {t}  题目={c}")
+            ok += 1
+    print(f"\n作业卷导入完成：成功 {ok}，失败 {fail}。")
+    db.close()
+    return 0 if fail == 0 else 1
+
+
+def cmd_sync_aicloud(args) -> int:
+    """从爱问云拉取测验成绩 → exam_records（委托 aicloud_sync）。"""
+    import os
+    from .aicloud_sync import main as sync_main
+
+    argv = []
+    if args.phone:
+        argv += ["--phone", args.phone]
+    if args.password:
+        argv += ["--password", args.password]
+    if args.group:
+        argv += ["--group", str(args.group)]
+    if args.dry_run:
+        argv.append("--dry-run")
+    if not (args.password or os.environ.get("AICLOUD_PASSWORD")):
+        print("错误：需要 --password 或环境变量 AICLOUD_PASSWORD", file=sys.stderr)
+        return 2
+    return sync_main(argv)
+
+
 def cmd_serve(args) -> int:
     try:
         from .server import run_app
@@ -269,6 +316,10 @@ def build_parser() -> argparse.ArgumentParser:
     pie.add_argument("csv", help="ecdict.csv 路径")
     pie.set_defaults(func=cmd_import_ecdict)
 
+    phw = sub.add_parser("ingest-homework", help="导入哈一作业卷 PDF（文件名含「作业卷」）")
+    phw.add_argument("target", help="作业卷 PDF 文件或所在目录")
+    phw.set_defaults(func=cmd_ingest_homework)
+
     pst = sub.add_parser("stats", help="统计")
     pst.set_defaults(func=cmd_stats)
 
@@ -276,6 +327,13 @@ def build_parser() -> argparse.ArgumentParser:
     pse.add_argument("--host", default="127.0.0.1")
     pse.add_argument("--port", type=int, default=8000)
     pse.set_defaults(func=cmd_serve)
+
+    psy = sub.add_parser("sync-aicloud", help="从爱问云拉取测验成绩同步进成绩库")
+    psy.add_argument("--phone", default=None, help="爱问云账号（默认 $AICLOUD_PHONE）")
+    psy.add_argument("--password", default=None, help="密码（默认 $AICLOUD_PASSWORD）")
+    psy.add_argument("--group", type=int, default=None, help="班级 ID（默认 $AICLOUD_GROUP 或 3350581）")
+    psy.add_argument("--dry-run", action="store_true", help="只打印计划不写库")
+    psy.set_defaults(func=cmd_sync_aicloud)
 
     return p
 

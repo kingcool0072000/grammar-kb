@@ -309,6 +309,39 @@ class Query:
         ).fetchall()
         return [_row_to_kp(r, self.db.conn) for r in rows]
 
+    # ---- 作业卷 ---------------------------------------------------------- #
+
+    def homework(self, lecture_number: int) -> Optional[dict]:
+        """某讲作业卷全部题目（含题干与选项），未导入返回 None。"""
+        import json as _json
+
+        rows = self.db.homework_questions(lecture_number)
+        if not rows:
+            return None
+        lec = self.db.get_lecture(lecture_number)
+        return {
+            "lecture": lecture_number,
+            "title": lec.title if lec else "",
+            "count": len(rows),
+            "items": [
+                {
+                    "qnum": r["qnum"],
+                    "section": r["section"] or "",
+                    "stem": r["stem"] or "",
+                    "options": _json.loads(r["options_json"] or "[]"),
+                    "isCell": bool(r["is_cell"]),
+                }
+                for r in rows
+            ],
+        }
+
+    def homework_list(self) -> list[dict]:
+        """已导入作业卷的讲次列表。"""
+        return [
+            {"lecture": r["lecture_number"], "questions": r["n"]}
+            for r in self.db.homework_lectures()
+        ]
+
     # ---- 统计 ------------------------------------------------------------ #
 
     def stats(self) -> dict:

@@ -37,6 +37,7 @@ uv run grammar-kb stats          # 查看统计
 
 ```bash
 uv run grammar-kb ingest ./pdfs               # 导入目录（或单个 PDF 文件）
+uv run grammar-kb ingest-homework ./作业卷目录 # 导入哈一作业卷 PDF（题干入 homework_question 表）
 uv run grammar-kb lecture 25                   # 输出某讲的完整 Markdown（表格已还原）
 uv run grammar-kb lecture 25 --format html     # 输出某讲的 HTML（表格渲染为 <table>）
 uv run grammar-kb kp 173                       # 输出某知识点的完整 Markdown
@@ -139,6 +140,8 @@ uv run grammar-kb-server --host 0.0.0.0 --port 8000
 | GET | `/vocabulary?limit=300&min_freq=2` | 单词表（释义/词性/词形变化） |
 | GET | `/taxonomy` | 知识点主题体系树（大类→主题） |
 | GET | `/dict/{word}` | 查任意单词（ECDICT 全量词典） |
+| GET | `/homework` | 已导入作业卷的讲次列表；`?lectures=2,4` 批量取多讲题目 |
+| GET | `/homework/{lecture}` | 某讲作业卷全部题目（题干+选项，题号与测验平台一致） |
 | GET/POST | `/exams` | 作业成绩：列表 / 新增 |
 | PUT/DELETE | `/exams/{id}` | 作业成绩：修改 / 删除 |
 
