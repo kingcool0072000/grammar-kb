@@ -1403,3 +1403,59 @@ main { --fce-fs: 15px; }
 .fce-reading-mode .fce-mark .bad { color: #a33; }
 .fce-reading-mode .fce-back-btn { background: var(--paper-card); border-color: var(--paper-line); color: #6b5b3e; }
 .fce-reading-mode .fce-choices { background: transparent; }
+
+/* ========================= 阅读训练 ========================= */
+.reading-art-list { display: flex; flex-direction: column; gap: 8px; }
+.reading-card {
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
+  width: 100%; padding: 12px 16px; border: 1px solid var(--line, #e2e8f0);
+  border-radius: 12px; background: var(--card, #fff); cursor: pointer;
+  text-align: left; transition: border-color .15s, box-shadow .15s;
+}
+.reading-card:hover { border-color: #0e7490; box-shadow: 0 2px 10px rgba(14,116,144,.12); }
+.reading-card.static { cursor: default; }
+.reading-card.static:hover { border-color: var(--line, #e2e8f0); box-shadow: none; }
+.reading-card-title { font-weight: 600; color: var(--ink, #1e293b); }
+.reading-card-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--ink-faint, #94a3b8); }
+.reading-card-src { font-size: 12px; color: var(--ink-faint, #94a3b8); }
+
+.reading-article { line-height: 1.9; font-size: 16.5px; color: var(--ink, #1e293b); }
+.reading-article p { margin: 0 0 1em; padding: 6px 10px; border-radius: 8px; transition: background .15s; }
+.reading-article p.picked { background: rgba(14,116,144,.1); outline: 1px dashed #0e7490; }
+.reading-article w { cursor: pointer; border-bottom: 1px dotted #0e7490; }
+.reading-article w:hover { background: rgba(14,116,144,.14); }
+.reading-article strong { color: #0e7490; font-weight: 700; }
+
+.reading-toolbar { margin-top: 18px; padding: 14px 16px; border: 1px solid var(--line, #e2e8f0); border-radius: 12px; background: var(--card, #fff); display: flex; flex-direction: column; gap: 10px; }
+.reading-tool-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.reading-tool-label { font-size: 14px; color: var(--ink-soft, #64748b); }
+.reading-pick-info { font-size: 13px; color: var(--ink-faint, #94a3b8); }
+.reading-hint { font-size: 13px; color: var(--ink-faint, #94a3b8); margin: 0; }
+.reading-btn { border: 1px solid var(--line, #e2e8f0); background: var(--card, #fff); color: var(--ink, #1e293b); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 14px; }
+.reading-btn:hover { border-color: #0e7490; }
+.reading-btn.primary { background: #0e7490; border-color: #0e7490; color: #fff; }
+.reading-btn.primary:hover { background: #0c627c; }
+.reading-btn.danger { background: #b42318; border-color: #b42318; color: #fff; }
+.reading-btn.small { padding: 3px 10px; font-size: 12.5px; }
+
+.reading-dict { border: 1px solid #e0f2fe; background: #f0f9ff; border-radius: 10px; padding: 10px 14px; }
+.reading-dict-word { font-weight: 700; font-size: 16px; }
+.reading-dict-ph { color: var(--ink-faint, #94a3b8); font-weight: 400; margin-left: 6px; }
+.reading-dict-line { font-size: 14px; color: var(--ink, #1e293b); }
+.reading-dict-line i { color: #0e7490; font-style: normal; margin-right: 4px; }
+.reading-dict-forms { font-size: 13px; color: var(--ink-soft, #64748b); margin-top: 4px; }
+
+.reading-editor { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.reading-editor-head { display: flex; gap: 8px; flex-wrap: wrap; }
+.reading-editor-head input { flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid var(--line, #e2e8f0); border-radius: 8px; }
+.reading-editor textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line, #e2e8f0); border-radius: 8px; font-size: 14px; line-height: 1.7; resize: vertical; }
+.reading-editor-actions { display: flex; gap: 8px; }
+
+.reading-review-card { border: 1px solid var(--line, #e2e8f0); border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; background: var(--card, #fff); }
+.reading-review-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 14px; }
+.reading-review-text summary { cursor: pointer; color: var(--ink-soft, #64748b); font-size: 13px; }
+.reading-review-text .reading-article { max-height: 300px; overflow: auto; font-size: 14.5px; }
+.reading-review-grade { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.reading-review-grade label { font-size: 13px; color: var(--ink-soft, #64748b); }
+.reading-review-grade input { padding: 6px 10px; border: 1px solid var(--line, #e2e8f0); border-radius: 8px; }
+.reading-review-msg { font-size: 13px; color: #0e7490; min-height: 18px; }

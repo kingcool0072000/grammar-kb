@@ -1,0 +1,24 @@
+515	8212	Listening
+988	385	5 You hear a teacher talking to a class.
+1177	770	What does she want her students to do this week?
+1468	791	A bring some items to school
+1745	770	B find out some information
+2049	770	C make something at home
+2587	365	6
+2601	709	You hear two friends talking about a story-writing competition.
+2805	770	They agree that they will
+3066	791	A each write a story and go in for it.
+3358	770	B share the prize if one of them wins it.
+3662	770	C visit a zoo together to get ideas for it.
+4186	385	7 You hear a radio announcement about an event.
+4389	770	What is the aim of the event?
+4680	791	A to encourage young people to get involved in science
+4972	791	B to raise city residents' awareness of unusual wildlife
+5233	770	C to find out about trends in animal numbers
+5784	385	8
+5813	628	You hear a review of a computer game on the radio.
+6017	770	What does the reviewer think of the game?
+6293	770	A Itis surprisingly different from other adventure games.
+6585	791	B It is likely to have a very broad appeal to computer gamers.
+6861	791	C Itis only suitable for people experienced in this type of game.
+10001	1009	#DЗЕ#KEТ/РЕТ/FC2*+ ,$09½0015 : ¡ 9kpf

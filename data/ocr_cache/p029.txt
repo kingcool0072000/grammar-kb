@@ -1,0 +1,31 @@
+408	972	Test 2
+973	973	READING AND USE OF ENGLISH (1 hour 15 minutes)
+1469	4989	Part 1
+1874	953	For questions 1-8, read the text below and decide which answer (A, B, C or D) best fits each gap.
+2065	953	There is an example at the beginning (0).
+2442	953	Mark your answers on the separate answer sheet.
+2807	952	Example:
+3081	973	0 A managed B arrived
+3081	4036	C succeeded
+3085	5536	D reached
+3604	1926	A
+3590	2535	B
+3590	3144	C
+3604	3752	D
+3662	1156	0
+4435	4300	Captain of a team
+4927	973	What are the secrets of success in sport? After winning a big match, players are often asked how
+5282	931	they (0)...
+5277	2048	...to do it. Most say it is the result of hard work and practice. But another important
+5581	973	(1) .....
+5596	1643	... in their success is their team captain. The players (2) ........ on the captain to motivate
+5930	953	them and (3)..
+5946	2494	..they all play well together as a team. The role of captain only (4) ...... a person
+6281	953	who works well under pressure. Could you be a captain? Can you take (5) .. of a group of
+6613	953	people, even when they are tired or frustrated? Can you ensure that the team achieves its full
+6947	953	(6) .. during a match? It's not easy, but those who do this well are rewarded with a team of
+7269	973	players who respect them and (7) ..
+7269	4279	... them. (8) ...
+7281	5659	..... they may not win every match, they will do
+7601	973	everything they can to make the captain proud of them. That's the secret of success.
+9636	973	30

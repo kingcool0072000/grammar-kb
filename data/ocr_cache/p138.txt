@@ -1,0 +1,38 @@
+494	955	Test 2 Key
+1003	954	PART 2
+1034	2662	You'll hear a girl called Kate giving a class presentation on the subject
+1206	2642	of chocolate. For questions 9-18, complete the sentences with a word or
+1370	2641	short phrase.
+1642	2662	You now have forty-five seconds to look at Part Two.
+1918	2621	[pause]
+2151	2662	tone
+2441	1930	Kate:
+2458	2459	My presentation today is about chocolate. When our teacher said we could
+2645	2642	do a history project on any food we liked, I knew straight away what I'd
+2806	2642	choose, because chocolate's my absolute favourite.
+3037	2642	So where does the story of chocolate begin? More than fifteen hundred years
+3212	2642	ago, seed pods from the cocoa tree were being used to make chocolate by
+3388	2642	people in Central America. I discovered that the Mayan civilization in Mexico
+3561	2621	were the first people to realise that cocoa beans are absolutely delicious.
+3752	2642	They made a chocolate drink, which was sweetened with honey, but which,
+3909	2621	incredibly, also contained chilli peppers - can you imagine that?
+4142	2642	To begin with, the cocoa pods were collected from wild trees in the rainforest,
+4303	2642	but soon chocolate became so popular that people started cultivating them.
+4491	2662	This was in gardens, however, rather than in fields on farms. This, of course,
+4651	2662	made it much easier for people to get hold of chocolate and its consumption
+4821	2679	became widespread.
+5058	2662	Another civilization, the Aztecs, learnt from their Mayan neighbours how
+5233	2662	delicious chocolate was as a drink and they eventually valued it so highly that
+5406	2642	the beans were accepted as a way of paying taxes, even though gold was
+5582	2662	widely available.
+5800	2662	Cocoa didn't make its way to Europe until the fifteenth century. Spanish
+5988	2662	explorers in the Americas took it home with them along with the potato, but it
+6148	2621	is thought that the tomato was taken over to Europe even earlier than this.
+6383	2661	Chocolate became fashionable in Europe in the seventeenth century and
+6569	2642	people used to meet in chocolate houses to chat and drink chocolate - a
+6730	2662	bit like the way people meet in cafés today. They drank their chocolate
+6891	2642	from a special dish with two handles and it was because of this that the
+7063	2662	saucer first made its appearance - it kept the chocolate from dripping onto
+7240	2662	people's clothes.
+9622	975	138
+9942	1016	1З#KТ/РEТ/FCžЖ· ,·З69M01 :iq-kpf

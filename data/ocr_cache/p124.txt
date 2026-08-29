@@ -1,0 +1,37 @@
+436	946	Test 1 Key
+961	966	Question 5
+4451	965	Question 6
+959	2674	Five. You hear a girl talking about a sports event she took part in.
+1242	2631	Ipause]
+1468	2674	tone
+1788	2037	Girl: I recently won a trophy at a big football club. I raised money for a children's
+1962	2674	charity by asking friends and family to sponsor me in a running race. It was
+2139	2674	quite cold on the day but, before we started, we had a dancing warm-up with
+2311	2674	music, to get us ready. We ran two laps around the outside of the stadium.
+2485	2674	There were lots of really kind, supportive people cheering us all the way
+2662	2654	round, which was fun. At the end it got hard but I managed to keep going.
+2834	2674	Then a man handed me a medal and said I was the first girl to finish. I was
+3008	2674	surprised as I hadn't expected that.
+3284	2633	Ipause]
+3517	2674	tone
+3838	2654	[The recording is repeated.]
+4098	2654	[pause]
+4462	2654	Six. You hear a teacher telling her class about something called World
+4624	2694	Oceans Day.
+4912	2654	lpause]
+5145	2695	tone
+5439	1665	Woman:
+5465	2674	Now, next week there's going to be a special international day called World
+5624	2695	Oceans Day. The organisers want everyone all over the world to think about
+5815	2674	protecting our oceans, which generate the oxygen we breathe, help feed us,
+5988	2654	regulate our climate, and clean the water we drink, as well as being home to
+6150	2674	hundreds of species of underwater creatures. So what do you think we could
+6338	2674	do to make our commitment to protect the oceans on that day? In a moment,
+6497	2654	I'm going to give you a few ideas about that. Then you can come up with
+6673	2674	some ideas of your own for homework and we'll make our decision.
+6956	2650	lpause]
+7181	2694	tone
+7499	2654	[The recording is repeated.]
+7776	2654	lpause]
+9636	987	124
+9942	967	=ЕЗ·KEТ/РЕТ/FЕ*† ,łЗ*01 :¡9kpf

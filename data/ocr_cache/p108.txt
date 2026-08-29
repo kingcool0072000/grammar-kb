@@ -1,0 +1,105 @@
+407	938	Marks and results
+1133	1040	B2
+1351	1122	5
+1123	1488	Content
+1367	1489	All content is
+1511	1469	relevant to the task.
+1661	1468	Target reader is
+1793	1488	fully informed.
+2558	1102	4
+2790	1122	3
+2805	1489	Minor irrelevances
+2923	1489	and/or omissions
+3099	1488	may be present.
+3226	1489	Target reader is on
+3357	1469	the whole informed.
+988	3102	Communicative
+1104	3122	Achievement
+1366	3102	Uses the conventions of
+1497	3081	the communicative task
+1627	3102	effectively to hold the
+1788	3081	target reader's attention
+1935	3102	and communicate
+2065	3102	straightforward and
+1123	5162	Organisation
+1366	5163	Text is well-organised
+1511	5142	and coherent,
+1657	5142	using a variety of
+1758	5163	cohesive devices and
+1919	5163	organisational patterns
+2065	5163	to generally good effect.
+2223	3102	complex ideas, as
+2355	3101	appropriate.
+2573	3918	Performance shares features of Bands 3 and 5.
+2805	3081	Uses the conventions of
+2821	5142	Text is generally
+2950	3102	the communicative task
+2936	5163	well- organised and
+3096	3081	to hold the target reader's
+3081	5163	coherent, using a
+3227	3081	attention
+3215	5162	variety of
+3357	3081	and communicate
+3373	5122	linking words and
+3519	3081	straightforward ideas.
+3519	5122	cohesive devices.
+1122	7060	Language
+1366	7061	Uses a range of vocabulary,
+1511	7061	including less common lexis,
+1660	7040	appropriately
+1773	7061	Uses a range of simple and complex
+1919	7061	grammatical forms with control
+2050	7061	and flexibility.
+2196	7061	Occasional errors may be present
+2354	7040	but do not impede communication.
+2805	7061	Uses a range of everyday vocabulary
+2950	7061	appropriately, with occasional
+3081	7061	inappropriate use of less common
+3212	7020	lexis.
+3373	7040	Uses a range of simple and some
+3525	7039	complex grammatical forms with a
+3650	7019	good degree of control.
+3784	7060	Errors do not impede
+4404	7040	Uses everyday vocabulary generally
+4534	7040	appropriately, while occasionally
+4665	7040	overusing certain lexis.
+4817	7040	Uses simple grammatical forms with
+4944	7060	a good degree of control.
+5088	7122	While errors are noticeable
+5203	7102	meaning can still be determined
+4127	1122	2
+4374	1142	1
+4389	1469	Irrelevances and
+4520	1489	misinterpretation
+4651	1489	of task may be
+4811	1489	present. Target
+4958	1489	reader is minimally
+5072	1469	informed.
+4157	3918	Performance shares features of Bands 1 and 3.
+4389	3081	Uses the conventions of
+4389	5142	Text is connected and
+4550	3081	the communicative task
+4520	5142	coherent, using basic
+4680	3081	in generally appropriate
+4652	5142	linking words and
+4827	3102	ways to communicate
+4801	5142	a limited number of
+4958	3102	straightforward ideas.
+4942	5142	cohesive devices.
+5436	1122	0
+5465	1489	Content is totally
+5583	1468	irrelevant.
+5742	1489	Target reader is not
+5857	1489	informed.
+5669	5387	Performance below Band 1.
+6351	938	Length of responses
+6555	938	Make sure you write the correct amount of words. Responses which are too short may
+6744	938	not have an adequate range of language and may not provide all the information that is
+6919	938	required. Responses which are too long may contain irrelevant content and have a negative
+7093	938	effect on the reader.
+7485	938	Varieties of English
+7674	959	You are expected to use a particular variety of English with some degree of consistency in
+7863	938	areas such as spelling, and not for example switch from using a British spelling of a word
+8054	938	to an American spelling of the same word.
+9622	959	108
+9942	979	З·KEТ/РЕТ/F½Ж· ,·1 : İ qkpf

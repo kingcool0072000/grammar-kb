@@ -1,0 +1,56 @@
+437	876	Test 4 Key
+988	876	Listening (approximately 40 minutes)
+1310	875	Part 1
+1574	875	1A 2 A
+1584	2421	3 A
+1570	3277	4 B
+1584	4050	5 A
+1570	4822	6 A
+1570	5720	7 C
+1556	6534	8 C
+1918	876	Part 2
+2165	876	9 Z0o
+2182	1773	10 farmers
+2340	876	14 (animal) reserves
+2514	876	18 gloves
+2198	3318	11 repairs
+2194	4572	12 night work
+2354	3256	15 the Internet OR Internet use
+2866	875	Part 3
+3124	855	19 C 20 G
+3140	2672	21 A
+3126	3610	22 B
+3140	4572	23 F
+3475	876	Part 4
+3737	875	24 A
+3722	1816	25 B
+3722	2734	26 B
+3737	3652	27 C
+3736	4572	28 A 29 B 30 A
+2194	6638	13 wild dog / Wild Dog
+2356	6679	16 lake
+2369	7870	17 (heavy) boots
+4534	876	Transcript
+7922	897	PART 1
+8468	915	Question 1
+4534	2609	This is the Cambridge English: First for Schools, Test 4.
+4811	2630	I'm going to give you the instructions for this test. I'll introduce each part of
+5016	2649	the test and give you time to look at the questions. At the start of each prece
+5116	2630	vou'll hear this sound:
+5406	2609	tone
+5697	2651	You'll hear each piece twice.
+5974	2651	Remember, while you're listening, write your answers on the question paper.
+6149	2651	You'll have five minutes at the end of the test to copy your answers onto the
+6323	2609	separate answer sheet.
+6630	2628	There will now be a pause. Please ask any questions now, because you must
+6773	2609	not speak during the test.
+7049	2588	lpause]
+7340	2630	Now open your question paper and look at Part One.
+7608	2585	[pause]
+7950	2651	You'll hear people talking in eight different situations. For questions 1-8,
+8140	2609	choose the best answer (A, B or C).
+8474	2630	One. You overhear two friends talking about a lesson they had at school.
+8752	2587	[pause]
+8997	2630	tone
+9607	918	156
+9941	918	#2J3ЇKEТ/PET/FCEZ*7, *343MD0#X1È : iq-kpf

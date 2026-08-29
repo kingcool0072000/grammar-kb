@@ -1,0 +1,53 @@
+468	8119	Test 3 Key
+2383	292	PART 4
+3648	647	Interviewer:
+4058	1230	Jack:
+5321	667	Interviewer:
+5552	1231	Jack:
+6802	668	Interviewer:
+7194	1252	Jack:
+8619	688	Interviewer:
+8866	1252	Jack:
+973	1962	[The recording is repeated.]
+1252	1961	[pause]
+1511	1983	That is the end of Part Three.
+1758	2004	Now turn to Part Four.
+2066	1961	[pause]
+2427	2004	You'll bear an interview with Jack Herbert, a talented young pianist.
+2587	1983	For questions 24-30, choose the best answer (A, B or C).
+2834	2004	You now have one minute to look at Part Four.
+3111	1982	[pause]
+3359	1982	tone
+3677	1983	Hi there. On today's programme, I'm talking to teenage concert pianist, Jack
+3852	1983	Herbert. Jack, tell us when and how you first started playing.
+4084	1983	Well, my Gran played quite well - when I was a little kid, I'd drop off to sleep
+4245	1983	at night to the sound of her playing in the distance. It wasn't long before I was
+4405	2004	asking to have a go myself. Gran didn't fancy the idea of teaching me so she
+4578	2004	arranged for me to have lessons with a proper teacher. And wow - was he
+4767	1983	strict! But she was always there for me - making sure | kept going whenever
+4943	1962	things got tough and, you know, she'd find me interesting things to play, stuff
+5089	1982	like that.
+5336	1983	Do you come from a very musical family?
+5568	1983	My older sister's just graduated from music college and she's desperate
+5729	1962	to find a permanent position in an orchestra. She plays for a local theatre
+5923	1982	company from time to time, but it doesn't pay the bills so she's taken a job
+6075	1962	in a music store till she gets sorted out. And my brother's quite a talented
+6251	1983	guitarist who used to do gigs with a band but he's given it all up. Mum played
+6424	1962	in a national symphony orchestra before she married Dad. They've always
+6598	1983	been a great support to me. So l've been lucky really.
+6831	1983	Now, at the age of twelve, you got a scholarship to the National Music
+6991	2004	School. What was it like there?
+7238	1983	Well, obviously it was a huge privilege to play with the greatest young
+7399	1983	musicians in the country, though I didn't really appreciate it at the time. The
+7574	1983	thing was I didn't feel at home among all those talented people. I thought l'd
+7747	2004	never be good enough for my teachers there, though I really wanted to do
+7906	2004	my best. I had to do what were called 'performance platforms' - I'd play on
+8081	1983	a small stage in the hallway of the college. And the music they'd given me to
+8241	2025	play always seemed much too challenging. But I can see now that I needed
+8417	2004	to be pushed so I'm grateful to them.
+8650	2025	Practising must take up a lot of your time.
+8883	1983	It does - practice will always be part of my life, even if there's other stuff I'd
+9040	2004	rather be doing sometimes because you can't get to the top without putting
+9215	2004	the hours in. But of course, there's more to being a good concert pianist than
+9549	8789	153
+9927	960	313ЇKEТ/РЕТ/FC *** * : ¡ qkpf

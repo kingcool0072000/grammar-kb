@@ -1,0 +1,25 @@
+523	6549	Reading and Use of English
+1152	700	A The main reason for this is that they had
+1322	1053	previously only been able to look on land.
+1584	702	B So they decided to collect some more
+1744	1053	samples in winter, despite the difficulties
+1919	1032	involved.
+2165	681	C
+2776	681	D
+2201	1028	The presence
+2194	2376	of particular plants,
+2354	1053	however, indicates that it was fairly warm
+2529	1053	even during those coldest months.
+2791	1033	They could grow there because at that
+2965	1053	time the area had a near-tropical climate
+3139	1053	with frost-free winters, even in the polar
+3316	1032	darkness.
+1153	5101	E Some of them have now been brought up
+1322	5433	in the tubes.
+1589	5081	F But their new findings have provided
+1730	5454	the first ever detailed information about
+1934	5433	its environment and, consequently, its
+2093	5454	climate.
+2340	5082	G This ensured it remained inside as it was
+2545	5433	pulled out.
+10028	938	#213E#KET/PET/FC*7,$2692D0*X1E: i 0kpł

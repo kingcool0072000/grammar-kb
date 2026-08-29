@@ -1,0 +1,26 @@
+465	991	Test 2
+1034	971	SPEAKING (14 minutes)
+1410	971	You take the Speaking test with another candidate (possibly two candidates), referred to here as
+1584	971	your partner. There are two examiners. One will speak to you and your partner and the other will
+1773	991	be listening. Both examiners will award marks.
+2152	971	Part 1 (2 minutes)
+2429	971	The examiner asks you and your partner questions about yourselves. You may be asked about
+2645	950	things like 'your home town', 'your interests', 'your career plans', etc.
+3009	971	Part 2 (a one-minute 'long turn' for each candidate, plus a 20-second response from
+3183	950	the second candidate)
+3459	950	The examiner gives you two photographs and asks you to talk about them for one minute.
+3667	949	The examiner then asks your partner a question about your photographs and your partner
+3837	929	responds briefly.
+4216	950	Then the examiner gives your partner two different photographs. Your partner talks about these
+4404	950	photographs for one minute. This time the examiner asks you a question about your partner's
+4593	950	photographs and you respond briefly.
+4970	950	Part 3 (4 minutes)
+5247	950	The examiner asks you and your partner to talk together. You may be asked to solve a problem
+5423	971	or try to come to a decision about something. For example, you might be asked to decide the
+5611	971	best way to use some rooms in a language school. The examiner gives you some text to help
+5784	971	you but does not join in the conversation.
+6177	950	Part 4 (4 minutes)
+6468	971	The examiner asks some further questions, which leads to a more general discussion of what
+6656	950	you have talked about in Part 3. You may comment on your partner's answers if you wish.
+9665	971	50
+10015	938	$23#EТ/РEТ/FC**,#З0X15 : iq-kpf

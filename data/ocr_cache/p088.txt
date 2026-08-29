@@ -1,0 +1,25 @@
+499	8282	Listening
+974	292	5 You hear two friends talking about a musical festival they are going to attend.
+1178	648	What is the boy looking forward to most?
+1497	669	A learning who the surprise performer will be
+1788	690	B having the chance to see new performers
+2122	669	C hearing some performers he liked last year
+2659	251	6 You hear two friends talking about a movie.
+2848	669	What do they agree about?
+3154	669	A The plot was handled appropriately.
+3459	669	B The visual effects were stunning.
+3750	690	C The actors were well chosen.
+4287	292	7
+4316	669	You hear two friends talking about a news story about a baby monkey.
+4505	669	What do they agree about?
+4812	669	A that the monkey is in the best environment for it
+5130	690	B that the monkey deserves better treatment
+5437	690	C that it is sad this species of monkey is endangered
+5959	271	8
+5974	564	You overhear two friends talking about their holidays.
+6178	690	How does the boy feel about his holiday?
+6482	690	A surprised about how much he enjoyed his holiday
+6788	690	B disappointed that the family's plans had to change
+7093	690	C pleased that he was able to learn a new skill
+9694	8933	89 ฿
+9942	899	#1З#KEТ/РEТ/FCЗ** ,*З9*0 : i9kpf

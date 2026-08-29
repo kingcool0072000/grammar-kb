@@ -1,0 +1,31 @@
+494	971	Test 2
+1006	5039	Part 4
+1395	971	For questions 25-30, complete the second sentence so that it has a similar meaning to the first
+1600	971	sentence, using the word given. Do not change the word given. You must use between two and
+1773	950	five words, including the word given. Here is an example (0).
+2138	970	Example:
+2427	1404	Prizes are given out when the school year finishes.
+2676	1404	PLACE
+2981	1404	Prize-giving
+2952	5206	... end of each school year.
+3255	950	The gap can be filled by the words 'takes place at the', so you write:
+3679	949	Example:
+3677	2231	0
+3691	2644	TAKES PLACE AT THE
+4100	950	Write only the missing words IN CAPITAL LETTERS on the separate answer sheet.
+4622	950	25 l'd like to be an actor one day but fame doesn't interest me.
+4883	1363	INTERESTED
+5176	1363	I'd like to be an actor one day but I'm ...
+5566	950	26 I didn't go skating because | was too tired.
+5831	1383	WOULD
+5182	8178	famous.
+6107	4834	. I hadn't been so tired.
+6409	950	27 It's been absolutely ages since I last saw David.
+6671	1384	SEEN
+6949	4028	............ absolutely ages.
+7325	971	28
+7340	1342	Can you tell me the difference between these two computers?
+7602	1425	DIFFERENT
+7895	1446	Can you tell me how ...........
+7863	4979	............from that one?
+9942	971	#1З#KEТ/РEТ/FСЗ** ,*З9*0 : i9kpf

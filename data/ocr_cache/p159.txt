@@ -1,0 +1,44 @@
+552	8155	Test 4 Key
+4014	269	Question 6
+8069	271	Question 7
+1034	1299	Man: Yes, I didn't see them but | like their songs. And as well as all the people
+1221	1991	they've already announced, they're promising an appearance by someone
+1366	1991	really famous.
+1569	1006	Woman:
+1585	1844	I wonder who that could be.
+1845	1970	Well, they've said someone fantastic's going to be performing with Fatima
+2021	1991	Wheatley, someone she's never worked with before. I can't wait to find out
+2194	1991	who that'll be. And Fatima's got a great voice, of course - I did get to see her
+2354	1991	perform last year.
+2558	964	Woman:
+2580	2010	Yes, me too.
+2863	1991	lpause]
+3095	2012	tone
+3415	1991	[The recording is repeated.]
+3677	1991	lpause]
+4040	1991	Six. You hear two friends talking about a movie.
+4304	1990	[pause]
+4534	2012	tone
+4827	1277	Man:
+4854	1844	Did you enjoy the movie, Melissa?
+5063	962	Woman:
+5088	1949	I actually liked it even more than the book it was based on - which I loved.
+5249	1991	The actors were brilliant - perfect for their roles.
+5465	1278	Man:
+5494	1991	Well, some were. I've read the book too and I thought the hero should've
+5654	1991	been someone a bit taller and darker. But the others were OK. And at least
+5829	1990	the director didn't mess around with the story.
+6031	964	Woman:
+6075	1991	No, thank goodness. It would've spoilt things if he had. I was a bit
+6237	1991	disappointed by some of the visual effects - especially in the car chase - but
+6409	1991	otherwise it was great.
+6642	1257	Man: Oh? I was actually quite impressed by that chase!
+6920	1969	Ipause]
+7168	1990	tone
+7470	1991	[The recording is repeated.]
+7737	1968	[pause]
+8082	1991	Seven. You hear two friends talking about a news story about a
+8258	1990	baby monkey.
+8534	1969	[pause]
+8779	1991	tone
+10033	895	#213E#KEТ/PET/FC#7,9D01E: iqkpł°

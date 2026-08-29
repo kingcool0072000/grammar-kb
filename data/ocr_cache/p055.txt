@@ -1,0 +1,33 @@
+379	847	Test 3
+888	4988	Part 4
+1279	848	For questions 25-30, complete the second sentence so that it has a similar meaning to the first
+1484	848	sentence, using the word given. Do not change the word given. You must use between two and
+1673	848	five words, including the word given. Here is an example (0).
+2035	848	Example:
+2326	848	0 Prizes are given out when the school year finishes.
+2574	1303	PLACE
+2883	1302	Prize-giving
+2863	4658	........... end of each school year.
+3170	848	The gap can be filled by the words "takes place at the', so you write:
+3594	826	Example:
+3590	2153	0
+3605	2525	TAKES PLACE AT THE
+4011	848	Write only the missing words IN CAPITAL LETTERS on the separate answer sheet.
+4549	828	25 It's a pity | didn't see Jane before she went on holiday.
+4811	1283	WISH
+5087	1283	1...
+5101	4596	.... Jane before she went on holiday.
+5494	848	26 Richard only arrived just before the concert began.
+5755	1283	TURN
+6034	1282	Richard
+6063	5258	.... until just before the concert began.
+6438	848	27 Despite not feeling well, Lisa went to the cinema with her friends.
+6700	1283	ALTHOUGH
+6991	1304	Lisa went to the cinema with her friends.
+6991	8447	well.
+7354	869	28
+7369	1138	When does the bus leave on Sundays?
+7645	1304	WHAT
+7952	1325	Can you tell me .......................................on Sundays?
+9622	869	56
+9942	910	#2J3шЇKEТ/PEТ/FCž*·,*34301 : iq-kpf

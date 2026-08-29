@@ -100,6 +100,18 @@ export const api = {
     req('/fce-submissions', { searchParams: { user, status, limit } }),
   fceSubmit: (rec) => reqJson('/fce-submissions', 'POST', rec),
   fceGrade: (id, rec) => reqJson(`/fce-submissions/${id}`, 'PUT', rec),
+  // 阅读训练：列表（默认只返回派生文；教师 kind=base 查原文段）/ 详情 / 录音提交与批改
+  readingArticles: ({ kind } = {}) =>
+    req('/reading/articles', { searchParams: { kind } }),
+  readingArticle: (id) => req(`/reading/articles/${id}`),
+  readingAddDerived: (rec) => reqJson('/reading/articles', 'POST', rec),
+  readingUpdateDerived: (id, rec) => reqJson(`/reading/articles/${id}`, 'PUT', rec),
+  readingDeleteDerived: (id) => reqJson(`/reading/articles/${id}`, 'DELETE'),
+  readingRecordings: ({ user, status, limit = 100 } = {}) =>
+    req('/reading/recordings', { searchParams: { user, status, limit } }),
+  readingRecording: (id) => req(`/reading/recordings/${id}`),
+  readingSubmitRecording: (rec) => reqJson('/reading/recordings', 'POST', rec),
+  readingGradeRecording: (id, rec) => reqJson(`/reading/recordings/${id}`, 'PUT', rec),
 }
 
 // 规整单个知识点，保证集合字段为数组

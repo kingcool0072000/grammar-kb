@@ -1,0 +1,52 @@
+423	948	Frames for the Speaking test
+901	927	Parts 3 and 4
+1366	927	Part 3 4 minutes (5 minutes for groups of three)
+1671	948	Interlocutor:
+3779	927	Candidates:
+4026	948	Interlocutor:
+4476	927	Candidates:
+4723	948	Interlocutor:
+1715	2680	Now, I'd like you to talk about something together for about
+1861	2680	two minutes.
+2065	2639	[3 minutes for groups of three]
+2327	2659	Here are some things that might be important if you want to
+2500	2659	have good friends and a question for you to discuss. First you
+2660	2658	have some time to look at the task.
+2936	2639	Indicate the visual 4E on page C12 to the candidates.
+3081	2680	Allow 15 seconds.
+3389	2659	Now, talk to each other about how important these things are if
+3546	2639	you want to have good friends.
+3808	2618	[2 minutes / 3 minutes for groups of three]
+4069	2659	Thank you. Now you have about a minute to talk about which
+4244	2659	two things are most important.
+4492	2639	[1 minute]
+4768	2659	Thank you.
+5116	927	Part 4 4 minutes (6 minutes for groups of three)
+5334	948	Interlocutor:
+5377	2680	Use the following questions, in order, as
+5555	2659	appropriate:
+5815	2659	• How easy do you think it is to make new
+5988	2907	friends? (Why? / What's the best way to
+6136	2902	do this?)
+5363	7092	Select any of the following
+5538	7092	prompts, as appropriate:
+5784	7092	• What do you think?
+5973	7072	• Do you agree?
+6136	7071	• And you?
+6424	2639	• What is the perfect number of friends to
+6604	2885	have? (Why?)
+6861	2639	• How important is it to be able to trust our friends? (Why?)
+7123	2639	• What do you think is the main reason why friends argue?
+7296	2886	(Why?)
+7499	2659	•
+7531	2804	Is it possible to have close friends who are a lot older or
+7732	2886	younger than us? (Why? / Why not?)
+7981	2639	• People in families sometimes find it hard to be friends with
+8169	2886	each other. Why do you think this is?
+8430	2639	• Is it possible to be close friends with people that you only talk
+8604	2886	to online? (Why? / Why not?)
+8838	2659	• Is it easier to be friends with someone who is very similar to
+9042	2886	you or someone who is very different? (Why?)
+9288	2907	Thank you. That is the end of the test.
+9622	927	106
+9942	948	#З·KEТ/РЕТ/FCЕ * , $9M01 : İqkpf

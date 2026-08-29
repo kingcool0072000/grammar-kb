@@ -1,0 +1,73 @@
+508	6509	Reading and Use of English
+1220	3100	School trips
+2020	451	A
+2020	924	Lisa
+2340	287	The trip was organised at the beginning of the
+2470	287	academic year because we hadn't seen each
+2633	306	other much over the summer. It was basically six
+2777	308	days doing activities like mountain walking and
+2950	287	canoeing. We offered to help with the cooking,
+3096	266	which was actually quite good fun. The plan
+3226	308	was that we would do things all together in the
+3401	287	evenings; my friends and I came up with stuff like
+3561	266	games and talent shows, and we even put on a
+3708	266	play one night. We performed it for the teachers,
+3851	266	who really liked it - at least, that's what they
+4019	265	said at the time! It didn't really matter anyway,
+4157	287	because we all had such a laugh. Some friends
+4288	308	of mine even posted a video of it online when we
+4462	266	got home. I hope we can do something like that
+4607	287	again some time.
+4970	451	B
+4985	944	Rosa
+5277	287	I must admit I expected it to be a bit of a waste
+5450	287	of time. This trip was compulsory for the whole
+5596	287	class, and I thought it might be dreadful! Anyway,
+5742	287	when we got off the train and I saw the lovely
+5889	287	village where we were staying, I knew straight
+6046	266	away it would be all right. Our teachers were
+6208	266	really friendly and did loads of sports with us,
+6351	287	which was perfect for me, but not that great
+6497	287	for some of my less sporty friends. On one day
+6657	266	we could choose to go either to a museum or
+6816	266	to an art gallery. I went to the museum, which
+6947	287	was a poor decision as the alternative, the art
+7107	287	gallery, was pretty cool and everyone should see
+7269	266	it apparently. All in all, though, I had a great time
+7427	266	and I'll definitely be on the next trip!
+2020	5051	C
+2020	5564	Claire
+2327	4887	We were away for three days, and on one of
+2492	4865	them we visited a huge cave. I was anxious
+2646	4866	about going underground into the dark! All my
+2747	4866	friends teased me about that but said I'd be OK
+2936	4866	and that they'd look after me, so I went along. I
+3096	4866	didn't like it at all at first, but when I eventually
+3226	4866	relaxed and started to look around properly, I
+3401	4845	have to say it was stunning. There were lights
+3546	4845	along all the paths inside the cave and they'd
+3692	4866	also put some up so you could see the different
+3851	4845	rock formations there. So in the end, it wasn't
+4011	4845	scary at all. The rest of the trip was fun too, but
+4157	4845	I'd say that was the highlight. I wish I could go
+4316	4866	back there with my family, but it's too far away.
+4462	4866	But should you be in that area, it is definitely
+4593	4887	worth a visit.
+4970	5051	D
+4970	5544	Jana
+5277	4866	I hadn't wanted to go on any school trips before
+5436	4866	because I was worried about being away from my
+5596	4866	parents. I know it sounds silly, but | also know I
+5726	4887	wasn't the only one. There was no choice this
+5889	4887	time; the whole class had to go. It was only for
+6046	4866	the weekend in any case, and not far from home
+6208	4866	either. We went camping - luckily, it didn't rain. I
+6351	4866	thought the teachers might be strict with us, but
+6502	4885	that wasn't the case at all. We went for long walks
+6657	4845	in the forest during the day, but probably the
+6804	4866	best bit was in the evenings when we sat round
+6947	4887	a campfire in a big circle and sang funny songs. I
+7093	4907	even ended up getting close to people I'd never
+7269	4866	talked to much at school before, so the trip really
+7412	4866	was worthwhile.
+10013	960	#B3#KET/PEТ/FC2*#,#95ZD01E: ia-kpfS

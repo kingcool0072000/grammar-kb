@@ -1,0 +1,48 @@
+461	8098	Test 1 Key
+1018	423	Listening (approximately 40 minutes)
+1351	403	Part 1
+1600	403	1 C
+1600	1008	2 B
+1600	1854	3A 4A 5C 6C
+1598	5120	7B
+1600	5947	8 A
+1962	403	Part 2
+2209	403	9 film / movie
+2238	2076	10 (tour) guide
+2223	3850	11 mountain / Mountain
+2412	403	12 jungle(-)life / junglelife
+2412	3205	13 peaceful
+2372	4737	14 insects
+2587	403	15 black(-)back(s) / blackback(s)
+2591	3768	16 ground
+2762	403	17 humans / human beings
+2748	3245	18 rainforest / Rainforest
+3095	403	Part 3
+3357	403	19 D
+3357	1189	20 B
+3343	2197	21 H
+3344	3043	22 F
+3357	4012	23 E
+3713	400	Part 4
+3972	401	24 C
+3968	1189	25 A
+3954	2217	26 B
+3953	3125	27 B
+3939	3971	28 C
+3939	4475	, 29 А 30 А
+4611	401	Transcript
+4593	2096	This is the Cambridge English: First for Schools, Test 1.
+4870	2096	I'm going to give you the instructions for this test. I'll introduce each part of
+5029	2096	the test and give you time to look at the questions. At the start of each piece
+5195	2095	you'll hear this sound:
+5465	2076	tone
+5770	2096	You'll hear each piece twice.
+6061	2116	Remember, while you're listening, write your answers on the question paper.
+6207	2116	You'll have five minutes at the end of the test to copy your answers onto the
+6380	2096	separate answer sheet.
+6642	2116	There will now be a pause. Please ask any questions now, because you must
+6817	2096	not speak during the test.
+7081	2095	[pause]
+7354	2116	Now open your question paper and look at Part One.
+7630	2096	Ipause]
+10013	1022	#₴IЗ#KEТ/РEТ/FCЗ*· ,†З·9½D0#1 : iq-kpf'

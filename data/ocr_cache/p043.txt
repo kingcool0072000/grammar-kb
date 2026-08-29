@@ -1,0 +1,28 @@
+437	943	Test 2
+1004	944	LISTENING (approximately 40 minutes)
+1482	5010	Part 1
+1889	924	You will hear people talking in eight different situations. For questions 1-8, choose the best answer
+2093	903	(A, B or C).
+2514	944	1
+2558	1293	You hear a teacher talking to some students.
+2747	1355	What is he doing?
+3023	1355	A explaining the benefits of walking holidays
+3315	1355	B emphasising the natural beauty of some places
+3590	1355	C describing the difference between two areas
+4142	944	2 You hear two friends talking about a bike race they went on.
+4346	1355	What does the girl say about it?
+4623	1355	A She was disappointed with her speed.
+4912	1375	B She found it more difficult than expected.
+5188	1355	C She almost gave up before the finish.
+5758	1170	You hear a man and his daughter talking in a library.
+5946	1355	What is the man doing?
+6235	1355	A recommending a book for his daughter to read
+6511	1375	B complaining about his daughter's reading habits
+6804	1375	C promising to help his daughter to choose a book
+7340	965	4
+7369	1375	You hear two friends talking about a television programme about polar bears.
+7570	1373	What do they both think was unusual about it?
+7834	1396	A the information given in it
+8096	1396	B the location chosen for it
+8401	1396	C the skill involved in filming it
+9942	965	#З·KEТ/РЕТ/FC** ,$З9*01 :iqkpf

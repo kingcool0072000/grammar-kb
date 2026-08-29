@@ -1,0 +1,43 @@
+511	960	Test 1 Key
+1017	940	PART 3
+1046	2658	You'll hear five short extracts in which teenagers are talking about a recent
+1235	2638	holiday. For questions 19-23, choose from the list (A-H) the opinion each
+1414	2637	speaker expresses. Use the letters only once. There are three extra letters
+1557	2638	which you do not need to use.
+1906	2678	You now have thirty seconds to look at Part Three.
+2184	2615	lpause]
+2414	2678	tone
+2733	2658	Speaker 1
+3008	2638	[pause]
+3270	2638	I had a brilliant holiday in Greece this summer. My best friend's parents
+3459	2637	invited me to go with them to visit their cousins. It was great'cause they
+3619	2658	speak Greek and know where to go and what to do. We saw fantastic
+3793	2658	archaeological sites and also went scuba diving several times. I loved that -
+3968	2658	and felt I'd really improved since my first attempts last year. Probably the best
+4142	2638	thing was going to an opera in an ancient open-air theatre. I wasn't looking
+4333	2638	forward to it because I'd never seen an opera before, but I can't wait to go
+4491	2658	again!
+4756	2657	[pause]
+5045	2657	Speaker 2
+5319	2658	[pause]
+5583	2678	This year my family went to France. I've been learning French at school but
+5755	2658	I didn't get to practise it much because everyone there spoke English much
+5932	2678	better than I spoke French. We stayed in a campsite on the south coast. It
+6104	2658	was a terribly long drive down there, which was boring, but it was fun once
+6281	2658	we arrived. There were loads of people my age staying there too and we
+6453	2678	spent every day together. Some of us had waterskiing lessons. I've always
+6630	2638	wanted to have a go at that and it turned out I had a real talent for it. I hope I'll
+6802	2678	persuade my parents to go back there next year.
+7079	2658	[pause]
+7342	2678	Speaker 3
+7630	2658	[pause]
+7892	2678	We usually go to the same place every year. You might think that's a bit
+8067	2678	boring but I actually like it. I've got some of my best friends there - we've
+8229	2699	all known each other since we were six. This year we took some cousins
+8416	2678	along with us. They're from Australia and they're spending a year travelling
+8590	2658	round the world. Lucky things! I'd never met them before. It was fun being on
+8765	2678	holiday with them, showing them round and introducing them to my mates.
+8938	2678	They particularly enjoyed some evenings we spent at a jazz club. I did too -
+9114	2678	the musicians were great, and it's made me determined to start learning the
+9287	2678	saxophone now I'm home.
+9927	1002	#213w#KEТ/РEТ/FC*·,#9M0XË : i q-kpf

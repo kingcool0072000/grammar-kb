@@ -1,0 +1,27 @@
+494	951	Test 1
+1003	4939	Part 7
+1395	951	You are going to read an article in which four teenagers talk about part-time work. For questions
+1600	951	43-52, choose from the teenagers (A-D). The teenagers may be chosen more than once.
+1964	951	Mark your answers on the separate answer sheet.
+2458	931	Which teenager
+2806	950	argues that having a job encourages people to be more efficient?
+3227	951	says there is only a limited range of jobs to choose from?
+3664	931	has to put up with people teasing them?
+4100	931	hopes to find regular part-time work eventually?
+4537	951	puts up with a general disadvantage of having a job?
+4942	951	can choose to work less when short of time?
+5393	948	got a job to please someone else?
+5816	951	doesn't agree with the reason behind someone's decision?
+6252	951	was not told off for a mistake they made?
+6686	971	did what they could to improve their situation?
+2776	8137	43
+3212	8137	44
+3633	8157	45
+4069	8157	46
+4505	8157	47
+4927	8157	48
+5363	8157	49
+5799	8157	50
+6235	8157	51
+6671	8157	52
+9942	1052	#1З#KEТ/РEТ/FC3*7,*39*0 : i9kpf

@@ -1,0 +1,45 @@
+465	875	Marks and results
+1002	854	Sample B (Test 1, Question 3 - Letter)
+1353	1017	Dear Tom,
+1642	999	Thank you for your letter. Sorry that I haven't written for so long. I'd love to advise you what you
+1831	979	should choose. Well, to my mind languages play one of the biggest rolw in our modern society. If
+2007	958	you want to study abroad or visit foreign country, you ought to speak to pupils by their native
+2165	958	language. Moreover, if you are planning to study abroad, you, of course, must know local language.
+2429	1000	As for sciences, it also depends on your planning. First of all, you should take shape exactly where
+2617	979	you will work. If you decide to connect your future with science, for example physics or chemistry,
+2776	979	consequently you should continue studying sciences.
+3052	1000	Were 1you, I would choose languages, because they become very popular and useful. If you know
+3212	979	some language, you could provide your future.
+3503	1000	So, your choice depends only on you and your preferences to future. Well, I have to go now. Write
+3641	977	back soon and tell me what you choose.
+3882	996	Best wishes,
+4130	977	Ksenia
+4768	957	Scales
+4767	2666	Mark
+5290	979	Content
+6061	979	Communicative
+6235	1000	Achievement
+7039	978	Organisation
+7034	2854	4
+7899	1018	Language
+7936	2833	4
+4790	3411	Commentary
+5067	3436	All content is relevant and the target reader would be fully
+5234	3395	informed. The writer discusses both languages and sciences and
+5406	3416	gives an opinion on why each is important, and states which one
+5568	3416	they would choose.
+5844	3437	The letter is written in an appropriate, friendly tone, which
+6017	3416	communicates straightforward ideas effectively. Both advantages
+6178	3416	and disadvantages of the two subjects are discussed and reasons
+6366	3416	for choices are given in a way which holds the reader's attention
+6527	3416	and which would help them make a choice.
+6788	3395	The letter is well organised and coherent and there is a variety of
+6934	3437	cohesive devices used. The letter has external cohesive features
+7153	3416	such as Thank you for your letter, Write back soon, and uses
+7296	3416	conjunctions to link across and within sentences.
+7572	3416	There is a range of vocabulary used appropriately with some good
+7732	3416	phrases attempted; however, less common lexis is not always quite
+7909	3416	successtul (you should take shape, they become very popular).
+8096	3416	There is a range of simple and some more complex grammatical
+8258	3415	forms used with control. The errors are non-impeding.
+9927	916	#2I3·KEТ/РET/FC*†,#901 : iq-kpf

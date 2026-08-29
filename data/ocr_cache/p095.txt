@@ -1,0 +1,41 @@
+465	958	Frames for the Speaking test
+988	958	Part 2 4 minutes (6 minutes for groups of three)
+1252	957	Family holidays
+1380	958	Celebrations
+1643	958	Interlocutor:
+3735	958	Candidate A:
+3982	958	Interlocutor:
+4696	979	Candidate B:
+4927	958	Interlocutor:
+6356	957	Candidate B:
+6614	937	Interlocutor:
+7298	979	Candidate A:
+7558	958	Interlocutor:
+1687	2687	In this part of the test, I'm going to give each of you two
+1860	2708	photographs. I'd like you to talk about your photographs
+2021	2729	on your own for about a minute, and also to answer a short
+2210	2708	question about your partner's photographs.
+2471	2687	(Candidate A), it's your turn first. Here are your photographs.
+2645	2708	They show people doing different things on a family holiday.
+2906	2708	Indicate pictures 1A and 1B on page C1 to Candidate A.
+3168	2687	I'a like you to compare the photographs, and say why you
+3343	2687	think the people have chosen to do these things on their family
+3502	2687	holiday. All right?
+3755	2686	[1 minute]
+4027	2707	Thank you.
+4302	2687	(Candidate B), which of these things would you prefer to do
+4462	2687	with your family? (Why?)
+4723	2666	[Approximately 30 seconds]
+4997	2683	Thank you.
+5247	2708	Now, (Candidate B), here are your photographs. They show
+5407	2708	people celebrating in different situations.
+5668	2708	Indicate pictures 1C and 1D on page C2 to Candidate B.
+5945	2687	I'd like you to compare the photographs, and say why you think
+6104	2687	the people are celebrating in these situations. All right?
+6352	2666	[1 minute]
+6630	2687	Thank you.
+6891	2687	(Candidate A), do you enjoy birthday celebrations?
+7063	2687	(Why? / Why not?)
+7325	2666	[Approximately 30 seconds]
+7575	2686	Thank you.
+9942	916	###ẞ#·ñKЕТ/РEТ/FC2*†,*#З*0X1È : i q-kpf

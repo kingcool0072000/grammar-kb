@@ -1,0 +1,82 @@
+450	958	Test 4
+979	5101	Part 5
+1351	958	You are going to read a magazine article in which a teenager discusses classical music. For
+1569	937	questions 31-36, choose the answer (A, B, C or D) which you think fits best according to the text.
+1904	958	Mark your answers on the separate answer sheet.
+7646	249	line 34
+2412	3562	Teenagers and Classical Music
+2719	958	When you see a teenager with an MP3 player,
+2863	937	you can be pretty certain it's not classical music
+2994	958	they're listening to. Most of us can list the names
+3139	958	of dozens of pop groups, but ask any of my friends
+3270	937	if they know who Brahms was and you can tell by
+3415	937	the expression on their face that they haven't a
+3590	937	clue. I have just started doing a music degree, but
+3720	958	the people on my course know no more about the
+3866	958	works of great composers than anyone else our
+4027	958	age. And if you don't know who wrote the music,
+4173	958	you are unlikely to go out and buy any recordings
+4288	958	of their work.
+4520	958	The statistics must be depressing for a lover of
+4680	937	classical music. Apparently only 3% of concert
+4811	958	tickets sold last year were for classical music
+4958	958	events, and the average classical recording sells
+5101	958	a mere 300 copies. I must
+5101	3479	say I still find that
+5247	937	hard to believe. So what has caused this decline
+5392	958	in interest for a type of music that has lasted for
+5538	958	centuries? The older generation are irritated by
+5685	958	our obsession with TV and video games, blaming
+5828	958	it for most things, but I don't think there is any
+5959	958	connection in this case. The simple truth is that
+6132	956	classical music just doesn't hold much attraction
+6265	958	for most people, and that is particularly true of
+6412	958	teenagers, who are the ones most likely to buy
+6542	958	music and concert tickets.
+6788	958	Now I'm aware that this doesn't apply to everyone
+6919	979	my age. I know some teenagers who go to classical
+7065	979	music concerts all the time, but they are a minority.
+7209	979	Although I am a musician and play in an orchestra,
+7340	979	I'm not exactly a classical music fan. I enjoy a huge
+7500	979	range of styles, but judging by what's stored on
+7630	979	my computer, my classical music consumption is
+7792	1000	probably pretty close to that 3% figure.
+8008	979	So why don't teenagers like classical music?
+8154	1000	Well, first of all, the pace and rhythm of classical
+8312	998	music, with its numerous changes of mood, are
+8446	1000	problematic for us. We like to talk fast, play fast,
+8590	1000	and think fast. In addition, if you believe the
+2703	5625	experts, we have difficulty paying attention for
+2850	5625	more than about three minutes; far too short for
+3008	5625	most pieces of classical music, but perfect for a
+3154	5625	pop song. Pop is structurally quite simple and
+3284	5625	therefore easy to listen to, while appreciating
+3430	5604	a piece of classical music requires time and
+3577	5625	concentration. The subject matter of pop music
+3720	5625	also holds much more appeal than a lengthy piece
+3866	5625	of classical music with no lyrics. Classical music
+4042	5583	is incredibly powerful, but not exactly full of the
+4157	5604	issues that concern teenagers.
+4374	5625	The way we listen to music has also changed. In the
+4520	5625	past, families would gather at home to make music
+4680	5583	together, and an ability to play an instrument was
+4827	5604	highly valued. The only other opportunity to hear
+4958	5625	music was at a concert. Nowadays, you can find
+5101	5625	any music you want at the click of a mouse, and
+5261	5604	yet the sound track to our lives is rarely classical.
+5392	5625	When did you last go into a shop that had classical
+5554	5604	music playing in the background?
+5758	5625	In my orchestra we play classical music in all sorts
+5901	5625	of different places, but no matter how cool the
+6061	5604	posters are, I see virtually nothing but grey hair
+6208	5604	when |look into the crowd. Some say that the lack
+6338	5625	of interest in classical music among teenagers is
+6482	5625	the fault of our schools, but there are plenty of
+6642	5604	kids eager to play classical music in their school
+6788	5604	orchestra. They arrive early to practise and stay
+6919	5625	after school to rehearse. Classical music appeals
+7065	5625	to them when they perform, but otherwise it is
+7196	5625	not their music of choice. The two activities have
+7354	5625	become separated. When we want to relax, it's
+7515	5604	always pop music.
+10017	884	·=3R#KТ/PEТ/FC3*†,#99D0*1 : iq-kpf

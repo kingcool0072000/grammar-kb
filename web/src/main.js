@@ -7,12 +7,14 @@ import { mountTaxonomy } from './views/taxonomy.js'
 import { mountExams } from './views/exams.js'
 import { mountFce } from './views/fce.js'
 import { mountFcePapers } from './views/fcePapers.js'
+import { mountReading } from './views/reading.js'
+import { mountReadingAdmin } from './views/readingAdmin.js'
 import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
 
 const app = document.getElementById('app')
 
-// teacher: true 的页签仅教师可见；学生版只有背单词
+// teacher: true 的页签仅教师可见；学生版有背单词 / FCE真题 / 阅读练习
 const VIEWS = [
   { key: 'courses', label: '课程', teacher: true },
   { key: 'vocab', label: '词汇表', teacher: true },
@@ -20,6 +22,8 @@ const VIEWS = [
   { key: 'taxonomy', label: '初中英语', teacher: true },
   { key: 'fce', label: 'FCE', teacher: true },
   { key: 'fcePapers', label: 'FCE真题' },
+  { key: 'readingAdmin', label: '阅读内容', teacher: true },
+  { key: 'reading', label: '阅读练习' },
   { key: 'exams', label: '作业成绩', teacher: true },
 ]
 
@@ -191,6 +195,10 @@ async function bootstrap() {
       mountFce(viewEl)
     } else if (route === 'fcePapers') {
       mountFcePapers(viewEl, { role })
+    } else if (route === 'readingAdmin') {
+      mountReadingAdmin(viewEl)
+    } else if (route === 'reading') {
+      mountReading(viewEl, { role })
     } else if (route === 'exams') {
       mountExams(viewEl, { lectures: state.lectures })
     }

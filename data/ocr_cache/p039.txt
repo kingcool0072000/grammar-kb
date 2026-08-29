@@ -1,0 +1,28 @@
+453	918	Test 2
+961	4968	Part 7
+1366	920	You are going to read four reviews of school concerts. For questions 43-52, choose from the
+1540	920	reviews (A-D). The reviews may be chosen more than once.
+1920	919	Mark your answers on the separate answer sheet.
+2385	920	Which review writer
+2749	899	is looking forward to hearing the players on another occasion?
+3183	920	heard some popular pieces performed in a modern way?
+3619	920	says a performance involved a risk that paid off?
+4081	918	says a performance was as good as people thought it would be?
+4464	940	predicts successful careers for some performers?
+4912	920	says the students played more difficult pieces than they normally do?
+5348	920	mentions how hard everybody worked before the concert?
+5770	920	was impressed by the performers' ability to concentrate?
+6206	940	admits that some of the music didn't appeal to them?
+6642	920	wishes one performance had been longer?
+2747	8200	43
+3168	8200	44
+3604	8200	45
+4040	8200	46
+4462	8200	47
+4898	8200	48
+5334	8220	49
+5770	8220	50
+6191	8220	51
+6642	8220	52
+9607	940	40
+9942	1022	#213#KEТ/PET/FC2*·,*3630#*1à :iq-kpf

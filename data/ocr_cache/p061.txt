@@ -1,0 +1,28 @@
+465	956	Test 3
+989	5072	Part 7
+1380	956	You are going to read a magazine article in which four teenagers talk about their experiences of
+1569	935	taking part in a reality TV series, which aims to find the best young business person. For questions
+1773	934	43-52, choose from the people (A-D). The people may be chosen more than once.
+2122	956	Mark your answers on the separate answer sheet.
+2635	950	Which person
+2965	914	learnt that academic ability is not necessary for doing well in business?
+3401	935	says they have a competitive nature?
+3822	956	was determined to enjoy their experience on the show?
+4273	956	discovered that winning the show was not as easy as they had thought?
+4694	956	believes you should go into business with people who have similar ambitions?
+5130	935	thinks you need a variety of skills to succeed in business?
+5567	956	says that if you want success you have to work hard?
+6005	956	wanted to change the image of a certain group of people?
+6424	977	says the show taught them to appreciate different styles of working?
+6860	977	says you should not listen to those who doubt you?
+2950	8357	43
+3401	8336	44
+3808	8357	45
+4244	8378	46
+4680	8378	47
+5101	8378	48
+5537	8378	49
+5973	8378	50
+6409	8378	51
+6860	8357	52
+10074	935	3EKEТ/РET/FC*7,1350*1 : iqkpf

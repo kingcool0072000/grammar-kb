@@ -1,0 +1,31 @@
+407	980	Test 1
+918	4958	Part 4
+1323	959	For questions 25-30, complete the second sentence so that it has a similar meaning to the first
+1511	960	sentence, using the word given. Do not change the word given. You must use between two and
+1700	960	five words, including the word given. Here is an example (0).
+2063	979	Example:
+2604	1418	PLACE
+2340	1399	Prizes are given out when the school year finishes.
+2909	1419	Prize-giving
+2907	5200	.. end of each school year.
+3197	980	The gap can be filled by the words 'takes place at the', so you write:
+3619	980	Example:
+3619	2240	0
+3634	2640	TAKES PLACE AT THE
+4042	980	Write only the missing words IN CAPITAL LETTERS on the separate answer sheet.
+4578	979	25 The bike is quite old so you should ask someone to check the brakes before you ride it.
+4840	1399	GET
+5130	1400	This bike is quite old so you should ...
+5130	7860	before you ride it.
+5508	980	26 I borrowed my sister's car because I hadn't yet saved enough money to buy my own.
+5784	1420	UNTIL
+6091	1419	My sister ..
+6077	5399	... I had saved enough money to buy my own.
+6627	980	27 | was late for school because I couldn't find my bag.
+6889	1420	TIME
+7180	4440	...... for school if I'd been able to find my bag.
+7543	1000	28
+7573	1320	Nicky is the only person who has signed up for the trip.
+7836	1419	NOBODY
+8130	1418	Apart ....
+8125	4480	.......... their name down for the trip.

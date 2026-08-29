@@ -1,0 +1,41 @@
+450	7975	Introduction
+988	561	Further information
+1353	561	The information contained in this practice book is designed to be an overview of the exam. For a
+1526	561	full description of all of the above exams, including information about task types, testing focus and
+1700	561	preparation, please see the relevant handbooks which can be obtained from Cambridge English
+1875	561	Language Assessment at the address below or from the website at: www.cambridgeenglish.org
+2136	581	Cambridge English Language Assessment
+2136	5390	Telephone: +44 1223 553997
+2284	560	1 Hills Road
+2283	5390	Fax: +44 1223 553621
+2471	581	Cambridge CB1 2EU
+2486	5390	Email: helpdesk@cambridgeenglish.org
+2645	581	United Kingdom
+3183	561	The structure of Cambridge English: First for Schools: an overview
+3517	561	The Cambridge English: First for Schools examination consists of four papers.
+3866	561	Reading and Use of English 1 hour 15 minutes
+4055	561	This paper consists of seven parts, with 52 questions. For Parts 1 to 4, the test contains texts
+4216	561	with accompanying grammar and vocabulary tasks, and separate items with a grammar and
+4389	561	vocabulary focus. For Parts 5 to 7, the test contains a range of texts and accompanying reading
+4576	557	comprehension tasks.
+4912	561	Writing 1 hour 20 minutes
+5088	561	This paper consists of two parts which carry equal marks. In Part 1, which is compulsory,
+5261	561	candidates have to write an essay of between 140 and 190 words, giving their opinion in
+5455	559	response to a task. In Part 2, there are four tasks from which candidates choose one to write
+5611	561	about. The range of tasks from which questions may be drawn includes an article, an email/
+5785	540	letter, an essay, a review and a short story. The last question is based on a set text. In this part,
+5930	561	candidates have to write between 140 and 190 words.
+6295	561	Listening 40 minutes (approximately)
+6483	561	This paper consists of four parts. Each part contains a recorded text or texts and some
+6656	561	questions, including multiple-choice, sentence completion and multiple-matching. Each text is
+6818	541	heard twice. There is a total of 30 questions.
+7165	561	Speaking
+7123	1482	14 minutes
+7340	561	The Speaking test consists of four parts. The standard test format is two candidates and two
+7487	580	examiners.'
+7514	1583	One examiner takes part in the conversation while the other examiner listens. Both
+7703	561	examiners give marks. Candidates will be given photographs and other visual and written
+7863	561	materials to look at and talk about. Sometimes candidates will talk with the other candidate,
+8037	541	sometimes with the examiner, and sometimes with both.
+9680	9038	5
+9942	1062	#3IЗ·KEТ/РEТ/FCE5** ,#3901à : iqkpf

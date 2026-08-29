@@ -1,0 +1,30 @@
+465	993	Test 1
+1031	973	LISTENING (approximately 40 minutes)
+1527	4989	Part 1
+1919	953	You will hear people talking in eight different situations. For questions 1-8, choose the best answer
+2113	931	(A, B or C).
+2529	973	1
+2573	1338	You hear part of a news item about a school project.
+2747	1379	What have the students at the school invented?
+3023	1399	A an unusual means of transport
+3328	1379	B a method of making ice cream
+3619	1379	C a way of producing energy
+4142	973	2
+4186	1237	You hear a teacher talking to her students about a writing competition.
+4377	1379	What is she doing?
+4639	1399	A encouraging them to go in for it
+4942	1379	B suggesting how they could do well in it
+5219	1379	C correcting information they've received about it
+5741	973	3
+5770	1237	You hear part of a radio item about a bird.
+5973	1379	The presenter is explaining why
+6242	1398	A the bird has the appearance it has.
+6527	1399	B the bird has arrived at a wildlife centre.
+6816	1379	C the bird was given the name Manukura.
+7354	973	4
+7384	1399	You hear two friends talking about a TV talent show.
+7573	1399	What do they agree about?
+7850	1399	A The girl band made a surprising choice of song.
+8139	1399	B The singer who ended the show had a very strong voice.
+8415	1399	C The performers were generally better than in previous weeks.
+9958	1014	FT3→#KEТ/PET/FC**,#330015 : iq-kpf

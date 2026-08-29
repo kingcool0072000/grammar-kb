@@ -1,0 +1,45 @@
+494	8099	Test 1 Key
+1021	349	Question 3
+4492	330	Question 4
+1017	2024	Three. You hear part of a radio item about a bird.
+1299	2001	[pause
+1526	2045	tone
+1816	1012	Woman:
+1848	2023	A rare white kiwi bird has been born in New Zealand as part of a special
+2020	2024	breeding programme. The bird, named Manukura by members of the local
+2194	2024	Maori community, was born at the Pukaha Mount Bruce National Wildlife
+2340	2024	Centre and is believed to be the first all-white kiwi chick ever to have been
+2531	2024	born in captivity. The arrival of the bird was a big surprise as no white kiwis
+2703	2024	had been brought to the Wildlife Centre. It is believed that Manukura's
+2864	2045	parents must have carried the genes for white feathers. Local Maoris have
+3052	2024	called the bird's birth a 'tohu' which means a sign of new beginnings.
+3328	2004	lpause]
+3561	2045	tone
+3880	2024	[The recording is repeated.]
+4156	2004	[pause]
+4505	2024	Four. You hear two friends talking about a TV talent show.
+4774	2001	lpause]
+5000	2045	tone
+5261	1404	Girl:
+5508	1363	Boy:
+5712	1425	Girl:
+5276	2024	What did you think of last night's 'Pop Stars' programme?
+5510	2024	Well, some of the competitors were really good this week
+5741	2045	Do you think so? I did like the guy who sang last. I thought he had a very
+5901	2024	powerful voice.
+6150	1363	Boy: Really? I thought he was a bit boring. I preferred the group of girls who
+6293	2045	opened the show.
+6526	1404	Girl:
+6541	1859	Well, they looked good but wasn't it a strange song for them to pick?
+6773	1363	Boy:
+6773	1880	You can say that again! But they did it very well.
+6991	1404	Girl:
+7005	2045	Hmm. But I'm really not getting into it. I hope things improve next week.
+7238	1384	Boy:
+7209	1859	I'm sure they will.
+7517	2023	lpause]
+7747	2045	tone
+8067	2024	[The recording is repeated.]
+8328	2024	[pause]
+9665	8780	123
+9942	950	#*3#KEТ/PET/FCEŽ*7,*3901 : iakpf

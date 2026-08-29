@@ -1,0 +1,26 @@
+465	1010	Test 3
+973	5092	Part 4
+1382	969	You will hear an interview with Jack Herbert, a talented young pianist. For questions 24-30,
+1569	989	choose the best answer (A, B or C).
+2037	989	24 When Jack was a child, his grandmother
+2340	1422	A gave him his first lessons on the piano.
+2645	1422	B sometimes disagreed with his piano teacher.
+2965	1422	C helped him when he found learning the piano difficult.
+3488	989	25 What does Jack say about other members of his family?
+3809	1422	A His brother no longer performs in public.
+4113	1422	B His parents have both played professionally.
+4418	1422	C His sister makes her living as a musician.
+4970	1010	26 How did Jack feel during his time at the National Music School?
+5276	1443	A pleased to have the opportunity to be there
+5582	1443	B worried that he wouldn't live up to expectations
+5888	1443	C frustrated that he couldn't choose which pieces to play
+6439	1010	27 What is Jack's attitude to practising?
+6746	1443	A He doesn't take it as seriously as he used to.
+7049	1443	B He feels it's essential for good performance.
+7354	1443	C He wishes he didn't have to do so much of it.
+7906	1030	28 When he's performing in a live concert, Jack aims to
+8212	1463	A interpret the music in his own way.
+8518	1463	B share his enjoyment of the music with others.
+8837	1463	C play the music better than he's ever done before.
+9622	1030	70
+9942	989	#ФJЗ#KEТ/PET/FC2*·,*363*0#Ж1 : iq-kpf

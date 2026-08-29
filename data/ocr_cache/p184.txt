@@ -1,0 +1,45 @@
+3043	1888	FIRST FOR SCHOOLS 1
+3313	2920	FIRST CERTIFICATE IN ENGLISH FOR SCHOOLS
+3519	3713	For revised exam from 2015
+3779	3887	WITH ANSWERS
+4055	657	This 1st collection of examination papers for the revised Cambridge English: First for Schools, also known as
+4229	638	First Certificate in English (FCE) for Schools, provides all the exam practice you need. It contains:
+4462	638	• four official examination papers that provide authentic exam practice
+4622	638	• a helpful overview of the Cambridge English: First for Schools exam to familiarise you with its format
+4782	638	• attractive visual material to help you practise for the paired Speaking test
+4927	657	• photocopiable answer sheets so you can practise transferring your answers.
+5232	657	This edition with answers and audio also includes:
+5450	657	• a clear explanation of marking and grading, illustrated by authentic sample answers
+5610	638	• recording scripts and answer keys
+5786	638	• frameworks to help you prepare for the Speaking test
+5947	638	• Audio CDs containing the recorded material for the Listening paper.
+6438	831	CAMBRIDGE ENGLISH CORPUS
+6584	793	The Cambridge English Corpus is a
+6687	793	multi-billion word collection of written
+6787	793	and spoken English. It includes the
+6904	793	Cambridge Learner Corpus, a unique
+6992	793	bank of exam candidate papers.
+7137	793	Our authors study the Corpus to see how English is
+7238	773	really used, and to identify typical learner mistakes.
+7340	793	This means that Cambridge materials help students to
+7443	773	avoid mistakes, and you can be confident the language
+7543	773	taught is useful, natural and fully up to date.
+7674	793	www.cambridge.org/corpus
+7863	870	CAMBRIDGE QUALITY GUARANTEE
+6337	4545	CEFR level:
+6540	4700	C2
+6787	4700	C1
+7078	4680	B2
+7383	4700	B1
+7732	4700	A2
+6351	5222	Cambridge ESOL exams:
+6555	5222	Cambridge English: Proficiency (CPE)
+6802	5222	Cambridge English: Advanced (CAE)
+7008	5222	Cambridge English: First (FCE)
+7153	5222	Cambridge English: First (FCE) for Schools
+7325	5222	Cambridge English: Preliminary (PET)
+7470	5222	Cambridge English: Preliminary (PET) for Schools
+7675	5222	Cambridge English: Key (KET)
+7805	5222	Cambridge English: Key (KET) for Schools
+9069	7253	ISBN 978-1-107-67209-3
+9732	7385	_781107 672093

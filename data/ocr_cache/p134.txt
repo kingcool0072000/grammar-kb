@@ -1,0 +1,37 @@
+465	924	Test 2 Key
+961	923	PART 1
+1512	944	Question 1
+4844	963	Question 2
+989	2648	You'll hear people talking in eight different situations. For questions 1-8,
+1173	2646	choose the best answer (A, B or C).
+1513	2648	One. You hear a teacher talking to some students.
+1787	2628	[pause]
+2021	2668	tone
+2325	1950	Man: Now I took this photo when I was on holiday by the sea. I was walking along a
+2514	2648	path on the southern coast. To get across the river that runs into this shallow
+2691	2648	bay here, I had to head away from the seashore. And I was struck by the
+2863	2648	change in character of the soil and what was growing as I got further away
+3023	2648	from the shore. There was a real contrast between the thin soil on top of the
+3214	2648	cliffs there, and the grass and plants that you can see in the picture as | got
+3372	2628	further inland. Look at the thick woods and green fields here.
+3667	2626	[pause]
+3895	2669	tone
+4215	2648	[The recording is repeated.]
+4494	2627	Ipause]
+4840	2669	Two. You hear two friends talking about a bike race they went on.
+5117	2648	Ipause]
+5348	2689	tone
+5654	2012	Boy: Are you pleased you did the bike race?
+5872	2053	Girl:
+5901	2525	Well, forty kilometres is a long way to cycle. was exhausted by the end so!
+6075	2648	think doing that distance in the time I did it was quite an achievement, even
+6251	2648	if it was slow compared to some of the others. But, you know, in the last ten
+6409	2669	kilometres my legs were feeling really sore. I didn't realise just how hard that'd
+6598	2628	make it, but I kept going, and I can't say I ever really thought about giving up.
+6789	2647	I guess we were lucky to get so much encouragement from people watching.
+7007	2011	Boy: It made quite a difference, didn't it?
+7285	2667	lpause]
+7514	2689	tone
+7834	2669	[The recording is repeated.]
+8111	2669	[pause]
+9916	941	#23BKET/PET/FCEA*, 133ZD0kE : iqkpf

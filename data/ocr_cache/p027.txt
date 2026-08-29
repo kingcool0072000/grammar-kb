@@ -1,0 +1,25 @@
+436	1048	Test 1
+1005	1028	SPEAKING (14 minutes)
+1382	1028	You take the Speaking test with another candidate (possibly two candidates), referred to here as
+1570	1028	your partner. There are two examiners. One will speak to you and your partner and the other will
+1759	1028	be listening. Both examiners will award marks.
+2122	1028	Part 1 (2 minutes)
+2413	1028	The examiner asks you and your partner questions about yourselves. You may be asked about
+2602	1008	things like 'your home town', 'your interests', 'your career plans', etc.
+2979	1028	Part 2 (a one-minute 'long turn' for each candidate, plus a 20-second response from
+3154	1008	the second candidate)
+3448	1027	The examiner gives you two photographs and asks you to talk about them for one minute.
+3633	1028	The examiner then asks your partner a question about your photographs and your partner
+3808	1008	responds briefly.
+4200	1028	Then the examiner gives your partner two different photographs. Your partner talks about these
+4376	1028	photographs for one minute. This time the examiner asks you a question about your partner's
+4578	1028	photographs and you respond briefly.
+4942	1028	Part 3 (4 minutes)
+5232	1028	The examiner asks you and your partner to talk together. You may be asked to solve a problem
+5424	1028	or try to come to a decision about something. For example, you might be asked to decide the
+5612	1028	best way to use some rooms in a language school. The examiner gives you some text to help
+5785	1028	you but does not join in the conversation.
+6162	1028	Part 4 (4 minutes)
+6455	1028	The examiner asks some further questions, which leads to a more general discussion of what
+6628	1008	you have talked about in Part 3. You may comment on your partner's answers if you wish.
+9916	1040	$BE3R#KET/PET/FCE3*7, 13D0x: iqkpf

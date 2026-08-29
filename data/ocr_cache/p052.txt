@@ -1,0 +1,36 @@
+481	6516	Reading and Use of English
+1014	284	1 A primary
+1351	286	2 A sold
+1770	284	3 A signing
+2108	286	4 A use
+2502	307	5 A amused
+2902	284	6 A calmly
+3241	286	7 A back
+3633	286	8 A plenty
+973	2704	B chief
+1351	2704	B launched
+1760	2704	B copying
+2110	2703	B value
+2502	2704	B delighted
+2897	2703	B deeply
+3241	2725	B over
+3633	3012	many
+989	4836	C superior
+1368	4855	C promoted
+1745	4856	C recording
+2128	4854	C practice
+2503	4855	C thankful
+2893	4856	C thoroughly
+3258	4835	C away
+3604	4815	C
+3632	5223	enough
+990	7130	D leading
+1352	7130	D sent
+1747	7129	D filling
+2110	7130	D worth
+2525	7127	D proud
+2880	7130	D seriously
+3241	7131	Din
+3604	7110	D
+3592	7499	several
+9916	941	#3E#KET/PET/FCES*,1220k1E: iqkpf

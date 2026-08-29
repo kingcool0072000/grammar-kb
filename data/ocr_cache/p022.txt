@@ -1,0 +1,25 @@
+1017	583	5
+4215	583	7
+5813	583	8
+553	8349	Listening
+1046	945	You hear a girl talking about a sports event she took part in.
+1249	965	What is the girl doing?
+1526	965	A giving her opinion about people at the event
+1802	985	B explaining why she did so well in the event
+2093	985	C describing what happened at the event
+2646	865	You hear a teacher telling her class about something called World Oceans Day.
+2834	965	What is the teacher going to do next?
+3111	985	A give more information about the importance of oceans
+3401	985	B listen to suggestions about how to celebrate the day
+3692	985	C say how the class could help the environment
+4215	905	You hear an announcement about a festival.
+4433	965	What is the speaker's main purpose?
+4680	985	A to describe the event
+4986	1006	B to publicise a competition
+5276	985	C to explain how to get tickets
+5828	885	You hear a boy leaving a voicemail message for his friend.
+6046	985	Why is he calling his friend?
+6308	1006	A to offer to do something
+6599	985	B to complain about something
+6889	985	C to give advice about something
+10012	1041	##13#KEТ/PEТ/FC*,#39D0#15 : i4kpf23

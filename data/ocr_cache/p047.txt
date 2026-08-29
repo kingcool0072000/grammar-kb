@@ -1,0 +1,27 @@
+393	925	Test 2
+918	5041	Part 4
+1322	925	You will hear an interview with a girl called Poppy Wallace, who sings in a girl band called GirlSong.
+1511	925	For questions 24-30, choose the best answer (A, B or C).
+1962	905	24 What does Poppy say about the band's success this year?
+2240	1337	A The girls didn't expect it to happen so quickly.
+2529	1358	B The girls haven't had enough time to appreciate it.
+2848	1358	C The girls recognise that it was the result of years of hard work.
+3373	905	25 How does Poppy feel about GirlSong's recent tour?
+3662	1337	A glad to have spent time with the fans
+3940	1358	B pleased that it's made them more confident performers
+4229	1358	C happy with the way relationships within the band have developed
+4796	905	26 How did GirlSong come to work with the singer called Leo?
+5073	1358	A Their agent contacted him about it.
+5363	1358	B He suggested it after hearing their music.
+5640	1358	C They met him by chance at a recording studio.
+6206	925	27 What is Poppy's attitude to working with Leo again?
+6484	1358	A She's alarmed about the attention they will get.
+6773	1358	B She's excited about the opportunity to perform with him.
+7035	1399	C She's concerned about the pressure involved.
+7601	946	28
+7630	1378	On international tours, Poppy likes to
+7906	1378	A make time for seeing the local sights.
+8184	1399	B try singing local folk songs.
+8488	1378	C learn simple phrases in the local language.
+9636	946	48
+9942	946	#3#KEТ/PEТ/FC***,1343*01 : iq-kpf

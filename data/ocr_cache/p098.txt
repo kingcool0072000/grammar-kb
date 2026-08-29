@@ -1,0 +1,40 @@
+538	6458	Frames for the Speaking test
+1061	229	Part 2 4 minutes (6 minutes for groups of three)
+1311	227	Cooking
+1483	229	Taking photos
+1700	229	Interlocutor:
+3636	228	Candidate A:
+3897	207	Interlocutor:
+4596	228	Candidate B:
+4854	208	Interlocutor:
+6254	207	Candidate B:
+6501	186	Interlocutor:
+7194	208	Candidate A:
+7460	186	Interlocutor:
+1745	1895	In this part of the test, I'm going to give each of you two
+1918	1916	photographs. I'd like you to talk about your photographs
+2079	1937	on your own for about a minute, and also to answer a short
+2252	1916	question about your partner's photographs.
+2544	1895	(Candidate A), it's your turn first. Here are your photographs.
+2703	1916	They show people cooking in different situations.
+2967	1916	Indicate pictures 2A and 2B on page C4 to Candidate A.
+3228	1895	I'd like you to compare the photographs, and say why you think
+3401	1895	the people are cooking in these situations. All right?
+3654	1893	[1 minute]
+3929	1915	Thank you.
+4186	1895	(Candidate B), would you like to cook in either of these
+4346	1895	situations? (Why? / Why not?)
+4608	1895	[Approximately 30 seconds]
+4872	1894	Thank you.
+5146	1916	Now, (Candidate B), here are your photographs. They show
+5305	1916	people taking photographs in different situations.
+5566	1916	Indicate pictures 2C and 2D on page C5 to Candidate B.
+5830	1895	I'd like you to compare the photographs, and say why you think
+6003	1895	the people are taking photographs in these situations. All right?
+6253	1894	[1 minute]
+6527	1895	Thank you.
+6787	1895	(Candidate A), do you like taking photographs when you're on
+6964	1916	holiday? (Why? / Why not?)
+7210	1895	[Approximately 30 seconds]
+7479	1914	Thank you.
+9987	912	#½1З1#KЕТ/РЕТ/ЕŒ½*· ț½ •¡0kpf

@@ -1,0 +1,72 @@
+451	972	Test 3
+959	5072	Part 6
+1369	951	You are going to read an article about the invention of roller coasters. Six sentences have been
+1555	952	removed from the article. Choose from the sentences A-G the one which fits each gap (37-42).
+1764	970	There is one extra sentence which you do not need to use.
+2107	973	Mark your answers on the separate answer sheet.
+2674	2857	The history of roller coasters
+3066	3126	Roller coasters have a The following year, a mining company in the USA
+3241	3105	long history, and although
+3241	5507	constructed a railway in Pennsylvania to carry
+3372	3126	most of them are now
+3401	5507	coal in similar small cars from the mine, which was
+3591	3105	found in the USA, their
+3591	5507	situated at the top of a mountain, to the canal at the
+3751	3126	origins lie elsewhere.
+3753	5526	bottom.
+3998	3146	As early as the 15th
+3998	5548	From there, it could be put on boats.
+3982	8902	40
+4158	3126	century, a popular pastime
+4158	5548	The return trip, however, involved a team of donkeys
+4332	3126	for Russians was sliding
+4332	5548	pulling the cars back up, and took six times as long.
+4492	3146	down snow-covered hills
+4506	5527	In order to solve this problem, a second track was
+4680	973	on a sledge, much as children still do during the
+4680	5548	built so that steam engines could be used to do this.
+4854	973	winter in many countries today.
+4854	3788	37
+4869	4596	These
+4941	5527	In 1872, with the mine now closed, the railway
+5029	973	consisted of a wooden slope covered in ice, on top
+5087	5548	became a tourist attraction. Visitors came from miles
+5205	973	of a wooden frame. Riders sat on large blocks of ice,
+5276	5548	around to travel to the top of the mountain, enjoy
+5378	973	and the slides, which could be up to 24 metres high,
+5452	5548	the views, and then take the railway down again.
+5552	993	became so popular that even the royal family were
+5610	5693	41
+5712	973	said to be fans.
+5872	5548	One of the passengers on the railway, Marcus
+5973	973	Soldiers returning to France from Russia are thought
+6133	973	to have taken with them stories of the 'Russian
+6297	992	mountains'.
+6322	1925	, and variations of the Russian slides
+6498	993	began to appear in France. To make up for the
+6672	973	lack of snow and ice, the slides had wooden tracks
+6832	993	along which people rode in small cars with wheels.
+6991	1055	38
+6992	2028	Such freedom of movement meant that
+7180	993	they often bumped into each other.
+7427	1014	This all changed in 1817, with the opening, in Paris,
+7601	993	of two new slides or 'roller coasters', which had
+7761	993	cars that were secured to the tracks. Thanks to this
+7952	993	improvement, they were now much safer to ride
+8125	993	in, which, in turn, meant that they could go faster.
+8270	1014	39
+8299	2028	However, in 1826 a mechanical system
+8473	993	was introduced to drag them up to the start of the
+8648	1014	ride again.
+6061	5527	Thompson, saw the potential of such an experience,
+6220	5548	and decided to construct what we now recognise as
+6395	5527	the first roller coaster. It opened in 1884 at Coney
+6569	5527	Island in New York, and was an instant success.
+6759	5527	Thompson charged 5 cents a ride, and earned his
+6905	5548	entire investment back in just a few days, such was
+7093	5527	the popularity of this new ride. By the end of the
+7253	5548	century, roller coasters could be found at funfairs
+7441	5527	across the country.42
+7413	8281	It is a battle that
+7616	5527	continues to this day.
+9941	952	B313·KEТ/РEТ/FC** ,#3901 : i 9kpf

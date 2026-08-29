@@ -1,0 +1,45 @@
+427	855	Frames for the Speaking test
+916	859	Test 4
+1281	880	Note: In the examination, there will be both an assessor and an interlocutor in the room.
+1469	1069	The visual material for Test 4 appears on pages C10 and C11 (Part 2), and C12 (Part 3).
+1816	859	Part 1 2 minutes (3 minutes for groups of three)
+2107	859	Interlocutor:
+2139	2641	Good morning/afternoon/evening. My name is ........
+2139	7714	... and this
+2327	2599	is my colleague ......
+2311	4675	....
+2500	2641	And your names are?
+2688	2620	Can I have your mark sheets, please? Thank you.
+2863	2599	First of all, we'd like to know something about you.
+3127	2620	Where are you from, (Candidate A)?
+3284	2620	And you, (Candidate B)?
+3459	2620	What do you like about living (here / name of candidate's
+3604	2599	home town)?
+3823	2620	And what about you, (Candidate A/B)?
+4157	2599	Select one or more questions from any of the following
+4331	2599	categories, as appropriate.
+4565	2599	Habits and routines
+4769	2599	• Do you like to be busy every day? (Why? / Why not?)
+4958	2599	• What sport do you enjoy playing? (Why do you like
+5118	2850	doing that?)
+5292	2599	• Do you enjoy watching TV? (What's your favourite
+5465	2851	programme?) (Why do you like it?)
+5639	2599	• Do you ever meet your friends in the evenings after school?
+5815	2851	(What do you do together?)
+6046	2620	The Weekend
+6250	2599	• Do you prefer to spend time with your family or with your
+6428	2848	friends at the weekend? (Why?)
+6613	2599	• Are there a lot of interesting things to do in your town at the
+6773	2851	weekend? (What do you do there?)
+6951	2577	• Do you often have to do homework at the weekend? (How
+7123	2851	do you feel about that?)
+7296	2599	• Can you tell us something about what you're planning to do
+7427	2893	next weekend?
+7705	2620	The Future
+7923	2599	• What are you going to do after school today? (Why?)
+8081	2599	• What would you like to do for your next birthday? (Why?)
+8272	2597	• Is there something you'd like to learn in the future? (What
+8430	2872	would you like to learn?) (Why?)
+8604	2599	• What would you like to do when you leave school? (Why?)
+9607	901	104
+9942	880	#З#KEТ/РEТ/FC**·,*301 : i qkpf

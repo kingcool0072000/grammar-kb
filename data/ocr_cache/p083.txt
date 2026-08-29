@@ -1,0 +1,29 @@
+450	817	Test 4
+959	4989	Part 7
+1351	817	You are going to read an article in which four teenage girls describe school trips they have
+1555	817	been on. For questions 43-52, choose from the people (A-D). The people may be chosen more
+1730	817	than once.
+2107	838	Mark your answers on the separate answer sheet.
+2601	817	Which person
+2950	817	recommends something she did?
+3389	817	appreciates having made new friends?
+3811	836	regretted a choice she made?
+4258	817	was persuaded to do something which proved enjoyable?
+4696	817	thought of ideas for group activities?
+5130	838	had concerns that were shared by other people?
+5566	838	was reassured by a good first impression?
+5973	817	is not sure she was told the truth?
+6438	838	enjoyed some activities more than other people did?
+6874	838	had expected some people to behave differently?
+2936	8343	43
+3372	8343	44
+3808	8343	45
+4244	8343	46
+4680	8343	47
+5116	8343	48
+5552	8343	49
+5988	8343	50
+6409	8364	51
+6860	8364	52
+9665	880	84
+10016	835	··3#KТ/РEТ/FC2*7,*79%D0X15 :i9-kpf

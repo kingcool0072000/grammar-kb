@@ -1,0 +1,26 @@
+394	1029	Test 3
+946	1010	SPEAKING (14 minutes)
+1338	1010	You take the Speaking test with another candidate (possibly two candidates), referred to here as
+1511	1010	your partner. There are two examiners. One will speak to you and your partner and the other will
+1700	1010	be listening. Both examiners will award marks.
+2078	1010	Part 1 (2 minutes)
+2354	1030	The examiner asks you and your partner questions about yourselves. You may be asked about
+2558	989	things like 'your home town', 'your interests',
+2543	5051	, 'your career plans', etc.
+2936	1010	Part 2 (a one-minute 'long turn' for each candidate, plus a 20-second response from
+3111	986	the second candidate)
+3401	1010	The examiner gives you two photographs and asks you to talk about them for one minute.
+3577	1010	The examiner then asks your partner a question about your photographs and your partner
+3765	989	responds brietly.
+4142	1010	Then the examiner gives your partner two different photographs. Your partner talks about these
+4331	1010	photographs for one minute. This time the examiner asks you a question about your partner's
+4520	1010	photographs and you respond briefly.
+4884	1010	Part 3 (4 minutes)
+5162	1030	The examiner asks you and your partner to talk together. You may be asked to solve a problem
+5363	1010	or try to come to a decision about something. For example, you might be asked to decide the
+5538	1030	best way to use some rooms in a language school. The examiner gives you some text to help
+5726	1010	you but does not join in the conversation.
+6104	1010	Part 4 (4 minutes)
+6380	1030	The examiner asks some further questions, which leads to a more general discussion of what
+6584	989	you have talked about in Part 3. You may comment on your partner's answers if you wish.
+9622	1010	72

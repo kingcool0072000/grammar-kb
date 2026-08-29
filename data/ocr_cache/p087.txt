@@ -1,0 +1,29 @@
+392	876	Test 4
+973	876	LISTENING (approximately 40 minutes)
+1468	4968	Part 1
+1875	855	You will hear people talking in eight different situations. For questions 1-8, choose the best answer
+2066	834	(A, B or C).
+2572	876	1
+2617	1273	You overhear two friends talking about a lesson they had at school.
+2790	1294	What surprised them in the lesson?
+3095	1294	A how astronomers are able to research distant stars
+3415	1294	B the reason for the particular location of a star
+3735	1294	C the temperature and size of the sun
+4287	855	2 You hear two friends talking about buying a card game for the boy's sister.
+4476	1294	What is the girl's opinion of it?
+4781	1294	A It doesn't suit his sister's character.
+5101	1294	B It's not appropriate for someone of his sister's age.
+5424	1294	C It's a game that's better for boys than girls.
+5959	855	3 You hear part of an interview on the radio with a writer of children's books.
+6148	1294	The writer thinks that books are more powerful than films because
+6468	1294	A they affect you in a very personal and vivid way.
+6774	1294	B they allow you to share the characters' inner thoughts.
+7094	1294	C they stay in your memory longer than films do.
+7601	855	4
+7630	1294	You hear a guide speaking to tourists.
+7821	1294	What is the guide talking about?
+8110	1315	A when different exhibitions are on
+8445	1315	B what's on display in the exhibitions
+8749	1315	C the best way to go round the exhibitions
+9622	897	88
+9958	897	#33#KEТ/PET/FCA*t,*0*1ă : iq-kpf

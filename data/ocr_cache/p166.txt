@@ -1,0 +1,17 @@
+436	847	Test 4 Key
+947	2560	[pause]
+1222	2582	Now you'll hear Part Four again.
+1453	2582	tone
+1773	2582	[The recording is repeated.]
+2052	2560	[pause]
+2311	2582	That is the end of Part Four.
+2618	2582	There will now be a pause of five minutes for you to copy your answers
+2791	2582	onto the separate answer sheet. Be sure to follow the numbering of all the
+2965	2582	questions. I'll remind you when there's one minute left, so that you're sure
+3111	2582	to finish in time.
+3415	2561	[Teacher, pause the recording here for five minutes. Remind students when
+3590	2561	they have one minute left.]
+3866	2582	That is the end of the test. Please stop now. Your supervisor will now collect
+4040	2582	all the question papers and answer sheets.
+9651	867	166
+9912	950	#≤·E/РEТ/FC2*· ,$0 : i qkpf

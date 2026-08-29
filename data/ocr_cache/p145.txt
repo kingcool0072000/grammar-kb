@@ -1,0 +1,52 @@
+527	8022	Test 3 Key
+1061	383	Listening (approximately 40 minutes)
+1380	383	Part 1
+1628	383	1 B
+1642	1108	2 A
+1628	1935	3 С
+1628	2580	4 B
+1642	3487	5 C
+1642	4193	6 B
+1642	5060	7B
+1642	5826	8 C
+1976	383	Part 2
+2412	362	10 wave
+2604	361	11 radio
+2763	362	12 teeth
+2951	362	13 ear(s)
+3115	361	14 tail
+3284	362	15 submarine
+3476	362	16 50 / fifty
+3633	362	17 raincoat / rain(-)coat
+3824	362	18 eagles (flying)
+2267	362	9 lecturer / university lecturer / lecturer at (a/the) university
+4174	360	Part 3
+4418	362	19 B
+4418	1169	20 F
+4418	2096	21 H
+4433	3044	22 D
+4436	3909	23 E
+4770	361	Part 4
+5030	362	24 C
+5045	1169	25 A
+5045	2096	26 B
+5045	2983	27 B
+5045	3891	28 B
+5029	4838	29 А 30 C
+1017	8467	HAN
+5658	361	Transcript
+5669	2036	This is the Cambridge English: First for Schools, Test 3.
+5930	2016	I'm going to gwve you the instructions for this test. Ill introduce each part of
+6105	2016	the test and give you time to look at the questions. At the start of each piece
+6265	2016	you'll hear this sound:
+6541	2015	tone
+6831	2036	You'll hear each piece twice.
+7123	2036	Remember, while you're listening, write your answers on the question paper.
+7297	2056	You'll have five minutes at the end of the test to copy your answers onto the
+7441	2056	separate answer sheet.
+7733	2056	There will now be a pause. Please ask any questions now, because you must
+7907	2036	not speak during the test.
+8185	2015	[pause]
+8473	2056	Now open your question paper and look at Part One.
+8737	2035	[pause]
+10007	1043	##1З#KЕТ/РЕТ/FC½*7,#a½D#1: i4kpf

@@ -1,0 +1,52 @@
+524	8106	Test 2 Key
+1061	370	Listening (approximately 40 minutes)
+1380	349	Part 1
+1642	370	1 C
+1642	1090	2 B
+1627	1872	3 A 4A
+1627	3456	5 B
+1642	4238	6 B
+1642	5144	7 C
+1642	5884	8 C
+1978	349	Part 2
+2272	339	9 honey
+2275	1540	10 gardens
+2441	349	15 (chocolate) press
+2267	2942	11 gold
+2254	4053	12 tomato
+2256	5657	13 saucer
+2432	2672	16 bars
+2428	3826	17 milk
+2434	5018	18 mood(s)
+2764	348	Part 3
+3023	349	19 B
+3023	1172	20 C
+3026	2158	21 F
+3023	2962	22 D
+3023	3930	23 G
+3372	349	Part 4
+3633	349	24 A
+3633	1213	25 C
+3633	2181	26 B
+3633	3045	27 A
+3633	3971	28 C
+3633	5020	29 B 30 C
+1017	8662	ЯА
+2267	7037	14 steam (power)
+4263	348	Transcript
+4273	2057	This is the Cambridge English: First for Schools, Test 2.
+4549	2057	I'm going to give you the instructions for this test. I'll introduce each part of
+4709	2057	the test and give you time to look at the questions. At the start of each piece
+4870	2034	you'll hear this sound
+5130	2037	tone
+5436	2057	You'll hear each piece twice.
+5712	2078	Remember, while you're listening, write your answers on the question paper.
+5886	2078	You'll have five minutes at the end of the test to copy your answers onto the
+6046	2037	separate answer sheet.
+6338	2057	There will now be a pause. Please ask any questions now, because you must
+6512	2037	not speak during the test.
+6773	2037	[pause]
+7049	2078	Now open your question paper and look at Part One.
+7325	2016	[pause]
+9709	8744	133
+10009	935	##£3#KЕТ/PEТ/FŒEżš*7,‡Эй9žDПЖ1:¡qКpł3

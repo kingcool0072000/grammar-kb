@@ -1,0 +1,41 @@
+436	983	Frames for the Speaking test
+959	983	Part 2 4 minutes (6 minutes for groups of three)
+1223	982	Getting help
+1353	982	In town
+1613	1004	Interlocutor:
+3546	983	Candidate A:
+3808	983	Interlocutor:
+4508	1004	Candidate B:
+4738	1004	Interlocutor:
+6150	1004	Candidate B:
+6409	983	Interlocutor:
+7107	1004	Candidate A:
+7354	1004	Interlocutor:
+1657	2698	In this part of the test, I'm going to give each of you two
+1831	2740	photographs. I'd like you to talk about your photographs
+1992	2761	on your own for about a minute, and also to answer a short
+2180	2719	question about your partner's photographs.
+2442	2719	(Candidate A), it's your turn first. Here are your photographs.
+2616	2719	They show people getting help in different situations.
+2877	2719	Indicate pictures 3A and 3B on page C7 to Candidate A.
+3139	2719	I'd like you to compare the photographs, and say why you think
+3315	2719	the people need help in these situations. All right?
+3548	2719	[1 minute]
+3824	2740	Thank you.
+4100	2719	(Candidate B), have you ever needed help with your work?
+4260	2739	(Why?)
+4520	2719	[Approximately 30 seconds]
+4785	2739	Thank you.
+5063	2740	Now, (Candidate B), here are your photographs. They show
+5219	2740	people doing different things in town.
+5481	2740	Indicate pictures 3C and 3D on page C8 to Candidate B.
+5742	2740	I'd like you to compare the photographs, and say why you think
+5915	2740	the people have chosen to do these things in town. All right?
+6164	2719	[1 minute]
+6439	2740	Thank you.
+6718	2718	(Candidate A), what do you like to do when you're in town?
+6864	2738	(Why?)
+7123	2719	[Approximately 30 seconds]
+7386	2739	Thank you.
+9622	1004	102
+9958	878	#3##KEТ/PET/FCA*†, #39MD0*215 : ia-kpf

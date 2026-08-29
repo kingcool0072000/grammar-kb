@@ -1,0 +1,36 @@
+508	6584	Reading and Use of English
+1002	388	1 A feature
+1397	387	2 A rely
+1759	388	3 A prepare
+2136	368	4 A fits
+2499	388	5 A direction
+2878	388	6 A talent
+3271	388	7 A catch up with
+3604	408	8
+3605	674	A However
+1004	2923	B factor
+1374	2921	B trust
+1777	2922	B provide
+2125	2923	B suits
+2503	2923	B order
+2892	2924	B ability
+3276	2922	B look up to
+3638	2943	B Despite
+1007	4763	C mark
+1368	4764	C believe
+1765	4762	C enable
+2126	4743	C matches
+2514	4764	C responsibility
+2897	4763	C potential
+3271	4764	C come up with
+3649	4764	C Although
+1002	6891	D characteristic
+1390	6908	D hope
+1746	6911	D ensure
+2137	6911	D applies
+2514	6912	D charge
+2895	6911	D promise
+3271	6911	D get up to
+3604	6932	D
+3604	7239	Even
+10014	996	#T13#KEТ/РEТ/FC*,139½D0*1: iqkpf"

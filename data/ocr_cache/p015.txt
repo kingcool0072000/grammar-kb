@@ -1,0 +1,76 @@
+494	981	Test 1
+1003	4929	Part 6
+1381	981	You are going to read an article about two teenagers who send a small model man into space. Six
+1584	961	sentences have been removed from the article. Choose from the sentences A-G the one which fits
+1774	981	each gap (37-42). There is one extra sentence which you do not need to use.
+2136	1002	Mark your answers on the separate answer sheet.
+2704	3587	Model man in space
+3081	1002	At the young age of 17, Mathew Ho and Asad
+3266	1001	Muhammad have already sent a man into space - a
+3444	981	very small model of a man, that is.
+3663	1002	Mathew and Asad attached a four-centimetre-tall
+3837	981	model man and four cameras to a balloon and
+4027	961	launched the whole thing into space.
+4011	4148	37
+4201	981	The boys could hardly believe their success,
+4375	981	especially as the entire project had cost them just
+4549	981	$400. They had worked on it every weekend for four
+4723	981	months. It wasn't a school project; they just thought
+4913	961	it would be a cool thing to do. 'We didn't really think
+5072	981	it would work until that point,' says Mathew.
+5305	1002	Mathew and Asad had the idea for the project two
+5494	980	years ago when they saw an online video of a balloon
+5670	1002	being sent into space by some university students.
+5813	1142	38
+5843	2104	They both had a passion for all things
+6017	981	flight-related so they were the perfect partners for
+6192	981	the project.
+6424	1002	The pair were soon spending every Saturday at
+6614	981	Mathew's house, drawing up plans and building the
+6788	981	balloon. 'People would walk in, see us building this
+6947	1002	weird thing with a parachute, and wonder what we
+7122	1002	were doing. We'd just say,
+7136	3163	•We're sending cameras
+7312	981	into space!' Mathew had already made a lightweight
+7472	1022	box to carry the cameras.
+7441	3166	39
+7472	4128	They needed
+7645	1022	ones which could be programmed to take photos
+7819	1022	every 20 seconds without stopping
+8066	1022	Next they sewed the parachute, which took them
+8212	1022	three weeks on Asad's
+8212	3026	mum's
+8226	3687	sewing machine.
+8402	1022	'We soon realised that we're no experts at sewing,'
+3081	5350	laughs Mathew. 'We broke
+3081	7635	... what, four needles?
+3270	5370	Ridiculous!' The end result didn't look too great but
+3459	5370	worked perfectly. 40
+3444	7755	_'People were yelling
+3604	5390	at us,' remembers Asad.
+3851	5390	They ordered a professional weather balloon online,
+4027	5390	and bought helium gas from a party supply store.
+4201	5390	Mathew purchased a special wide-angle video
+4389	5370	camera. Finally, they put the whole thing together,
+4563	5370	carefully cutting a space inside the lightweight
+4709	5390	container for three cameras and a mobile phone
+4913	5370	with a GPS system which helped them to follow it.
+5043	5551	41
+5072	5991	They also checked with the relevant
+5247	5370	authorities to make sure its flight wouldn't interfere
+5406	5390	with air traffic or be illegal.
+5654	5390	The boys chose a local football field as their take-
+5843	5370	off point. Then they blew up the balloon, let it
+6003	5390	go, and watched their model man float upwards.
+6162	5531	42
+6177	6112	Less than two hours later, a signal on
+6351	5410	Mathew's computer told them that the model man
+6527	5410	had re-entered the earth's atmosphere. He had just
+6701	5390	landed in a field, 122 kilometres from the launch
+6874	5410	point. Based on their calculations, the balloon
+7034	5410	had climbed to about 24,000 metres in just over an
+7209	5410	hour. Then it exploded, triggering the model man's
+7385	5410	32-minute fall to earth. Mathew and Asad have
+7559	5410	since received a note of congratulations from the
+7718	5410	manufacturers of the little model man.
+10016	1026	½=#KТ/РEТ/FC2*7,#39D0X15:iqkpf

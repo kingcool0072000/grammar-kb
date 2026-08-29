@@ -1,0 +1,13 @@
+406	1039	Introduction
+973	1000	Grading
+1308	980	The overall grade is based on the total score gained in all four papers. All candidates receive
+1482	980	a Statement of Results which includes a profile of their performance in each of the four skills
+1657	980	and Use of English. Certificates are given to candidates who pass the examination with grade
+1846	979	A, B or C. Candidates who achieve grade A receive the Cambridge English: First for Schools
+2021	959	certificate stating that they demonstrated ability at Level C1. Candidates who achieve grade B
+2180	979	or C receive the Cambridge English: First for Schools certificate stating that they demonstrated
+2369	960	ability at Level B2. Candidates whose performance is below B2 level, but falls within Level B1,
+2531	960	receive a Cambridge English certificate stating that they have demonstrated ability at Level B1.
+2703	980	Candidates whose performance falls below Level B1 do not receive a certificate.
+2892	1200	For further information on grading and results, go to the website (see page 5).
+9927	1100	#Z5З·KEТ/РЕТ/FCЕЗ*· ,ț15 :iqkpf

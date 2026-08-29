@@ -1,0 +1,42 @@
+409	883	Test 1 Key
+917	884	PART 1
+1482	901	Question 1
+2209	1913	Man:
+4902	904	Question 2
+5894	1602	Woman:
+944	2633	You'll hear people talking in eight different situations. For questions 1-8,
+1130	2610	choose the best answer (A, B or C).
+1468	2613	One. You hear part of a news item about a school project.
+1715	2592	Ipause]
+1918	2633	tone
+2225	2613	Students at the Central School in Newtown have won a national competition
+2398	2592	to find the best eco-invention. Competitors had to find a way to change a
+2587	2592	familiar place, making it better for the environment. The winners came up with
+2748	2613	an idea they called the Centi-Pedal to be used by people waiting in a queue
+2937	2592	for ice cream in a local park. Their invention is a long stationary bike with
+3095	2613	eight seats. Kids waiting in line take turns to pedal. This makes the wait less
+3272	2613	boring and also helps to power the ice cream freezers. Anyone pedalling for
+3460	2613	more than five minutes gets a discount on their ice cream.
+3735	2592	lpause]
+3968	2633	tone
+4273	2613	[The recording is repeated.]
+4550	2592	lpause]
+4912	2613	Two. You hear a teacher talking to her students about a writing
+5076	2632	competition.
+5351	2612	lpause
+5595	2654	tone
+5886	2592	I know you're all very interested in the short story competition so I'm very
+6075	2633	glad to tell you that you're all registered and your contributions have to be
+6251	2633	handed in by the end of the month - so there isn't much time to get the
+6424	2613	revised final versions done. I'm going to give you back your first drafts with
+6598	2633	some individual comments. Your work shows plenty of imagination, which is
+6802	2633	a definite plus, but a general point to bear in mind is that stories which have
+6947	2633	been successful in this competition in previous years have tended to follow a
+7122	2613	traditional structure with a beginning, middle and end, even though they were
+7298	2633	only three or four pages long.
+7572	2613	[pause]
+7805	2654	tone
+8125	2613	(The recording is repeated.]
+8402	2612	lpause]
+9622	946	122
+9942	946	З·KТ/РЕТ/FЗ** ₺1 :iqkpf

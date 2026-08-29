@@ -1,0 +1,24 @@
+537	8245	Listening
+1034	4474	Part 3
+1424	463	You will hear five short extracts in which teenagers are talking about a recent holiday. For questions
+1627	463	19-23, choose from the list (A-H) the opinion each speaker expresses. Use the letters only once.
+1803	463	There are three extra letters which you do not need to use.
+2356	483	A The best bit was meeting someone who's become a close friend.
+2968	483	B Iwas good at an activity I hadn't tried before.
+3183	6471	Speaker 1
+3154	8729	19
+3561	483	C I had a great time performing in a musical event.
+3795	6450	Speaker 2
+3779	8709	20
+4171	483	D A new experience was more enjoyable than I'd expected.
+4406	6470	Speaker 3
+4374	8709	21
+4781	483	E The journey to our destination was my favourite part.
+5002	6471	Speaker 4
+4999	8729	22
+5392	846	I was proud that I could speak the local language.
+5612	6470	Speaker 5
+5595	8729	23
+5990	483	G It was more exciting than previous visits to the same place.
+6600	443	H Itwas good to go away with people for the first time.
+10019	1041	B2I3E#KEТ/PET/FCEA*7, #292D01E: i q-kpf?5

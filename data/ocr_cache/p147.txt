@@ -1,0 +1,43 @@
+523	8185	Test 3 Key
+1036	431	Question 3
+1046	2123	Three. You hear a girl telling her father about a writer who visited
+1211	2122	her school.
+1482	2103	[pause]
+1715	2144	tone
+2036	1422	Man: How was school today, Gemma?
+2238	1092	Gemma:
+2472	1422	Man:
+2704	1092	Gemma:
+2267	2041	Great, thanks. A writer came to talk to us about his work.
+2485	2103	Oh. What was his name?
+2718	2103	I can't remember actually, Peter somebody ... But I knew he'd written over
+2892	2123	a hundred books and I actually want to read some of them now. He said
+3067	2123	he lives on an island in the middle of nowhere and that's where he gets all
+3229	2144	his ideas. There are some ancient ruins there and sometimes when he's
+3416	2123	wandering alone, he really feels the past coming to life. Anyway, he was there
+3590	2123	at the end signing his books so I was hoping to say hello. The queue was too
+3765	2103	long though. That was a pity.
+4042	2102	[pause]
+4273	2144	tone
+4593	2123	[The recording is repeated.]
+4870	2102	Ipause]
+5208	431	Question 4
+5218	2144	Four. You hear part of an interview with a girl who is talking about some
+5380	2123	wolves she saw.
+5655	2123	[pause]
+5889	2143	tone
+6208	804	Interviewer:Emma, I hear something exciting happened to you.
+6438	1257	Emma: Yes, I live near a village in the mountains and last week I saw some wolves
+6598	2123	near my home. To get to school, it's a fifteen-minute walk through a small
+6773	2144	wood and I saw this wolf crossing my path about fifty metres away. It
+6947	2144	stopped and looked directly at me. I wasn't actually all that frightened. I took
+7122	2144	a photo with my phone just as it was walking away. Then, another day, I saw
+7281	2164	a much bigger one. I was glad it was on the other side of the river. I didn't
+7458	2164	have my phone with me then so that was a bit disappointing, but it was
+7630	2164	amazing to see another one in the same area.
+7921	2123	[pause]
+8155	2164	tone
+8473	2144	[The recording is repeated.]
+8754	2121	[pause]
+9665	8886	147
+9912	989	#½13#KET/РET/FC***,#0#1à : iq-kpf

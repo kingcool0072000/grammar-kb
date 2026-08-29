@@ -1,0 +1,45 @@
+384	915	Test 2 Key
+902	919	PART 4
+932	2658	You'll hear an interview with a girl called Poppy Wallace, who sings in a girl
+1106	2658	band called GirlSong. For questions 24-30, choose the best answer (A, B
+1264	2658	or C).
+1512	2699	You now have one minute to look at Part Four.
+1823	2635	lpause
+2049	2678	tone
+2325	1349	Interviewer:
+2370	2494	Today I'm talking to Poppy Wallace, lead singer with GirlSong, the popular
+2560	2658	girl band. Poppy, GirlSong has been one of this year's most dramatic success
+2718	2658	stories. It must've been an exciting time for you.
+2966	1758	Poppy: Absolutely. It's been amazing. We've been so lucky. We've had to do a lot
+3140	2658	of work over the past year, of course, and we only got together just before
+3299	2638	that. Everyone we met in the music business was always really excited about
+3491	2677	our sound and said we'd make it big, but none of us thought our time would
+3648	2678	come so soon. It's great that it has!
+3851	1349	Interviewer:
+3895	2474	I'm sure. You've just completed your first international tour. How was that?
+4114	1779	Poppy: It was great! We'd done a couple of short tours in this country so we were
+4304	2658	already reasonably confident in front of large audiences. But it was exciting
+4478	2638	to make new fans all over the world. It was just a pity we were moving on all
+4668	2658	the time and couldn't really get to know people. Next time, we'll try to build
+4826	2638	in more opportunities for contact with our fan base. As a band, we've got
+4985	2678	even closer to each other than we were before - which is brilliant! I know that
+5174	2658	sometimes things can become quite tense within groups on tour. I'm glad
+5348	2658	that didn't happen to us.
+5595	1349	Interviewer: You were joined on tour by Leo, a singer who's been around for over ten
+5755	2658	years now. How did that come about?
+6002	1779	Poppy: Well, we were doing some recording at the studios near here and at the end
+6177	2678	of the first day our agent told us he'd just seen Leo walking down the stairs.
+6354	2678	We joked about how good it would be to work together, never dreaming it'd
+6527	2678	actually happen. Next day, there was a message for us. The studio manager
+6686	2678	had asked Leo to listen to one of the tracks we'd recorded. He loved it and
+6875	2658	wanted to try doing something together. It really was a dream come true!
+7093	1349	Interviewer:
+7340	1779	Poppy:
+7107	2678	And you're going to be working with Leo again. Are you looking forward to it?
+7340	2638	Well, of course it'll be a great opportunity to record an album with him. I can't
+7514	2678	deny that. The thought of all those people pointing cameras at us everywhere
+7703	2658	we go, though, is quite scary really. I mean we're always having to write songs
+7863	2658	to deadlines and rehearse for long hours so we're used to that sort of stress.
+8070	1369	Interviewer:
+8110	2515	When you're on an international tour, do you have time to enjoy yourselves?
+9927	961	#23→·KEТ/PET/FCE*† ,#*3M001Ğ : İ q-kpf

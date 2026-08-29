@@ -1,0 +1,51 @@
+465	6499	Frames for the Speaking test
+944	270	Parts 3 and 4
+1411	270	Part 3 4 minutes (5 minutes for groups of three)
+1734	248	Interlocutor:
+1760	1979	Now, I'd like you to talk about something together for about
+1899	1977	two minutes.
+2093	1937	[3 minutes for groups of three]
+2369	1958	I'd like you to imagine that a teacher is planning a class
+2531	1958	discussion about what's important for a good education. First
+2688	1979	you have some time to look at the task.
+2965	1958	Indicate the visual 3E on page C9 to the candidates.
+3125	1958	Allow 15 seconds.
+3401	1958	Now, talk to each other about how important it is for schools to
+3578	1937	encourage students to do these things as part of their education.
+3810	270	Candidates:
+4074	248	Interlocutor:
+3838	1937	[2 minutes / 3 minutes for groups of three]
+4098	1958	Thank you. Now you have about a minute to talk about which
+4273	1958	of these things is not so important for a good education.
+4496	269	Candidates:
+4770	249	Interlocutor:
+4524	1936	[1 minute]
+4803	1956	Thank you.
+5130	250	Part 4 4 minutes (6 minutes for groups of three)
+5450	229	Interlocutor:
+5479	1979	Use the following questions, in order,
+5640	1958	as appropriate:
+5916	1916	• What do you think is the best thing about
+6090	2187	your school? (Why?)
+6338	1937	• Do you think learning a musical
+5610	6437	Select any of the following
+5770	6437	prompts, as appropriate:
+6031	6416	• What do you think?
+6208	6437	• Do you agree?
+6342	6415	• And vou?
+6534	2183	instrument should be part of every
+6687	2187	student's education? (Why? / Why not?)
+6940	1956	• Is it important for all students to do homework?
+7122	2187	(Why? / Why not?
+7385	1958	• Some schools organise activities for students to do after
+7543	2187	school or at the weekends. What do you think about this?
+7718	2187	(Why?)
+7994	1937	• Many schools organise trips to other countries for their
+8156	2187	students. Do you think this is a good idea? (Why? / Why not?)
+8416	1937	• What do you think is the right age for students to leave
+8590	2187	school? (Why?)
+8854	1937	• Do you think all students should go to university?
+9026	2208	(Why? / Why not?)
+9287	1958	Thank you. That is the end of the test.
+9622	8750	103
+9927	916	#2I3·KEТ/РET/FC*†,#901 : iq-kpf

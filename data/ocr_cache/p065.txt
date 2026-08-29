@@ -1,0 +1,30 @@
+480	895	Test 3
+1046	916	LISTENING (approximately 40 minutes)
+1541	4958	Part 1
+1948	895	You will hear people talking in eight different situations. For questions 1-8, choose the best answer
+2126	873	(A, B or C).
+2558	916	1
+2601	1312	You hear a girl who is going to live in another country talking to a friend.
+2790	1333	They agree that it will be
+3052	1354	A exciting to live in a new place.
+3359	1333	B easy to make new friends.
+3633	1333	C simple to keep in touch.
+4171	895	2
+4217	1248	You hear part of a science programme about a planned space mission to the moons of
+4378	1331	Jupiter.
+4578	1333	Why does the presenter regard them as a good place to explore?
+4854	1333	A Something could be living there.
+5130	1333	B There's a lot of volcanic activity there.
+5423	1333	C It will show how far it's possible to travel.
+5988	895	3 You hear a girl telling her father about a writer who visited her school.
+6165	1333	What did she think about the writer?
+6453	1333	A She was pleased to meet him because she enjoys his books.
+6745	1354	B She was surprised to find out how many books he's written.
+7021	1354	C She was interested to learn about what inspires him.
+7558	916	4
+7587	1229	You hear part of an interview with a girl who is talking about some wolves she saw.
+7776	1354	How did the girl feel when she saw the second wolf?
+8052	1354	A less afraid than she would have expected
+8343	1375	B sorry that she was unable to photograph it
+8620	1374	C grateful that she lives in such an exciting place
+10022	884	$z3#KТ/PEТ/FC3*7,#5ЗD0Ж15 : iq-kpf

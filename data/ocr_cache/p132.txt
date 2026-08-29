@@ -1,0 +1,63 @@
+1194	912	Test 2 Key
+1673	892	Reading and Use of English (1 hour 15 minutes)
+2008	890	Part 1
+2254	892	1 B
+2269	1556	2 A
+2269	2406	3 D
+2269	3278	4 B
+2269	4066	5 D
+2269	4958	6 C
+2254	5788	7 B
+2254	6576	8 C
+2616	892	Part 2
+2877	871	9 to 10 known
+2877	3174	11 from
+2885	4375	12 what
+3066	871	16 coming
+3401	892	Part 3
+3679	887	17 understanding
+3677	3008	18 individually
+3823	892	22 educational / educative
+3823	3817	23 locations
+2885	5680	13 it
+2878	6597	14 their
+3662	4813	19 instructions
+3652	6679	20 unclear
+3840	5433	24 availability
+4175	890	Part 4
+4462	892	25 not INTERESTED in | being / becoming
+4639	892	26 WOULD have / WOULD've gone / been skating | if
+4781	892	27 haven't / have not / 've not SEEN | David for / in
+4985	892	28 this computer | is DIFFERENT
+5130	892	29 in SPITE of I (the) wind
+5305	892	30 time | I GOT to the
+5655	891	Part 5
+5917	891	31 A
+5920	1823	32 C
+5904	2778	33 B
+5901	3651	34 D
+5915	4605	35 C
+5915	5580	36 B
+6265	892	Part 6
+6527	892	37 E
+6527	1804	38 D
+6511	2759	39 G
+6527	3609	40 A
+6511	4585	41 F
+6527	5559	42 B
+6890	891	Part 7
+7139	892	43 B
+7311	871	51 C
+7137	1762	44 A
+7311	1763	52 D
+7139	2697	45 C
+7139	3630	46 A
+7151	4605	47 D
+7139	5497	48 B
+7140	6305	49 A
+7139	7385	50 D
+7936	912	Writing (1 hour 20 minutes)
+8258	933	Candidate responses are marked using the assessment scale on page 108.
+2866	7820	15 which
+3667	8256	21 enjoyable
+10066	879	KEТ/РET/FCE*7,#35920#15 : i4 kpf

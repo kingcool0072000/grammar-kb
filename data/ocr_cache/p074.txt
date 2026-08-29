@@ -1,0 +1,36 @@
+1003	269	1 A preference
+1351	269	2 A make
+1746	269	3 A waiting
+2107	269	4 A admire
+2485	269	5 A distance
+2863	269	6 A causes
+3254	266	7 A doing
+3591	290	8 A offer
+991	2945	B alternative
+1351	2946	B take
+1745	2945	B hesitating
+2127	2944	B regard
+2495	2942	B reach
+2854	2944	B results
+3255	2942	B making
+3590	2966	B
+3590	3257	lend
+978	5185	C favourite
+1353	5186	C leave
+1757	5183	C delaying
+2127	5184	C grasp
+2485	5186	C length
+2869	5184	C means
+3243	5186	C having
+3620	5207	C provide
+494	6514	Reading and Use of English
+989	7219	D option
+1352	7219	D catch
+1747	7239	D pausing
+2094	7240	D observe
+2485	7240	D range
+2853	7239	D leads
+3243	7219	D giving
+3590	7551	recommend
+9665	8858	75
+9912	975	#½I3#KEТ/РET/FC**·,#0#15 : iq-kpf

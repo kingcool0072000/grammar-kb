@@ -1,0 +1,44 @@
+494	6450	Frames for the Speaking test
+1003	250	Test 3
+1366	250	Note: In the examination, there will be both an assessor and an interlocutor in the room.
+1557	438	The visual material for Test 3 appears on pages C7 and C8 (Part 2), and C9 (Part 3).
+1889	250	Part 1 2 minutes (3 minutes for groups of three)
+2123	229	Interlocutor:
+2151	1941	Good morning/afternoon/evening. My name is
+2107	6972	.... and
+2296	1941	this is my colleague .............
+2487	1941	And your names are?
+2659	1941	Can I have your mark sheets, please? Thank you.
+2850	1920	First of all, we'd like to know something about you.
+3183	1941	Where are you from, (Candidate A)?
+3359	1920	And you, (Candidate B)?
+3531	1941	What do you like about living (bere / name of candidate's
+3677	1920	home town)?
+3880	1941	And what about you, (Candidate A/B)?
+4215	1920	Select one or more questions from any of the following
+4389	1920	categories, as appropriate.
+4622	1920	Habits and routines
+4825	1920	• Do you like to be busy every day? (Why? / Why not?)
+4999	1899	• What sport do you enjoy playing? (Why do you like
+5176	2170	doing that?)
+5334	1899	• Do you enjoy watching TV? (What's your favourite
+5508	2171	programme?) (Why do you like it?)
+5685	1899	• Do you ever meet your friends in the evenings after school?
+5857	2171	(What do you do together?)
+6090	1941	The Weekend
+6293	1899	• Do you prefer to spend time with your family or with your
+6453	2171	friends at the weekend? (Why?)
+6642	1899	• Are there a lot of interesting things to do in your town at the
+6802	2171	weekend? (What do you do there?)
+6981	1898	• Do you often have to do homework at the weekend? (How
+7151	2171	do you feel about that?)
+7326	1899	• Can you tell us something about what you're planning to do
+7456	2192	next weekend?
+7734	1941	The Future
+7936	1920	• What are you going to do after school today? (Why?)
+8110	1920	• What would you like to do for your next birthday? (Why?)
+8271	1920	• Is there something you'd like to learn in the future? (What
+8444	2171	would you like to learn?) (Why?)
+8619	1920	• What would you like to do when you leave school? (Why?)
+9622	8705	101
+9958	918	#23→#KEТ/PEТ/FC*†,#39M0*x15 : i qkpf

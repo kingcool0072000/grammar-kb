@@ -65,13 +65,48 @@ try:
         teacher_score: Optional[int] = Field(default=None, ge=0, le=100)
         teacher_comment: str = ""
 
+    class ReadingDerivedIn(BaseModel):
+        """教师新增派生阅读文。"""
+
+        base_key: str = Field(min_length=1, max_length=32)
+        title: str = Field(default="", max_length=120)
+        text: str = Field(min_length=20)
+        source: str = Field(default="", max_length=200)
+
+    class ReadingUpdateIn(BaseModel):
+        """教师编辑派生阅读文（全部可选，仅传修改字段）。"""
+
+        title: Optional[str] = Field(default=None, max_length=120)
+        text: Optional[str] = None
+        source: Optional[str] = Field(default=None, max_length=200)
+        base_key: Optional[str] = Field(default=None, max_length=32)
+
+    class ReadingRecordIn(BaseModel):
+        """学生提交阅读录音（base64 webm，≤5 分钟）。"""
+
+        article_id: int = Field(ge=1)
+        audio_b64: str = Field(min_length=8)
+        mime: str = Field(default="audio/webm", max_length=40)
+        duration_sec: int = Field(default=0, ge=0, le=300)
+
+    class ReadingGradeIn(BaseModel):
+        """教师给录音打分（10 分制）。"""
+
+        score: int = Field(ge=0, le=10)
+        comment: str = Field(default="", max_length=2000)
+
 except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
     ExamRecordIn = None
     FceSubmissionIn = None
     FceGradeIn = None
+    ReadingDerivedIn = None
+    ReadingUpdateIn = None
+    ReadingRecordIn = None
+    ReadingGradeIn = None
 
 
-def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None):
+def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None,
+              fce_db_path: Optional[str] = None):
     """构造 FastAPI 应用。``db_path`` 为 None 时走默认库（GRAMMAR_KB_DB 或 data/grammar.db）；
     ``exam_db_path`` 为成绩库路径（默认 iCloud Drive 或 data/exam.db）。"""
     from fastapi import FastAPI, HTTPException, Query as FQuery, Request
@@ -81,12 +116,14 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from .exam_store import ExamStore
     from .auth import UserStore, make_token, read_token
     from .fce_query import FcePaperStore, FceSubmissionStore
+    from .reading import ReadingStore
 
     kbq = Query(open_db(db_path))
     exams = ExamStore(exam_db_path)
     users = UserStore()
-    fce_papers = FcePaperStore()
-    fce_submissions = FceSubmissionStore()
+    fce_papers = FcePaperStore(fce_db_path)
+    fce_submissions = FceSubmissionStore(fce_db_path)
+    reading = ReadingStore(fce_db_path)
     app = FastAPI(
         title="grammar-kb 题库 API",
         version=__version__,
@@ -131,6 +168,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("GET", "/fce-papers"),
         ("POST", "/fce-submissions"),
         ("GET", "/fce-submissions"),
+        ("GET", "/reading/articles"),
+        ("GET", "/reading/recordings"),
+        ("POST", "/reading/recordings"),
     )
 
     @app.middleware("http")
@@ -358,6 +398,109 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         if data is None:
             raise HTTPException(status_code=404, detail=f"提交记录 id={sub_id} 不存在")
         return _ok(data)
+
+    # ---- 阅读训练（base 原文段 + derived 派生文 + 录音提交/批改） ----
+
+    @app.get("/reading/articles")
+    def reading_articles(request: "fastapi.Request", kind: Optional[str] = None):
+        """文章列表。默认只返回派生文（阅读练习用）；教师传 kind=base 看原文段。"""
+        is_teacher = getattr(request.state, "role", "teacher") == "teacher"
+        if kind == "base":
+            if not is_teacher:
+                raise HTTPException(status_code=403, detail="原文段落列表仅教师可查")
+            return _ok(reading.list_articles(kind="base"))
+        if kind == "all" and is_teacher:
+            return _ok(reading.list_articles(kind=None))
+        return _ok(reading.list_articles(kind="derived"))
+
+    @app.get("/reading/articles/{article_id}")
+    def reading_article_detail(article_id: int, request: "fastapi.Request"):
+        """文章正文。学生访问 base 原文返回 403（只能读派生文）。"""
+        data = reading.get_article(article_id)
+        if data is None:
+            raise HTTPException(status_code=404, detail=f"文章 id={article_id} 不存在")
+        if data["kind"] == "base" and getattr(request.state, "role", "teacher") != "teacher":
+            raise HTTPException(status_code=403, detail="原文段落仅教师可读，学生请练习派生文章")
+        return _ok(data)
+
+    @app.post("/reading/articles")
+    def reading_add_derived(rec: ReadingDerivedIn, request: "fastapi.Request"):
+        """教师新增派生阅读文（挂到某个 base 段）。"""
+        _require_teacher(request)
+        try:
+            return _ok(reading.add_derived(rec.base_key, rec.title, rec.text, rec.source))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+
+    @app.put("/reading/articles/{article_id}")
+    def reading_update_derived(
+        article_id: int, rec: ReadingUpdateIn, request: "fastapi.Request"
+    ):
+        """教师编辑派生阅读文。"""
+        _require_teacher(request)
+        data = reading.update_derived(
+            article_id, rec.title, rec.text, rec.source, rec.base_key
+        )
+        if data is None:
+            raise HTTPException(status_code=404, detail=f"派生文章 id={article_id} 不存在")
+        return _ok(data)
+
+    @app.delete("/reading/articles/{article_id}")
+    def reading_delete_derived(article_id: int, request: "fastapi.Request"):
+        """教师删除派生阅读文（base 原文段不可删）。"""
+        _require_teacher(request)
+        if not reading.delete_derived(article_id):
+            raise HTTPException(status_code=404, detail=f"派生文章 id={article_id} 不存在")
+        return _ok({"id": article_id})
+
+    @app.post("/reading/recordings")
+    def reading_submit_recording(rec: ReadingRecordIn, request: "fastapi.Request"):
+        """学生提交阅读录音（一篇文章录一段）。"""
+        user = _request_user(request)
+        try:
+            return _ok(reading.submit_recording(
+                user, rec.article_id, rec.audio_b64, rec.mime, rec.duration_sec,
+            ))
+        except KeyError as e:
+            raise HTTPException(status_code=404, detail=str(e).strip("'"))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+
+    @app.get("/reading/recordings")
+    def reading_recordings(
+        request: "fastapi.Request", user: Optional[str] = None,
+        status: Optional[str] = None, limit: int = 100,
+    ):
+        """录音列表。学生只看自己的；教师可看全部（?status=pending 拉待批改）。"""
+        if request.state.role != "teacher":
+            user = request.state.user
+        return _ok(reading.list_recordings(user=user, status=status, limit=limit))
+
+    @app.get("/reading/recordings/{rec_id}")
+    def reading_recording_detail(rec_id: int, request: "fastapi.Request"):
+        """录音详情（含 base64 音频，供播放）。学生只能听自己的。"""
+        data = reading.get_recording(rec_id)
+        if data is None:
+            raise HTTPException(status_code=404, detail=f"录音 id={rec_id} 不存在")
+        if request.state.role != "teacher" and data["user"] != request.state.user:
+            raise HTTPException(status_code=403, detail="只能查看自己的录音")
+        return _ok(data)
+
+    @app.put("/reading/recordings/{rec_id}")
+    def reading_grade_recording(rec_id: int, rec: ReadingGradeIn, request: "fastapi.Request"):
+        """教师给录音打分（10 分制 + 评语）。"""
+        _require_teacher(request)
+        try:
+            data = reading.grade_recording(rec_id, rec.score, rec.comment)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        if data is None:
+            raise HTTPException(status_code=404, detail=f"录音 id={rec_id} 不存在")
+        return _ok(data)
+
+    def _require_teacher(request) -> None:
+        if getattr(request.state, "role", "teacher") != "teacher":
+            raise HTTPException(status_code=403, detail="该功能仅教师账号可用")
 
     # ---- 作业成绩（可写；独立 exam.db，默认放 iCloud Drive 跨设备同步） ----
 

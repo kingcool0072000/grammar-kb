@@ -1,0 +1,37 @@
+554	8130	Test 1 Key
+1078	389	Question 7
+4553	368	Question 8
+1063	2053	Seven. You hear an announcement about a festival.
+1358	2050	[pause]
+1584	2073	tone
+1889	1375	Man: How do you fancy winning the chance to take your family to a fantastic music
+2064	2053	festival over the midsummer weekend? Happy Times Music Festival is now
+2238	2032	in its second year and it looks set to give all those attending a wonderful
+2413	2053	weekend. The Festival focuses on the best music of the last fifty years with
+2587	2053	top artists performing hits from the past as well as those of today. To win a
+2747	2073	family ticket send us a text saying, in no more than fifteen words, why you'd
+2936	2053	like to be there. Tickets are selling fast so this might be your only chance to
+3112	2073	get there.
+3389	2051	[pause]
+3619	2073	tone
+3938	2053	[The recording is repeated.]
+4220	2051	[pause]
+4563	2073	Eight. You hear a boy leaving a voicemail message for his friend.
+4848	2049	[pause]
+5072	2073	tone
+5377	1416	Boy: Hi, Gary. I got your message. The funny thing is my mum's just like yours.
+5552	2073	She's always asking me what I think she should get my cousins for their
+5726	2073	birthdays. I don't know why she thinks I'm such a good person to ask.
+5901	2073	Anyway, about that computer game you asked me about - All Stars Racing.
+6075	2073	Well, I've heard of it but I've never played it so l've got no idea if it'd be
+6251	2073	good for your cousin. I don't mind going with you to that games place in the
+6424	2073	shopping centre to try it out if you think that'd help. All right. Text me if you
+6600	2053	like. Bye.
+6874	2053	[pause]
+7107	2094	tone
+7429	2073	[The recording is repeated.]
+7691	2052	[pause]
+7966	2073	That is the end of Part One.
+8227	2094	Now turn to Part Two.
+8518	2073	[pause]
+9984	980	#21З1#KЕТ/РEТ/FC2**,#39žD0#1 : i9kp₺5

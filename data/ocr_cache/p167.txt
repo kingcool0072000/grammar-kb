@@ -1,0 +1,99 @@
+494	4545	Sample answer sheet: Reading and Use of English
+1119	1239	CAMBRIDGE ENGLISH
+1220	1239	Language Assessment
+1308	1239	Part of the University of Cambridge
+1874	2665	SAMPLE
+2255	6115	Centre No.
+2616	6115	Candidate No.
+2892	6115	Examination
+3008	6115	Details
+2255	909	Candidate Name
+2340	888	If not atready printed, write name
+2398	909	in CAPITALs and compiete the
+2485	909	Candidate No. grid (in pencit).
+2616	909	Candidate Signature
+2892	909	Examination Title
+3124	909	Centre
+3415	1115	Supervisor:
+3562	1095	If the candidate is ABSENT or has WITHDRAWN shade here -
+4026	3347	Candidate Answer Sheet
+4476	826	Instructions
+4666	867	Use a PENCIL (B or HB).
+4927	867	Rub out any answer you wish
+5058	847	to change using an eraser.
+5595	867	Parts 1, 5, 6 and 7:
+5713	867	Mark ONE letter for each
+5857	867	question.
+6090	847	For example, if you think B is the right
+6192	867	answer to the question, mark your
+6281	867	answer sheet like this:
+7281	867	Parts 2, 3 and 4:
+7412	867	Write your answer clearly
+7531	867	in CAPITAL LETTERS
+7776	867	For Parts 2 and 3 write one letter
+7880	867	in each box. For example:
+8270	1797	XIAM
+4273	3553	Part 1
+4476	3553	1
+4505	3884	A
+4694	3533	2
+4665	4318	B
+4912	3553	3
+5130	3553	4
+5116	3925	A
+5101	4338	B
+5363	3553	5
+5348	3925	A
+5319	4318	B
+5581	3553	6
+5566	3904	A
+5537	4338	B
+5799	3553	7
+5770	4338	B
+6002	3553	8
+5988	3925	A
+5973	4338	B
+6322	3574	Part 2
+6845	3491	10
+7122	3491	11
+7398	3491	12
+7659	3512	13
+7950	3491	14
+8226	3491	15
+8502	3491	16
+4680	4710	C
+5552	4710	C
+2877	7314	11.
+2979	7314	2.
+2877	7541	1.
+2761	7747	.0.
+2761	7954	0.
+2863	7768	.1.
+2965	7561	.2.
+3095	7355	3.
+2994	7747	2.
+3110	7561	3.
+3197	7314	:4.
+3095	7747	3
+3328	7314	5.
+3313	7561	.5.
+3343	7954	5.
+3662	7355	.8.
+3749	7582	.9
+3561	7954	Z.
+3677	7975	8.
+3328	8326	-
+3575	8305	-
+6235	7747	Do not write
+6328	7767	below here
+6541	7727	9, 0 и
+7078	7727	11,
+7078	7995	0
+7369	7706	12,
+7369	8202	u
+7645	7685	13,
+8197	7685	15,
+8197	8202	u
+8866	6115	Continues over
+9130	6177	© UCLES 2014 Photocopiable
+9912	971	#213#KEТ/PET/F**** : İ qkpf

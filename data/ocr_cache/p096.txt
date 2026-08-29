@@ -1,0 +1,46 @@
+523	6453	Frames for the Speaking test
+1018	268	Parts 3 and 4
+1483	268	Part 3 4 minutes (5 minutes for groups of three)
+1787	288	Interlocutor:
+1833	1938	Now, I'd like you to talk about something together for about
+1976	1958	two minutes.
+2180	1938	[3 minutes for groups of three]
+2441	1938	I'd like you to imagine that a teacher is planning a class
+2617	1938	discussion about the place where you live. First you have some
+2776	1958	time to look at the task.
+3037	1938	Indicate the visual 1E on page C3 to the candidates.
+3213	1958	Allow 15 seconds.
+3490	1958	Now, talk to each other about what the advantages and
+3648	1958	disadvantages are of having these things near where you live.
+3898	267	Candidates:
+4159	267	Interlocutor:
+3909	1938	[2 minutes / 3 minutes for groups of three]
+4171	1958	Thank you. Now you have about a minute to decide which of
+4346	1938	these things it is most important to have near where you live.
+4578	268	Candidates:
+4840	268	Interlocutor:
+4595	1937	[1 minute]
+4872	1957	Thank you.
+5219	268	Part 4 4 minutes (6 minutes for groups of three)
+5450	268	Interlocutor:
+5480	1979	Use the following questions, in order, as
+5654	1938	approprate:
+5915	1938	• What's the best thing about living in
+6076	2206	(candidate's area)? (Why?)
+6337	1938	• How important is it to live near your
+5581	6391	Select any of the following
+5757	6391	prompts, as appropriate:
+6018	6391	• What do you think?
+6191	6391	• Do you agree?
+6352	6391	• And you?
+6511	2206	friends? (Why?)
+6773	1938	• If you could live anywhere in (candidate's country), which
+6933	2226	town would you choose to live in? (Why?)
+7210	1958	• Do you think it might be exciting to live in lots of different
+7383	2206	places? (Why? / Why not?)
+7645	1938	• Some people live in the same place all their lives. What do
+7821	2206	you think about this?
+8082	1958	• Some people go to live and work in other countries. Do you
+8255	2206	think this is a good thing to do? (Why? / Why not?)
+8517	1979	Thank you. That is the end of the test.
+10007	943	##13#KEТ/РEТ/FC2*·,$99½1 : iqkpf

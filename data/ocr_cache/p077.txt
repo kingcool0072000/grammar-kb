@@ -1,0 +1,33 @@
+451	1012	Test 4
+978	5121	Part 4
+1366	991	For questions 25-30, complete the second sentence so that it has a similar meaning to the first
+1555	991	sentence, using the word given. Do not change the word given. You must use between two and
+1744	991	five words, including the word given. Here is an example (0).
+2109	991	Example:
+2660	1445	PLACE
+2398	1363	Prizes are given out when the school year finishes.
+2965	1446	Prize-giving
+2965	5247	....end of each school year.
+3258	991	The gap can be filled by the words 'takes place at the', so you write:
+3678	1012	Example:
+3662	2293	0
+3677	2706	TAKES PLACE AT THE
+4113	991	Write only the missing words IN CAPITAL LETTERS on the separate answer sheet.
+4637	991	25 Wear some warm clothes because it might get cold later.
+4898	1446	CASE
+5174	1466	Wear some warm clothes
+5191	7271	cold later.
+5582	991	26 I really regret eating all that chocolate.
+5843	1446	WISH
+6149	1425	I really ...
+6149	5247	.... all that chocolate.
+6526	1012	27 'I'm sorry I didn't do my homework,' said Maria.
+6787	1446	NOT
+7093	1466	Maria apologised
+7084	6424	.. her homework.
+7456	1012	28
+7471	1384	I missed the train because I got to the station late.
+7736	1465	CAUGHT
+8037	1466	If I had got to the station on time, ......
+8023	7892	. the train.
+9983	924	#=#3→#KEТ/PEТ/FCE½*7,1З6ЗD015 :iq-kpf

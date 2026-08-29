@@ -1,0 +1,49 @@
+481	939	Frames for the Speaking test
+973	939	Parts 3 and 4
+1397	939	Part 3
+1409	1691	4 minutes (5 minutes for groups of three)
+1744	939	Interlocutor:
+3837	939	Candidates:
+4084	939	Interlocutor:
+4534	939	Candidates:
+4796	960	Interlocutor:
+1774	2713	Now, I'd like you to talk about something together for about
+1918	2693	two minutes.
+2122	2651	[3 minutes for groups of three]
+2371	2693	Here are some things that many of us try to do in our everyday
+2560	2672	lives and a question for you to discuss. First you have some time
+2718	2672	to look at the task.
+2994	2672	Indicate the visual 2E on page C6 to the candidates.
+3154	2693	Allow 15 seconds.
+3430	2693	Now, talk to each other about why it's important to do these
+3604	2672	things in our everyday lives.
+3866	2672	[2 minutes / 3 minutes for groups of three]
+4115	2693	Thank you. Now you have about a minute to decide which of
+4287	2693	these things it is most important for everyone to do.
+4565	2671	[1 minute]
+4829	2692	Thank you.
+5174	939	Part 4 4 minutes (6 minutes for groups of three)
+5494	939	Interlocutor:
+5523	2713	Use the following questions, in order, as
+5699	2692	appropriate:
+5959	2693	• What do you enjoy doing most after
+6136	2943	school each day? (Why?)
+6397	2672	• Do you think it's important to eat
+5625	7181	Select any of the following
+5801	7181	prompts, as appropriate:
+6062	7181	• What do you think?
+6235	7202	• Do you agree?
+6397	7181	• And you?
+6586	2943	healthily every day? (Why? / Why not?)
+6832	2672	• Do you think life would be better if weekends were longer
+7005	2943	and everyone had more free time? (Why? / Why not?)
+7252	2693	• Some people say that going on the Internet wastes a lot of our
+7441	2943	time. What do you think?
+7703	2693	• Do you think people are happier if they have a very busy life?
+7879	2943	(Why? / Why not?)
+8141	2693	• Some people say you can't have a happy life if you don't
+8314	2943	work hard. What do you think?
+8575	2693	• What do you think is most important for a happy life?
+8749	2943	(Why? / Why not?)
+9011	2713	Thank you. That is the end of the test.
+9997	890	#3#EТ/PET/F2**,#29015 : i4-kpf

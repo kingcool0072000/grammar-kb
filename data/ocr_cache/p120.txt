@@ -1,0 +1,65 @@
+1150	861	Test 1 Key
+1628	862	Reading and Use of English (1 hour 15 minutes)
+1949	861	Part 1
+2210	862	1 D
+2224	1663	2 A
+2210	2422	3 C
+2210	3305	4 B
+2210	4086	5 D
+2224	4907	6 B
+2210	5708	7 C
+2210	6509	8 B
+2573	862	Part 2
+2837	861	9 had / held
+2995	862	14 That / This
+2834	2422	10 Although / Though
+2981	2648	15 one / some
+2840	4987	11 other
+2995	4373	16 be/ come
+2820	6262	12 and
+2824	7370	13 what
+3343	841	Part 3
+3635	861	17 growth
+3815	860	21 recording(s)
+3605	2279	18 scientists
+3798	2626	22 discovery
+3619	3798	19 behaviour / behavior
+3779	4291	23 unaware
+3633	6591	20 equipment
+3779	5975	24 valuable / invaluable / valued
+4156	862	Part 4
+4389	862	25 GET the brakes I checked OR GET a l brake check
+4564	862	26 lent me l her car UNTIL
+4752	862	27 would have / would've / 'd have been / arrived I on / in TIME
+4941	862	28 from Nicky | NOBODY has put / written OR from Nicky | NOBODY (else) put / wrote
+5116	862	29 WISH I had / 'd / paid (more) OR WISH I had / 'd | been paying
+5261	862	30 've / have RUN out | of
+5610	862	Part 5
+5874	861	31 D
+5872	1786	32 C
+5872	2731	33 B
+5874	3469	34 A
+5874	4557	35 A
+5872	5420	36 C
+6222	861	Part 6
+6482	862	37 D
+6500	1804	38 A
+6482	2648	39 E
+6482	3634	40 G
+6482	4558	41 F
+6482	5441	42 C
+6831	862	Part 7
+7093	862	43 D
+7093	1806	44 C
+7096	2729	45 A
+7095	3653	46 C
+7093	4558	47 B
+7093	5441	48 A
+7093	6386	49 B
+7110	7267	50 D
+7110	8211	51 C
+7108	9137	52 B
+7660	862	Writing (1 hour 20 minutes)
+7995	882	Candidate responses are marked using the assessment scale on page 108.
+9622	882	120
+9941	965	33#KEТ/РEТ/FCE*†,#35*01 :i akpf

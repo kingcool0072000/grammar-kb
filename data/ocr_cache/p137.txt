@@ -1,0 +1,39 @@
+498	8189	Test 2 Key
+1034	486	Question 7
+4521	487	Question 8
+1018	2174	Seven. You hear a radio announcement about an event.
+1308	2154	[pause]
+1540	2174	tone
+1850	1156	Woman:
+1860	2174	Scientists studying wildlife are keen to find out more about the creatures that
+2034	2154	you generally find living in city gardens and are asking for your help. If you see
+2210	2174	or hear any birds or animals in your backyard, please get in touch. Last year
+2369	2174	over a hundred thousand people took part in our similar survey and it's hoped
+2562	2174	even more will participate this time. The survey's important because it helps
+2732	2174	us know which types of creature are doing well and which are in decline.
+2906	2154	If you're willing to get involved, then log on to the Nature Count website at
+3066	2174	www.naturecount.com. We'll give the address again later in the programme.
+3345	2153	[pause]
+3590	2174	tone
+3897	2154	[The recording is repeated.]
+4172	2174	[pause]
+4520	2195	Eight. You hear a review of a computer game on the radio.
+4796	2174	[pause]
+5031	2194	tone
+5334	1483	Man: A game that's been popular for some time in the US has just had its first
+5508	2174	release here. Alien Attack starts you off protecting a small mountain village
+5702	2174	from attack by aliens but you soon find you're actually living in a dream world.
+5857	2174	Your adventures then start to cross over from one world to the other as your
+6034	2174	actions in one affect what happens in the other. It can be tricky to figure out
+6206	2174	what on earth's going on at some points but, if you're a fan of adventure
+6380	2174	games, you'll probably love this one. It's not a good choice for people new to
+6556	2174	games like this, however.
+6831	2174	[pause]
+7064	2194	tone
+7398	2174	[The recording is repeated.]
+7666	2172	[pause]
+7937	2192	That is the end of Part One.
+8197	2215	Now turn to Part Two.
+8474	2174	[pause]
+9694	8841	137
+9942	1016	###3ш#FKEТ/РEТ/FC2*†,*#З*0X1È : i q-kpf

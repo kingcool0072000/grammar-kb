@@ -1,0 +1,65 @@
+1200	837	Test 3 Key
+1730	819	Reading and Use of English (1 hour 15 minutes)
+2065	818	Part 1
+2311	819	1 D
+2325	1638	2 B
+2311	2436	3 С
+2325	3235	4 A
+2325	4012	5 B
+2311	4852	6 D
+2311	5756	7 C
+2325	6596	8 A
+2675	797	Part 2
+2921	819	9Not
+2921	1764	10 to
+3111	797	15 something
+2937	2751	11 across
+3096	2584	16 Give
+2979	4138	12 it
+2923	5146	13 unless
+2921	6512	14 become / be
+3446	819	Part 3
+3722	818	17 frightened
+3897	797	21 discovery
+3737	2541	18 knowledge
+3880	2478	22 weaknesses
+3740	4367	19 impossible
+3897	4348	23 friendships
+3735	6176	20 daily / everyday
+3880	6176	24 decisions
+4232	817	Part 4
+4491	819	25 WISH I'd / I had / I could have / I could've I seen
+4681	819	26 didn't / did not | TURN up
+4840	819	27 ALTHOUGH she / Lisa I did not / didn't feel OR
+5031	1197	ALTHOUGH she / Lisa | was not / wasn't (feeling)
+5174	819	28 WHAT time | the bus leaves
+5349	819	29 is | INCLUDED in / with
+5523	819	30 was ALLOWED I to leave
+5874	818	Part 5
+6133	819	31 A
+6133	1743	32 D
+6133	2731	33 C
+6133	3655	34 C
+6133	4558	35 B
+6133	5567	36 A
+6482	819	Part 6
+6758	798	37 E
+6746	1659	38 C
+6758	2605	39 B 40 G
+6758	4516	41 D
+6746	5399	42 F
+7111	796	Part 7
+7370	818	43 B
+7544	777	50 D
+7369	1680	44 A
+7544	1722	51 A
+7369	2647	45 D
+7529	2647	52 B
+7356	3634	46 C
+7376	4533	47 D
+7356	5504	48 C
+7357	6469	49 C
+8139	840	Writing (1 hour 20 minutes)
+8415	861	Candidate responses are marked using the assessment scale on page 108.
+9636	840	144
+9942	882	#НЗЕ#KEТ/РЕТ/FСЗ** ,*З*0 :İqkpf

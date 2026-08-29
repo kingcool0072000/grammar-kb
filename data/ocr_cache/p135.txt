@@ -1,0 +1,41 @@
+512	8159	Test 2 Key
+1018	392	Question 3
+4724	371	Question 4
+1034	2086	Three. You hear a man and his daughter talking in a library.
+1293	2066	[pause|
+1540	2086	tone
+1860	1446	Girl: I don't know what book to take out this week, Dad. Have you got any ideas?
+2079	1363	Man: Well, you used to like stories by Jackie Donald. Perhaps they've got one of
+2252	2066	hers that you haven't read yet?
+2470	1466	Girl: Oh, I'm not so keen on her now - I need a change.
+2718	1363	Man: Well, whatever you choose, please hurry up because we haven't got all day.
+2895	2066	What about that biography of the dancer you like. Shall I find it for you? But,
+3052	2045	look, I did promise Mum we'd be home by six.
+3284	1446	Girl: Well, I do like stories about people's lives, I suppose.
+3562	2044	[pause]
+3793	2086	tone
+4113	2066	(The recording is repeated.]
+4374	2045	[pause]
+4740	2066	Four. You hear two friends talking about a television programme about
+4898	2066	polar bears.
+5166	2042	[pause]
+5406	2086	tone
+5727	1404	Boy: Did you watch the documentary about those polar bears stuck on an iceberg
+5873	2045	for weeks?
+6119	1446	Girl: Yeah, I loved it! I've seen lots of programmes about polar bears but this one
+6294	2066	seemed quite different.
+6528	1425	Boy: The close-ups of the bears were amazing but you get that kind of thing in
+6700	2066	most wildlife programmes, don't you?
+6918	1446	Girl:
+6933	1942	True. But the scenery was fantastic - I suppose it's not hard to make icebergs
+7107	2045	look impressive, though. But you'd never believe the stuff about why the
+7281	2066	bears stayed on that iceberg.
+7499	1425	Boy:
+7500	1962	You mean because they were scared to leave? I'd never heard of anything
+7676	2066	like that before either. You wouldn't think they'd be afraid of anything.
+7950	2066	lpause]
+8183	2086	tone
+8503	2066	(The recording is repeated.]
+8749	2086	[pause]
+9651	8801	135
+9927	971	#2#3w·KEТ/РEТ/FC*·,#901 : iq-kpf

@@ -1,0 +1,57 @@
+496	8091	Test 4 Key
+1003	601	Interviewer: So what happened then? Jamie, from Edinburgh, asks how you broke into
+1177	1929	the fashion industry.
+1384	890	Roberto:
+1410	1929	Well, the people at the youth club were quite impressed with what I'd made,
+1569	1929	but actually I was still at college and had no real interest in fashion at all at
+1760	1929	that stage. Anyway, the leaders at the youth club put me in for a competition.
+1918	1929	It was sponsored by a well-known fashion magazine. I ended up with first
+2095	1929	prize for the things I'd done and doors started opening pretty soon after that!
+2311	601	Interviewer:
+2340	1929	Next, Irina, who's sixteen, asks: 'How do you feel about your current
+2505	1927	designs?'
+2720	891	Roberto:
+2718	1950	My very first creation at the youth club was an evening dress for my sister. It
+2894	1929	took me some time 'cause I'd never sewn before. Amazingly, what I produced
+3075	1949	wasn't too bad. I then did some kids' clothes for my nephews and nieces.
+3241	1950	They seemed pleased with the result. So I branched out a bit and did some
+3432	1929	menswear, which came in for a lot of praise. But I knew I could do even
+3605	1908	better. These days I'm managing to create a modern urban look. It appeals to
+3784	1927	me anyway!
+3982	601	Interviewer:
+4012	1929	Next, Graham asks: 'What or who is your biggest influence when it comes to
+4156	1908	fashion?'
+4405	891	Roberto:
+4420	1929	That's a tricky one. I guess most people would say that it's someone really
+4578	1929	well-known - designers like Paul Smith or Alexander MacQueen. I'm nostalgic
+4767	1929	about the style of clothes in the 1950s that's reflected in my work. Of course,
+4942	1929	I go to all the big fashion shows, but | try to make sure that what I see there
+5101	1929	doesn't change what I'm doing too much.
+5319	601	Interviewer:
+5350	1929	Now, your sister's quite a famous model. Mike asks if all your family's in the
+5496	1908	fashion business.
+5728	891	Roberto:
+5741	1950	Not at all, no. When my parents found out I wanted to design clothes, they
+5915	1929	didn't know quite what to think. They'd assumed I'd go into education -
+6091	1929	they're both teachers - but they realised I was determined, so they backed
+6264	1950	me all the way. They knew once I'd made up my mind, that was it.
+6487	600	Interviewer:
+6499	1950	Paul, from London, wants to know how you cope with criticism.
+6729	892	Roberto: The public sometimes doesn't go for individuality and I try not to take any
+6904	1950	negative comments to heart - though that's tough sometimes. I just carry on
+7079	1929	regardless because I have a faith in what I do, and that's not easily shaken.
+7238	1950	There's always a feeling with some people that everyone has to look the
+7429	1950	same. That's not something I'm into, but I don't mind them being like that.
+7630	601	Interviewer:
+7659	1950	Finally, a number of people have asked if you have any advice for young
+7821	1950	people trying to get into the fashion industry today.
+8042	890	Roberto:
+8052	1950	I guess, know yourself. This industry can crush you, change your views and
+8213	1970	change you. This can happen, especially if you do a traditional college course,
+8401	1970	even a good one. I'd say, get a job where you're also going to get some
+8563	1950	training, like with a photographer or on a magazine. Put together a portfolio
+8735	1970	which shows a few of your ideas, don't go over the top on this though.
+8938	622	Interviewer:
+8968	1970	Roberto, many thanks for coming ...
+9665	8755	165
+9912	933	#23·KE/РET/C2**#90: ¡qkpf

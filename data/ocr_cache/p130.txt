@@ -1,0 +1,48 @@
+488	1003	Test 1 Key
+1003	985	PART 4
+1018	2731	You'll hear an interview with a writer called Clare Watson, who writes
+1206	2710	novels for teenagers. For questions 24-30, choose the best answer (A, B
+1353	2710	or C).
+1598	2731	You now have one minute to look at Part Four.
+1905	2689	[pause]
+2136	2731	tone
+2427	1375	Interviewer:
+2456	2710	With me in the studio today, I have Clare Watson, author of over twenty
+2633	2710	extremely successful novels for teenagers. Clare, what first made you want to
+2776	2710	become a novelist?
+3023	1930	Clare:
+3037	2546	l've always loved books. I can remember as a very small child listening to
+3213	2710	my mum reading stories to me. At primary school, we'd write stories and the
+3401	2669	teacher often chose me to read mine aloud to the rest of the class. However,
+3563	2710	at secondary school, the teacher was more interested in perfect spelling
+3735	2710	and grammar so I started getting lots of corrections and lost some of my
+3909	2710	enthusiasm. But I still used to make up stuff to entertain my kid brother. He
+4085	2710	said my stories were way better than anything in books. That's what started
+4258	2710	me thinking maybe I could write one for publication one day.
+4493	1396	Interviewer: You've published lots of novels. Do you have a personal favourite?
+4754	1930	Clare: It's hard to decide, I think it's probably Swans. It's one of my funniest stories,
+4927	2710	but that's not why I like it so much. It's more because it ended up just how I'd
+5101	2689	imagined it being. Each time I start a novel, I want it to be this and that and
+5276	2710	it hardly ever becomes what I'd intended. Anyway, it's about Gina Finlay, the
+5450	2710	girl l've written twelve other novels about, but it's the first one set in a holiday
+5611	2710	context. The previous ones had all been about Gina at school.
+5857	1396	Interviewer: How do you come up with ideas for stories?
+6090	1930	Clare:
+6104	2546	Well, that's a bit like asking where you get your dreams from. You don't
+6295	2710	exactly know, do you? Dreams are often quite surprising and you've no idea
+6453	2710	really where they originate. But I came up with my first idea for the Gina Finlay
+6630	2710	series when I was jogging round the park. In fact, that's where most of my
+6787	2689	ideas make their first appearance.
+7034	1375	Interviewer:
+7034	2607	The Gina Finlay stories have become a phenomenally successful TV series.
+7225	2731	How do you feel about the TV adaptations?
+7471	1930	Clare: I'm glad Gina's become so popular. For years, I'd been getting letters from
+7645	2689	fans saying, please get her stories made into TV shows. When that eventually
+7821	2710	happened, I don't think anyone imagined it'd turn into such a long-running
+7994	2710	series. I enjoy visiting the set and watching the actors at work, but | don't
+8168	2710	have to write the scripts, thank goodness! There are so many that it wouldn't
+8343	2710	be possible. But the team of writers does a great job, I think!
+8561	1396	Interviewer:
+8575	2669	You've set up a project to encourage teenagers to write fiction. What was the
+8751	2689	inspiration for that?
+9942	965	#3#3™#KEТ/РEТ/FC**·,#3501 : iq-kpf

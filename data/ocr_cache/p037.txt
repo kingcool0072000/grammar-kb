@@ -1,0 +1,70 @@
+450	920	Test 2
+959	4969	Part 6
+1352	899	You are going to read an article about a ball that can generate electricity. Six sentences have been
+1555	879	removed from the article. Choose from the sentences A-G the one which fits each gap (37-42).
+1729	920	There is one extra sentence which you do not need to use.
+2107	920	Mark your answers on the separate answer sheet.
+2674	1881	Need electricity? Play a game of soccer!
+2863	1554	Two inventors have produced a new soccer ball called 'Soccket' that can generate electricity.
+3140	899	Though 25% of the world's population may not have
+3140	5398	They tried their idea out at home first by sticking a
+3313	899	easy access to electricity, we all have access to a
+3328	5398	shake-to-charge flashlight they had bought inside a
+3502	879	source of energy that is currently being wasted - small, hollow ball. Then they kicked it around to see if
+3662	899	energy released by our bodies when we move
+3662	5398	the flashlight would pick up the charge. 40
+3837	899	around. Two inventors have figured out how to
+3823	5419	A mechanism inside the ball captured the energy
+4026	899	capture this energy and convert it into electricity.
+3997	5419	created as the ball moved, which could then be
+4186	899	The only equipment needed? A Soccket football and
+4186	5398	converted into electricity. They made a number of
+4346	899	the desire to have some fun.
+4361	5398	these balls which were tested by delighted kids at
+4534	5398	the World Cup Soccer Championships. Just under
+4608	920	The story behind this amazing invention began at an
+4695	5419	150g heavier than a regulation soccer ball, the
+4782	920	unusual engineering class where non-engineers were
+4869	5419	Soccket had the capacity to store enough energy to
+4956	920	challenged to combine art and science, and come
+5044	5419	power up a small lamp for three hours following just
+5133	919	up with a practical solution to help the world. Two
+5277	920	students - Julia Silverman and Jessica Mathews -
+5232	5398	30 minutes of play.
+5480	920	decided to give it a try. The pair discussed issues
+5476	5437	The company then worked on the first Soccket
+5639	920	facing many people around the world to see which
+5639	5419	football to be produced in large numbers. The latest
+5829	899	of them they could help tackle.
+5799	3680	37
+5814	5439	model is six to seven times more energy efficient
+5988	5419	than the original, and has the capacity to store
+6075	899	That's when Julia, who used to play a lot of sports
+6250	899	in high school, had a brilliant idea: what if they were
+6177	5419	enough energy to power a reading lamp, a cell phone
+6339	5438	charger and even a water purifier. 41
+6409	920	able to capture some of the energy that is generated
+6600	920	when people play sports?
+6569	3394	38
+6573	4395	Given its
+6526	5419	company encourages people not only to buy one
+6686	5419	for themselves but also to donate one to a country
+6773	920	popularity among both young and old all over the
+6845	5419	where it might be needed.
+6934	940	world, soccer seemed to be the natural sport of
+7107	940	choice, and the ball the perfect thing to do it with!
+7107	5439	And the Soccket is not the young entrepreneurs'
+7268	5439	only idea - having succeeded with the Soccket, they
+7355	940	The innovative idea won their professor's approval.
+7441	5439	have many similar ideas combining fun and function.
+7529	920	It then became the passion and life goal of these
+7601	5582	42
+7616	6441	As Silverman says: 'Just because we
+7704	940	two young women. After graduating, they founded
+7791	5439	get older doesn't mean we have to stop playing,
+7892	940	Uncharted Play, Inc., a non-profit-making company.
+7965	5439	and just because we need important things in our
+8037	1104	39
+8155	5439	life, like electricity, doesn't mean we can't have fun
+8328	5419	producing them.'
+9943	981	FЗ·KEТ/РЕТ/FCЗ** ,*З*1:iqkpf

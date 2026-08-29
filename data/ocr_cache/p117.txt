@@ -1,0 +1,35 @@
+465	7484	Marks and results
+1031	371	Listening
+1366	371	One mark is given for each correct answer. The total is weighted to give a mark out of 40 for
+1557	350	the paper. In Part 2, minor spelling errors are allowed, provided that the candidate's intention
+1671	371	is clear.
+1890	577	For security reasons, several versions of the Listening paper are used at each administration
+2063	350	of the examination. Before grading, the performance of the candidates in each of the versions is
+2239	350	compared and marks adjusted to compensate for any imbalance in levels of difficulty.
+2776	350	Speaking
+3095	350	Throughout the test candidates are assessed on their own individual performance and not
+3286	329	in relation to the other candidate. They are assessed on their language skills, not on their
+3459	350	personality, intelligence or knowledge of the world. Candidates must, however, be prepared to
+3619	350	develop the conversation and respond to the tasks in an appropriate way.
+3793	597	Candidates are awarded marks by two examiners: the assessor and the interlocutor. The
+3968	350	assessor awards marks by applying performance descriptors from the Analytical Assessment
+4142	350	scales for the following criteria:
+4491	371	Grammar and Vocabulary
+4755	350	This refers to the accurate use of grammatical forms and appropriate use of vocabulary. It also
+4927	329	includes the range of language.
+5275	346	Discourse Management
+5523	350	This refers to the extent, relevance and coherence of each candidate's contributions.
+5697	350	Candidates should be able to construct clear stretches of speech which are easy to follow. The
+5872	329	length of their contributions should be appropriate to the task, and what they say should be
+6046	329	related to the topic and the conversation in general.
+6366	350	Pronunciation
+6656	350	This refers to the intelligibility of contributions at word and sentence levels. Candidates should
+6833	350	be able to produce utterances that can easily be understood, and which show control of
+7005	329	intonation, stress and individual sounds.
+7312	350	Interactive Communication
+7604	350	This refers to the ability to use language to achieve meaningful communication. Candidates
+7791	350	should be able to initiate and respond appropriately according to the task and conversation,
+7953	350	and also to use interactive strategies to maintain and develop the communication whilst
+8110	371	negotiating towards an outcome.
+9916	941	237ET/PET/FCE3*, 165%b0k15 : iq-kpf
+9651	8804	117

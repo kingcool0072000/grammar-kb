@@ -1,0 +1,25 @@
+452	957	Test 4
+1002	937	SPEAKING (14 minutes)
+1397	937	You take the Speaking test with another candidate (possibly two candidates), referred to here as
+1569	937	your partner. There are two examiners. One will speak to you and your partner and the other will
+1773	937	be listening. Both examiners will award marks.
+2137	937	Part 1 (2 minutes)
+2413	937	The examiner asks you and your partner questions about yourselves. You may be asked about
+2617	916	things like 'your home town', 'your interests', 'your career plans', etc.
+2979	937	Part 2 (a one-minute 'long turn' for each candidate, plus a 20-second response from
+3169	937	the second candidate)
+3446	937	The examiner gives you two photographs and asks you to talk about them for one minute.
+3619	958	The examiner then asks your partner a question about your photographs and your partner
+3808	916	responds briefly.
+4202	937	Then the examiner gives your partner two different photographs. Your partner talks about these
+4389	937	photographs for one minute. This time the examiner asks you a question about your partner's
+4563	937	photographs and you respond briefly.
+4942	937	Part 3 (4 minutes)
+5218	937	The examiner asks you and your partner to talk together. You may be asked to solve a problem
+5392	958	or try to come to a decision about something. For example, you might be asked to decide the
+5595	937	best way to use some rooms in a language school. The examiner gives you some text to help
+5771	958	you but does not join in the conversation.
+6148	958	Part 4 (4 minutes)
+6438	958	The examiner asks some further questions, which leads to a more general discussion of what
+6627	916	you have talked about in Part 3. You may comment on your partner's answers if you wish.
+10047	881	2KET/PET/FC#7, 1a55%b0#15 : i0 kpf

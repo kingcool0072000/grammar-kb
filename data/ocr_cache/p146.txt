@@ -1,0 +1,49 @@
+470	850	Test 3 Key
+975	851	PART 1
+1530	871	Question 1
+2529	1933	Boy:
+2732	1975	Girl:
+3154	1933	Boy:
+3372	1975	Girl:
+3619	1933	Boy:
+4013	1974	Girl:
+4433	1933	Boy:
+5902	873	Question 2
+1002	2619	You'll hear people talking in eight different situations. For questions 1-8,
+1188	2595	choose the best answer (A, B or C).
+1526	2598	One. You hear a girl who is going to live in another country talking to
+1690	2597	a friend.
+1980	2576	[pause
+2210	2619	tone
+2529	2619	Are you excited about your family moving to live in the USA for two years?
+2761	2494	In a way. It sounds an interesting place. It'll be weird going to a new school
+2938	2598	and I'm going to miss my friends.
+3139	2619	But you'll soon meet new ones and feel at home, I'm sure.
+3401	2577	I know that, but we must keep in touch.
+3636	2494	Yes, at least we can do that on our laptops and even see each other as
+3794	2598	we chat.
+4040	2598	True, but there's going to be a big time difference. I'll be getting up just as
+4202	2598	you go to bed, I think.
+4449	2598	Oh, I hadn't thought of that. What a pain!
+4726	2597	[pause]
+4956	2619	tone
+5278	2598	[The recording is repeated.]
+5560	2595	[pause]
+5902	2619	Two. You hear part of a science programme about a planned space mission
+6061	2598	to the moons of Jupiter.
+6351	2598	Ipause]
+6598	2577	tone
+6904	2619	Did you know many planets have their own moons? Well, plans are being
+7051	2640	made for a space mission to explore four moons of the planet Jupiter. It's
+7252	2598	hoped that it will launch in twenty twenty-two and the journey there will
+7429	2598	take eight years. Some interesting features make these moons well worth
+7587	2598	visiting. Three of the moons are thought to have oceans underneath their
+7776	2598	surfaces so it's possible there could be some form of life there. One, known
+7950	2619	as Ganymede, is the only moon in the solar system to have its own magnetic
+8126	2598	field. Another, called lo, is the most volcanically active body known to us,
+8300	2619	shooting material an amazing three hundred kilometres above its surface.
+8575	2598	[pause]
+8808	2619	tone
+9129	2619	[The recording is repeated.]
+9406	2618	[pause]
+9961	909	#≥œ⅔®#ñKЕТ/PЕТ/FСEżЭ*‡,‡ЭāЗžNb0ä1 :İq-kpf

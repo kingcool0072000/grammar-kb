@@ -1,0 +1,83 @@
+5364	227	line 19
+450	933	Test 2
+961	5041	Part 5
+1353	912	You are going to read an extract from a novel about a Canadian teenager called Rex. For questions
+1556	912	31-36, choose the answer (A, B, C or D) which you think fits best according to the text.
+1891	933	Mark your answers on the separate answer sheet.
+2398	4751	Kayak Rex
+2690	912	I leapt from my bed, lifted a corner of the bedroom
+2834	933	curtain, and looked down on the river bend. A fresh
+2979	933	crack in the ice glistened in the morning sunlight. I
+3110	912	shaded my eyes and looked upstream towards the
+3270	912	wall of sandbags, there to protect the buildings from
+3416	912	flooding as the river ice melted. My back still ached
+3575	892	from lifting them into place. All last week, I'd worked
+3706	912	alongside most of the town's adult population for
+3851	912	long hours, proving I was up to the task. Not that
+3997	912	my grandfather took much notice.
+4216	933	With one hand still on the curtain, I swept my
+4362	933	eyes along the half-mile ribbon of steaming black
+4505	933	water formed by the release pipe from the wood
+4665	892	processing factory in Milltown. With fragile ice
+4796	912	shelves on either side, the dark open patch was
+4942	892	followed by solid ice downstream. As I took off my
+5101	912	pyjamas and reached for my kayaking wetsuit, I
+5219	912	spotted a boy on the far side of the river's edge - a
+5377	912	boy I didn't recognise. I frowned. Unbelievably, he
+5508	933	was attempting to balance on an ice shelf along the
+5668	912	water warmed by the factory. I zipped up my wetsuit
+5815	912	and reached for my kayaking jacket. I checked the
+5961	912	pocket for the lucky chain I keep there - a silver
+6091	933	chain my famous grandfather once brought back
+6235	933	from an expedition in South America. Far better
+6380	933	than having a famous grandfather is having this
+6541	912	chain, which no one but him, my mom and me know
+6671	933	about. Plus, I have the actual diary that he kept on
+6833	912	that journey. I keep it under my pillow and read bits
+6964	933	of it before I fall asleep. I patted the chain again and
+7107	933	made my way towards the kitchen.
+7325	933	'Morning, Rex.' Mom smiled at me as I grabbed a
+7473	952	banana off the kitchen counter. 'You're up early for
+7617	954	a Saturday. Ill cook up brunch after your training
+7748	954	session. Be careful now "Thanks, Mom.' I headed
+7906	933	down the hallway, nearly slamming into Grandpa's
+8066	912	tall thin frame as he stepped out of his bedroom.
+8197	933	'Can't you ever watch where you're going?' he
+8328	954	shouted. 'Where are you going, anyway?' 'Sorry,
+8474	954	Grandpa. I'm going kayaking.
+8474	3692	As if my wetsuit
+8633	933	didn't make that obvious. As if he didn't see me in
+2690	5560	my kayak every morning. Grandpa is Grandpa, and
+2834	5560	I try to ignore it when he loses his temper, but he's
+2979	5560	been making it that much harder for me to do lately.
+3228	5539	'What's the point of training? You didn't win the
+3359	5518	competition,' he said. For a split second, the steel-
+3502	5539	edged remark hit exactly like he meant it to. But I
+3633	5560	took a deep breath and silently counted to three. He
+3766	5560	crossed the hall and slammed the bathroom door
+3924	5539	shut behind him. Mom appeared with a sympathetic
+4055	5560	smile. 'Don't mind him. He's ...''... not himself at the
+4230	5538	moment, I finished for her. I refrained from saying
+4362	5539	that he'd always been that way. But, like Mom, I try
+4505	5560	to go easy on him.
+4709	5560	When I was a child, he was my hero - from the time
+4869	5560	he first showed me photos of him in the National
+5015	5580	Geographic magazine. Those faded photos still
+5161	5560	hang framed on his bedroom wall, above his dust-
+5305	5539	covered expedition medals and trophies. But I don't
+5436	5560	go into his room anymore. I've got my own growing
+5581	5560	collection of trophies to look at and, someday soon,
+5741	5539	maybe, my own face in National Geographic. And
+5872	5560	yet, well, a part of me still wants to remain devoted
+6034	5539	to him, this ill-tempered old man.
+6235	5560	Mom smiled. 'At least, he's coming out of his
+6380	5580	bedroom more. Have a good session, Rex. I admire
+6526	5560	your determination to keep it up, even on these cold
+6656	5580	days!' I smiled back at her as I peeled my banana.
+6802	5539	'It'll be warmer in South America,' I said. 'If I come
+6964	5560	up with sponsors for my expedition.' She laughed
+7107	5580	and returned to the kitchen. I ate my banana and
+7252	5539	went downstairs. Stepping into the backyard, I
+7383	5560	hurried towards the boathouse.
+9636	933	36
+9942	912	#*13→#KEТ/PET/FCE2*·,*349MD0#X1È : i q-kpf

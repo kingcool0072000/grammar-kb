@@ -1,0 +1,25 @@
+465	7510	Marks and results
+1017	469	The interlocutor awards a mark for overall performance using a Global Achievement scale.
+1424	571	B2
+1642	653	5
+2151	653	4
+2383	653	3
+1424	1020	Grammar and Vocabulary
+1656	1020	• Handles communication on a range of familiar topics, with very little hesitation.
+1802	1020	• Uses accurate and appropriate linguistic resources to express ideas and produce extended discourse that is
+1933	1183	generally coherent.
+2166	3448	Performance shares features of Bands 3 and 5.
+2398	1020	• Handles communication on familiar topics, despite some hesitation.
+2543	1020	• Organises extended discourse but occasionally produces utterances that lack coherence, and some inaccuracies
+2708	1161	and inappropriate usage occur.
+2892	653	2
+2906	3448	Performance shares features of Bands 1 and 3.
+3125	653	1
+3517	612	0
+3140	1020	• Handles communication in everyday situations, despite hesitation.
+3286	1020	• Constructs longer utterances but is not able to use complex language except in well-rehearsed utterances.
+3531	4081	Performance below Band 1.
+3854	469	Assessment for Cambridge English: First for Schools is based on performance across all parts
+4041	448	of the test, and is achieved by applying the relevant descriptors in the assessment scales.
+9680	8816	119
+9942	1020	#žŒЗ®#fKEТ/PEТ/FCEŹ*·†,‡Э6ЗЖJD#Ж1È :İq-kpf

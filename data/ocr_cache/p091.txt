@@ -1,0 +1,25 @@
+409	851	Test 4
+920	5008	Part 4
+1322	852	You will hear part of an interview with Roberto Gianni, a fashion designer. For questions 24-30,
+1511	852	choose the best answer (A, B or C).
+1962	852	24 When Roberto was a teenager, he felt he needed
+2267	1288	A to show his friends he was capable of originality.
+2587	1288	B to prove he was better at design than his friends.
+2892	1288	C to help his friends create good-looking clothes.
+3447	852	25 What gave Roberto his big chance to break into the fashion industry?
+3767	1288	A going to college to study design
+4055	1309	B coming up with an award-winning design
+4391	1288	C being interviewed by a fashion magazine
+4927	852	26 How does Roberto feel about the clothes he designs now?
+5247	1288	A Hethinks they are more glamorous than his early designs.
+5552	1288	B He's making clothes that match his own personal taste.
+5857	1288	C He believes his designs appeal to different age groups.
+6411	852	27 What does Roberto regard as the biggest influence on his work?
+6715	1309	A other more famous designers
+7005	1330	B fashion shows he's attended
+7340	1309	C the fashions of the past
+7892	873	28 How did Roberto's parents react to his choice of career?
+8212	1330	A They gave him their support.
+8517	1330	B They tried to change his mind.
+8837	1330	C They didn't think he was serious.
+9927	914	#313#KEТ/PEТ/FCE2*·,*349001È : iq-kpf

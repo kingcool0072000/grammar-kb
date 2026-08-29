@@ -1,0 +1,32 @@
+530	8051	Test 1 Key
+1031	1884	Ipause]
+1311	1882	Speaker 4
+1588	1882	lpause]
+1845	1884	This year we went to Spain for the first time. It was exciting because my
+2021	1884	brother and I did loads of surfing. Neither of us had ever even been on a surt
+2194	1904	board before. My brother seemed to get the hang of it at once. I never did,
+2370	1904	but I still enjoyed it. What was great, though, was that I'm the only person
+2543	1863	in my family who knows any Spanish so I did all the ordering in restaurants.
+2718	1884	It was kind of fun being in charge of things actually! The journey home was
+2895	1904	exciting - we missed our flight and ended up coming home by train!
+3172	1882	[pause]
+3445	1883	Speaker 5
+3721	1883	Ipause]
+3982	1884	I went away with my grandma this year. I'd only ever been away with her on
+4142	1925	my own once before and that was ages ago. So I was a bit apprehensive, you
+4345	1904	know, thinking she might want to do very different things from me. But it was
+4506	1904	fine. We both love music so most evenings we ate in a café, where people
+4680	1904	used to come to play folk music. But the highlight for me was actually getting
+4854	1884	there. We drove to the cottage she'd rented and it took us four or five days.
+5031	1904	Not because it was that far, but because we stopped to do lots of things
+5188	1904	along the way.
+5465	1884	lpause]
+5743	1925	Now you'll bear Part Three again.
+5973	1925	tone
+6294	1904	[The recording is repeated.]
+6570	1883	[pause]
+6831	1925	That is the end of Part Three.
+7094	1925	Now turn to Part Four.
+7393	1900	[pause]
+9651	8695	129
+9912	973	#½З·KEТ/РEТ/FC½ ** ,## : İ qkpf

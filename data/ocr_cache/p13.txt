@@ -1,0 +1,80 @@
+453	983	Test 1
+963	4938	Part 5
+1366	963	You are going to read an extract from a novel about an American teenager called Bonnie. For
+1557	963	questions 31-36, choose the answer (A, B, C or D) which you think fits best according to the text.
+1906	983	Mark your answers on the separate answer sheet.
+2369	4538	Queen Rider
+2688	983	Bonnie Wyndham got out of her mother's car and
+2834	963	looked at Almonside School. T'll make you sorry
+2989	962	I've come here,' she told her, pleasantly. Her mother
+3110	963	was getting out of the other door at the time so she
+3241	983	didn't hear, but Bonnie wouldn't have cared if she
+3416	943	had. Her mother knew her feelings. Mrs. Wyndham
+3578	943	looked about her. Almonside was a funny school, all
+3692	983	bits and pieces, buildings hidden away amongst the
+3838	963	trees on a wooded hillside; very confusing at first
+3984	963	sight. Then she saw the signs on a post: science
+4130	983	block, gymnasium, riding centre ...
+4345	963	'Riding centre,' said Bonnie, showing a sudden
+4478	963	interest.
+4709	963	'Headmaster's study,' said her mother. "This
+4854	983	way.'
+5072	983	Bonnie followed her mother along a broad drive that
+5203	983	curved between trees.
+5421	983	'I wish you'd walk beside me instead of following
+5595	963	me like a dog,' said Mrs. Wyndham wearily, but she
+5713	983	didn't seem to expect Bonnie to do so.
+5932	983	A few minutes later, her mother was talking to
+6082	982	Bonnie's new headmaster in his study, while Bonnie
+6220	983	herself sat and waited outside the door. Suddenly,
+6380	963	Bonnie jumped up. 'Why should I just sit here?' she
+6511	983	said to herself. 'I'll be thrown out before very long,
+6656	983	anyway,' she said mentally to the door, 'so why not
+6817	963	get it over and done with?' She left the building
+6947	983	and headed for the riding centre in the direction
+7093	963	indicated by the sign.
+7296	983	There was a nice old building where the horses were
+7442	1004	kept, and a large structure for indoor riding. Bonnie
+7588	963	looked about her, but there was no one in sight.
+7718	983	There was a certain reverence about her manner
+7880	983	as she approached the animals. Bonnie treated
+8023	983	horses with respect. The horses were very well
+8168	983	looked after, she could tell that at once.
+2688	5441	Almost every stall was occupied, and she wandered
+2834	5441	along looking carefully at each horse and judging
+2979	5401	it. "They know what they're doing here,' she told
+3125	5441	a small pony as she ran a finger along its nose. It
+3270	5441	was the next horse that pulled her up short. 'But
+3416	5421	aren't you the best of the lot!' she said. He was
+3562	5421	brown with a touch of white. Lively, probably, but
+3720	5421	Bonnie liked that. 'You know, I have the feeling
+3838	5441	we've met before,' said Bonnie, stroking his neck.
+3984	5441	'It was in my dreams and I was riding you to victory
+4130	5421	in some big competition.' Over the stall was his
+4274	5439	name: Maverick.
+4505	5421	Suddenly, she couldn't resist the temptation to ride
+4641	5440	the horse. 'I wonder where I can find a bridle for
+4781	5441	your head, and a saddle for your back. Can't be far
+4927	5441	away.' The room containing all the riding equipment
+5072	5441	was - Bonnie was delighted to discover - unlocked.
+5203	5441	Absorbed in the pleasurable task of putting a saddle
+5348	5441	on Maverick's back, she forgot all about her mother
+5494	5441	and the headmaster. When she sat up high on the
+5668	5421	big horse outside the building, she felt like a queen,
+5770	5441	mistress of all she could see. Her nickname at her
+5944	5441	previous school had been Queen Bee, and she
+6090	5421	laughed delightedly as she remembered it. 'You're
+6220	5441	the best horse I've ever sat on, Maverick,' she said
+6380	5421	admiringly, 'and when I say that I'm not kidding, I
+6511	5441	can assure you, because I know about horses, even
+6671	5421	if I don't know about anything else.'
+6875	5441	She nudged him into a walk, then into a trot. 'If I stay
+7005	5441	here, I think you and I could be great friends,' she
+7151	5441	confided. She went round and round the paddock.
+7296	5441	The rhythm was exhilarating, a little breeze
+7458	5441	whipping smartly past her cheek and making it
+7572	5441	glow. She could tell Maverick trusted her, and she
+7734	5421	felt certain that he'd jump well.
+9622	1004	14
+9912	1104	#½1ЗKET/PET/FC**·,$359M0#1à : iqkpf
+3255	9738	lin

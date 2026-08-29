@@ -1,0 +1,58 @@
+480	6296	Sample answer sheet: Listening
+1119	1255	CAMBRIDGE ENGLISH
+1206	1275	Language Assessment
+1295	1275	Part of the University of Cambridge
+1874	2695	SAMPLE
+2252	925	Candidate Name
+2325	925	If not atready printed, write name
+2398	925	in CAPITALS and complete the
+2471	925	Candidate No. grid (in pencil).
+2617	925	Candidate Signature
+2878	946	Examination Title
+3110	946	Centre
+3417	1151	Supervisor:
+3563	1131	If the candidate is ABSENT or has WITHDRAWNshade here -
+2253	6131	Centre No.
+2601	6131	Candidate No.
+2892	6131	Examination
+3009	6131	Details
+2761	7345	10,0.
+2877	7345	111
+2979	7366	12.
+2979	7572	2.
+2863	7777	.1.
+2979	7777	2.
+3081	7345	13.3,
+3095	7777	3.
+3081	7983	3.
+3197	7798	4.
+3212	7962	4.
+3328	7345	15.
+3764	7386	9.
+3444	7777	-6.-6
+3648	7818	8,.8.
+3749	8004	.9
+3357	8312	-
+3706	8292	-
+4477	3374	Candidate Answer Sheet
+5101	1069	Instructions
+5319	1111	Use a PENCIL (B or HB).
+5480	1111	Rub out any answer you wish to change using an eraser.
+5930	1255	Parts 1, 3 and 4:
+6061	1255	Mark ONE letter for each question.
+6353	1255	For example, if you think B is the
+6499	1255	right answer to the question, mark
+6643	1252	your answer sheet like this:
+6976	2386	0
+5915	4444	Part 2:
+6061	4465	Write your answer clearly in CAPITAL LETTERS.
+6322	4465	Write one letter or number in each box.
+6483	4465	If the answer has more than one word, leave one
+6642	4444	box empty between words.
+6848	4464	For example:
+7122	4958	A
+7136	5185	N
+7151	5679	EXA
+7675	1089	Turn this sheet over to start.
+9143	6213	© UCLES 2014 Photocopiable
+10021	933	·2TЗ#EТ/РEТ/FCEЖ,†aS½D0*X : iqkpł6º

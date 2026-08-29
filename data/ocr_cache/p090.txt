@@ -1,0 +1,26 @@
+529	8224	Listening
+1002	4371	Part 3
+1397	309	You will hear five short extracts in which teenagers are talking about the sports they take part in.
+1584	309	For questions 19-23, choose from the list (A-H) what each speaker says about their sport. Use the
+1773	288	letters only once. There are three extra letters which you do not need to use.
+2325	309	A An injury stopped me doing it for a while.
+2906	309	B
+2921	577	I'm going to take a special course to improve my skills.
+3156	6411	Speaker 1
+3139	8721	19
+3531	639	I was surprised how much time I needed for it.
+3766	6411	Speaker 2
+3749	8701	20
+4098	329	D
+4144	618	Ienjoy competitions more than training.
+4379	6410	Speaker 3
+4360	8721	21
+4754	309	E It has helped me make a lot of new friends.
+4970	6412	Speaker 4
+4970	8721	22
+5349	309	F The weather sometimes spoils my enjoyment.
+5583	6411	Speaker 5
+5581	8721	23
+5959	309	G A member of my family encouraged me to take it up.
+6569	309	H My club provides all the equipment I need.
+9916	946	AB3R#KET/PE/FCES*, 13ib0aka : i q kpf'

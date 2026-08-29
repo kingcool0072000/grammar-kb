@@ -1,0 +1,44 @@
+436	969	Marks and results
+988	969	Sample D (Test 2, Question 4 - Review)
+1366	1090	A good café to meet friends in!
+1613	1131	Here, in Palermo, there are a lot of very beautiful café, but one of the best café to meet friends in
+1808	1089	is Gino's! It is not in the centre of the centre of the town, it is easy to arrive there by tube, but if
+1976	1111	you like walking it is only twenty minutes from the principal square.
+2253	1111	It is the tipical Italian café in a side there is the bar where you can do there breakfast with tea,
+2412	1131	desserts or croissants, but their specialities are the arancini, you can find more of twenty types
+2589	1131	of arancini. In the other side there is the restaurant that is also a pizzeria. It serves the best fish
+2733	1131	of Palermo.
+3025	1131	There is a very beautiful atmosphere inside very comfortable but at the same time it is funny.
+3214	1090	I think other people would like it, because in a little space they can find all the Sicily and if the
+3387	1111	weather is bad it is a very beautiful place where stay with friends.
+3998	1090	Scales
+4435	1110	Content
+4001	2765	Mark
+4447	2969	5
+5043	1111	Communicative
+5218	1131	Achievement
+5145	2949	4
+6032	1110	Organisation
+6031	2969	2
+7084	1109	Language
+7078	2969	3
+4042	3486	Commentary
+4287	3515	All content is relevant to the task and the target reader would be
+4464	3494	fully informed. We learn where the café is, what food is served and
+4637	3494	that the atmosphere is good.
+4900	3494	The conventions of writing a review are used effectively and the
+5058	3494	target reader's attention would be held. The café is described and
+5262	3494	both factual and personal observations are made, using a tone and
+5406	3494	register which are suitable for a teenage audience.
+5683	3494	The review is generally well organised and coherent, making use
+5857	3515	of linking words and some simple cohesive devices. More use of
+6031	3494	referencing such as pronouns, rather than punctuation would
+6207	3494	help the overall cohesiveness of the text, both at sentence and
+6381	3494	paragraph level.
+6643	3515	There is a range of everyday vocabulary used appropriately to
+6817	3494	describe the café. There is a range of simple and some more
+7006	3494	complex grammatical torms used with a good degree of control.
+7165	3515	There are some errors, particularly with plurals (one of the best
+7342	3494	cate), and prepositions (more of ...; all the Sicıly), but these do not
+7485	3494	impede communication.
+10002	1003	#2#3##KEТ/PEТ/FC*,#69*D0*15 : iq-kpf

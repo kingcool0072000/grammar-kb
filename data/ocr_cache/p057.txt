@@ -1,0 +1,73 @@
+407	954	Test 3
+915	5082	Part 5
+1323	975	You are going to read a magazine article about a young mountain climber. For questions 31-36,
+1511	933	choose the answer (A, B, C or D) which you think fits best according to the text.
+1861	975	Mark your answers on the separate answer sheet.
+4244	248	line 12
+2369	4398	Teenage Climber
+2662	954	Kai Bradey is 14 and plans to be one of the youngest
+2805	954	people ever to climb Mount Everest. Kai's team
+2936	933	for the climb includes his father, Ed, and mother,
+3096	954	Melissa. They call themselves "The Bradey Team',
+3226	954	and climbing Everest is only one part of their plan.
+3401	912	If Kai succeeds in climbing Everest, and Koscuiszko in
+3546	933	Australia, he will become one of the youngest people
+3687	952	to have climbed the Seven Summits, the highest
+3808	954	points on each continent. Few people achieve this
+3982	933	under the age of thirty. Kai has already climbed four
+4113	954	of them and might actually do it before his teenage
+4258	954	years are over. If he makes it, he could become one
+4421	952	of the most famous teens of his generation. Because
+4550	954	young people are spending more time on computers
+4697	953	and games consoles, Kai hopes to inspire kids to
+4859	952	climb their own mountains. Or, at least, to venture
+4974	953	outdoors.
+5188	933	I have spoken to a number of well-known Everest
+5350	933	climbers and could not find a single one who thought
+5508	933	that taking a 14-year-old up the world's highest
+5639	933	mountain was a good idea. They questioned whether
+5800	933	many young climbers had the necessary physical
+5930	933	strength, and had doubts about whether a teenager
+6090	933	would be prepared emotionally for the challenge.
+6225	932	In addition, they couldn't see how a young person
+6380	933	could have gained enough practical knowledge or
+6511	933	awareness of potential hazards to develop the good
+6657	912	judgment and reactions a climber must have in order
+6804	912	to take part in such a project sately.
+6992	954	The Bradeys have heard such views before. 'I know
+7165	954	that people are critical of us - I have to put up with
+7296	954	that,' Ed says, 'but I don't waste my time thinking
+2646	5560	about it - there's still so much to do. Ithink about
+2805	5560	possible problems, obviously. Melissa and I weigh
+2936	5560	up the risks all the time. I'm concerned for Kai's
+3096	5580	safety as any parent would be, but I believe our own
+3242	5560	backgound as climbers will help, and watching Kai
+3401	5580	develop gives me confidence.'
+3609	5600	I also wonder about Kai's motivation. Is this just an
+3750	5601	ambitious father taking his own love of adventure to
+3896	5601	a dangerous extreme? "This project isn't about me
+4042	5601	trying to become famous for my son's achievements,'
+4186	5601	Ed insists. 'At first, he talked about it as something
+4346	5580	for later in life, but when we discussed it, we thought:
+4462	5601	'Why wait?' We talk to him from time to time to make
+4623	5580	sure he hasn't lost the motivation to do it.' When lask
+4781	5580	Kai what pleasure he finds in the challenge he says, 'I
+4912	5580	just focus on achieving my goal.'
+5130	5601	In the past, few knew or cared about being the
+5277	5601	youngest or fastest person to climb a particular
+5423	5601	mountain, or sail a particular ocean. Today, every
+5579	5600	adventure is blogged about, and every climb turns into
+5712	5601	a record-setting challenge. The more adventurous the
+5843	5601	record, the more interest it generates. This gives Kai
+6004	5601	a dilemma. We may complain that achievement too
+6150	5601	often replaces enjoyment during such challenges, but
+6308	5580	if Kai wants to inspire others, he has got to play the
+6453	5580	media game. This means blogging, sitting for photo
+6628	5576	shoots and giving interviews.
+6600	8174	He has got to offer
+6744	5580	something truly spectacular. Like climbing Everest.
+6861	5601	'And in fact,' Ed says. "If Kai decides next week that
+7044	5579	he's had enough of mountain climbing and wants to
+7184	5579	swim instead, we'll forget about this whole project
+7311	5580	and go to the pool.'
+9636	933	58

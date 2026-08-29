@@ -1,0 +1,49 @@
+1171	916	Introduction
+1729	918	This collection of four complete practice tests comprises papers from the Cambridge English:
+1904	918	First for Schools examination; students can practise these tests on their own or with the help
+2064	917	of a teacher.
+2252	1157	The Cambridge English: First for Schools examination is part of a suite of general English
+2427	918	examinations produced by Cambridge English Language Assessment. This suite consists of five
+2603	918	examinations that have similar characteristics but are designed for different levels of English
+2776	898	language ability. Within the five levels, Cambridge English: First for Schools is at Level B2 in
+2951	918	the Council of Europe's Common European Framework of Reference for Languages: Learning,
+3124	918	teaching, assessment. It has been accredited by Ofqual, the statutory regulatory authority in
+3284	938	England, at Level 1 in the National Qualifications Framework. The Cambridge English: First
+3459	918	for Schools examination is widely recognised in commerce and industry and in individual
+3635	938	university faculties and other educational institutions.
+4015	2154	Examination
+4040	4830	Council of Europe
+4201	4870	Framework Level
+4031	7743	UK National
+4215	7684	Qualifications
+4362	7544	Framework Level
+4796	8243	3
+4636	1337	Cambridge English: Proficiency
+4813	1636	Certificate of Proficiency
+4985	1956	in English (CPE)
+5248	1397	Cambridge English: Advanced
+5411	2174	Certificate in
+5581	1636	Advanced English (CAE)
+5857	1097	Cambridge English: First for Schools
+6017	1257	First Certificate in English (FCE)
+6193	2215	for Schools
+6556	1317	Cambridge English: Preliminary
+6716	1337	Preliminary English Test (PET)
+7152	1656	Cambridge English: Key
+7313	1696	Key English Test (KET)
+4796	5508	C2
+5421	5489	C1
+6031	5489	B2
+6598	5489	B1
+7238	5469	A2
+5406	8243	2
+6075	8183	1
+6628	7984	Entry 3
+7225	7983	Entry 2
+7790	958	Cambridge English: First for Schools follows the same format as Cambridge English: First
+7981	937	and the level of the question papers is identical. The only difference is that the content and
+8139	938	treatment of topics in Cambridge English: First for Schools have been particularly targeted at
+8314	938	the interest and experience of school pupils. Cambridge English: First for Schools candidates
+8512	936	who achieve Grade C or higher in the exam, receive a Cambridge English: First for Schools
+8665	937	certificate.
+9665	918	4

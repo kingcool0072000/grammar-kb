@@ -1,0 +1,41 @@
+517	8071	Test 4 Key
+4069	269	Question 2
+8245	268	Question 3
+1005	1325	Girl: That was a brilliant science lesson, wasn't it?
+1250	1283	Boy: Yes, but I find it hard to get my head round some of those facts that
+1411	1946	astronomers have recently discovered. You know, like they think that it's fifty
+1584	1925	thousand degrees Celsius on that star they're researching. How can that be?
+1817	1325	Girl: I know what you mean. Or like it's a hundred and fifty times bigger than our
+1991	1946	sun. No wonder scientists are keen to find out more about it.
+2223	1283	Boy: That's right. They want to discover why it's on its own rather than in a cluster
+2398	1946	of other stars, like they usually are. It's very curious, isn't it?
+2602	1324	Girl:
+2616	1946	Sure is. I'd love to know the answer.
+2911	1943	[pause]
+3139	1966	tone
+3444	1925	[The recording is repeated.]
+3722	1924	[pause]
+4069	1966	Two. You hear two friends talking about buying a card game for the boy's
+4233	1944	sister.
+4510	1944	[pause]
+4752	1966	tone
+5058	1304	Boy:
+5058	1946	Shall I get this card game for my sister's birthday?
+5276	1345	Girl: How old is she? Seven?
+5523	1304	Boy: That's right. Do you think it's too old for her?
+5755	1345	Girl: Well, I didn't get it till | was ten, but I played it with my younger brother and he
+5932	1966	sometimes managed to beat me. It's quite easy once you get the hang of it,
+6090	1946	though it's hard at first to remember all the rules.
+6338	1304	Boy: So you need a bit of patience? My sister hasn't got any!
+6569	1345	Girl: That could be a problem then. Look, this board game here might be better.
+6787	1304	Boy:
+6802	1863	Thanks. That's certainly the sort of thing she'd enjoy.
+7066	1944	[pause]
+7296	1987	tone
+7616	1946	[The recording is repeated.]
+7893	1945	[pause]
+8241	1966	Three. You hear part of an interview on the radio with a writer of
+8386	1966	children's books.
+8681	1944	[pause
+8909	1987	tone
+9927	952	#T3w#KEТ/РEТ/FC*†,#9M00X1Ë : iq-kpf

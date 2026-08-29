@@ -1,0 +1,35 @@
+481	6606	Reading and Use of English
+988	502	1 A exceptional
+1377	499	2 A resulting
+1715	502	3 A broadened
+2107	502	4 A composed
+2470	502	5 A took
+2863	502	6 A place
+3226	502	7 A sent
+3604	502	8 A harsh
+988	3012	B impossible
+1369	3011	B following
+1715	3012	B extended
+2109	3011	B created
+2495	3009	B earned
+2863	3012	B part
+3233	3009	B left
+3604	3293	strict
+976	4999	C excellent
+1373	4998	C concluding
+1730	4999	C spread
+2109	4999	C formed
+2501	4999	C paid
+2880	4999	C position
+3257	4999	C dropped
+3604	5000	C firm
+973	7048	D impressive
+1366	7048	D developing
+1738	7045	D passed
+2101	7045	D set
+2503	7047	D caught
+2879	7047	D play
+3236	7045	D thrown
+3590	7068	D
+3619	7389	strong
+10038	1058	#BI3E#KEТ/PEТ/FC*7, 1aS01E: ia-kpf?

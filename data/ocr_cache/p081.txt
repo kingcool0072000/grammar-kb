@@ -1,0 +1,74 @@
+480	978	Test 4
+988	5125	Part 6
+1380	979	You are going to read an article about Antarctica. Six sentences have been removed from the
+1569	958	article. Choose from the sentences A-G the one which fits each gap (37-42). There is one extra
+1744	979	sentence which you do not need to use.
+2136	979	Mark your answers on the separate answer sheet.
+2645	3354	Rainforest in Antarctica
+3023	1291	Scientists have discovered that Antarctica looked very different 55 million years ago!
+3343	958	Antarctica is the fifth largest continent after Asia,
+3517	979	Africa, North America and South America. It covers
+3691	979	14 million km', 98% of which is ice.
+3925	1000	Antarctica is frozen now, but a study has found
+4084	979	that there were trees similar to palm trees in the
+4258	1000	Antarctic 55 million years ago, in a period known as
+4434	979	the early Eocene era.
+4418	2916	37
+4434	4020	Global levels of
+4607	979	the principal greenhouse gas, carbon dioxide, were
+4782	1000	nearly three times as high then as today.
+5029	1000	Scientists have known for a long time that the start
+5203	1000	of the Eocene era was one of the hottest periods
+5377	958	in Earth's history, so at that time Antarctica would
+5538	999	have been ice free and much warmer than at present.
+5697	1145	38
+5973	1000	For millions of years, rock, plants and animal bones
+6148	1000	have been ground down by wind, water and the
+6309	1000	sheer weight of ice to tiny pieces known as sediment.
+6482	1000	Scientists have now analysed samples of Antarctic
+6657	1000	sediment from the Eocene period. These were not
+6845	979	available to them until very recently.39
+7005	1000	Unfortunately, any sediment remaining there from
+7181	1000	the Eocene period was destroyed as Antarctica's
+7354	999	climate changed or buried under thousands of
+7514	999	metres of ice.
+7761	1020	Now technology has allowed researchers to
+7950	1020	analyse sediment from under the sea. The study
+8110	1020	was carried out by a team of 36 scientists off the
+8285	1020	coast of Antarctica. They dropped a drilling machine
+8473	1020	through 4 km of water, and used it to make a long
+8648	1020	thin hole, 1 km deep, into the ocean floor. Then a
+3343	5541	metal tube was pushed down into the sediment to
+3517	5541	take a sample, and a sort of lid was closed over it.
+3662	5729	40
+3663	6750	One of the authors of the study said:
+3837	5562	"The samples are the first detailed evidence we have
+4011	5583	of what was happening in the Antarctic during this
+4200	5562	vitally important era.'
+4447	5562	Throughout the Eocene period, tiny pieces of plant
+4622	5583	were transported by insects, or washed to the
+4782	5583	bottom of the sea bed just off the coast. They then
+4956	5583	settled into the sediment and were preserved for
+5142	5578	50 million years.
+5116	7187	41
+5145	8166	Analysis of the plant
+5306	5583	pieces in the sediment samples reveals that the coast
+5450	5583	of Antarctica used to be covered in warm rainforest
+5624	5583	similar to that in northern Australia or New Guinea.
+5828	5583	Further inland, mountainous regions were covered
+5988	5583	in different kinds of trees.
+6235	5583	This discovery suggests that temperatures on the
+6395	5583	Antarctic coast were around 16°C and summers
+6598	5541	reached a pleasant 21°C. Antarctica was in nearly
+6773	5562	the same position as it is now, over the South Pole.
+6934	5583	As a result, it would have been dark in winter, like
+7125	5561	today. 42
+7107	7354	Temperatures probably never
+7297	5541	fell below 10°C.
+7529	5583	The vegetation of Antarctica is very different today
+7703	5583	from 55 million years ago. There are no trees or
+7877	5583	bushes on the continent, and only two species of
+8038	5583	flowering plants are found along the western side of
+8241	5562	the Antarctic Peninsula. What will it be like, though,
+8386	5562	in another 50 million years?
+9928	937	#23#KEТ/PET/FCE3**,#3SM001 : iq-kpf

@@ -1,0 +1,32 @@
+509	6639	Reading and Use of English
+1004	389	31 How did Rex feel as he looked at the sandbags?
+1220	819	A satisfied with the work he had done
+1426	819	B eager to get down to the river
+1614	819	C relieved that the flooding was over
+1788	840	D concerned he might have to move them again
+2078	389	32 When Rex 'frowned' in line 19, it showed that
+2312	818	A he wished he were outside with the boy.
+2486	840	B he was trying to remember the boy's name.
+2688	819	C he disapproved of the boy's actions.
+2863	840	D he was unable to make out what the boy was doing.
+3155	409	33 What do we learn about Rex's grandfather in the third paragraph?
+3386	819	A He has little idea of what is going on.
+3575	819	B Heis behaving increasingly badly.
+3735	840	C He needs more and more attention.
+3953	819	D He is often in the way.
+4229	389	34 How did Rex react to his grandfather's comment about the competition?
+4463	819	A He decided that his grandfather hadn't intended to hurt him.
+4651	819	B He wanted to reply to his grandfather but wasn't sure what to say.
+4840	819	C He hoped to annoy his grandfather by pretending he hadn't heard.
+5029	819	D He ignored his grandfather despite feeling upset about the criticism.
+5306	409	35 In the fifth paragraph, what is suggested about Rex's attitude to his grandfather?
+5523	819	A Rex has always felt the need to compete with his grandfather.
+5726	819	B Rex believes his grandfather exaggerates his past achievements.
+5901	819	C Rex is sad about the way his relationship with his grandfather has changed.
+6105	819	D Rex feels guilty because he is already more successful than his grandfather was.
+6380	409	36 At the end of the passage, what are we told about Rex?
+6614	819	A He is receiving support to go on an exciting trip.
+6788	819	B He trains regularly whatever the weather is like.
+6991	1188	He gets little encouragement from his mother.
+7180	840	D Heis planning to move somewhere less cold.
+9916	1000	EEZR#KET/PET/FCES*,agibakE: iqkpt

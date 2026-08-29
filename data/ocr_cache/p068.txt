@@ -1,0 +1,25 @@
+495	8230	Listening
+974	4382	Part 3
+1380	308	You will hear five short extracts in which teenagers are talking about a new video game. For
+1569	329	questions 19-23, choose from the list (A-H) the opinion each speaker expresses. Use the letters
+1760	329	only once. There are three extra letters which you do not need to use.
+2296	329	A It's less exciting than a previous version of the same game.
+2906	329	B The special effects were what made me interested in it.
+3130	6417	Speaker 1
+3110	8703	19
+3505	329	C The pace of it is rather slow.
+3736	6398	Speaker 2
+3720	8703	20
+4130	329	D It gives players some interesting choices to make.
+4347	6419	Speaker 3
+4331	8703	21
+4739	329	E Atfirst, it's difficult to understand what you have to do.
+4957	6419	Speaker 4
+4941	8724	22
+5334	534	It's likely to appeal to a different age group.
+5557	6418	Speaker 5
+5537	8724	23
+5932	617	The later levels introduce some unusual elements.
+6541	329	H My friend's better at it than l am.
+9680	8827	69
+9912	1008	#∞#З→·nKET/PET/FC**·, *353MD0#X1à : i q-kpf

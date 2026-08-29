@@ -1,0 +1,35 @@
+406	970	Test 1
+959	950	READING AND USE OF ENGLISH (1 hour 15 minutes)
+1460	4868	Part 1
+1861	950	For questions 1-8, read the text below and decide which answer (A, B, C or D) best fits each gap.
+2049	950	There is an example at the beginning (0).
+2429	950	Mark your answers on the separate answer sheet.
+2791	950	Example:
+3066	950	0 A effects
+3057	2473	B tricks
+3052	3584	C skills
+3053	4653	D talents
+3590	1900	A
+3575	2475	B
+3575	3069	C
+3575	3663	D
+3662	1128	0
+4406	4533	BMX racing
+4927	950	Somewhere in California during the early 1970s, a bunch of kids customised their bicycles so they
+5247	950	could do (0) ...
+5247	2376	... on them. They were able to do incredibly (1) .
+5247	6831	.. things like jumping off ramps
+5595	950	and making their bikes fly through the air. Then they began racing them along dirt tracks. The
+5917	970	kids were recorded on camera and the (2) ..... film, which was called On Any Sunday, (3) ........
+6251	950	the word about the new pastime like wildfire. And so a sport (4) ........ by kids for kids was born.
+6584	970	Bicycle Motocross was the name given to it, which was soon shortened to BMX. It (5) .
+6543	9049	.. the
+6904	970	attention of thousands of kids over one short summer.
+7617	990	Nowadays, BMX racing is recognised as a fun action sport. BMX caters for the individual. Every
+7950	970	rider gets to take (6) ...... No one sits on the bench and no one ever gets (7) .
+7921	8059	.. from the team.
+8284	990	And statistics have proved that, due to the (8) ..
+8270	5287	. safety requirements, it is one of the safest of all
+8604	970	youth sports. Have you ever thought of giving BMX a try?
+9607	970	8
+9942	1108	#*3#KEТ/PET/FC3*7,#39M0#1 : i9-kpf

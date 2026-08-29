@@ -1,0 +1,49 @@
+467	867	Test 4 Key
+4158	887	Question 8
+930	1880	Man:
+960	2458	Did you see that news item about that really unusual monkey?
+1164	1590	Woman:
+1177	2479	You mean the baby one born in the French zoo? It was the cutest thing l've
+1353	2623	ever seen! I wish I was the zookeeper looking after it!
+1584	1880	Man:
+1600	2561	I don't know about that. But it's such a pity that there's only a thousand of
+1758	2582	them left in the world.
+1964	1611	Woman:
+2209	1880	Man:
+2441	1611	Woman:
+2674	1880	Man:
+2005	2603	It is a shame, but at least this one's getting well cared for.
+2240	2603	Yes, but it would be better off in the wild where it belongs.
+2456	2603	I'm not so sure. It's safe and it's got plenty to eat where it is!
+2703	2603	It's not the same, though, as having a forest to roam around in, is it?
+2997	2581	Ipause
+4433	2582	[pause]
+4680	2623	tone
+4970	1983	Girl:
+5203	1942	Boy:
+5784	1983	Girl:
+6031	1942	Boy:
+6613	1983	Girl:
+6845	1942	Boy:
+3227	2603	tone
+3531	2582	[The recording is repeated.]
+3812	2581	[pause]
+4171	2623	Eight. You overhear two friends talking about their holidays.
+5000	2603	How was your holiday, Ben? You went to New York, didn't you?
+5232	2603	Actually, my dad decided against that in the end. We went to the mountains
+5393	2582	instead. My parents said they wanted some fresh air and a
+5566	2623	more active holiday.
+5813	2623	Well, that sounds good too.
+6033	2623	Mm. I was quite disappointed at first but I came round to it a bit when they
+6206	2603	said | could have some skiing lessons if I wanted. And now I'm so glad we
+6380	2623	went. I can't wait to go again.
+6627	2603	Oh, I didn't know you could ski.
+6862	2561	I couldn't. But I can now. My instructor was great.
+7127	2601	[pause]
+7369	2623	tone
+7691	2603	[The recording is repeated.]
+7955	2601	[pause]
+8242	2623	That is the end of Part One.
+8517	2623	Now turn to Part Two.
+8783	2601	[pause]
+10012	901	Ж≥œẞ®#fKEТ/PЕТ/FŒE≥:*‡,†Э79žbД#Ж1ă:İq-kpf

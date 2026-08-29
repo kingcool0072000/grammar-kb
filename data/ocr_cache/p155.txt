@@ -1,0 +1,65 @@
+1211	407	Test 4 Key
+1687	408	Reading and Use of English (1 hour 15 minutes)
+2005	388	Part 1
+2267	388	1 A
+2267	1063	2 B
+2267	1881	3 D
+2281	2760	4 A
+2281	3456	5 B
+2267	4355	6 C
+2267	5173	7D
+2267	5991	8 C
+2616	388	Part 2
+2906	388	9 would / could / might / can
+3067	388	14 but / except
+3052	2229	15 the / what
+2880	3496	10 needs / has
+3053	3905	16 how
+2864	5193	11 order
+2864	6543	12 out / on
+2867	8014	13 like
+3401	388	Part 3
+3662	388	17 Mexican
+3854	388	22 disagreement
+3648	1942	18 evidence
+3822	2351	23 discoveries
+3677	3476	19 exciting
+3662	4928	20 remarkable
+3872	4088	24 generally
+3679	6788	21 significance
+4189	387	Part 4
+4463	388	25 in CASE | it gets / becomes / turns / is
+4609	388	26 WISH I hadn't / had not l eaten
+4812	388	27 for | NOT doing / completing / finishing OR for | NOT having done / completed / finished
+4958	388	28 I would / I'd l have CAUGHT OR I would've I CAUGHT
+5130	388	29 it | wasn't / was not UNTIL
+5319	388	30 MUST have l gone
+5641	387	Part 5
+5901	388	31 C
+5901	1267	32 C
+5903	2228	33 A
+5901	3067	34 B
+5901	4028	35 D
+5916	4969	36 B
+6254	386	Part 6
+6511	388	37 D
+6511	1308	38 F
+6511	2208	39 A
+6511	3128	40 G
+6511	4008	41 E
+6513	4968	42 C
+6861	387	Part 7
+7124	386	43 C
+7297	367	51 B
+7122	1288	44 D
+7312	1247	52 D
+7122	2229	45 B
+7122	3149	46 C
+7122	4069	47 A
+7122	4989	48 D
+7122	5848	49 B
+7122	6809	50 A
+7848	408	Writing (1 hour 20 minutes)
+8125	408	Candidate responses are marked using the assessment scale on page 108.
+9636	8752	155
+9942	1002	#2JЗ##KEТ/РEТ/FC2**,*901 : i9-kpf

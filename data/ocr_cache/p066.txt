@@ -1,0 +1,25 @@
+526	8273	Listening
+988	349	5
+1032	717	You hear a young racing driver talking on the radio.
+1206	718	What is the speaker's main purpose?
+1499	739	A to outline the advantages and disadvantages of his sport
+1760	759	B to explain what it takes to be a successful racing driver
+2063	739	C to inform listeners about his own background in racing
+2587	349	6
+2601	739	You overhear a boy talking about a football competition he has been in.
+2790	739	How does he feel?
+3066	759	A exhausted because of the pressure
+3372	739	B enthusiastic at getting so far
+3648	759	C upset because his team didn't win
+4231	328	7 You overhear a girl talking about a club she has recently started going to.
+4420	739	What does she say about it?
+4696	739	A It's not what she expected.
+4985	739	B She doesn't enjoy everything about it.
+5261	739	C She has learnt a lot since joining.
+5784	349	8
+5815	657	You hear a teacher talking to her class about some homework they did.
+6018	739	What do the class need to do better in future assignments?
+6295	739	A organise their work clearly
+6584	759	B label visuals appropriately
+6860	739	C check their work carefully
+10002	959	#213#EТ/PEТ/FCE2**,#a692D0X15 : i0-kpf?

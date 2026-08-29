@@ -1,0 +1,43 @@
+508	6485	Frames for the Speaking test
+1033	251	Part 2 4 minutes (6 minutes for groups of three)
+1279	271	Travelling around a city
+1424	271	A free afternoon
+1671	251	Interlocutor:
+3764	251	Candidate A:
+4028	229	Interlocutor:
+4711	250	Candidate B:
+4973	229	Interlocutor:
+6529	250	Candidate B:
+6806	229	Interlocutor:
+7471	230	Candidate A:
+7748	229	Interlocutor:
+1729	1924	In this part of the test, I'm going to give each of you two
+1889	1945	photographs. I'd like you to talk about your photographs
+2088	1965	on your own for about a minute, and also to answer a short
+2238	1945	question about your partner's photographs.
+2499	1945	(Candidate A), it's your turn first. Here are your photographs.
+2674	1945	They show people travelling around a city in different ways.
+2936	1945	Indicate pictures 4A and 4B on page C10 to Candidate A.
+3198	1945	I'd like you to compare the photographs, and say what you
+3372	1945	think might be difficult for the people about travelling around a
+3531	1945	city in these ways. All right?
+3780	1945	[1 minute]
+4056	1945	Thank you.
+4316	1945	(Candidate B), how would you prefer to travel around a city?
+4488	1919	(Why?)
+4740	1924	[Approximately 30 seconds]
+5001	1945	Thank you.
+5261	1945	Now, (Candidate B), here are your photographs. They show
+5436	1945	people doing different things on a free afternoon.
+5697	1945	Indicate pictures 4C and 4D on page C11 to Candidate B.
+5960	1945	I'd like you to compare the photographs, and say why you think
+6133	1945	the people are enjoying doing these things on a free afternoon.
+6296	1965	All right?
+6555	1945	[1 minute]
+6803	1945	Thank you.
+7078	1945	(Candidate A), which of these things would you prefer to do on
+7238	1945	a free afternoon? (Why?)
+7499	1924	[Approximately 30 seconds]
+7762	1945	Thank you.
+9651	8744	105
+9958	920	#НЗ#KEТ/РЕТ/FСЗ** ,**1 :İФkpf
