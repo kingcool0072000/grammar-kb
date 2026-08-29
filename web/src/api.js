@@ -2,6 +2,33 @@
 // 开发期 /api 由 vite.config.js 代理到 http://127.0.0.1:8000
 const BASE = '/api'
 
+// ---- 登录态（学生/教师角色，token 存 localStorage）----
+const LS_AUTH = 'gkb-auth-v1'
+
+export function getAuth() {
+  try {
+    return JSON.parse(localStorage.getItem(LS_AUTH)) || null
+  } catch {
+    return null
+  }
+}
+
+export function setAuth(auth) {
+  if (auth) localStorage.setItem(LS_AUTH, JSON.stringify(auth))
+  else localStorage.removeItem(LS_AUTH)
+}
+
+function authHeaders() {
+  const a = getAuth()
+  return a && a.token ? { Authorization: `Bearer ${a.token}` } : {}
+}
+
+// 401 时清掉本地登录态并回到登录页（token 过期/被重置）
+function handle401() {
+  setAuth(null)
+  if (!location.hash.startsWith('#/login')) location.hash = '/login'
+}
+
 // 后端统一返回 { code, message, data }，这里解包出 data
 async function req(path, { searchParams } = {}) {
   const url = new URL(BASE + path, location.origin)
@@ -10,7 +37,11 @@ async function req(path, { searchParams } = {}) {
       if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v)
     }
   }
-  const res = await fetch(url)
+  const res = await fetch(url, { headers: authHeaders() })
+  if (res.status === 401) {
+    handle401()
+    throw new Error('登录已过期，请重新登录')
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} @ ${path}`)
   const json = await res.json()
   if (json && typeof json === 'object' && 'code' in json) {
@@ -20,7 +51,23 @@ async function req(path, { searchParams } = {}) {
   return json
 }
 
+async function reqJson(path, method, body) {
+  const res = await fetch(new URL(BASE + path, location.origin), {
+    method,
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  if (res.status === 401) {
+    handle401()
+    throw new Error('登录已过期，请重新登录')
+  }
+  const j = await res.json()
+  if (!res.ok || j.code !== 0) throw new Error(j.detail || j.message || `HTTP ${res.status}`)
+  return j.data
+}
+
 export const api = {
+  login: (user, password) => reqJson('/auth/login', 'POST', { user, password }),
   stats: () => req('/stats'),
   lectures: () => req('/lectures'),
   lecture: (number, format = 'markdown') =>
@@ -41,36 +88,18 @@ export const api = {
   homework: (lecture) => req(`/homework/${lecture}`),
   homeworkBatch: (lectures) =>
     req('/homework', { searchParams: { lectures: lectures.join(',') } }),
-  // 作业成绩（后端 exam.db 持久化）
+  // 作业成绩（后端 exam.db 持久化；学生只可提交，管理需教师）
   examsList: () => req('/exams'),
-  examsAdd: (rec) =>
-    fetch(new URL(BASE + '/exams', location.origin), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(rec),
-    }).then(async (r) => {
-      const j = await r.json()
-      if (!r.ok || j.code !== 0) throw new Error(j.detail || j.message || `HTTP ${r.status}`)
-      return j.data
-    }),
-  examsUpdate: (id, rec) =>
-    fetch(new URL(`${BASE}/exams/${id}`, location.origin), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(rec),
-    }).then(async (r) => {
-      const j = await r.json()
-      if (!r.ok || j.code !== 0) throw new Error(j.detail || j.message || `HTTP ${r.status}`)
-      return j.data
-    }),
-  examsDelete: (id) =>
-    fetch(new URL(`${BASE}/exams/${id}`, location.origin), { method: 'DELETE' }).then(
-      async (r) => {
-        const j = await r.json()
-        if (!r.ok || j.code !== 0) throw new Error(j.detail || j.message || `HTTP ${r.status}`)
-        return j.data
-      },
-    ),
+  examsAdd: (rec) => reqJson('/exams', 'POST', rec),
+  examsUpdate: (id, rec) => reqJson(`/exams/${id}`, 'PUT', rec),
+  examsDelete: (id) => reqJson(`/exams/${id}`, 'DELETE'),
+  // FCE 真题（后端 data/fce.db 只读；练习提交与批改可写）
+  fcePapers: () => req('/fce-papers'),
+  fcePaper: (testId) => req(`/fce-papers/${testId}`),
+  fceSubmissions: ({ user, status, limit = 100 } = {}) =>
+    req('/fce-submissions', { searchParams: { user, status, limit } }),
+  fceSubmit: (rec) => reqJson('/fce-submissions', 'POST', rec),
+  fceGrade: (id, rec) => reqJson(`/fce-submissions/${id}`, 'PUT', rec),
 }
 
 // 规整单个知识点，保证集合字段为数组

@@ -12,7 +12,7 @@ export function mountCourses(el, { lectures, openLecture }) {
 
   el.innerHTML = `
     <div class="view-head">
-      <h1>按课程浏览</h1>
+      <h1>初中语法课</h1>
       <p>共 ${lectures.length} 讲讲义，按语法体系分为 ${cats.length} 类。点开任意一讲查看完整内容。</p>
     </div>
     ${cats.map((c) => groupHtml(c, groups.get(c))).join('')}

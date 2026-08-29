@@ -1,22 +1,22 @@
 import { escapeHtml } from '../render.js'
 import { api } from '../api.js'
 
-// 知识点体系视图：按 语法大类 → 主题 两级树聚合零散知识点。
+// 初中英语知识体系视图：按 语法大类 → 主题 两级树聚合零散知识点。
 // 数据来自后端 /taxonomy（subcategory + 规则归类），点击知识点打开详情抽屉。
 export async function mountTaxonomy(el, { pointsById, openKp }) {
-  el.innerHTML = '<div class="loading"><div class="spinner"></div>加载知识体系…</div>'
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>加载初中英语知识体系…</div>'
 
   let tree
   try {
     tree = await api.taxonomy()
   } catch (e) {
-    el.innerHTML = `<div class="error-box">加载知识体系失败：${escapeHtml(e.message)}</div>`
+    el.innerHTML = `<div class="error-box">加载初中英语知识体系失败：${escapeHtml(e.message)}</div>`
     return
   }
 
   el.innerHTML = `
     <div class="view-head">
-      <h1>知识体系</h1>
+      <h1>初中英语</h1>
       <p>共 ${tree.total} 个知识点，按 语法大类 → 主题 两级聚合。点击主题展开，点知识点看详情。</p>
     </div>
     <div id="tax-tree"></div>

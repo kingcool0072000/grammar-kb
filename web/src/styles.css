@@ -169,6 +169,7 @@ main {
 .chip:hover { border-color: var(--ink-faint); }
 .chip.active {
   color: #fff;
+  background: var(--brand);
   border-color: transparent;
 }
 .search-box {
@@ -886,3 +887,519 @@ main {
 .wrong-opt.correct {
   color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; font-weight: 700;
 }
+
+/* ---- 背单词 ---------------------------------------------------------------- */
+
+.recite-setup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-end;
+  padding: 20px 24px;
+}
+.recite-field label {
+  display: block;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+.recite-setup .btn-primary { margin-left: auto; }
+.recite-stats { margin-top: 16px; }
+.recite-stats-card h3 { margin: 0 0 8px; font-size: 15px; }
+.recite-stats-card .chip { margin-top: 10px; }
+
+/* 全屏 overlay */
+.recite-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: linear-gradient(160deg, #f7f8fc 0%, #eef1f8 60%, #e8ecf7 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+}
+.rc-top {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px 0;
+}
+.rc-quit {
+  border: none;
+  background: none;
+  color: var(--ink-faint);
+  cursor: pointer;
+  font-size: 14px;
+}
+.rc-quit:hover { color: var(--ink); }
+.rc-progress { color: var(--ink-faint); font-size: 14px; }
+
+.rc-card {
+  width: min(92vw, 640px);
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 44px 36px 28px;
+  margin: 5vh auto 0;
+  text-align: center;
+}
+.rc-prompt { min-height: 120px; }
+.rc-word {
+  font-size: clamp(40px, 7vw, 64px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.rc-meaning {
+  font-size: clamp(24px, 4vw, 32px);
+  font-weight: 600;
+  color: var(--ink);
+  padding-top: 14px;
+}
+.rc-phonetic {
+  margin-top: 10px;
+  color: var(--ink-faint);
+  font-size: 15px;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.rc-hint { color: var(--ink-faint); font-size: 14px; padding: 28px 0; }
+
+/* 自评三键 */
+.rc-self { display: flex; gap: 14px; justify-content: center; padding: 14px 0 4px; }
+.rc-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 26px;
+  font-size: 15px;
+  cursor: pointer;
+  color: #fff;
+}
+.rc-btn.right { background: #10b981; }
+.rc-btn.fuzzy { background: #f59e0b; }
+.rc-btn.wrong { background: #ef4444; }
+.rc-btn:hover { filter: brightness(1.08); }
+
+/* 打字输入 */
+.rc-input {
+  font-size: clamp(24px, 4.5vw, 34px);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 18px 0 6px;
+  min-height: 64px;
+  color: var(--ink);
+  font-family: ui-monospace, Menlo, monospace;
+}
+.rc-input.final { letter-spacing: 0.12em; }
+.diff-ch { color: var(--ink); }
+.diff-ch.wrong { color: #ef4444; text-decoration: underline wavy #ef4444 1px; }
+.diff-ch.missing {
+  color: #f59e0b;
+  border-bottom: 2px dashed #f59e0b;
+}
+.rc-verdict { font-size: 16px; margin: 4px 0 14px; }
+.rc-verdict.ok { color: #10b981; }
+.rc-verdict.no { color: #ef4444; }
+
+/* 屏幕软键盘（平板友好） */
+.rc-kb {
+  width: min(94vw, 660px);
+  margin: 4vh auto 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rc-kb-row { display: flex; gap: 6px; justify-content: center; }
+.rc-key {
+  flex: 0 1 42px;
+  min-width: 34px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 17px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(31, 36, 51, 0.08);
+}
+.rc-key:hover { border-color: var(--brand); color: var(--brand); }
+.rc-key[data-key='我记住了'] { flex: 1.4; color: #10b981; border-color: #a7e8cf; }
+.rc-key[data-key='不认识'] { flex: 1; color: #ef4444; border-color: #f3b4b4; }
+
+/* 翻面后的详情 */
+.rc-extra { text-align: left; }
+.rc-detail {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  justify-content: center;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+.rc-special {
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 13px;
+}
+.rc-form i {
+  font-style: normal;
+  color: var(--ink-faint);
+  margin-right: 4px;
+  font-size: 13px;
+}
+.rc-form b { color: var(--brand-ink); }
+.rc-example {
+  width: 100%;
+  text-align: center;
+  color: var(--ink);
+  margin-top: 6px;
+  line-height: 1.6;
+}
+.rc-example .muted { font-size: 13px; }
+
+/* 结算 */
+.recite-result {
+  margin-top: 20px;
+  padding: 28px 32px;
+  text-align: center;
+}
+.recite-result h2 { margin: 0 0 8px; }
+.recite-result .chip-row { display: flex; gap: 12px; justify-content: center; margin-top: 16px; }
+.recite-result .btn-primary.ghost {
+  background: var(--card);
+  color: var(--brand);
+  border: 1px solid var(--brand);
+}
+
+/* ---- 登录与账号 ---------------------------------------------------------------- */
+
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #f7f8fc 0%, #eef1f8 60%, #e8ecf7 100%);
+  padding: 24px;
+}
+.login-card {
+  width: min(92vw, 380px);
+  padding: 36px 32px;
+  box-shadow: var(--shadow-lg);
+}
+.login-brand { margin-bottom: 24px; }
+.login-field {
+  display: block;
+  margin-bottom: 16px;
+}
+.login-field span {
+  display: block;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+.login-field input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  background: var(--bg);
+  color: var(--ink);
+}
+.login-field input:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+.login-error {
+  color: #b42318;
+  font-size: 13px;
+  min-height: 18px;
+  margin: 0 0 8px;
+}
+.login-submit {
+  width: 100%;
+  padding: 11px 0;
+  font-size: 15px;
+}
+.user-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.logout-btn {
+  border: none;
+  background: none;
+  color: var(--ink-faint);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.logout-btn:hover {
+  color: #b42318;
+  background: #fee2e2;
+}
+
+/* ---- 背单词进度看板 ---------------------------------------------------------- */
+
+.recite-dash { padding: 20px 24px; }
+.recite-dash-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.recite-dash-head h3 { margin: 0; font-size: 16px; }
+.recite-dash-pct {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--brand);
+}
+.dash-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  overflow: hidden;
+  margin: 12px 0 10px;
+}
+.dash-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--brand), #7c9bff);
+  transition: width 0.3s;
+}
+.recite-dash .muted { margin: 0; font-size: 13.5px; }
+
+/* ======================= FCE 真题（fce.db 试卷浏览） ======================= */
+
+.fce-back-btn {
+  border: 1px solid var(--line); background: var(--card); color: var(--ink-soft);
+  border-radius: 8px; padding: 5px 13px; font-size: 13px; cursor: pointer; margin-bottom: 10px;
+}
+.fce-back-btn:hover { background: var(--bg-soft); color: var(--ink); }
+.fce-paper-card .course-num { color: #7c3aed; }
+.fce-passage { margin: 10px 0 16px; }
+.fce-opt-list { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+.fce-opt-row { display: flex; gap: 8px; font-size: 13px; color: var(--ink-soft); line-height: 1.55; }
+.fce-opt-key {
+  font-weight: 800; color: var(--brand-ink); flex: none;
+  background: #eef2ff; border-radius: 5px; min-width: 20px; text-align: center; height: fit-content;
+  padding: 0 4px; font-size: 12px; margin-top: 1px;
+}
+.fce-q-keyword { font-size: 12.5px; font-weight: 800; color: #b45309; letter-spacing: 0.4px; margin-top: 4px; }
+.fce-type-chip {
+  align-self: flex-start; font-size: 11px; font-weight: 700; color: var(--ink-faint);
+  background: var(--bg-soft); border-radius: 999px; padding: 1px 8px; margin-left: 33px; margin-top: 2px;
+}
+
+/* ======================= FCE 真题练习模式 ======================= */
+
+.fce-essay-review-btn {
+  border: 1px solid #fde68a; background: #fffbeb; color: #b45309; font-weight: 700;
+  border-radius: 10px; padding: 8px 16px; cursor: pointer; margin-bottom: 14px; font-size: 13.5px;
+}
+.fce-essay-review-btn:hover { background: #fef3c7; }
+.fce-part-list { display: flex; flex-direction: column; gap: 8px; }
+.fce-part-card {
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  border: 1px solid var(--line); background: var(--card); border-radius: 12px;
+  padding: 13px 18px; cursor: pointer; font: inherit; color: var(--ink);
+}
+.fce-part-card:hover { border-color: var(--brand); background: var(--bg-soft); }
+.fce-part-name { font-weight: 800; min-width: 70px; }
+.fce-part-sub { color: var(--ink-faint); font-size: 13px; flex: 1; }
+.fce-part-best { color: #15803d; font-size: 12.5px; font-weight: 700; background: #f0fdf4; padding: 3px 10px; border-radius: 999px; }
+.fce-instruction {
+  background: var(--bg-soft); border-radius: 10px; padding: 10px 16px;
+  font-size: 13px; color: var(--ink-soft); line-height: 1.7; margin-bottom: 14px;
+}
+.fce-progress {
+  position: sticky; top: 8px; z-index: 5; background: var(--card);
+  border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px;
+  display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+  box-shadow: 0 2px 10px rgba(15,23,42,.06);
+}
+.fce-progress span { font-size: 12.5px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+.fce-prog-track { flex: 1; height: 7px; border-radius: 999px; background: var(--bg-soft); overflow: hidden; }
+.fce-prog-track i { display: block; height: 100%; background: linear-gradient(90deg, var(--brand), #7c9bff); border-radius: 999px; transition: width .25s; }
+.fce-form { display: flex; flex-direction: column; gap: 10px; }
+.fce-pq {
+  border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+  background: var(--card); transition: border-color .2s;
+}
+.fce-pq.unanswered { border-style: dashed; }
+.fce-pq-head { display: flex; gap: 10px; align-items: flex-start; }
+.fce-pq-n { font-weight: 800; color: var(--ink-faint); min-width: 26px; text-align: right; }
+.fce-pq-body { flex: 1; }
+.fce-pq-stem { font-size: 14px; color: var(--ink); line-height: 1.65; margin: 0; }
+.fce-pq-fill { font-size: 13px; color: var(--ink-soft); margin: 4px 0 0; line-height: 1.6; }
+.fce-choices { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 0 36px; }
+.fce-choice {
+  display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line);
+  border-radius: 9px; padding: 8px 12px; cursor: pointer; transition: all .15s;
+}
+.fce-choice:hover { border-color: var(--brand); background: #f5f7ff; }
+.fce-choice.picked { border-color: var(--brand); background: #eef2ff; }
+.fce-choice input { margin-top: 3px; accent-color: var(--brand); }
+.fce-choice-key { font-weight: 800; color: var(--brand-ink); }
+.fce-choice-text { font-size: 13.5px; color: var(--ink); line-height: 1.55; }
+.fce-pq input[type=text], .fce-pq textarea {
+  width: 100%; margin-top: 10px; border: 1px solid var(--line); border-radius: 9px;
+  padding: 9px 12px; font: inherit; font-size: 13.5px; background: var(--card); color: var(--ink);
+}
+.fce-pq input[type=text]:focus, .fce-pq textarea:focus { outline: 2px solid #c7d2fe; border-color: var(--brand); }
+.fce-pq.right { border-color: #86efac; background: #f0fdf4; }
+.fce-pq.wrong { border-color: #fca5a5; background: #fef2f2; }
+.fce-mark { margin: 8px 0 0 36px; font-size: 13px; font-weight: 700; }
+.fce-mark .ok { color: #15803d; }
+.fce-mark .bad { color: #b42318; }
+.fce-submit-bar { display: flex; align-items: center; gap: 14px; margin: 8px 0 20px; }
+.fce-submit-btn {
+  border: none; background: linear-gradient(135deg, var(--brand), #7c9bff); color: #fff;
+  font-weight: 800; font-size: 14.5px; border-radius: 10px; padding: 11px 30px; cursor: pointer;
+}
+.fce-submit-btn:disabled { opacity: .6; cursor: default; }
+.fce-submit-note { font-size: 12.5px; color: var(--ink-faint); }
+.fce-result-box { border-radius: 12px; padding: 18px 22px; margin-bottom: 24px; border: 1px solid; }
+.fce-result-box h3 { margin: 0 0 6px; font-size: 17px; }
+.fce-result-box p { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
+.fce-result-box.good { background: #f0fdf4; border-color: #bbf7d0; } .fce-result-box.good h3 { color: #15803d; }
+.fce-result-box.mid { background: #fffbeb; border-color: #fde68a; } .fce-result-box.mid h3 { color: #b45309; }
+.fce-result-box.low { background: #fef2f2; border-color: #fecaca; } .fce-result-box.low h3 { color: #b42318; }
+.fce-result-box.pend { background: #eff6ff; border-color: #bfdbfe; } .fce-result-box.pend h3 { color: #1d4ed8; }
+.fce-again-btn {
+  margin-top: 12px; border: 1px solid var(--brand); background: var(--card); color: var(--brand);
+  font-weight: 700; border-radius: 8px; padding: 7px 18px; cursor: pointer;
+}
+.fce-again-btn:hover { background: #eef2ff; }
+.fce-his-row {
+  display: flex; align-items: center; gap: 14px; border: 1px solid var(--line);
+  border-radius: 10px; padding: 9px 15px; background: var(--card); margin-bottom: 6px; font-size: 13.5px;
+}
+.fce-his-what { flex: 1; font-weight: 700; color: var(--ink); }
+.fce-his-score { color: var(--brand-ink); }
+.fce-his-score.ok { color: #15803d; }
+.fce-his-score.pend { color: #b45309; }
+.fce-his-date { color: var(--ink-faint); font-size: 12.5px; }
+.essay-card { border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; background: var(--card); margin-bottom: 12px; }
+.essay-head { font-size: 13.5px; color: var(--ink-soft); margin-bottom: 10px; }
+.essay-text {
+  white-space: pre-wrap; font: inherit; font-size: 14px; line-height: 1.8; color: var(--ink);
+  background: var(--bg-soft); border-radius: 10px; padding: 14px 16px; max-height: 340px; overflow-y: auto;
+}
+.essay-grade-row { display: flex; gap: 10px; margin-top: 12px; }
+.essay-score-input { width: 110px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; }
+.essay-comment-input { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; }
+.essay-grade-btn {
+  border: none; background: var(--brand); color: #fff; font-weight: 700;
+  border-radius: 8px; padding: 8px 18px; cursor: pointer;
+}
+.essay-grade-btn:disabled { opacity: .6; }
+
+/* ======================= FCE 练习页 v2：字号调节 + 计时 + 阅读字体 ======================= */
+
+/* 英文阅读字体栈：书卷衬线，数字清晰；题目与原文统一 */
+main { --fce-fs: 15px; }
+.fce-passage, .fce-pq, .fce-instruction, .fce-choices, .fce-pq textarea {
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+}
+.fce-toolbar {
+  position: sticky; top: 8px; z-index: 5; background: var(--card);
+  border: 1px solid var(--line); border-radius: 10px; padding: 7px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; box-shadow: 0 2px 10px rgba(15,23,42,.06);
+}
+.fce-timer { font-size: 14px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.fce-timer b { color: var(--brand-ink); font-size: 15px; }
+.fce-font-ctl { display: flex; align-items: center; gap: 8px; }
+.fce-font-label { font-size: 12px; color: var(--ink-faint); }
+.fce-font-btn {
+  border: 1px solid var(--line); background: var(--card); color: var(--ink-soft);
+  border-radius: 7px; cursor: pointer; padding: 3px 10px; font-weight: 800;
+  font-family: Georgia, serif;
+}
+.fce-font-btn:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); background: #f5f7ff; }
+.fce-font-btn:disabled { opacity: .35; cursor: default; }
+/* 字号变量作用到阅读与题目 */
+.fce-passage-title {
+  font-size: 13px; font-weight: 800; color: var(--brand-ink);
+  border-left: 3px solid var(--brand); padding-left: 9px; margin-bottom: 8px;
+}
+.fce-passage-body {
+  border: 1px solid var(--line); border-radius: 12px; background: var(--card);
+  padding: 18px 24px 8px; font-size: calc(var(--fce-fs) + 1.5px); line-height: 2.0;
+  color: var(--ink); max-height: none; overflow: visible; margin-bottom: 16px;
+}
+.fce-passage-body p { margin: 0 0 15px; text-align: justify; hyphens: auto; }
+.fce-pq-stem { font-size: calc(var(--fce-fs) + 1px); }
+.fce-pq-fill { font-size: var(--fce-fs); }
+.fce-choice-text { font-size: var(--fce-fs); }
+.fce-pq textarea { font-size: calc(var(--fce-fs) + 1px); line-height: 1.9; }
+.fce-prog-inline { flex: 1; display: flex; align-items: center; gap: 10px; margin: 0 16px; }
+.fce-prog-inline span { font-size: 12px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+
+/* ======================= FCE 学生练习：电子书护眼模式 ======================= */
+
+/* 暖纸色护眼底：长时间阅读降低对比刺激；卡片同色调稍亮一档 */
+.fce-reading-mode {
+  --paper-bg: #f3ecd9;      /* 亚麻纸 */
+  --paper-card: #faf5e7;    /* 卡片纸面 */
+  --paper-ink: #3d3327;     /* 墨色（暖黑，不用纯黑） */
+  --paper-line: #ddd2b8;
+  background:
+    radial-gradient(1200px 500px at 20% -5%, #f7f1e0 0%, transparent 60%),
+    linear-gradient(180deg, #f4edda 0%, #f1e9d3 100%);
+  min-height: calc(100vh - 120px);
+  border-radius: 14px;
+  padding: 4px 22px 30px;
+  box-shadow: inset 0 0 60px rgba(190, 170, 120, 0.12);
+  color: var(--paper-ink);
+}
+.fce-reading-mode .fce-passage-body {
+  background: var(--paper-card);
+  border-color: var(--paper-line);
+  color: var(--paper-ink);
+  box-shadow: 0 1px 4px rgba(180, 160, 110, 0.15);
+}
+.fce-reading-mode .fce-passage-title { color: #8a6d3b; border-color: #b08d4f; }
+.fce-reading-mode .fce-pq {
+  background: var(--paper-card);
+  border-color: var(--paper-line);
+  color: var(--paper-ink);
+}
+.fce-reading-mode .fce-pq.unanswered { border-color: #cbbf9e; border-style: dashed; }
+.fce-reading-mode .fce-pq-stem,
+.fce-reading-mode .fce-pq-fill,
+.fce-reading-mode .fce-choice-text { color: var(--paper-ink); }
+.fce-reading-mode .fce-choice { border-color: var(--paper-line); background: transparent; }
+.fce-reading-mode .fce-choice:hover { border-color: #b08d4f; background: #f2e8cf; }
+.fce-reading-mode .fce-choice.picked { border-color: #9a7b3f; background: #efe2bd; }
+.fce-reading-mode .fce-choice.picked .fce-choice-key { color: #7a5c22; }
+.fce-reading-mode .fce-pq input[type=text],
+.fce-reading-mode .fce-pq textarea {
+  background: #fdf9ee; border-color: var(--paper-line); color: var(--paper-ink);
+}
+.fce-reading-mode .fce-toolbar,
+.fce-reading-mode .fce-instruction {
+  background: var(--paper-card); border-color: var(--paper-line); color: #6b5b3e;
+}
+.fce-reading-mode .fce-timer b,
+.fce-reading-mode #fce-prog-text { color: #7a5c22; }
+.fce-reading-mode .fce-prog-track { background: #e6dab8; }
+.fce-reading-mode .fce-type-chip { background: #ece1c2; color: #8a744b; }
+.fce-reading-mode .fce-instruction { color: #6b5b3e; }
+.fce-reading-mode .fce-submit-note { color: #9c8a63; }
+.fce-reading-mode .fce-mark .bad { color: #a33; }
+.fce-reading-mode .fce-back-btn { background: var(--paper-card); border-color: var(--paper-line); color: #6b5b3e; }
+.fce-reading-mode .fce-choices { background: transparent; }

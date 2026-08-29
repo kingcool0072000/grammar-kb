@@ -1,20 +1,26 @@
 import './styles.css'
-import { api, fetchAllPoints } from './api.js'
+import { api, fetchAllPoints, getAuth, setAuth } from './api.js'
 import { mountCourses } from './views/courses.js'
 import { mountVocabulary } from './views/vocabulary.js'
+import { mountRecite } from './views/recite.js'
 import { mountTaxonomy } from './views/taxonomy.js'
 import { mountExams } from './views/exams.js'
 import { mountFce } from './views/fce.js'
+import { mountFcePapers } from './views/fcePapers.js'
+import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
 
 const app = document.getElementById('app')
 
+// teacher: true 的页签仅教师可见；学生版只有背单词
 const VIEWS = [
-  { key: 'courses', label: '课程' },
-  { key: 'vocab', label: '词汇表' },
-  { key: 'taxonomy', label: '知识体系' },
-  { key: 'fce', label: 'FCE' },
-  { key: 'exams', label: '作业成绩' },
+  { key: 'courses', label: '课程', teacher: true },
+  { key: 'vocab', label: '词汇表', teacher: true },
+  { key: 'recite', label: '背单词' },
+  { key: 'taxonomy', label: '初中英语', teacher: true },
+  { key: 'fce', label: 'FCE', teacher: true },
+  { key: 'fcePapers', label: 'FCE真题' },
+  { key: 'exams', label: '作业成绩', teacher: true },
 ]
 
 function h(tag, cls, html) {
@@ -24,9 +30,12 @@ function h(tag, cls, html) {
   return e
 }
 
-function currentRoute() {
-  const v = (location.hash.replace(/^#\/?/, '') || 'courses').split('?')[0]
-  return VIEWS.some((x) => x.key === v) ? v : 'courses'
+function currentRoute(role) {
+  const v = (location.hash.replace(/^#\/?/, '') || '').split('?')[0]
+  const view = VIEWS.find((x) => x.key === v)
+  // 学生访问教师页 → 回背单词；未匹配 → 学生回背单词、教师回课程
+  if (!view || (view.teacher && role !== 'teacher')) return role === 'teacher' ? 'courses' : 'recite'
+  return v
 }
 
 function pointsCacheKey(kpCount) {
@@ -34,18 +43,35 @@ function pointsCacheKey(kpCount) {
 }
 
 async function bootstrap() {
+  // ---- 登录守卫：无登录态直接进登录页 ----
+  const auth = getAuth()
+  if (!auth) {
+    app.innerHTML = ''
+    const loginEl = h('div')
+    app.append(loginEl)
+    mountLogin(loginEl, { onLogin: () => restartApp() })
+    return
+  }
+
   // header + main 容器
+  const role = auth.role
+  const visibleViews = VIEWS.filter((v) => !v.teacher || role === 'teacher')
   const header = h('header', 'app-header')
   const headerInner = h('div', 'header-inner')
   headerInner.innerHTML = `
     <div class="brand">
       <span class="logo">语</span>
-      <div>语法知识库<small>学习地图</small></div>
+      <div>语法知识库<small>${role === 'teacher' ? '教师版' : '学生版'}</small></div>
     </div>
     <nav class="tabs" id="tabs">
-      ${VIEWS.map((v) => `<button class="tab" data-view="${v.key}">${v.label}</button>`).join('')}
+      ${visibleViews.map((v) => `<button class="tab" data-view="${v.key}">${v.label}</button>`).join('')}
     </nav>
-    <div class="stats-pills" id="stats-pills"></div>
+    <div class="stats-pills" id="stats-pills">
+      <span class="pill user-pill" title="当前登录">
+        <b>${role === 'teacher' ? '👩‍🏫' : '🎒'}</b> ${auth.user}
+        <button class="logout-btn" id="logout-btn" title="退出登录">退出</button>
+      </span>
+    </div>
   `
   header.append(headerInner)
   const main = h('main')
@@ -69,53 +95,62 @@ async function bootstrap() {
 
   let state = { stats: null, lectures: [], points: [], vocab: [] }
 
-  // 拉取基础数据
-  try {
-    const [stats, lectures] = await Promise.all([api.stats(), api.lectures()])
-    state.stats = stats
-    state.lectures = lectures
-    renderStats(stats)
-  } catch (e) {
-    boot.querySelector('#boot-msg').innerHTML =
-      `<span style="color:#b42318">无法连接数据后端（${e.message}）。请确认 grammar-kb 服务在 127.0.0.1:8000 运行。</span>`
-    return
-  }
-
-  // 知识点：优先 localStorage 缓存（按知识点总数版本化）
-  const kpCount = state.stats.knowledge_points
-  const key = pointsCacheKey(kpCount)
-  const bar = boot.querySelector('#boot-bar')
-  const msg = boot.querySelector('#boot-msg')
-  try {
-    const cached = localStorage.getItem(key)
-    if (cached) {
-      state.points = JSON.parse(cached)
-      msg.textContent = `已加载缓存 ${state.points.length} 个知识点`
-    } else {
-      state.points = await fetchAllPoints((done, total) => {
-        bar.style.width = `${Math.round((done / total) * 100)}%`
-        msg.textContent = `检索知识点 ${done}/${total}…`
-      })
-      bar.style.width = '100%'
-      msg.textContent = `整理 ${state.points.length} 个知识点…`
-      try {
-        localStorage.setItem(key, JSON.stringify(state.points))
-      } catch { /* 配额不足则跳过缓存 */ }
+  // 学生版只需要词汇表数据（背单词）；知识点/讲次等重数据仅教师版加载
+  if (role === 'teacher') {
+    // 拉取基础数据
+    try {
+      const [stats, lectures] = await Promise.all([api.stats(), api.lectures()])
+      state.stats = stats
+      state.lectures = lectures
+      renderStats(stats)
+    } catch (e) {
+      boot.querySelector('#boot-msg').innerHTML =
+        `<span style="color:#b42318">无法连接数据后端（${e.message}）。请确认 grammar-kb 服务在 127.0.0.1:8000 运行。</span>`
+      return
     }
-  } catch (e) {
-    boot.querySelector('#boot-msg').innerHTML =
-      `<span style="color:#b42318">加载知识点失败：${e.message}</span>`
-    return
-  }
 
-  // 构建考点信号反向索引：时态 / 标志词 → 涉及它的知识点列表（供知识点详情双向跳转）
-  signalCtx.points = state.points
-  signalCtx.byTense = buildSignalIndex(state.points, (p) =>
-    [...new Set((p.markers || []).map((m) => m.tense).filter(Boolean))],
-  )
-  signalCtx.byMarker = buildSignalIndex(state.points, (p) =>
-    [...new Set((p.markers || []).map((m) => m.marker).filter(Boolean))],
-  )
+    // 知识点：优先 localStorage 缓存（按知识点总数版本化）
+    const kpCount = state.stats.knowledge_points
+    const key = pointsCacheKey(kpCount)
+    const bar = boot.querySelector('#boot-bar')
+    const msg = boot.querySelector('#boot-msg')
+    try {
+      const cached = localStorage.getItem(key)
+      if (cached) {
+        state.points = JSON.parse(cached)
+        msg.textContent = `已加载缓存 ${state.points.length} 个知识点`
+      } else {
+        state.points = await fetchAllPoints((done, total) => {
+          bar.style.width = `${Math.round((done / total) * 100)}%`
+          msg.textContent = `检索知识点 ${done}/${total}…`
+        })
+        bar.style.width = '100%'
+        msg.textContent = `整理 ${state.points.length} 个知识点…`
+        try {
+          localStorage.setItem(key, JSON.stringify(state.points))
+        } catch { /* 配额不足则跳过缓存 */ }
+      }
+    } catch (e) {
+      boot.querySelector('#boot-msg').innerHTML =
+        `<span style="color:#b42318">加载知识点失败：${e.message}</span>`
+      return
+    }
+
+    // 构建考点信号反向索引：时态 / 标志词 → 涉及它的知识点列表（供知识点详情双向跳转）
+    signalCtx.points = state.points
+    signalCtx.byTense = buildSignalIndex(state.points, (p) =>
+      [...new Set((p.markers || []).map((m) => m.tense).filter(Boolean))],
+    )
+    signalCtx.byMarker = buildSignalIndex(state.points, (p) =>
+      [...new Set((p.markers || []).map((m) => m.marker).filter(Boolean))],
+    )
+  } else {
+    try {
+      await api.stats() // 探活，同时触发 401 守卫
+    } catch (e) {
+      return // 已被 handle401 踢回登录页
+    }
+  }
 
   // 词汇表（基于讲义语料的 /vocabulary，串行避免后端并发压力）
   try {
@@ -139,7 +174,7 @@ async function bootstrap() {
   }
 
   function render() {
-    const route = currentRoute()
+    const route = currentRoute(role)
     headerInner.querySelectorAll('.tab').forEach((t) =>
       t.classList.toggle('active', t.dataset.view === route),
     )
@@ -148,10 +183,14 @@ async function bootstrap() {
       mountCourses(viewEl, { lectures: state.lectures, openLecture: ctx.openLecture })
     } else if (route === 'vocab') {
       mountVocabulary(viewEl, { vocab: state.vocab, openWord: (e) => drawer.showWord(e) })
+    } else if (route === 'recite') {
+      mountRecite(viewEl, { vocab: state.vocab, role })
     } else if (route === 'taxonomy') {
       mountTaxonomy(viewEl, { pointsById, openKp: ctx.openKp })
     } else if (route === 'fce') {
       mountFce(viewEl)
+    } else if (route === 'fcePapers') {
+      mountFcePapers(viewEl, { role })
     } else if (route === 'exams') {
       mountExams(viewEl, { lectures: state.lectures })
     }
@@ -163,18 +202,31 @@ async function bootstrap() {
     if (!t) return
     location.hash = `/${t.dataset.view}`
   })
+  headerInner.querySelector('#logout-btn').addEventListener('click', () => {
+    setAuth(null)
+    restartApp()
+  })
   window.addEventListener('hashchange', render)
   render()
+}
+
+// 退出登录 / 登录成功后整页重载应用状态
+function restartApp() {
+  location.reload()
 }
 
 function renderStats(stats) {
   const pills = document.querySelector('#stats-pills')
   if (!stats || !pills) return
-  pills.innerHTML = `
+  // 前插而非覆写：pills 里还有带「退出」按钮的账号 pill，不能冲掉
+  pills.insertAdjacentHTML(
+    'afterbegin',
+    `
     <span class="pill"><b>${stats.lectures}</b> 讲</span>
     <span class="pill"><b>${stats.knowledge_points}</b> 知识点</span>
     <span class="pill"><b>${stats.markers}</b> 标志词</span>
-  `
+  `,
+  )
 }
 
 // 反向索引：keyFn(point) -> 该知识点命中的若干键；返回 Map<key, point[]>
