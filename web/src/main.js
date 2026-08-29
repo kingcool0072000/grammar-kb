@@ -4,6 +4,7 @@ import { mountCourses } from './views/courses.js'
 import { mountVocabulary } from './views/vocabulary.js'
 import { mountTaxonomy } from './views/taxonomy.js'
 import { mountExams } from './views/exams.js'
+import { mountFce } from './views/fce.js'
 import { createDrawer } from './components/drawer.js'
 
 const app = document.getElementById('app')
@@ -12,6 +13,7 @@ const VIEWS = [
   { key: 'courses', label: '课程' },
   { key: 'vocab', label: '词汇表' },
   { key: 'taxonomy', label: '知识体系' },
+  { key: 'fce', label: 'FCE' },
   { key: 'exams', label: '作业成绩' },
 ]
 
@@ -148,6 +150,8 @@ async function bootstrap() {
       mountVocabulary(viewEl, { vocab: state.vocab, openWord: (e) => drawer.showWord(e) })
     } else if (route === 'taxonomy') {
       mountTaxonomy(viewEl, { pointsById, openKp: ctx.openKp })
+    } else if (route === 'fce') {
+      mountFce(viewEl)
     } else if (route === 'exams') {
       mountExams(viewEl, { lectures: state.lectures })
     }
