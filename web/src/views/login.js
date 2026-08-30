@@ -6,8 +6,8 @@ export function mountLogin(el, { onLogin }) {
     <div class="login-wrap">
       <div class="login-card card">
         <div class="brand login-brand">
-          <span class="logo">语</span>
-          <div>语法知识库<small>学生版 / 教师版</small></div>
+          <span class="logo">学</span>
+          <div>和爸爸学英语<small>学生版 / 教师版</small></div>
         </div>
         <form id="login-form">
           <label class="login-field">

@@ -277,12 +277,16 @@ async function renderReview(el, recs) {
       </div>
       <div class="reading-review-msg"></div>
     `
-    // 音频（懒加载 base64）
+    // 音频（懒加载 base64：首次点播放才拉取，设 src 后续播）
     const audio = row.querySelector('audio')
     audio.addEventListener('play', async () => {
-      if (audio.src) return
-      const full = await api.readingRecording(r.id)
-      audio.src = `data:${full.mime};base64,${full.audio_b64}`
+      if (audio.src && audio.readyState > 0) return
+      if (!audio.src) {
+        const full = await api.readingRecording(r.id)
+        audio.src = `data:${full.mime};base64,${full.audio_b64}`
+        audio.load()
+      }
+      try { await audio.play() } catch { /* 浏览器策略拦截时由用户再点 */ }
     })
     row.querySelector('[data-grade]').addEventListener('click', async () => {
       const score = Number(row.querySelector('[data-score]').value)

@@ -28,6 +28,31 @@ PAPER_CN = {
 
 
 def _default_db_path() -> str:
+    """fce.db 默认路径：环境变量 → iCloud Drive → 项目 data/。
+
+    iCloud 放整个 fce.db（题库 + 练习/录音提交），学生端提交的录音随
+    iCloud 同步到教师端设备（与 exam_store 的成绩库同一套模式；
+    库为默认 journal 模式单文件，iCloud 整文件同步可靠）。
+    首次启用 iCloud 时若云端无库而本地有，一次性整库拷贝上云。
+    """
+    import os
+    import shutil
+
+    env = os.environ.get("GRAMMAR_KB_FCE_DB")
+    if env:
+        return env
+    icloud = os.path.expanduser(
+        "~/Library/Mobile Documents/com~apple~CloudDocs/grammar-kb/fce.db"
+    )
+    icloud_dir = os.path.dirname(icloud)
+    cloud_root = os.path.expanduser("~/Library/Mobile Documents/com~apple~CloudDocs")
+    if os.path.isdir(cloud_root):
+        if not os.path.exists(icloud):
+            os.makedirs(icloud_dir, exist_ok=True)
+            local = Path(__file__).resolve().parent.parent / "data" / "fce.db"
+            if local.exists():
+                shutil.copy2(local, icloud)  # 一次性迁移：本地全量上云
+        return icloud
     return str(Path(__file__).resolve().parent.parent / "data" / "fce.db")
 
 

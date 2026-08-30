@@ -50,7 +50,7 @@ def _login(c, user, password="123456"):
 
 def test_reading_full_flow(reading_env):
     c = _client(reading_env)
-    t, s = _login(c, "teacher"), _login(c, "student")
+    t, s = _login(c, "teacher"), _login(c, "malin")
 
     # 教师：base 原文段（kind=base）；学生：默认列表只有派生（空）
     arts_t = c.get("/reading/articles", headers=t, params={"kind": "base"}).json()["data"]
@@ -124,7 +124,7 @@ def test_reading_full_flow(reading_env):
 def test_dict_lookup_student_ok(reading_env):
     """学生查单词（阅读练习选中词查 ECDICT）。"""
     c = _client(reading_env)
-    s = _login(c, "student")
+    s = _login(c, "malin")
     r = c.get("/dict/pastime", headers=s)
     assert r.status_code == 200
     assert "消遣" in r.json()["data"]["gloss"]

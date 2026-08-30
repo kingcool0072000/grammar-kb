@@ -7,7 +7,7 @@
   无状态校验，不落库
 
 默认账号（家庭本地工具，首次启动播种，可删 users.json 重置后改密码）：
-- student / 123456（学生：只能背单词 + 提交成绩）
+- malin / 123456（学生：只能背单词 + 提交成绩）
 - teacher / 123456（教师：全部功能）
 """
 from __future__ import annotations
@@ -22,7 +22,7 @@ import time
 from pathlib import Path
 
 DEFAULT_USERS = {
-    "student": ("123456", "student"),
+    "malin": ("123456", "student"),
     "teacher": ("123456", "teacher"),
 }
 TOKEN_TTL = 30 * 24 * 3600  # 30 天

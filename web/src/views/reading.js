@@ -48,10 +48,13 @@ function renderList(el, arts, recs, role) {
     <section class="fce-group" style="margin-bottom:18px">
       <div class="fce-group-title">📈 最近批改</div>
       ${graded.slice(0, 5).map((r) => `
-        <div class="fce-his-row">
-          <span class="fce-his-what">${escapeHtml(r.article_title || `文章#${r.article_id}`)}</span>
-          <b class="fce-his-score ok">${r.teacher_score}/10</b>
-          <span class="fce-his-date">${(r.created_at || '').slice(0, 10)}</span>
+        <div class="reading-graded-row">
+          <div class="fce-his-row">
+            <span class="fce-his-what">${escapeHtml(r.article_title || `文章#${r.article_id}`)}</span>
+            <b class="fce-his-score ok">${r.teacher_score}/10</b>
+            <span class="fce-his-date">${(r.created_at || '').slice(0, 10)}</span>
+          </div>
+          ${r.teacher_comment ? `<div class="reading-graded-comment">💬 ${escapeHtml(r.teacher_comment)}</div>` : ''}
         </div>`).join('')}
     </section>` : ''}
     ${[...groups.entries()].map(([key, list]) => `
@@ -100,19 +103,39 @@ function keyLabel(key) {
 // ---------- 详情 ----------
 async function renderDetail(el, id, role) {
   el.innerHTML = '<div class="view-head"><h1>阅读练习</h1><p>加载中…</p></div>'
-  let art
+  let art, myRecs
   try {
-    art = await api.readingArticle(id)
+    ;[art, myRecs] = await Promise.all([
+      api.readingArticle(id),
+      api.readingRecordings(),
+    ])
   } catch (e) {
     el.querySelector('p').innerHTML = `<span style="color:#b42318">加载失败：${escapeHtml(e.message)}</span>`
     return
   }
+  // 本篇的批改历史（学生自己在本篇的全部录音与批改结果）
+  const recsForArt = myRecs.filter((r) => r.article_id === id)
+  const gradedHist = recsForArt.filter((r) => r.status === 'graded')
+  const pendingN = recsForArt.length - gradedHist.length
   el.innerHTML = `
     <div class="view-head">
       <button class="fce-back-btn" id="rd-back">← 返回列表</button>
       <h1>${escapeHtml(art.title || '未命名')}</h1>
       <p>${art.words} 词 · ${escapeHtml(keyLabel(art.base_key))}${art.source ? ` · 来源：${escapeHtml(art.source)}` : ''}</p>
     </div>
+    ${recsForArt.length ? `
+    <section class="fce-group">
+      <div class="fce-group-title">📝 我的朗读记录（本篇）</div>
+      ${gradedHist.slice(0, 5).reverse().map((r) => `
+        <div class="reading-graded-row">
+          <div class="fce-his-row">
+            <span class="fce-his-date">${(r.created_at || '').slice(0, 16).replace('T', ' ')}</span>
+            <b class="fce-his-score ok">老师 ${r.teacher_score}/10</b>
+          </div>
+          ${r.teacher_comment ? `<div class="reading-graded-comment">💬 ${escapeHtml(r.teacher_comment)}</div>` : ''}
+        </div>`).join('')}
+      ${pendingN > 0 ? `<div class="fce-his-row"><span class="fce-his-what">最新一次录音</span><b class="fce-his-score pend">待批改</b></div>` : ''}
+    </section>` : ''}
     <div class="reading-article" id="rd-text">${renderText(art.text)}</div>
     <div class="reading-toolbar">
       <div class="reading-tool-row">

@@ -14,6 +14,7 @@ from datetime import datetime, timezone as _tz
 from pathlib import Path
 from typing import Optional
 
+from .fce_query import _default_db_path
 from .reading_build import READING_SCHEMA, word_count
 
 _MAX_AUDIO_B64 = 12 * 1024 * 1024  # 12MB base64（约 9MB 音频，5 分钟 webm 足够）
@@ -35,9 +36,9 @@ class ReadingStore:
     """reading_article / reading_recordings 读写（fce.db 同库）。"""
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or str(
-            Path(__file__).resolve().parent.parent / "data" / "fce.db"
-        )
+        # 与 FcePaperStore 同库同路径解析（环境变量 → iCloud → data/），
+        # 录音随 iCloud 跨设备到达教师端
+        self.db_path = db_path or _default_db_path()
         if Path(self.db_path).exists():
             with self._connect() as conn:
                 conn.executescript(READING_SCHEMA)

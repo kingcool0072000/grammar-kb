@@ -43,19 +43,19 @@ def _login(c, user, password):
 
 def test_user_store_seeds_defaults(users_file):
     s = UserStore()
-    assert s.verify("student", "123456") == "student"
+    assert s.verify("malin", "123456") == "student"
     assert s.verify("teacher", "123456") == "teacher"
-    assert s.verify("student", "wrong") is None
+    assert s.verify("malin", "wrong") is None
     assert s.verify("nobody", "123456") is None
     # 播种后确实落盘
     assert users_file.exists()
 
 
 def test_token_roundtrip(users_file):
-    t = make_token("student", "student", ttl=60)
+    t = make_token("malin", "malin", ttl=60)
     assert read_token(t) is not None
     # 过期
-    t2 = make_token("student", "student", ttl=-1)
+    t2 = make_token("malin", "malin", ttl=-1)
     assert read_token(t2) is None
     # 篡改
     assert read_token(t[:-4] + "AAAA") is None
@@ -65,7 +65,7 @@ def test_token_roundtrip(users_file):
 # ---- HTTP 权限矩阵 ---------------------------------------------------------- #
 
 def test_login_wrong_password(client):
-    r = client.post("/auth/login", json={"user": "student", "password": "nope"})
+    r = client.post("/auth/login", json={"user": "malin", "password": "nope"})
     assert r.status_code == 401
 
 
@@ -77,7 +77,7 @@ def test_no_token_401(client):
 
 
 def test_student_scope(client):
-    tok = _login(client, "student", "123456")["token"]
+    tok = _login(client, "malin", "123456")["token"]
     h = {"Authorization": f"Bearer {tok}"}
     # 学生可用：背单词数据 + 提交成绩
     assert client.get("/vocabulary", headers=h).status_code == 200

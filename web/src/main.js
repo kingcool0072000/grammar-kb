@@ -64,8 +64,8 @@ async function bootstrap() {
   const headerInner = h('div', 'header-inner')
   headerInner.innerHTML = `
     <div class="brand">
-      <span class="logo">语</span>
-      <div>语法知识库<small>${role === 'teacher' ? '教师版' : '学生版'}</small></div>
+      <span class="logo">学</span>
+      <div>和爸爸学英语<small>${role === 'teacher' ? '教师版' : '学生版'}</small></div>
     </div>
     <nav class="tabs" id="tabs">
       ${visibleViews.map((v) => `<button class="tab" data-view="${v.key}">${v.label}</button>`).join('')}
@@ -82,8 +82,8 @@ async function bootstrap() {
   const boot = h('div', 'boot')
   boot.innerHTML = `
     <div class="brand" style="justify-content:center;margin-bottom:8px">
-      <span class="logo">语</span>
-      <div>语法知识库<small>学习地图</small></div>
+      <span class="logo">学</span>
+      <div>和爸爸学英语<small>学习地图</small></div>
     </div>
     <p style="color:var(--ink-soft)">正在准备知识点…</p>
     <div class="bar"><i id="boot-bar"></i></div>
