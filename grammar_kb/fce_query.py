@@ -336,6 +336,12 @@ class FceSubmissionStore:
             ).fetchone()
         return _sub_out(row)
 
+    def delete(self, sub_id: int) -> bool:
+        """删除一条练习提交（教师清理数据）。"""
+        with self._connect() as conn:
+            cur = conn.execute("DELETE FROM fce_submission WHERE id = ?", (sub_id,))
+            return cur.rowcount > 0
+
 
 def _sub_out(r: sqlite3.Row) -> dict:
     def _j(s, default):

@@ -54,7 +54,7 @@ export async function mountFcePapers(el, { role } = {}) {
     ${history.length ? `
       <section class="fce-group" style="margin-top:26px">
         <div class="fce-group-title">📊 我的练习记录</div>
-        ${history.slice(0, 10).map(subRow).join('')}
+        ${history.slice(0, 10).map((s) => subRow(s, myRole)).join('')}
       </section>` : ''}
   `
 
@@ -63,13 +63,14 @@ export async function mountFcePapers(el, { role } = {}) {
   })
   const reviewBtn = el.querySelector('#essay-review')
   if (reviewBtn) reviewBtn.addEventListener('click', () => renderEssayReview(el, pending, myRole))
+  bindSubRowActions(el, history)
 }
 
 function doneCount(history, testId) {
   return history.filter((s) => s.test_id === testId).length
 }
 
-function subRow(s) {
+function subRow(s, role) {
   const when = (s.created_at || '').slice(0, 10)
   const dur = s.duration_sec ? ` · ⏱${fmtDur(s.duration_sec)}` : ''
   const score = s.status === 'auto'
@@ -77,12 +78,85 @@ function subRow(s) {
     : s.status === 'graded'
       ? `<b class="fce-his-score ok">老师 ${s.teacher_score ?? '-'}</b><span class="fce-his-date">${dur}</span>`
       : '<b class="fce-his-score pend">待批改</b>'
+  const isAdmin = role === 'teacher'
   return `
-    <div class="fce-his-row">
-      <span class="fce-his-what">T${s.test_id} ${PAPER_CN[s.paper] || s.paper} P${s.part}</span>
+    <div class="fce-his-row fce-sub-row" data-sub="${s.id}" data-user="${escapeHtml(s.user || '')}">
+      <span class="fce-his-what">${isAdmin && s.user ? `${escapeHtml(s.user)} · ` : ''}T${s.test_id} ${PAPER_CN[s.paper] || s.paper} P${s.part}</span>
       ${score}
       <span class="fce-his-date">${when}</span>
+      <button class="reading-btn small" data-sub-view="${s.id}" title="查看这次练习的逐题明细">📋 明细</button>
+      ${isAdmin ? `<button class="reading-btn small danger" data-sub-del="${s.id}" title="删除这条练习记录">删除</button>` : ''}
     </div>`
+}
+
+// 教师版：练习记录行 明细/删除
+function bindSubRowActions(el, history) {
+  el.querySelectorAll('[data-sub-del]').forEach((b) => {
+    b.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      const id = Number(b.dataset.subDel)
+      const s = history.find((x) => x.id === id)
+      if (!confirm(`确定删除这条练习记录（${s ? `T${s.test_id} P${s.part}` : id}）？删除后不可恢复。`)) return
+      try {
+        await api.fceDeleteSubmission(id)
+        const row = b.closest('.fce-sub-row')
+        if (row) row.remove()
+      } catch (err) {
+        alert(`删除失败：${err.message}`)
+      }
+    })
+  })
+  el.querySelectorAll('[data-sub-view]').forEach((b) => {
+    b.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      await showSubmissionDetail(Number(b.dataset.subView))
+    })
+  })
+}
+
+// 逐题明细弹窗：拉取提交详情（含每题作答/正确答案/对错）
+async function showSubmissionDetail(subId) {
+  let s
+  try {
+    s = await api.fceSubmission(subId)
+  } catch (err) {
+    alert(`加载明细失败：${err.message}`)
+    return
+  }
+  let mask = document.querySelector('.fce-sub-detail')
+  if (mask) mask.remove()
+  mask = document.createElement('div')
+  mask.className = 'fce-sub-detail'
+  const rows = (s.detail || []).map((d) => {
+    const cls = d.correct ? 'ok' : 'bad'
+    const expected = d.correct ? '' : `<span class="fce-detail-expected">答案 ${escapeHtml(String(d.expected ?? '-'))}</span>`
+    return `
+      <div class="fce-detail-row ${cls}">
+        <span class="fce-detail-q">Q${d.qnum}</span>
+        <span class="fce-detail-given">${escapeHtml(String(d.given || '（未作答）'))}</span>
+        ${expected}
+        <b class="fce-detail-mark ${cls}">${d.correct ? '✓' : '✗'}</b>
+      </div>`
+  }).join('')
+  const essayInfo = s.status !== 'auto' ? `
+    <div class="fce-detail-essay">
+      <div>状态：${s.status === 'graded' ? `已批改 · 老师 ${s.teacher_score ?? '-'} 分` : '待批改'}</div>
+      ${s.teacher_comment ? `<div class="fce-detail-comment">💬 ${escapeHtml(s.teacher_comment)}</div>` : ''}
+    </div>` : ''
+  mask.innerHTML = `
+    <div class="reading-hist-pop-mask" data-close></div>
+    <div class="reading-hist-pop-body">
+      <div class="reading-hist-pop-head">
+        <b>${escapeHtml(s.user || '')} · T${s.test_id} ${PAPER_CN[s.paper] || s.paper} P${s.part}
+          · ${s.status === 'auto' ? `${s.auto_score}/${s.total}` : s.teacher_score ?? '-'}</b>
+        <button class="reading-btn small" data-close>关闭</button>
+      </div>
+      <p class="reading-hint">${(s.created_at || '').slice(0, 16).replace('T', ' ')}${s.duration_sec ? ` · 用时 ${fmtDur(s.duration_sec)}` : ''}</p>
+      ${essayInfo}
+      ${rows || '<p class="reading-hint">（作文题无逐题明细）</p>'}
+    </div>`
+  document.body.append(mask)
+  mask.querySelectorAll('[data-close]').forEach((x) => x.addEventListener('click', () => mask.remove()))
 }
 
 // ---------- 大题列表（每次练一个大题） ----------

@@ -100,6 +100,8 @@ export const api = {
     req('/fce-submissions', { searchParams: { user, status, limit } }),
   fceSubmit: (rec) => reqJson('/fce-submissions', 'POST', rec),
   fceGrade: (id, rec) => reqJson(`/fce-submissions/${id}`, 'PUT', rec),
+  fceSubmission: (id) => req(`/fce-submissions/${id}`),
+  fceDeleteSubmission: (id) => reqJson(`/fce-submissions/${id}`, 'DELETE'),
   // 阅读训练：列表（默认只返回派生文；教师 kind=base 查原文段）/ 详情 / 录音提交与批改
   readingArticles: ({ kind } = {}) =>
     req('/reading/articles', { searchParams: { kind } }),

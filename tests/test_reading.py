@@ -133,3 +133,21 @@ def test_dict_lookup_student_ok(reading_env):
     r = c.get("/dict/pastime", headers=s)
     assert r.status_code == 200
     assert "消遣" in r.json()["data"]["gloss"]
+
+
+def test_fce_submission_teacher_delete(reading_env):
+    """教师可删除 FCE 练习提交；学生不能删。"""
+    c = _client(reading_env)
+    t, s = _login(c, "teacher"), _login(c, "malin")
+    # 提交一次客观题练习（T1 RUE P1）
+    r = c.post("/fce-submissions", headers=s, json={
+        "test_id": 1, "paper": "Reading and Use of English", "part": 1,
+        "answers": {"1": "D", "2": "A"},
+    })
+    assert r.status_code == 200, r.text
+    sub = r.json()["data"]
+    # 学生删除 → 403
+    assert c.delete(f"/fce-submissions/{sub['id']}", headers=s).status_code == 403
+    # 教师删除 → 200，再取详情 404
+    assert c.delete(f"/fce-submissions/{sub['id']}", headers=t).status_code == 200
+    assert c.get(f"/fce-submissions/{sub['id']}", headers=t).status_code == 404

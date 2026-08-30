@@ -1533,3 +1533,21 @@ main { --fce-fs: 15px; }
 }
 .reading-rec-editor label { font-size: 13px; color: var(--ink-soft, #64748b); }
 .reading-rec-editor input { padding: 6px 10px; border: 1px solid var(--line, #e2e8f0); border-radius: 8px; }
+
+/* FCE 练习记录：明细弹窗 */
+.fce-sub-detail { position: fixed; inset: 0; z-index: 95; }
+.fce-sub-detail .fce-detail-row {
+  display: flex; gap: 10px; align-items: baseline; padding: 5px 8px;
+  border-radius: 8px; font-size: 14px;
+}
+.fce-sub-detail .fce-detail-row.ok { background: rgba(34,160,107,.08); }
+.fce-sub-detail .fce-detail-row.bad { background: rgba(180,35,24,.07); }
+.fce-sub-detail .fce-detail-q { font-weight: 700; min-width: 38px; }
+.fce-sub-detail .fce-detail-given { color: var(--ink, #1e293b); }
+.fce-sub-detail .fce-detail-expected { color: #22a06b; font-size: 13px; }
+.fce-sub-detail .fce-detail-mark.ok { color: #22a06b; margin-left: auto; }
+.fce-sub-detail .fce-detail-mark.bad { color: #b42318; margin-left: auto; }
+.fce-sub-detail .fce-detail-essay { margin: 8px 0; padding: 8px 12px; background: #f0f9ff; border-radius: 8px; font-size: 14px; }
+.fce-sub-detail .fce-detail-comment { color: var(--ink-soft, #64748b); margin-top: 4px; }
+.fce-sub-row { align-items: center; }
+.fce-sub-row .reading-btn { margin-left: 6px; }

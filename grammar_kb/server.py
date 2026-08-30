@@ -407,6 +407,15 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             raise HTTPException(status_code=404, detail=f"提交记录 id={sub_id} 不存在")
         return _ok(data)
 
+    @app.delete("/fce-submissions/{sub_id}")
+    def fce_delete(sub_id: int, request: "fastapi.Request"):
+        """教师删除一条 FCE 练习提交。"""
+        if getattr(request.state, "role", "teacher") != "teacher":
+            raise HTTPException(status_code=403, detail="该功能仅教师账号可用")
+        if not fce_submissions.delete(sub_id):
+            raise HTTPException(status_code=404, detail=f"提交记录 id={sub_id} 不存在")
+        return _ok({"id": sub_id})
+
     # ---- 阅读训练（base 原文段 + derived 派生文 + 录音提交/批改） ----
 
     @app.get("/reading/articles")
