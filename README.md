@@ -5,7 +5,7 @@
 - **`grammar_kb/`（Python 后端）**：把 PDF 教材/讲义清洗并结构化为**可检索、可溯源的知识点数据库**——
   自动去水印、还原表格、切分知识点、抽取关键词与关系，存入本地 SQLite（FTS5 全文检索），
   提供 CLI、HTTP API 与 MCP 服务。
-- **`web/`（Vite 前端）**：面向学生的学习界面——初中语法课 / 词汇表 / 背单词 / 初中英语知识体系 / FCE 真题练习，
+- **`web/`（Vite 前端）**：面向学生的学习界面——初中语法课 / 词汇表 / 背单词 / 初中英语知识体系 / FCE 真题练习 / 阅读训练，
   外加作业成绩记录（增删改查，持久化于 iCloud Drive，跨设备同步）。
   学生版与教师版按账号区分功能与权限。
 
@@ -83,6 +83,9 @@ PDF ──► pdf_parser   去水印（字体+方向过滤）+ 重排行 + 还�
 | `auth.py`       | 学生/教师双角色认证（HMAC token，30 天有效） |
 | `fce_paper.py`  | FCE 青少版模拟卷 OCR（macOS Vision）→ 解析 → 入库 `data/fce.db`（4 Test × 87 题） |
 | `fce_query.py`  | FCE 真题只读查询 + 练习提交/自动批改（fce_submission 表） |
+| `reading_build.py` | FCE 阅读原文重建：OCR 坐标拆栏（双栏/四人网格）→ 填入正确答案 → `reading_article`（kind=base） |
+| `reading.py`    | 阅读训练读写层：派生文 CRUD + 学生录音提交 + 教师 10 分制批改（reading_recordings 表） |
+| `dict_db.py`    | ECDICT 全量词典导入与查询（36.5 万词条，`data/ecdict.db`） |
 | `cli.py`        | 命令行 |
 | `server.py`     | HTTP 服务（可选 extra） |
 | `mcp_server.py` | MCP 服务（可选 extra） |
@@ -154,6 +157,13 @@ uv run grammar-kb-server --host 0.0.0.0 --port 8000
 | POST | `/fce-submissions` | 提交一次 FCE 大题练习（客观题自动批改；作文转待批改；附用时） |
 | GET | `/fce-submissions` | 练习历史（学生只看自己；教师可按 status 拉待批改作文） |
 | PUT | `/fce-submissions/{id}` | 教师批改作文（分数 + 评语） |
+| GET | `/reading/articles` | 阅读文章列表（默认只回派生文；教师 `?kind=base` 看原文段、`?kind=all` 看全部） |
+| GET | `/reading/articles/{id}` | 文章正文（学生读 base 原文返回 403） |
+| POST/PUT/DELETE | `/reading/articles[/{id}]` | 教师新增 / 编辑 / 删除派生文 |
+| POST | `/reading/recordings` | 学生提交朗读录音（base64 webm ≤9MB/5 分钟，附选中的朗读文本） |
+| GET | `/reading/recordings` | 录音列表（学生只看自己；教师可按 status=pending 拉待批改） |
+| GET | `/reading/recordings/{id}` | 录音详情（含 base64 音频；学生只能听自己的） |
+| PUT | `/reading/recordings/{id}` | 教师批改录音（10 分制 + 评语） |
 
 ### 作业成绩数据存在哪
 
@@ -174,6 +184,18 @@ FCE 青少版（For Schools）模拟卷，源 PDF 为纯扫描图，经 macOS Vi
   （已 OCR 的页文本可缓存复用：`--ocr-dir <目录>`，格式为 `pNNN.txt` 三列坐标行）
 - **练习记录**：`fce_submission` 表存每次大题提交（作答明细、自动批改结果、用时、作文批改）
 - **OCR 依赖**：macOS 系统自带 Vision 框架（无需安装 tesseract），脚本内嵌于 `fce_paper.py`
+
+### 阅读训练数据（同 `data/fce.db`）
+
+- **原文（base）**：`reading_article(kind=base)` 50 段——RUE P1-P7 全部阅读文按 OCR 坐标拆栏重建
+  （P5/P6 双栏、P7 四人网格），空格填入正确答案（加粗标记），`base_key` 形如 `T1P5` / `T1P7-A`。
+  重建：`uv run python -m grammar_kb.reading_build`（OCR 缓存固化在 `data/ocr_cache/`，可复现）
+- **派生文（derived）**：B2 难度补充阅读（每段 120-300 词、青少年主题），教师经 UI 或
+  `scripts/ingest_derived.py data/derived_articles.json` 入库，按主题挂到对应原文段
+- **录音**：`reading_recordings` 表存学生朗读提交（base64 webm + 选中段落文本），教师 10 分制批改
+- **词典**：`/dict/{word}` 走 ECDICT 全量词典——首次使用需导入：
+  `uv run python -c "from grammar_kb.dict_db import import_ecdict; import_ecdict(<ecdict.csv 路径>)"`
+  （csv 来自 [ECDICT](https://github.com/skywind3000/ECDICT)，约 36.5 万词条；所有格自动归一：`children's` → `children`）
 
 示例：
 ```bash
@@ -262,7 +284,7 @@ uv run pytest -m "not integration"      # 仅纯单测（无需 PDF，秒级）
 
 覆盖：水印过滤 / 行重排 / 表格还原 / 知识点切分 / 分类 / 关键词抽取 / DB 不截断往返 /
 FTS 中英文检索 / 级联清理 / id 重建可复现 / 查询 / 端到端集成 / 认证与角色权限 /
-FCE OCR 解析 / FCE 提交批改。
+FCE OCR 解析 / FCE 提交批改 / 阅读文章权限与录音提交批改。
 
 集成测试需要一个 PDF 目录，用环境变量 `GRAMMAR_TEST_PDF_DIR` 指定；未指定或不存在则自动跳过。
 
