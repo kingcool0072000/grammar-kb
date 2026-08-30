@@ -120,6 +120,11 @@ def test_reading_full_flow(reading_env):
     assert c.delete(f"/reading/articles/{art['id']}", headers=t).status_code == 200
     assert c.get("/reading/articles", headers=s).json()["data"] == []
 
+    # 教师删除录音；学生不能删
+    assert c.delete(f"/reading/recordings/{rec['id']}", headers=s).status_code == 403
+    assert c.delete(f"/reading/recordings/{rec['id']}", headers=t).status_code == 200
+    assert c.get(f"/reading/recordings/{rec['id']}", headers=t).status_code == 404
+
 
 def test_dict_lookup_student_ok(reading_env):
     """学生查单词（阅读练习选中词查 ECDICT）。"""

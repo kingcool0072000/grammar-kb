@@ -274,18 +274,23 @@ async function renderReview(el, recs) {
         <label>分数 <input type="number" min="0" max="10" value="${r.teacher_score ?? 8}" style="width:56px" data-score></label>
         <input placeholder="评语（流利度/发音/语调建议）" value="${escapeHtml(r.teacher_comment || '')}" data-comment style="flex:1" />
         <button class="reading-btn primary" data-grade>提交批改</button>
+        <button class="reading-btn danger" data-del title="删除这条录音提交">删除</button>
       </div>
       <div class="reading-review-msg"></div>
     `
-    // 音频（懒加载 base64：首次点播放才拉取，设 src 后续播）
+    // 音频（懒加载 base64：首次点播放才拉取，加载完成后续播，避免与 load 竞态）
     const audio = row.querySelector('audio')
     audio.addEventListener('play', async () => {
-      if (audio.src && audio.readyState > 0) return
-      if (!audio.src) {
-        const full = await api.readingRecording(r.id)
-        audio.src = `data:${full.mime};base64,${full.audio_b64}`
-        audio.load()
-      }
+      if (audio.src) return
+      audio.pause()
+      const full = await api.readingRecording(r.id)
+      audio.src = `data:${full.mime};base64,${full.audio_b64}`
+      audio.load()
+      await new Promise((resolve) => {
+        audio.addEventListener('loadeddata', resolve, { once: true })
+        audio.addEventListener('error', resolve, { once: true })
+        setTimeout(resolve, 4000)
+      })
       try { await audio.play() } catch { /* 浏览器策略拦截时由用户再点 */ }
     })
     row.querySelector('[data-grade]').addEventListener('click', async () => {
@@ -301,6 +306,15 @@ async function renderReview(el, recs) {
         row.querySelector('[data-grade]').disabled = true
       } catch (e) {
         row.querySelector('.reading-review-msg').textContent = `失败：${e.message}`
+      }
+    })
+    row.querySelector('[data-del]').addEventListener('click', async () => {
+      if (!confirm(`确定删除 ${r.user} 的这条录音（${fmtDur(r.duration_sec || 0)}）？删除后不可恢复。`)) return
+      try {
+        await api.readingDeleteRecording(r.id)
+        row.remove()
+      } catch (e) {
+        row.querySelector('.reading-review-msg').textContent = `删除失败：${e.message}`
       }
     })
     box.append(row)

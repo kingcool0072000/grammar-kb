@@ -112,6 +112,7 @@ export const api = {
   readingRecording: (id) => req(`/reading/recordings/${id}`),
   readingSubmitRecording: (rec) => reqJson('/reading/recordings', 'POST', rec),
   readingGradeRecording: (id, rec) => reqJson(`/reading/recordings/${id}`, 'PUT', rec),
+  readingDeleteRecording: (id) => reqJson(`/reading/recordings/${id}`, 'DELETE'),
 }
 
 // 规整单个知识点，保证集合字段为数组

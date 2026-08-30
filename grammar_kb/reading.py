@@ -20,6 +20,39 @@ from .reading_build import READING_SCHEMA, word_count
 _MAX_AUDIO_B64 = 12 * 1024 * 1024  # 12MB base64（约 9MB 音频，5 分钟 webm 足够）
 
 
+def _transcode_for_safari(audio_b64: str, mime: str) -> tuple[str, str]:
+    """webm/opus → m4a(aac)。
+
+    学生端多为 Chrome（MediaRecorder 产 webm/opus），教师端若用 Safari/
+    WebKit 打开，<audio> 不支持 webm/opus——表现为「听不见」。系统有
+    ffmpeg 时统一转成 m4a（Safari/Chrome 双端原生可播）；无 ffmpeg 或
+    转码失败则原样存（Chrome 教师端仍可播）。
+    """
+    if "webm" not in (mime or "").lower():
+        return audio_b64, mime
+    import shutil
+    import subprocess
+    import tempfile
+
+    if not shutil.which("ffmpeg"):
+        return audio_b64, mime
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            src = Path(td) / "in.webm"
+            dst = Path(td) / "out.m4a"
+            src.write_bytes(base64.b64decode(audio_b64))
+            r = subprocess.run(
+                ["ffmpeg", "-v", "error", "-y", "-i", str(src),
+                 "-c:a", "aac", "-b:a", "64k", str(dst)],
+                capture_output=True, timeout=60,
+            )
+            if r.returncode == 0 and dst.exists() and dst.stat().st_size > 0:
+                return base64.b64encode(dst.read_bytes()).decode(), "audio/mp4"
+    except Exception:  # noqa: BLE001
+        pass
+    return audio_b64, mime
+
+
 def _now() -> str:
     return datetime.now(_tz.utc).isoformat(timespec="seconds")
 
@@ -149,6 +182,7 @@ class ReadingStore:
         except Exception as e:  # noqa: BLE001
             raise ValueError(f"录音数据无效: {e}") from e
         dur = max(0, min(int(duration_sec or 0), 5 * 60))
+        audio_b64, mime = _transcode_for_safari(audio_b64, mime or "audio/webm")
         with self._connect() as conn:
             art = conn.execute(
                 "SELECT id FROM reading_article WHERE id = ?", (article_id,)
@@ -219,6 +253,14 @@ class ReadingStore:
                 "SELECT * FROM reading_recordings WHERE id = ?", (rec_id,)
             ).fetchone()
         return _rec_out(row, with_audio=False)
+
+    def delete_recording(self, rec_id: int) -> bool:
+        """删除一条录音提交（教师清理数据）。"""
+        with self._connect() as conn:
+            cur = conn.execute(
+                "DELETE FROM reading_recordings WHERE id = ?", (rec_id,)
+            )
+            return cur.rowcount > 0
 
 
 def _art_out(r: sqlite3.Row, with_text: bool = False) -> dict:

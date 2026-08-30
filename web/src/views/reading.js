@@ -10,6 +10,7 @@ const MAX_RECORD_SEC = 300
 export async function mountReading(el, { role } = {}) {
   const auth = getAuth()
   const myRole = role || (auth && auth.role) || 'student'
+  el.className = 'reading-paper-view' // 电纸书护眼底色（学生默认）
   el.innerHTML = '<div class="view-head"><h1>阅读练习</h1><p>加载中…</p></div>'
   let arts, recs
   try {
@@ -26,7 +27,6 @@ export async function mountReading(el, { role } = {}) {
 
 // ---------- 列表 ----------
 function renderList(el, arts, recs, role) {
-  const graded = recs.filter((r) => r.status === 'graded')
   if (!arts.length) {
     el.innerHTML = `
       <div class="view-head"><h1>阅读练习</h1></div>
@@ -44,19 +44,6 @@ function renderList(el, arts, recs, role) {
       <h1>阅读练习</h1>
       <p>选择一篇派生文章开始练习：阅读 → 选段录音 → 提交老师批改。共 ${arts.length} 篇。</p>
     </div>
-    ${graded.length ? `
-    <section class="fce-group" style="margin-bottom:18px">
-      <div class="fce-group-title">📈 最近批改</div>
-      ${graded.slice(0, 5).map((r) => `
-        <div class="reading-graded-row">
-          <div class="fce-his-row">
-            <span class="fce-his-what">${escapeHtml(r.article_title || `文章#${r.article_id}`)}</span>
-            <b class="fce-his-score ok">${r.teacher_score}/10</b>
-            <span class="fce-his-date">${(r.created_at || '').slice(0, 10)}</span>
-          </div>
-          ${r.teacher_comment ? `<div class="reading-graded-comment">💬 ${escapeHtml(r.teacher_comment)}</div>` : ''}
-        </div>`).join('')}
-    </section>` : ''}
     ${[...groups.entries()].map(([key, list]) => `
       <section class="fce-group">
         <div class="fce-group-title">${escapeHtml(keyLabel(key))}（${list.length} 篇）</div>
@@ -64,11 +51,50 @@ function renderList(el, arts, recs, role) {
           ${list.map((a) => artCard(a, recs)).join('')}
         </div>
       </section>`).join('')}
+    <div class="reading-hist-pop" id="rd-hist-pop" hidden>
+      <div class="reading-hist-pop-mask" id="rd-hist-mask"></div>
+      <div class="reading-hist-pop-body">
+        <div class="reading-hist-pop-head">
+          <b id="rd-hist-title"></b>
+          <button class="reading-btn small" id="rd-hist-close">关闭</button>
+        </div>
+        <div id="rd-hist-list"></div>
+      </div>
+    </div>
   `
+  // 弹窗：展示某篇文章的历次批改
+  const pop = el.querySelector('#rd-hist-pop')
+  const openHist = (art) => {
+    const mine = recs.filter((r) => r.article_id === art.id)
+    el.querySelector('#rd-hist-title').textContent = art.title || '未命名'
+    el.querySelector('#rd-hist-list').innerHTML = mine.length
+      ? mine.slice().reverse().map((r) => `
+          <div class="reading-graded-row">
+            <div class="fce-his-row">
+              <span class="fce-his-date">${(r.created_at || '').slice(0, 16).replace('T', ' ')} · ${fmtSec(r.duration_sec || 0)}</span>
+              ${r.status === 'graded'
+                ? `<b class="fce-his-score ok">老师 ${r.teacher_score}/10</b>`
+                : '<b class="fce-his-score pend">待批改</b>'}
+            </div>
+            ${r.teacher_comment ? `<div class="reading-graded-comment">💬 ${escapeHtml(r.teacher_comment)}</div>` : ''}
+          </div>`).join('')
+      : '<p class="reading-hint">还没有朗读记录</p>'
+    pop.hidden = false
+  }
+  el.querySelector('#rd-hist-close').addEventListener('click', () => (pop.hidden = true))
+  el.querySelector('#rd-hist-mask').addEventListener('click', () => (pop.hidden = true))
+
   el.querySelectorAll('.reading-card').forEach((card) => {
     card.addEventListener('click', () =>
       renderDetail(el, Number(card.dataset.id), role),
     )
+  })
+  el.querySelectorAll('[data-hist]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation() // 不触发卡片进入详情
+      const a = arts.find((x) => x.id === Number(btn.dataset.hist))
+      if (a) openHist(a)
+    })
   })
 }
 
@@ -78,19 +104,20 @@ function artCard(a, recs) {
     .filter((r) => r.status === 'graded')
     .reduce((x, y) => (y.teacher_score > (x?.teacher_score ?? -1) ? y : x), null)
   const badge = best
-    ? `<b class="fce-his-score ok">${best.teacher_score}/10</b>`
+    ? `<b class="fce-his-score ok">最高 ${best.teacher_score}/10</b>`
     : mine.length
       ? '<b class="fce-his-score pend">待批改</b>'
       : ''
   return `
-    <button class="reading-card" data-id="${a.id}">
+    <div class="reading-card" data-id="${a.id}" role="button">
       <span class="reading-card-title">${escapeHtml(a.title || '未命名')}</span>
       <span class="reading-card-meta">
         <span class="tag" style="--cat-color:#0e7490">${a.words} 词</span>
         ${a.source ? `<span class="reading-card-src">${escapeHtml(a.source)}</span>` : ''}
         ${badge}
+        ${mine.length ? `<button class="reading-btn small" data-hist="${a.id}" title="查看批改记录">📋 记录</button>` : ''}
       </span>
-    </button>`
+    </div>`
 }
 
 function keyLabel(key) {

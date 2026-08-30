@@ -507,6 +507,14 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             raise HTTPException(status_code=404, detail=f"录音 id={rec_id} 不存在")
         return _ok(data)
 
+    @app.delete("/reading/recordings/{rec_id}")
+    def reading_delete_recording(rec_id: int, request: "fastapi.Request"):
+        """教师删除一条录音提交。"""
+        _require_teacher(request)
+        if not reading.delete_recording(rec_id):
+            raise HTTPException(status_code=404, detail=f"录音 id={rec_id} 不存在")
+        return _ok({"id": rec_id})
+
     def _require_teacher(request) -> None:
         if getattr(request.state, "role", "teacher") != "teacher":
             raise HTTPException(status_code=403, detail="该功能仅教师账号可用")

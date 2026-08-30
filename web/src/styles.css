@@ -1462,3 +1462,51 @@ main { --fce-fs: 15px; }
 .reading-review-text .reading-article.picked-view p { background: rgba(14,116,144,.06); border-left: 3px solid #0e7490; }
 .reading-graded-row { border-bottom: 1px dashed var(--line, #e2e8f0); padding: 6px 0; }
 .reading-graded-comment { font-size: 13.5px; color: var(--ink-soft, #64748b); line-height: 1.6; margin: 2px 0 4px; }
+
+/* 阅读练习 · 电纸书护眼底色（学生默认） */
+.reading-paper-view {
+  --paper-bg: #f3ecd9;
+  --paper-card: #faf5e7;
+  --paper-ink: #3d3327;
+  --paper-line: #ddd2b8;
+  --cat-color: #8a6d3b;
+  background:
+    radial-gradient(1200px 500px at 20% -5%, #f7f1e0 0%, transparent 60%),
+    linear-gradient(180deg, #f4edda 0%, #f1e9d3 100%);
+  min-height: calc(100vh - 120px);
+  border-radius: 14px;
+  padding: 4px 22px 30px;
+  box-shadow: inset 0 0 60px rgba(190, 170, 120, 0.12);
+  color: var(--paper-ink);
+}
+.reading-paper-view .view-head h1 { color: var(--paper-ink); }
+.reading-paper-view .view-head p { color: #8a7a5e; }
+.reading-paper-view .fce-group-title { color: #8a6d3b; }
+.reading-paper-view .reading-card { background: var(--paper-card); border-color: var(--paper-line); }
+.reading-paper-view .reading-card:hover { border-color: #b08d4f; box-shadow: 0 2px 10px rgba(176,141,79,.18); }
+.reading-paper-view .reading-card-title { color: var(--paper-ink); }
+.reading-paper-view .reading-card-meta { color: #9c8a63; }
+.reading-paper-view .reading-article { color: var(--paper-ink); }
+.reading-paper-view .reading-article p.picked { background: rgba(176,141,79,.16); outline-color: #b08d4f; }
+.reading-paper-view .reading-article strong { color: #8a6d3b; }
+.reading-paper-view .reading-toolbar { background: var(--paper-card); border-color: var(--paper-line); }
+.reading-paper-view .reading-btn { background: var(--paper-card); border-color: var(--paper-line); color: var(--paper-ink); }
+.reading-paper-view .reading-btn:hover { border-color: #b08d4f; }
+.reading-paper-view .reading-btn.primary { background: #8a6d3b; border-color: #8a6d3b; color: #faf5e7; }
+.reading-paper-view .reading-btn.danger { background: #a33d2e; border-color: #a33d2e; color: #faf5e7; }
+.reading-paper-view .reading-dict { background: #f6efdc; border-color: #e3d6b4; }
+.reading-paper-view .reading-hint, .reading-paper-view .reading-pick-info { color: #9c8a63; }
+.reading-paper-view .fce-his-date { color: #9c8a63; }
+.reading-paper-view .fce-back-btn { color: #8a6d3b; }
+
+/* 批改记录弹窗 */
+.reading-hist-pop { position: fixed; inset: 0; z-index: 90; }
+.reading-hist-pop-mask { position: absolute; inset: 0; background: rgba(30,25,15,.45); }
+.reading-hist-pop-body {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(520px, calc(100vw - 40px)); max-height: 72vh; overflow: auto;
+  background: var(--card, #fff); border-radius: 14px; padding: 16px 18px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.25);
+}
+.reading-hist-pop-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.reading-hist-pop-head b { font-size: 15px; }
