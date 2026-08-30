@@ -55,6 +55,69 @@ function renderHome(el, arts, recs) {
   )
   const rv = el.querySelector('#rd-review')
   if (rv) rv.addEventListener('click', () => renderReview(el, recs))
+  bindRecRowActions(el, recs)
+}
+
+// 最近录音提交行的 删除 / 编辑（改分数与评语）
+function bindRecRowActions(el, recs) {
+  el.querySelectorAll('[data-rec-del]').forEach((b) => {
+    b.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      const id = Number(b.dataset.recDel)
+      const r = recs.find((x) => x.id === id)
+      if (!confirm(`确定删除 ${r?.user || ''} 的这条录音（${fmtDur(r?.duration_sec || 0)}）？删除后不可恢复。`)) return
+      try {
+        await api.readingDeleteRecording(id)
+        const row = b.closest('.reading-rec-row')
+        if (row) row.remove()
+      } catch (err) {
+        alert(`删除失败：${err.message}`)
+      }
+    })
+  })
+  el.querySelectorAll('[data-rec-edit]').forEach((b) => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const id = Number(b.dataset.recEdit)
+      const r = recs.find((x) => x.id === id)
+      const row = b.closest('.reading-rec-row')
+      if (!r || !row) return
+      if (row.querySelector('.reading-rec-editor')) return // 已在编辑态
+      const editor = document.createElement('div')
+      editor.className = 'reading-rec-editor'
+      editor.innerHTML = `
+        <label>分数 <input type="number" min="0" max="10" value="${r.teacher_score ?? 8}" style="width:56px" data-ed-score></label>
+        <input placeholder="评语（流利度/发音/语调建议）" value="${escapeHtml(r.teacher_comment || '')}" data-ed-comment style="flex:1">
+        <button class="reading-btn small primary" data-ed-save>保存</button>
+        <button class="reading-btn small" data-ed-cancel>取消</button>
+      `
+      row.after(editor)
+      editor.querySelector('[data-ed-save]').addEventListener('click', async () => {
+        const score = Number(editor.querySelector('[data-ed-score]').value)
+        const comment = editor.querySelector('[data-ed-comment]').value
+        if (!(score >= 0 && score <= 10)) {
+          alert('分数须为 0-10')
+          return
+        }
+        try {
+          await api.readingGradeRecording(id, { score, comment })
+          r.teacher_score = score
+          r.teacher_comment = comment
+          r.status = 'graded'
+          // 就地刷新该行显示
+          const fresh = document.createElement('div')
+          fresh.innerHTML = recRow(r)
+          const newRow = fresh.firstElementChild
+          row.replaceWith(newRow)
+          bindRecRowActions(el, recs)
+        } catch (err) {
+          alert(`保存失败：${err.message}`)
+        }
+        editor.remove()
+      })
+      editor.querySelector('[data-ed-cancel]').addEventListener('click', () => editor.remove())
+    })
+  })
 }
 
 function groupBase(bases) {
@@ -82,10 +145,12 @@ function recRow(r) {
     ? `<b class="fce-his-score ok">${r.teacher_score}/10</b>`
     : '<b class="fce-his-score pend">待批改</b>'
   return `
-    <div class="fce-his-row" data-rec="${r.id}">
+    <div class="fce-his-row reading-rec-row" data-rec="${r.id}">
       <span class="fce-his-what">${escapeHtml(r.user)} · ${escapeHtml(r.article_title || `#${r.article_id}`)}</span>
       ${score}
       <span class="fce-his-date">${fmtDur(r.duration_sec || 0)} · ${(r.created_at || '').slice(0, 10)}</span>
+      <button class="reading-btn small" data-rec-edit="${r.id}" title="编辑分数与评语">✏️ 编辑</button>
+      <button class="reading-btn small danger" data-rec-del="${r.id}" title="删除这条录音">删除</button>
     </div>`
 }
 

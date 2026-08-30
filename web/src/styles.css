@@ -1523,3 +1523,13 @@ main { --fce-fs: 15px; }
 }
 .reading-level-bar i.silent { background: #d64545; }
 .reading-paper-view .reading-level-bar { background: #e3d6b4; }
+.reading-rec-row { align-items: center; }
+.reading-rec-row .reading-btn { margin-left: 6px; }
+.reading-rec-editor {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  padding: 8px 10px; margin: 4px 0 10px;
+  border: 1px dashed var(--line, #e2e8f0); border-radius: 10px;
+  background: var(--card, #fff);
+}
+.reading-rec-editor label { font-size: 13px; color: var(--ink-soft, #64748b); }
+.reading-rec-editor input { padding: 6px 10px; border: 1px solid var(--line, #e2e8f0); border-radius: 8px; }

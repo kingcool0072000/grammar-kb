@@ -14,7 +14,7 @@ import { createDrawer } from './components/drawer.js'
 
 const app = document.getElementById('app')
 
-// teacher: true 的页签仅教师可见；学生版有背单词 / FCE真题 / 阅读练习
+// teacher: true 仅教师可见；studentOnly: true 仅学生可见
 const VIEWS = [
   { key: 'courses', label: '课程', teacher: true },
   { key: 'vocab', label: '词汇表', teacher: true },
@@ -23,7 +23,7 @@ const VIEWS = [
   { key: 'fce', label: 'FCE', teacher: true },
   { key: 'fcePapers', label: 'FCE真题' },
   { key: 'readingAdmin', label: '阅读内容', teacher: true },
-  { key: 'reading', label: '阅读练习' },
+  { key: 'reading', label: '阅读练习', studentOnly: true },
   { key: 'exams', label: '作业成绩', teacher: true },
 ]
 
@@ -37,8 +37,10 @@ function h(tag, cls, html) {
 function currentRoute(role) {
   const v = (location.hash.replace(/^#\/?/, '') || '').split('?')[0]
   const view = VIEWS.find((x) => x.key === v)
-  // 学生访问教师页 → 回背单词；未匹配 → 学生回背单词、教师回课程
-  if (!view || (view.teacher && role !== 'teacher')) return role === 'teacher' ? 'courses' : 'recite'
+  // 学生访问教师页 → 回背单词；教师访问学生页 → 回课程；未匹配同理
+  if (!view || (view.teacher && role !== 'teacher') || (view.studentOnly && role === 'teacher')) {
+    return role === 'teacher' ? 'courses' : 'recite'
+  }
   return v
 }
 
@@ -59,13 +61,15 @@ async function bootstrap() {
 
   // header + main 容器
   const role = auth.role
-  const visibleViews = VIEWS.filter((v) => !v.teacher || role === 'teacher')
+  const visibleViews = VIEWS.filter(
+    (v) => (!v.teacher || role === 'teacher') && (!v.studentOnly || role !== 'teacher'),
+  )
   const header = h('header', 'app-header')
   const headerInner = h('div', 'header-inner')
   headerInner.innerHTML = `
     <div class="brand">
       <span class="logo">学</span>
-      <div>和爸爸学英语<small>${role === 'teacher' ? '教师版' : '学生版'}</small></div>
+      <div>和爸学<small>${role === 'teacher' ? '教师版' : '学生版'}</small></div>
     </div>
     <nav class="tabs" id="tabs">
       ${visibleViews.map((v) => `<button class="tab" data-view="${v.key}">${v.label}</button>`).join('')}
@@ -83,7 +87,7 @@ async function bootstrap() {
   boot.innerHTML = `
     <div class="brand" style="justify-content:center;margin-bottom:8px">
       <span class="logo">学</span>
-      <div>和爸爸学英语<small>学习地图</small></div>
+      <div>和爸学<small>学习地图</small></div>
     </div>
     <p style="color:var(--ink-soft)">正在准备知识点…</p>
     <div class="bar"><i id="boot-bar"></i></div>
