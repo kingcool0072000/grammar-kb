@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "grammar-kb"
-version = "0.1.0"
+version = "0.2.0"
 description = "把 PDF 教材/讲义清洗并结构化为可检索、可溯源的知识点数据库（去水印、还原表格、FTS5 全文检索，CLI + MCP 就绪）"
 readme = "README.md"
 requires-python = ">=3.10"

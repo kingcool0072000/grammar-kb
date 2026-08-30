@@ -1,6 +1,6 @@
 {
   "name": "grammar-kb-web",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "grammar-kb 题库的只读学习前端：按课程 / 按知识点 / 知识点关系网络",
   "type": "module",

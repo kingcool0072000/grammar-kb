@@ -22,7 +22,7 @@ from .models import (
     Category,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 # 数据集版本（与代码版本解耦）：数据迭代时递增。可用环境变量 GRAMMAR_KB_DATA_VERSION 覆盖。
 DATA_VERSION = "data-v1"
 __all__ = [
