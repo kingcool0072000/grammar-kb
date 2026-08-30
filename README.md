@@ -1,6 +1,6 @@
-# grammar-kb
+# grammar-kb · 和爸学
 
-英语语法教学讲义的**知识库 + 学习前端**单仓项目，分两层：
+英语语法教学讲义的**知识库 + 学习前端**单仓项目（前端品牌名「和爸学」），分两层：
 
 - **`grammar_kb/`（Python 后端）**：把 PDF 教材/讲义清洗并结构化为**可检索、可溯源的知识点数据库**——
   自动去水印、还原表格、切分知识点、抽取关键词与关系，存入本地 SQLite（FTS5 全文检索），
@@ -156,14 +156,17 @@ uv run grammar-kb-server --host 0.0.0.0 --port 8000
 | GET | `/fce-papers/{test_id}` | 单套 FCE Test 全文（学生视角自动剥离答案） |
 | POST | `/fce-submissions` | 提交一次 FCE 大题练习（客观题自动批改；作文转待批改；附用时） |
 | GET | `/fce-submissions` | 练习历史（学生只看自己；教师可按 status 拉待批改作文） |
+| GET | `/fce-submissions/{id}` | 单次练习详情（逐题作答/正确答案/对错明细） |
 | PUT | `/fce-submissions/{id}` | 教师批改作文（分数 + 评语） |
+| DELETE | `/fce-submissions/{id}` | 教师删除一条练习提交 |
 | GET | `/reading/articles` | 阅读文章列表（默认只回派生文；教师 `?kind=base` 看原文段、`?kind=all` 看全部） |
 | GET | `/reading/articles/{id}` | 文章正文（学生读 base 原文返回 403） |
 | POST/PUT/DELETE | `/reading/articles[/{id}]` | 教师新增 / 编辑 / 删除派生文 |
-| POST | `/reading/recordings` | 学生提交朗读录音（base64 webm ≤9MB/5 分钟，附选中的朗读文本） |
+| POST | `/reading/recordings` | 学生提交朗读录音（≤9MB/5 分钟，附选中的朗读文本；webm 自动转 m4a 存档） |
 | GET | `/reading/recordings` | 录音列表（学生只看自己；教师可按 status=pending 拉待批改） |
 | GET | `/reading/recordings/{id}` | 录音详情（含 base64 音频；学生只能听自己的） |
 | PUT | `/reading/recordings/{id}` | 教师批改录音（10 分制 + 评语） |
+| DELETE | `/reading/recordings/{id}` | 教师删除一条录音提交 |
 
 ### 作业成绩数据存在哪
 
@@ -175,7 +178,7 @@ uv run grammar-kb-server --host 0.0.0.0 --port 8000
 
 库刻意不用 WAL 模式（单文件自包含，iCloud 整文件同步更可靠）；其他设备装好本仓库、登录同一 iCloud 账号后启动服务，读到的就是同一份成绩。
 
-### FCE 真题数据（`data/fce.db`）
+### FCE 真题数据（`fce.db`）
 
 FCE 青少版（For Schools）模拟卷，源 PDF 为纯扫描图，经 macOS Vision OCR + 结构化解析入库：
 
@@ -184,6 +187,10 @@ FCE 青少版（For Schools）模拟卷，源 PDF 为纯扫描图，经 macOS Vi
   （已 OCR 的页文本可缓存复用：`--ocr-dir <目录>`，格式为 `pNNN.txt` 三列坐标行）
 - **练习记录**：`fce_submission` 表存每次大题提交（作答明细、自动批改结果、用时、作文批改）
 - **OCR 依赖**：macOS 系统自带 Vision 框架（无需安装 tesseract），脚本内嵌于 `fce_paper.py`
+- **存哪**：与作业成绩库同一套路径解析（环境变量 `GRAMMAR_KB_FCE_DB` → iCloud Drive
+  `~/Library/Mobile Documents/com~apple~CloudDocs/grammar-kb/fce.db` → 项目 `data/fce.db`）。
+  放 iCloud 的意义：**学生端提交的练习与朗读录音随 iCloud 同步到教师端设备**（首次启用自动
+  把本地库整文件迁上云；单文件 journal 模式，iCloud 整文件同步可靠）
 
 ### 阅读训练数据（同 `data/fce.db`）
 
@@ -192,7 +199,10 @@ FCE 青少版（For Schools）模拟卷，源 PDF 为纯扫描图，经 macOS Vi
   重建：`uv run python -m grammar_kb.reading_build`（OCR 缓存固化在 `data/ocr_cache/`，可复现）
 - **派生文（derived）**：B2 难度补充阅读（每段 120-300 词、青少年主题），教师经 UI 或
   `scripts/ingest_derived.py data/derived_articles.json` 入库，按主题挂到对应原文段
-- **录音**：`reading_recordings` 表存学生朗读提交（base64 webm + 选中段落文本），教师 10 分制批改
+- **录音**：`reading_recordings` 表存学生朗读提交（音频 base64 + 选中的朗读段落文本）。
+  入库时 webm/opus 自动经 ffmpeg 转 m4a（Safari 教师端可播；系统装 ffmpeg 即生效）；
+  前端有双保险——录音时实时音量条（麦克风静音立即变红）+ 提交前静音检测拦截
+  （麦克风被系统静音/未授权时 Chrome 会录出全零数据，孩子端原本毫无察觉）
 - **词典**：`/dict/{word}` 走 ECDICT 全量词典——首次使用需导入：
   `uv run python -c "from grammar_kb.dict_db import import_ecdict; import_ecdict(<ecdict.csv 路径>)"`
   （csv 来自 [ECDICT](https://github.com/skywind3000/ECDICT)，约 36.5 万词条；所有格自动归一：`children's` → `children`）
@@ -251,9 +261,10 @@ uv sync --extra server && uv run grammar-kb-server
 cd web && npm install && npm run dev     # http://localhost:5180
 ```
 
-功能：
+功能（品牌名「和爸学」）：
 
-- **登录与角色**：学生版（背单词 + FCE 真题练习）/ 教师版（全部功能）；HMAC token 30 天有效
+- **登录与角色**：学生版 malin（背单词 + FCE 真题练习 + 阅读练习）/ 教师版（全部管理功能，
+  无练习类页签）；HMAC token 30 天有效
 - **初中语法课**：48 讲按语法体系（词法/时态/语态/非谓语/句法/综合复习）分组，点开看整讲内容
 - **词汇表**：600+ 高频词（释义/词性/词形变化/讲义出处），按词性筛选、搜索、排序
 - **初中英语**：359 个零散知识点聚合为「语法大类 → 主题」两级树，含固定搭配速查表
@@ -261,13 +272,16 @@ cd web && npm install && npm run dev     # http://localhost:5180
 - **FCE**：《FCE 冲刺宝典》静态知识库（19 天语法专题 + 直击考点练习）
 - **FCE真题**：FCE 青少版模拟卷（4 Test × 87 题）分大题练习——阅读原文电子书排版（护眼底色、
   serif 阅读字体、字号可调）、做题计时、提交自动批改（错题显示正确答案）、作文提交教师批改；
-  防翻译插件、学生练习页禁右键/选择
+  防翻译插件、学生练习页禁右键/选择。练习记录：学生看自己的历史；教师额外有
+  📋 逐题明细弹窗（作答/正确答案/对错、作文批改状态与评语）与删除按钮
 - **阅读内容（教师）**：FCE 阅读原文 50 段（RUE P1-P7 全部阅读文，OCR 坐标拆栏重建、
   正确答案回填加粗）；每段挂派生阅读（B2 难度、青少年主题，可持续新增/编辑/删除）；
-  接收学生朗读录音、在线试听、10 分制打分 + 评语
-- **阅读练习（学生）**：派生文章列表（显示字数与来源）→ 详情页阅读——点击段落选中录音范围
-  （≤300 词）、浏览器麦克风录音（≤5 分钟）提交教师端；点击任意单词查 ECDICT 全量词典
-  （36.5 万词条：音标/释义/词形变化），一次一词
+  接收学生朗读录音（预加载 Blob URL 直接试听）、10 分制打分 + 评语；
+  「最近录音提交」每行可 ✏️ 改分/评语、删除
+- **阅读练习（学生）**：派生文章列表（显示字数与来源、最高分角标，📋 按钮弹窗看历次批改）
+  → 详情页电纸书护眼排版——点击段落选中录音范围（≤300 词）后录音按钮才可用，
+  实时音量条 + 静音拦截（麦克风无效时不给老师交白卷），≤5 分钟提交教师端；
+  点击任意单词查 ECDICT 全量词典（36.5 万词条：音标/释义/词形变化 + 🔊 TTS 发音），一次一词
 - **🎯 考点信号（双向）**：知识点 ↔ 标志词/时态 双向跳转——「看到这个词，就是在考哪些知识点」
 - **📝 作业成绩**：每讲一份作业卷（35 题，满分 100）。点题号记对错、分数自动算；
   多次作答全部保留、可修改可删除；错题本按「讲次+题号」汇总错误次数；
@@ -284,7 +298,7 @@ uv run pytest -m "not integration"      # 仅纯单测（无需 PDF，秒级）
 
 覆盖：水印过滤 / 行重排 / 表格还原 / 知识点切分 / 分类 / 关键词抽取 / DB 不截断往返 /
 FTS 中英文检索 / 级联清理 / id 重建可复现 / 查询 / 端到端集成 / 认证与角色权限 /
-FCE OCR 解析 / FCE 提交批改 / 阅读文章权限与录音提交批改。
+FCE OCR 解析 / FCE 提交批改与删除 / 阅读文章权限与录音提交批改删除。
 
 集成测试需要一个 PDF 目录，用环境变量 `GRAMMAR_TEST_PDF_DIR` 指定；未指定或不存在则自动跳过。
 
