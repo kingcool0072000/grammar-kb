@@ -174,6 +174,9 @@ async function renderDetail(el, id, role) {
       <div class="reading-tool-row">
         <button class="reading-btn primary" id="rd-record" disabled title="先选中要朗读的段落">开始录音</button>
         <span class="reading-pick-info" id="rd-rectime"></span>
+        <span class="reading-level-wrap" title="录音音量：朗读时绿色条应跳动；不动=麦克风没声音">
+          <span class="reading-level-bar"><i id="rd-level"></i></span>
+        </span>
         <span class="reading-pick-info" id="rd-recmsg"></span>
       </div>
       <p class="reading-hint">选中单词可查词典（ECDICT）。一次只查一个单词。</p>
@@ -306,8 +309,61 @@ function setupRecorder(el, art) {
   let startedAt = 0
   let recording = false
   let pickedText = ''
+  let meterStop = null // 音量条 rAF 停止器
 
   const pickedParas = () => [...el.querySelectorAll('#rd-text p.picked')]
+
+  // 录音实时音量条：麦克风被系统静音/未授权时 Chrome 仍返回全零数据，
+  // 孩子察觉不到——音量条不动就是最好的即时提示
+  const startMeter = (stream) => {
+    const bar = el.querySelector('#rd-level')
+    if (!bar) return null
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const src = ctx.createMediaStreamSource(stream)
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 512
+      src.connect(analyser)
+      const buf = new Uint8Array(analyser.fftSize)
+      let raf = 0
+      const tick = () => {
+        analyser.getByteTimeDomainData(buf)
+        let peak = 0
+        for (let i = 0; i < buf.length; i++) peak = Math.max(peak, Math.abs(buf[i] - 128))
+        const level = Math.min(1, peak / 60) // 说话通常 >0.3
+        bar.style.width = `${Math.round(level * 100)}%`
+        bar.classList.toggle('silent', level < 0.03)
+        raf = requestAnimationFrame(tick)
+      }
+      tick()
+      return () => {
+        cancelAnimationFrame(raf)
+        src.disconnect()
+        ctx.close().catch(() => {})
+        bar.style.width = '0%'
+      }
+    } catch {
+      return null
+    }
+  }
+
+  // 提交前检测静音：解码录音取峰值，全零则拦截（不给老师交白卷）
+  const blobIsSilent = async (blob) => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const ab = await blob.arrayBuffer()
+      const audio = await ctx.decodeAudioData(ab)
+      let peak = 0
+      for (let c = 0; c < audio.numberOfChannels; c++) {
+        const d = audio.getChannelData(c)
+        for (let i = 0; i < d.length; i += 16) peak = Math.max(peak, Math.abs(d[i]))
+      }
+      ctx.close().catch(() => {})
+      return peak < 0.01
+    } catch {
+      return false // 解码失败（如浏览器不支持该格式）不拦截
+    }
+  }
 
   btn.addEventListener('click', async () => {
     if (!recording) {
@@ -331,6 +387,7 @@ function setupRecorder(el, art) {
         recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data)
         recorder.onstop = () => {
           stream.getTracks().forEach((t) => t.stop())
+          if (meterStop) { meterStop(); meterStop = null }
           submit()
         }
         recorder.start()
@@ -340,6 +397,7 @@ function setupRecorder(el, art) {
         btn.textContent = '停止录音'
         btn.classList.add('danger')
         msgEl.textContent = ''
+        meterStop = startMeter(stream)
         timer = setInterval(() => {
           const sec = Math.floor((Date.now() - startedAt) / 1000)
           timeEl.textContent = `⏱ ${fmtSec(sec)} / ${fmtSec(MAX_RECORD_SEC)}`
@@ -367,6 +425,14 @@ function setupRecorder(el, art) {
     const blob = new Blob(chunks, { type: chunks[0]?.type || 'audio/webm' })
     if (blob.size < 200) {
       msgEl.textContent = '录音太短，请重试'
+      return
+    }
+    // 静音拦截：麦克风被静音/未授权时 Chrome 录出的就是全零数据
+    msgEl.textContent = '检查录音…'
+    if (await blobIsSilent(blob)) {
+      msgEl.innerHTML = '⚠️ 录音里没有任何声音，已取消提交。请检查：<br>' +
+        '① 电脑是否静音 / 麦克风被挡；② 系统设置 → 隐私与安全性 → 麦克风，是否允许 Chrome；<br>' +
+        '③ 换一个麦克风设备后重录。录音时上方的音量条应随说话跳动。'
       return
     }
     msgEl.textContent = '提交中…'

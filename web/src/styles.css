@@ -1510,3 +1510,16 @@ main { --fce-fs: 15px; }
 }
 .reading-hist-pop-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
 .reading-hist-pop-head b { font-size: 15px; }
+
+/* 录音音量条（静音即时不提示的兜底可视化） */
+.reading-level-wrap { display: inline-flex; align-items: center; }
+.reading-level-bar {
+  display: inline-block; width: 90px; height: 8px; border-radius: 4px;
+  background: var(--line, #e2e8f0); overflow: hidden; vertical-align: middle;
+}
+.reading-level-bar i {
+  display: block; height: 100%; width: 0%;
+  background: #22a06b; border-radius: 4px; transition: width .08s linear;
+}
+.reading-level-bar i.silent { background: #d64545; }
+.reading-paper-view .reading-level-bar { background: #e3d6b4; }
