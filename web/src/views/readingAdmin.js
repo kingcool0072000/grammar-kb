@@ -262,7 +262,11 @@ async function renderReview(el, recs) {
         <b>${escapeHtml(r.user)}</b> · ${escapeHtml(r.article_title || '')}
         <span class="fce-his-date">${fmtDur(r.duration_sec || 0)} · ${(r.created_at || '').slice(0, 16).replace('T', ' ')}</span>
       </div>
-      <details class="reading-review-text"><summary>查看文章</summary>
+      ${r.selected_text ? `
+      <details class="reading-review-text" open><summary>学生朗读的选段</summary>
+        <div class="reading-article picked-view">${escapeHtml(r.selected_text).split(/\n+/).map((p) => `<p>${p}</p>`).join('')}</div>
+      </details>` : ''}
+      <details class="reading-review-text"><summary>查看全文</summary>
         <div class="reading-article">${(art?.text || '').split(/\n+/).map((p) => `<p>${escapeHtml(p).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>`).join('')}</div>
       </details>
       <audio controls preload="none" style="width:100%;margin:8px 0"></audio>

@@ -78,15 +78,17 @@ def test_reading_full_flow(reading_env):
     assert [a["id"] for a in c.get("/reading/articles", headers=s).json()["data"]] == [art["id"]]
     assert "bakery" in c.get(f"/reading/articles/{art['id']}", headers=s).json()["data"]["text"]
 
-    # 学生提交录音
+    # 学生提交录音（附选中的朗读文本）
     audio = base64.b64encode(b"FAKE-WEBM-AUDIO").decode()
     r = c.post("/reading/recordings", headers=s, json={
         "article_id": art["id"], "audio_b64": audio,
         "mime": "audio/webm", "duration_sec": 95,
+        "selected_text": "Emma started her first Saturday job at a bakery near her home.",
     })
     assert r.status_code == 200, r.text
     rec = r.json()["data"]
     assert rec["status"] == "pending"
+    assert "bakery" in rec["selected_text"]
 
     # 列表：学生只看自己的；教师按 pending 拉
     assert len(c.get("/reading/recordings", headers=s).json()["data"]) == 1

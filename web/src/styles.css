@@ -1459,3 +1459,4 @@ main { --fce-fs: 15px; }
 .reading-review-grade label { font-size: 13px; color: var(--ink-soft, #64748b); }
 .reading-review-grade input { padding: 6px 10px; border: 1px solid var(--line, #e2e8f0); border-radius: 8px; }
 .reading-review-msg { font-size: 13px; color: #0e7490; min-height: 18px; }
+.reading-review-text .reading-article.picked-view p { background: rgba(14,116,144,.06); border-left: 3px solid #0e7490; }

@@ -567,6 +567,7 @@ CREATE TABLE IF NOT EXISTS reading_recordings (
     audio_b64   TEXT NOT NULL,
     mime        TEXT DEFAULT 'audio/webm',
     duration_sec INTEGER DEFAULT 0,
+    selected_text TEXT DEFAULT '',
     status      TEXT DEFAULT 'pending',
     teacher_score INTEGER,
     teacher_comment TEXT DEFAULT '',

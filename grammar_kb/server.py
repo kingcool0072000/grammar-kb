@@ -82,12 +82,13 @@ try:
         base_key: Optional[str] = Field(default=None, max_length=32)
 
     class ReadingRecordIn(BaseModel):
-        """学生提交阅读录音（base64 webm，≤5 分钟）。"""
+        """学生提交阅读录音（base64 webm，≤5 分钟，附选中的朗读文本）。"""
 
         article_id: int = Field(ge=1)
         audio_b64: str = Field(min_length=8)
         mime: str = Field(default="audio/webm", max_length=40)
         duration_sec: int = Field(default=0, ge=0, le=300)
+        selected_text: str = Field(default="", max_length=4000)
 
     class ReadingGradeIn(BaseModel):
         """教师给录音打分（10 分制）。"""
@@ -325,8 +326,15 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     @app.get("/dict/{word}")
     def dict_lookup(word: str):
-        """查任意单词（ECDICT 全量词典，不限于讲义语料）。"""
-        entry = kbq.dict_lookup(word)
+        """查任意单词（ECDICT 全量词典，不限于讲义语料）。
+
+        所有格归一：children's / childrens' / dogs' → 原词查询。
+        """
+        import re as _re
+
+        w = word.strip()
+        w = _re.sub(r"(?:['’]s|s['’])$", lambda m: "s" if m.group(0).startswith("s") else "", w)
+        entry = kbq.dict_lookup(w)
         if entry is None:
             raise HTTPException(status_code=404, detail=f"词典未收录：{word}")
         return _ok(entry)
@@ -460,6 +468,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         try:
             return _ok(reading.submit_recording(
                 user, rec.article_id, rec.audio_b64, rec.mime, rec.duration_sec,
+                selected_text=rec.selected_text,
             ))
         except KeyError as e:
             raise HTTPException(status_code=404, detail=str(e).strip("'"))

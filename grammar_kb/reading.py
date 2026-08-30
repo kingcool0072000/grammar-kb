@@ -23,6 +23,14 @@ def _now() -> str:
     return datetime.now(_tz.utc).isoformat(timespec="seconds")
 
 
+def _ensure_selected_text_column(conn: sqlite3.Connection) -> None:
+    """老库补列（selected_text 后加的字段，ALTER 幂等）。"""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(reading_recordings)")}
+    if "selected_text" not in cols:
+        conn.execute("ALTER TABLE reading_recordings ADD COLUMN selected_text TEXT DEFAULT ''")
+        conn.commit()
+
+
 class ReadingStore:
     """reading_article / reading_recordings 读写（fce.db 同库）。"""
 
@@ -38,6 +46,7 @@ class ReadingStore:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         conn.executescript(READING_SCHEMA)
+        _ensure_selected_text_column(conn)
         return conn
 
     # ---- 文章 ----
@@ -126,7 +135,7 @@ class ReadingStore:
 
     def submit_recording(
         self, user: str, article_id: int, audio_b64: str, mime: str,
-        duration_sec: int,
+        duration_sec: int, selected_text: str = "",
     ) -> dict:
         audio_b64 = (audio_b64 or "").strip()
         if not audio_b64:
@@ -147,8 +156,10 @@ class ReadingStore:
                 raise KeyError(f"文章 id={article_id} 不存在")
             cur = conn.execute(
                 "INSERT INTO reading_recordings (user, article_id, audio_b64, mime,"
-                " duration_sec, status, created_at) VALUES (?,?,?,?,?, 'pending', ?)",
-                (user, article_id, audio_b64, mime or "audio/webm", dur, _now()),
+                " duration_sec, selected_text, status, created_at)"
+                " VALUES (?,?,?,?,?,?, 'pending', ?)",
+                (user, article_id, audio_b64, mime or "audio/webm", dur,
+                 (selected_text or "")[:4000], _now()),
             )
             row = conn.execute(
                 "SELECT * FROM reading_recordings WHERE id = ?", (cur.lastrowid,)
@@ -227,6 +238,7 @@ def _rec_out(r: sqlite3.Row, with_audio: bool = False) -> dict:
         "base_key": r["base_key"] if "base_key" in r.keys() else "",
         "article_kind": r["article_kind"] if "article_kind" in r.keys() else "",
         "mime": r["mime"], "duration_sec": r["duration_sec"],
+        "selected_text": r["selected_text"] if "selected_text" in r.keys() else "",
         "status": r["status"], "teacher_score": r["teacher_score"],
         "teacher_comment": r["teacher_comment"],
         "created_at": r["created_at"], "graded_at": r["graded_at"],

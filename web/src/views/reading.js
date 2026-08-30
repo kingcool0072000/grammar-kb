@@ -119,10 +119,10 @@ async function renderDetail(el, id, role) {
         <span class="reading-tool-label">🎙 录音段落：</span>
         <button class="reading-btn" id="rd-pickall">全选整篇</button>
         <button class="reading-btn" id="rd-picknone">清除选择</button>
-        <span class="reading-pick-info" id="rd-pickinfo">点击上方段落选中要录音的段落（≤${MAX_PICK_WORDS} 词）</span>
+        <span class="reading-pick-info" id="rd-pickinfo">先点击上方段落选中要录音的内容（≤${MAX_PICK_WORDS} 词），选中后才能录音</span>
       </div>
       <div class="reading-tool-row">
-        <button class="reading-btn primary" id="rd-record">开始录音</button>
+        <button class="reading-btn primary" id="rd-record" disabled title="先选中要朗读的段落">开始录音</button>
         <span class="reading-pick-info" id="rd-rectime"></span>
         <span class="reading-pick-info" id="rd-recmsg"></span>
       </div>
@@ -140,7 +140,13 @@ async function renderDetail(el, id, role) {
     paras.forEach((p) => p.classList.toggle('picked', picked.has(p.dataset.pidx)))
     pickInfo.textContent = picked.size
       ? `已选 ${picked.size} 段 · ${words} 词${words > MAX_PICK_WORDS ? '（超出上限，请减少段落）' : ''}`
-      : `点击上方段落选中要录音的段落（≤${MAX_PICK_WORDS} 词）`
+      : `先点击上方段落选中要录音的内容（≤${MAX_PICK_WORDS} 词），选中后才能录音`
+    // 录音按钮：仅在有选中且未超词数上限时可用
+    const btn = el.querySelector('#rd-record')
+    if (btn && !btn.dataset.recording) {
+      btn.disabled = picked.size === 0 || words > MAX_PICK_WORDS
+      btn.title = btn.disabled ? '先选中要朗读的段落' : ''
+    }
   }
   paras.forEach((p) =>
     p.addEventListener('click', (e) => {
@@ -158,15 +164,18 @@ async function renderDetail(el, id, role) {
     picked.clear()
     refreshPick()
   })
+  refreshPick() // 初始态：录音按钮禁用直到选中段落
 
   // ---- 查词（一次一个单词） ----
   el.querySelector('#rd-text').addEventListener('click', async (e) => {
     const w = e.target.closest('w')
     if (!w) return
-    const word = w.dataset.w
+    // 所有格/复数所有格还原：children's → children、dogs' → dogs
+    const raw = w.dataset.w
+    const word = raw.endsWith("s'") ? raw.slice(0, -1) : raw.replace(/'s$/, '').replace(/’s$/, '')
     const box = el.querySelector('#rd-dict')
     box.hidden = false
-    box.innerHTML = `<div class="reading-dict-word">${escapeHtml(word)}</div><p class="reading-dict-body">查询中…</p>`
+    box.innerHTML = `<div class="reading-dict-word">${escapeHtml(raw)}</div><p class="reading-dict-body">查询中…</p>`
     try {
       const entry = await api.dict(word)
       const lines = (entry.gloss_lines || [])
@@ -176,17 +185,29 @@ async function renderDetail(el, id, role) {
         .map(([k, v]) => `${formCn(k)} ${escapeHtml(v)}`)
         .join(' · ')
       box.innerHTML = `
-        <div class="reading-dict-word">${escapeHtml(entry.word)} <span class="reading-dict-ph">${escapeHtml(entry.phonetic)}</span></div>
+        <div class="reading-dict-word">${escapeHtml(entry.word)} <span class="reading-dict-ph">${escapeHtml(entry.phonetic)}</span> <button class="reading-btn small" data-tts="${escapeHtml(entry.word)}" title="播放发音">🔊 发音</button></div>
         <div class="reading-dict-body">${lines || escapeHtml(entry.gloss || '（无释义）')}</div>
         ${forms ? `<div class="reading-dict-forms">${forms}</div>` : ''}
         <button class="reading-btn small" id="rd-dict-close">关闭</button>`
       box.querySelector('#rd-dict-close').addEventListener('click', () => (box.hidden = true))
     } catch {
-      box.innerHTML = `<div class="reading-dict-word">${escapeHtml(word)}</div>
+      box.innerHTML = `<div class="reading-dict-word">${escapeHtml(raw)} <button class="reading-btn small" data-tts="${escapeHtml(word)}" title="播放发音">🔊 发音</button></div>
         <p class="reading-dict-body">词典未收录该词。</p>
         <button class="reading-btn small" id="rd-dict-close">关闭</button>`
       box.querySelector('#rd-dict-close').addEventListener('click', () => (box.hidden = true))
     }
+  })
+  // TTS 发音（事件委托，词典框内所有 🔊 按钮共用）
+  el.querySelector('#rd-dict').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-tts]')
+    if (!b) return
+    try {
+      const u = new SpeechSynthesisUtterance(b.dataset.tts)
+      u.lang = 'en-US'
+      u.rate = 0.9
+      speechSynthesis.cancel()
+      speechSynthesis.speak(u)
+    } catch { /* 浏览器不支持 TTS 时静默 */ }
   })
 
   // ---- 录音 ----
@@ -234,19 +255,25 @@ function setupRecorder(el, art) {
   let timer = null
   let startedAt = 0
   let recording = false
+  let pickedText = ''
+
+  const pickedParas = () => [...el.querySelectorAll('#rd-text p.picked')]
 
   btn.addEventListener('click', async () => {
     if (!recording) {
-      const pickedEl = el.querySelectorAll('#rd-text p.picked')
+      if (btn.disabled) return
+      const pickedEl = pickedParas()
       if (!pickedEl.length) {
         msgEl.textContent = '请先点击文章段落选中录音范围'
         return
       }
-      const words = pickedWords([...el.querySelectorAll('#rd-text p')], new Set([...pickedEl].map((p) => p.dataset.pidx)))
+      const words = pickedWords([...el.querySelectorAll('#rd-text p')], new Set(pickedEl.map((p) => p.dataset.pidx)))
       if (words > MAX_PICK_WORDS) {
         msgEl.textContent = `选中段落 ${words} 词，超过 ${MAX_PICK_WORDS} 词上限`
         return
       }
+      // 录音中锁定选中文本（提交时随音频一并上送，供教师对照检查）
+      pickedText = pickedEl.map((p) => p.textContent.replace(/\s+/g, ' ').trim()).join('\n\n')
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
         recorder = new MediaRecorder(stream)
@@ -258,6 +285,7 @@ function setupRecorder(el, art) {
         }
         recorder.start()
         recording = true
+        btn.dataset.recording = '1'
         startedAt = Date.now()
         btn.textContent = '停止录音'
         btn.classList.add('danger')
@@ -277,9 +305,13 @@ function setupRecorder(el, art) {
 
   async function submit() {
     recording = false
+    delete btn.dataset.recording
     clearInterval(timer)
     btn.textContent = '开始录音'
     btn.classList.remove('danger')
+    // 恢复按钮可用性（依据当前选段状态）
+    const pickedEl = pickedParas()
+    btn.disabled = pickedEl.length === 0
     const duration = Math.round((Date.now() - startedAt) / 1000)
     timeEl.textContent = ''
     const blob = new Blob(chunks, { type: chunks[0]?.type || 'audio/webm' })
@@ -293,8 +325,9 @@ function setupRecorder(el, art) {
       const rec = await api.readingSubmitRecording({
         article_id: art.id, audio_b64: b64,
         mime: blob.type || 'audio/webm', duration_sec: duration,
+        selected_text: pickedText,
       })
-      msgEl.innerHTML = `✅ 已提交（${fmtSec(duration)}），等待老师批改`
+      msgEl.innerHTML = `✅ 已提交（${fmtSec(duration)}·${pickedText.split(/\s+/).length} 词选段），等待老师批改`
       console.debug('recording submitted', rec.id)
     } catch (e) {
       msgEl.textContent = `提交失败：${e.message}`
