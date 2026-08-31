@@ -13,6 +13,7 @@
     grammar-kb relation 主将从现                     # 含某关系的知识点
     grammar-kb stats                                 # 统计
     grammar-kb serve --port 8000                     # 启动 HTTP 查询服务（见 /docs）
+    grammar-kb export-recordings ~/Desktop/recs      # 导出学生朗读录音（音频+选段文本）
 """
 from __future__ import annotations
 
@@ -257,6 +258,21 @@ def cmd_sync_aicloud(args) -> int:
     return sync_main(argv)
 
 
+def cmd_export_recordings(args) -> int:
+    """导出学生朗读录音为音频文件（附朗读选段文本）。"""
+    from .reading import ReadingStore
+
+    store = ReadingStore(args.fce_db)
+    files = store.export_recordings(args.out, user=args.user)
+    if not files:
+        print("（没有可导出的录音）")
+        return 0
+    for f in files:
+        print(f"  {f.name}  {f.stat().st_size:,} bytes")
+    print(f"\n共导出 {len(files)} 个文件 → {args.out}")
+    return 0
+
+
 def cmd_serve(args) -> int:
     try:
         from .server import run_app
@@ -334,6 +350,12 @@ def build_parser() -> argparse.ArgumentParser:
     psy.add_argument("--group", type=int, default=None, help="班级 ID（默认 $AICLOUD_GROUP 或 3350581）")
     psy.add_argument("--dry-run", action="store_true", help="只打印计划不写库")
     psy.set_defaults(func=cmd_sync_aicloud)
+
+    per = sub.add_parser("export-recordings", help="导出学生朗读录音为音频文件（附朗读选段文本）")
+    per.add_argument("out", help="输出目录（自动创建）")
+    per.add_argument("--user", default=None, help="只导出某学生的录音（默认全部）")
+    per.add_argument("--fce-db", default=None, help="fce.db 路径（默认 $GRAMMAR_KB_FCE_DB → iCloud → data/fce.db）")
+    per.set_defaults(func=cmd_export_recordings)
 
     return p
 

@@ -151,3 +151,32 @@ def test_fce_submission_teacher_delete(reading_env):
     # 教师删除 → 200，再取详情 404
     assert c.delete(f"/fce-submissions/{sub['id']}", headers=t).status_code == 200
     assert c.get(f"/fce-submissions/{sub['id']}", headers=t).status_code == 404
+
+
+def test_export_recordings(reading_env, tmp_path):
+    """ReadingStore.export_recordings：音频 + 选段文本导出。"""
+    import base64 as b64
+    from grammar_kb.reading import ReadingStore
+
+    c = _client(reading_env)
+    t, s = _login(c, "teacher"), _login(c, "malin")
+    art = c.post("/reading/articles", headers=t, json={
+        "base_key": "T1P1", "title": "导出测试",
+        "text": DERIVED_TEXT, "source": "测试",
+    }).json()["data"]
+    c.post("/reading/recordings", headers=s, json={
+        "article_id": art["id"],
+        "audio_b64": b64.b64encode(b"FAKE-AUDIO-BYTES").decode(),
+        "mime": "audio/webm", "duration_sec": 5,
+        "selected_text": "Emma started her first Saturday job.",
+    })
+    store = ReadingStore(str(reading_env / "fce.db"))
+    out = tmp_path / "recs"
+    files = store.export_recordings(str(out))
+    names = sorted(f.name for f in files)
+    assert any(n.startswith("rec") and n.endswith(".webm") for n in names)  # webm 原样（无 ffmpeg 转码场景）
+    assert any(n.endswith("_selected_text.txt") for n in names)
+    audio = next(f for f in files if f.suffix == ".webm")
+    assert audio.read_bytes() == b"FAKE-AUDIO-BYTES"
+    # 按用户过滤：teacher 无录音 → 空
+    assert store.export_recordings(str(out / "t"), user="teacher") == []

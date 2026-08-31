@@ -262,6 +262,43 @@ class ReadingStore:
             )
             return cur.rowcount > 0
 
+    def export_recordings(self, out_dir: str, user: Optional[str] = None) -> list[Path]:
+        """把录音导出为音频文件（附朗读选段文本），返回文件路径列表。
+
+        文件名：rec{id}_{user}_{YYYYMMDD_HHMM}.{m4a|webm}；每条录音旁若
+        有 selected_text，同目录写 rec{id}_selected_text.txt（给外部工具
+        /模型对照原文用）。
+        """
+        import re as _re
+
+        out = Path(out_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        sql = (
+            "SELECT r.id, r.user, r.mime, r.audio_b64, r.selected_text,"
+            " r.created_at, a.title FROM reading_recordings r"
+            " JOIN reading_article a ON a.id = r.article_id"
+        )
+        args: tuple = ()
+        if user:
+            sql += " WHERE r.user = ?"
+            args = (user,)
+        sql += " ORDER BY r.id"
+        files: list[Path] = []
+        with self._connect() as conn:
+            for r in conn.execute(sql, args).fetchall():
+                mime = (r["mime"] or "").lower()
+                ext = "m4a" if "mp4" in mime else ("webm" if "webm" in mime else "bin")
+                when = _re.sub(r"[-:T]", "", (r["created_at"] or "")[:16])
+                name = f"rec{r['id']}_{r['user']}_{when}.{ext}"
+                p = out / name
+                p.write_bytes(base64.b64decode(r["audio_b64"]))
+                files.append(p)
+                if r["selected_text"]:
+                    tp = out / f"rec{r['id']}_selected_text.txt"
+                    tp.write_text(r["selected_text"], encoding="utf-8")
+                    files.append(tp)
+        return files
+
 
 def _art_out(r: sqlite3.Row, with_text: bool = False) -> dict:
     d = {

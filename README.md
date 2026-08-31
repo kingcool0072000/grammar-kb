@@ -52,6 +52,7 @@ uv run grammar-kb exam-signal --list           # 列出所有考点信号维度
 uv run grammar-kb words --limit 100            # 单词表（释义/词性/词形变化/来源）
 uv run grammar-kb stats                        # 统计
 uv run grammar-kb serve --port 8000            # 启动 HTTP 查询服务（见 http://127.0.0.1:8000/docs）
+uv run grammar-kb export-recordings ~/Desktop/recs  # 导出学生朗读录音（音频+选段文本，给外部工具分析）
 ```
 
 默认数据库为运行目录下的 `data/grammar.db`，可用 `--db` 或环境变量 `GRAMMAR_KB_DB` 覆盖。
@@ -202,7 +203,9 @@ FCE 青少版（For Schools）模拟卷，源 PDF 为纯扫描图，经 macOS Vi
 - **录音**：`reading_recordings` 表存学生朗读提交（音频 base64 + 选中的朗读段落文本）。
   入库时 webm/opus 自动经 ffmpeg 转 m4a（Safari 教师端可播；系统装 ffmpeg 即生效）；
   前端有双保险——录音时实时音量条（麦克风静音立即变红）+ 提交前静音检测拦截
-  （麦克风被系统静音/未授权时 Chrome 会录出全零数据，孩子端原本毫无察觉）
+  （麦克风被系统静音/未授权时 Chrome 会录出全零数据，孩子端原本毫无察觉）。
+  导出音频文件给外部工具/模型分析：`grammar-kb export-recordings <目录> [--user malin]`
+  （文件名 `rec{id}_{user}_{时间}.{m4a|webm}`，旁附 `rec{id}_selected_text.txt` 朗读原文）
 - **词典**：`/dict/{word}` 走 ECDICT 全量词典——首次使用需导入：
   `uv run python -c "from grammar_kb.dict_db import import_ecdict; import_ecdict(<ecdict.csv 路径>)"`
   （csv 来自 [ECDICT](https://github.com/skywind3000/ECDICT)，约 36.5 万词条；所有格自动归一：`children's` → `children`）
