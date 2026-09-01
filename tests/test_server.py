@@ -76,9 +76,32 @@ def test_envelope_success(client):
 
 
 def test_root(client):
-    body = client.get("/").json()
-    assert body["code"] == 0
-    assert body["data"]["service"] == "grammar-kb"
+    """/ 的双模式：web/dist 存在时返回前端 HTML；否则 API 信息 JSON。
+
+    GRAMMAR_KB_STATIC=1（默认）且 web/dist 在 → FileResponse(index.html)。
+    """
+    import os
+    from pathlib import Path
+
+    dist = Path(__file__).resolve().parent.parent / "web" / "dist"
+    if dist.is_dir() and os.environ.get("GRAMMAR_KB_STATIC", "1") != "0":
+        r = client.get("/")
+        assert r.status_code == 200
+        assert "text/html" in r.headers.get("content-type", "")
+        # API 探活走 /api-info
+        body = client.get("/api-info").json()
+        assert body["code"] == 0 and body["data"]["service"] == "grammar-kb"
+    else:
+        body = client.get("/").json()
+        assert body["code"] == 0
+        assert body["data"]["service"] == "grammar-kb"
+
+
+def test_api_prefix_strip(client):
+    """单进程部署：前端 /api/* 前缀被中间件剥掉后正常路由。"""
+    r = client.get("/api/api-info")
+    assert r.status_code == 200
+    assert r.json()["data"]["service"] == "grammar-kb"
 
 
 def test_lectures_list(client):

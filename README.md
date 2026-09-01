@@ -125,6 +125,9 @@ CREATE VIRTUAL TABLE kp_fts USING fts5(title, body_md, examples_md, table_md,
 
 ## 作为 HTTP 服务
 
+> 部署（单进程一体 / Caddy 反代 / Podman）：见 [docs/deploy.md](docs/deploy.md)。
+> 默认 `GRAMMAR_KB_STATIC=1` 时本进程直接服务 `web/dist` 前端——单命令单端口跑完整应用。
+
 ```bash
 uv sync --extra server                       # 安装 server 依赖（fastapi + uvicorn）
 uv run grammar-kb serve --port 8000          # 经由 CLI

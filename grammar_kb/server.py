@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 from dataclasses import asdict
 from typing import Any, Optional
+from pathlib import Path as _P
 
 from . import __version__
 from .ingest import open_db
@@ -173,7 +174,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     # ---- 认证 ----
     # 白名单路径免登录：根信息、API 文档、登录本身
-    _AUTH_OPEN = frozenset({"/", "/docs", "/redoc", "/openapi.json", "/auth/login"})
+    _AUTH_OPEN = frozenset({"/", "/api-info", "/docs", "/redoc", "/openapi.json", "/auth/login"})
+    # 静态前端资源（web/dist 挂载时）：HTML/JS/CSS/字体免登录
+    _STATIC_PREFIXES = ("/assets/", "/favicon", "/vite.svg")
     # 学生角色可访问的 (method, path 前缀)：背单词所需数据 + 提交成绩 + FCE 真题练习
     _STUDENT_ALLOW = (
         ("GET", "/stats"),
@@ -193,7 +196,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     @app.middleware("http")
     async def _auth(request, call_next):  # noqa: ANN001
         path = request.url.path.rstrip("/") or "/"
-        if path in _AUTH_OPEN:
+        if path in _AUTH_OPEN or path.startswith(_STATIC_PREFIXES):
             return await call_next(request)
         auth_header = request.headers.get("Authorization", "")
         token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
@@ -226,8 +229,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         return _ok({"user": rec.user, "role": role, "token": make_token(rec.user, role)})
 
     # ---- 端点 ----
-    @app.get("/")
+    @app.get("/api-info", include_in_schema=False)
     def root():
+        """服务信息（原 / 路径，静态前端部署时 / 让给 web/dist）。"""
         return _ok(
             {
                 "service": "grammar-kb",
@@ -589,6 +593,33 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         if not exams.delete(exam_id):
             raise HTTPException(status_code=404, detail=f"成绩记录 id={exam_id} 不存在")
         return _ok({"id": exam_id})
+
+    # ---- 静态前端（可选）：web/dist 构建产物由本进程直接服务 ----
+    # 前端以 /api 调后端；开发期走 Vite 代理（剥前缀），部署期由下面
+    # 的中间件承担同样的剥前缀工作，无需 nginx。GRAMMAR_KB_STATIC=0 关闭。
+    web_dist = _P(__file__).resolve().parent.parent / "web" / "dist"
+    serve_static = os.environ.get("GRAMMAR_KB_STATIC", "1") != "0" and web_dist.is_dir()
+    if serve_static:
+
+        @app.middleware("http")
+        async def _strip_api_prefix(request, call_next):  # noqa: ANN001
+            if request.url.path.startswith("/api/"):
+                request.scope["path"] = request.url.path[4:]
+            return await call_next(request)
+
+        from fastapi.staticfiles import StaticFiles
+        from fastapi.responses import FileResponse
+
+        @app.get("/", include_in_schema=False)
+        def _index():
+            return FileResponse(web_dist / "index.html")
+
+        app.mount("/", StaticFiles(directory=web_dist, html=True), name="web")
+    else:
+
+        @app.get("/", include_in_schema=False)
+        def _root_fallback():
+            return root()
 
     return app
 
