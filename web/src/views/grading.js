@@ -98,12 +98,12 @@ export async function mountGrading(el) {
           <span class="fce-his-date">${e.date}${e.wrong && e.wrong.length ? ` · 错 ${e.wrong.length} 题` : ''}</span>
         </div>`).join('') || '<p class="reading-hint">暂无成绩</p>'}
       <div class="grading-action">
-        <button class="reading-btn" data-go="exams">打开作业成绩（录入/编辑）</button>
+        <button class="reading-btn" data-go="exams">打开哈一作业成绩（录入/编辑）</button>
       </div>
     </section>
   `
 
-  // 跳转：阅读批改 / FCE 作文批改 / 作业成绩
+  // 跳转：阅读批改 / FCE 作文批改 / 哈一作业成绩
   el.querySelectorAll('[data-go]').forEach((b) => {
     b.addEventListener('click', () => {
       const go = b.dataset.go

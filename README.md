@@ -6,7 +6,7 @@
   自动去水印、还原表格、切分知识点、抽取关键词与关系，存入本地 SQLite（FTS5 全文检索），
   提供 CLI、HTTP API 与 MCP 服务。
 - **`web/`（Vite 前端）**：面向学生的学习界面——初中语法课 / 词汇表 / 背单词 / 初中英语知识体系 / FCE 真题练习 / 阅读训练，
-  外加作业成绩记录（增删改查，持久化于 iCloud Drive，跨设备同步）。
+  外加哈一作业成绩记录（增删改查，持久化于 iCloud Drive，跨设备同步）。
   学生版与教师版按账号区分功能与权限。
 
 适用于任何"版式相对统一、带页眉页脚水印、含表格"的教学/技术 PDF。
@@ -80,7 +80,7 @@ PDF ──► pdf_parser   去水印（字体+方向过滤）+ 重排行 + 还�
 | `db.py`         | schema + CRUD + FTS5(trigram, external-content)，无截断 |
 | `query.py`      | 面向调用的查询 API |
 | `ingest.py`     | PDF → 落库（目录导入 = 全量重建，id 可复现） |
-| `exam_store.py` | 作业成绩独立 SQLite 库（增删改查；默认放 iCloud Drive） |
+| `exam_store.py` | 哈一作业成绩独立 SQLite 库（增删改查；默认放 iCloud Drive） |
 | `auth.py`       | 学生/教师双角色认证（HMAC token，30 天有效） |
 | `fce_paper.py`  | FCE 青少版模拟卷 OCR（macOS Vision）→ 解析 → 入库 `data/fce.db`（4 Test × 87 题） |
 | `fce_query.py`  | FCE 真题只读查询 + 练习提交/自动批改（fce_submission 表） |
@@ -150,8 +150,8 @@ uv run grammar-kb-server --host 0.0.0.0 --port 8000
 | GET | `/dict/{word}` | 查任意单词（ECDICT 全量词典） |
 | GET | `/homework` | 已导入作业卷的讲次列表；`?lectures=2,4` 批量取多讲题目 |
 | GET | `/homework/{lecture}` | 某讲作业卷全部题目（题干+选项，题号与测验平台一致） |
-| GET/POST | `/exams` | 作业成绩：列表 / 新增 |
-| PUT/DELETE | `/exams/{id}` | 作业成绩：修改 / 删除 |
+| GET/POST | `/exams` | 哈一作业成绩：列表 / 新增 |
+| PUT/DELETE | `/exams/{id}` | 哈一作业成绩：修改 / 删除 |
 | POST | `/auth/login` | 登录（学生/教师角色，返回 HMAC token） |
 | GET | `/fce-papers` | FCE 真题概览（4 套 Test 各 paper 题数） |
 | GET | `/fce-papers/{test_id}` | 单套 FCE Test 全文（学生视角自动剥离答案） |
@@ -169,7 +169,7 @@ uv run grammar-kb-server --host 0.0.0.0 --port 8000
 | PUT | `/reading/recordings/{id}` | 教师批改录音（10 分制 + 评语） |
 | DELETE | `/reading/recordings/{id}` | 教师删除一条录音提交 |
 
-### 作业成绩数据存在哪
+### 哈一作业成绩数据存在哪
 
 成绩存在**独立**的 SQLite 库（与讲义库 `data/grammar.db` 分开），路径按顺序解析：
 
@@ -188,7 +188,7 @@ FCE 青少版（For Schools）模拟卷，源 PDF 为纯扫描图，经 macOS Vi
   （已 OCR 的页文本可缓存复用：`--ocr-dir <目录>`，格式为 `pNNN.txt` 三列坐标行）
 - **练习记录**：`fce_submission` 表存每次大题提交（作答明细、自动批改结果、用时、作文批改）
 - **OCR 依赖**：macOS 系统自带 Vision 框架（无需安装 tesseract），脚本内嵌于 `fce_paper.py`
-- **存哪**：与作业成绩库同一套路径解析（环境变量 `GRAMMAR_KB_FCE_DB` → iCloud Drive
+- **存哪**：与哈一作业成绩库同一套路径解析（环境变量 `GRAMMAR_KB_FCE_DB` → iCloud Drive
   `~/Library/Mobile Documents/com~apple~CloudDocs/grammar-kb/fce.db` → 项目 `data/fce.db`）。
   放 iCloud 的意义：**学生端提交的练习与朗读录音随 iCloud 同步到教师端设备**（首次启用自动
   把本地库整文件迁上云；单文件 journal 模式，iCloud 整文件同步可靠）
@@ -286,7 +286,7 @@ cd web && npm install && npm run dev     # http://localhost:5180
   实时音量条 + 静音拦截（麦克风无效时不给老师交白卷），≤5 分钟提交教师端；
   点击任意单词查 ECDICT 全量词典（36.5 万词条：音标/释义/词形变化 + 🔊 TTS 发音），一次一词
 - **🎯 考点信号（双向）**：知识点 ↔ 标志词/时态 双向跳转——「看到这个词，就是在考哪些知识点」
-- **📝 作业成绩**：每讲一份作业卷（35 题，满分 100）。点题号记对错、分数自动算；
+- **📝 哈一作业成绩**：每讲一份作业卷（35 题，满分 100）。点题号记对错、分数自动算；
   多次作答全部保留、可修改可删除；错题本按「讲次+题号」汇总错误次数；
   数据经后端 `/exams` 存 iCloud（见上文），跨浏览器/设备不丢，旧 localStorage 记录首次打开自动迁移
 

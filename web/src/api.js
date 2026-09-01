@@ -88,7 +88,7 @@ export const api = {
   homework: (lecture) => req(`/homework/${lecture}`),
   homeworkBatch: (lectures) =>
     req('/homework', { searchParams: { lectures: lectures.join(',') } }),
-  // 作业成绩（后端 exam.db 持久化；学生只可提交，管理需教师）
+  // 哈一作业成绩（后端 exam.db 持久化；学生只可提交，管理需教师）
   examsList: () => req('/exams'),
   examsAdd: (rec) => reqJson('/exams', 'POST', rec),
   examsUpdate: (id, rec) => reqJson(`/exams/${id}`, 'PUT', rec),

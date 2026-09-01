@@ -26,7 +26,7 @@ const VIEWS = [
   { key: 'fcePapers', label: 'FCE真题' },
   { key: 'readingAdmin', label: '阅读内容', teacher: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
-  { key: 'exams', label: '作业成绩', teacher: true },
+  { key: 'exams', label: '哈一作业成绩', teacher: true },
 ]
 
 function h(tag, cls, html) {

@@ -730,7 +730,7 @@ main {
 .collo-en { font-weight: 600; font-size: 13px; white-space: nowrap; }
 .collo-zh { font-size: 12.5px; color: var(--ink-soft); text-align: right; }
 
-/* ---------- 作业成绩 ---------- */
+/* ---------- 哈一作业成绩 ---------- */
 .exam-sec { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 18px; }
 .exam-sec h3 { margin: 0 0 14px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; }
 .sec-sub { font-size: 12.5px; font-weight: 500; color: var(--ink-faint); }

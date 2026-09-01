@@ -1,7 +1,7 @@
 import { escapeHtml } from '../render.js'
 import { api } from '../api.js'
 
-// 作业成绩记录：每讲一份作业卷（35 题，1~5 每题 2 分、6~35 每题 3 分，满分 100）。
+// 哈一作业成绩记录：每讲一份作业卷（35 题，1~5 每题 2 分、6~35 每题 3 分，满分 100）。
 // 孩子每卷会做多次：全部记录存 localStorage，错题按「讲次+题号」汇总方便回查。
 const STORE_KEY = 'gkb-exam-records-v1'   // 旧 localStorage 记录，首启迁移到后端
 const MIGRATED_KEY = 'gkb-exam-migrated-v1'
@@ -39,7 +39,7 @@ export function mountExams(el, { lectures }) {
 
   el.innerHTML = `
     <div class="view-head">
-      <h1>作业成绩</h1>
+      <h1>哈一作业成绩</h1>
       <p>每讲一份作业卷（35 题 · 满分 ${fullScore}：1~5 题每题 ${scoreOf(1)} 分，6~35 题每题 ${scoreOf(6)} 分）。点题号记对错，分数自动算；多次作答全部保留。</p>
     </div>
 
@@ -384,7 +384,7 @@ export function mountExams(el, { lectures }) {
     const blob = new Blob([JSON.stringify(await fetchRecords(el), null, 2)], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `作业成绩-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `哈一作业成绩-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(a.href)
   })
