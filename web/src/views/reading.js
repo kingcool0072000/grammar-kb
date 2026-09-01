@@ -10,7 +10,6 @@ const MAX_RECORD_SEC = 300
 export async function mountReading(el, { role } = {}) {
   const auth = getAuth()
   const myRole = role || (auth && auth.role) || 'student'
-  el.className = 'reading-paper-view' // 电纸书护眼底色（学生默认）
   el.innerHTML = '<div class="view-head"><h1>阅读练习</h1><p>加载中…</p></div>'
   let arts, recs
   try {
@@ -112,7 +111,7 @@ function artCard(a, recs) {
     <div class="reading-card" data-id="${a.id}" role="button">
       <span class="reading-card-title">${escapeHtml(a.title || '未命名')}</span>
       <span class="reading-card-meta">
-        <span class="tag" style="--cat-color:#0e7490">${a.words} 词</span>
+        <span class="tag" style="--cat-color:#8a6d3b">${a.words} 词</span>
         ${a.source ? `<span class="reading-card-src">${escapeHtml(a.source)}</span>` : ''}
         ${badge}
         ${mine.length ? `<button class="reading-btn small" data-hist="${a.id}" title="查看批改记录">📋 记录</button>` : ''}

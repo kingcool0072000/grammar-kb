@@ -35,11 +35,11 @@ function renderHome(el, arts, recs) {
       <button class="fce-essay-review-btn" id="rd-review">🎙 待批改录音（${pending.length}）</button>` : ''}
     <div class="course-grid">
       ${[...groupBase(bases).entries()].map(([test, parts]) => `
-        <article class="course-card fce-paper-card" data-test="${test}" style="--cat-color:#0e7490">
+        <article class="course-card fce-paper-card" data-test="${test}" style="--cat-color:#8a6d3b">
           <div class="course-num">Test ${test}</div>
           <div class="course-title">FCE 阅读原文 · ${parts.reduce((s, p) => s + p.list.length, 0)} 段</div>
           <div class="course-meta">
-            ${parts.map((p) => `<span class="tag" style="--cat-color:#0e7490">${p.label}</span>`).join('')}
+            ${parts.map((p) => `<span class="tag" style="--cat-color:#8a6d3b">${p.label}</span>`).join('')}
             <span>${derivedCount(derived, test)} 篇派生</span>
           </div>
         </article>`).join('')}
@@ -184,8 +184,8 @@ function renderTest(el, arts, test, recs) {
             <button class="reading-card" data-id="${b.id}" data-key="${escapeHtml(b.base_key)}">
               <span class="reading-card-title">${escapeHtml(b.title)}</span>
               <span class="reading-card-meta">
-                <span class="tag" style="--cat-color:#64748b">原文 ${b.words} 词</span>
-                <span class="tag" style="--cat-color:#0e7490">派生 ${d.length} 篇</span>
+                <span class="tag" style="--cat-color:#8a6d3b">原文 ${b.words} 词</span>
+                <span class="tag" style="--cat-color:#8a6d3b">派生 ${d.length} 篇</span>
               </span>
             </button>`
           }).join('')}
@@ -228,7 +228,7 @@ async function renderBase(el, arts, baseId, recs) {
           <div class="reading-card static">
             <span class="reading-card-title">${escapeHtml(d.title)}</span>
             <span class="reading-card-meta">
-              <span class="tag" style="--cat-color:#0e7490">${d.words} 词</span>
+              <span class="tag" style="--cat-color:#8a6d3b">${d.words} 词</span>
               ${d.source ? `<span class="reading-card-src">${escapeHtml(d.source)}</span>` : ''}
               <button class="reading-btn small" data-edit="${d.id}">编辑</button>
               <button class="reading-btn small danger" data-del="${d.id}">删除</button>
