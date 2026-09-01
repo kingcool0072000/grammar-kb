@@ -166,63 +166,35 @@ async function renderDetail(el, id, role) {
     <div class="reading-article" id="rd-text">${renderText(art.text)}</div>
     <div class="reading-toolbar">
       <div class="reading-tool-row">
-        <span class="reading-tool-label">🎙 录音段落：</span>
-        <button class="reading-btn" id="rd-pickall">全选整篇</button>
-        <button class="reading-btn" id="rd-picknone">清除选择</button>
-        <span class="reading-pick-info" id="rd-pickinfo">先点击上方段落选中要录音的内容（≤${MAX_PICK_WORDS} 词），选中后才能录音</span>
+        <span class="reading-tool-label">🎙 全文朗读：</span>
+        <span class="reading-pick-info" id="rd-pickinfo">共 ${art.words} 词，录音将提交整篇内容</span>
       </div>
       <div class="reading-tool-row">
-        <button class="reading-btn primary" id="rd-record" disabled title="先选中要朗读的段落">开始录音</button>
+        <button class="reading-btn primary" id="rd-record" ${art.words > MAX_PICK_WORDS ? 'disabled' : ''}>开始录音</button>
         <span class="reading-pick-info" id="rd-rectime"></span>
         <span class="reading-level-wrap" title="录音音量：朗读时绿色条应跳动；不动=麦克风没声音">
           <span class="reading-level-bar"><i id="rd-level"></i></span>
         </span>
         <span class="reading-pick-info" id="rd-recmsg"></span>
       </div>
-      <p class="reading-hint">选中单词可查词典（ECDICT）。一次只查一个单词。</p>
+      <p class="reading-hint">点击单词可查词典（ECDICT）。一次只查一个单词。</p>
       <div class="reading-dict" id="rd-dict" hidden></div>
     </div>
   `
 
-  // ---- 段落选择（录音范围） ----
-  const paras = [...el.querySelectorAll('#rd-text p[data-pidx]')]
-  let picked = new Set()
-  const pickInfo = el.querySelector('#rd-pickinfo')
-  const refreshPick = () => {
-    const words = pickedWords(paras, picked)
-    paras.forEach((p) => p.classList.toggle('picked', picked.has(p.dataset.pidx)))
-    pickInfo.textContent = picked.size
-      ? `已选 ${picked.size} 段 · ${words} 词${words > MAX_PICK_WORDS ? '（超出上限，请减少段落）' : ''}`
-      : `先点击上方段落选中要录音的内容（≤${MAX_PICK_WORDS} 词），选中后才能录音`
-    // 录音按钮：仅在有选中且未超词数上限时可用
-    const btn = el.querySelector('#rd-record')
-    if (btn && !btn.dataset.recording) {
-      btn.disabled = picked.size === 0 || words > MAX_PICK_WORDS
-      btn.title = btn.disabled ? '先选中要朗读的段落' : ''
-    }
+  // 录音范围 = 全文（派生文 120-300 词）；超上限（理论不该发生）禁用按钮
+  if (art.words > MAX_PICK_WORDS) {
+    el.querySelector('#rd-pickinfo').textContent =
+      `全文 ${art.words} 词，超过 ${MAX_PICK_WORDS} 词上限，请联系老师`
   }
-  paras.forEach((p) =>
-    p.addEventListener('click', (e) => {
-      if (e.target.closest('w')) return // 查词点击不触发选段
-      const idx = p.dataset.pidx
-      picked.has(idx) ? picked.delete(idx) : picked.add(idx)
-      refreshPick()
-    }),
-  )
-  el.querySelector('#rd-pickall').addEventListener('click', () => {
-    picked = new Set(paras.map((p) => p.dataset.pidx))
-    refreshPick()
-  })
-  el.querySelector('#rd-picknone').addEventListener('click', () => {
-    picked.clear()
-    refreshPick()
-  })
-  refreshPick() // 初始态：录音按钮禁用直到选中段落
 
-  // ---- 查词（一次一个单词） ----
+  // ---- 查词（一次一个单词；点击的单词高亮） ----
   el.querySelector('#rd-text').addEventListener('click', async (e) => {
     const w = e.target.closest('w')
     if (!w) return
+    // 单词高亮：清除旧高亮，点亮当前词（面板关闭时一并清除）
+    el.querySelectorAll('#rd-text w.active').forEach((x) => x.classList.remove('active'))
+    w.classList.add('active')
     // 所有格/复数所有格还原：children's → children、dogs' → dogs
     const raw = w.dataset.w
     const word = raw.endsWith("s'") ? raw.slice(0, -1) : raw.replace(/'s$/, '').replace(/’s$/, '')
@@ -242,12 +214,18 @@ async function renderDetail(el, id, role) {
         <div class="reading-dict-body">${lines || escapeHtml(entry.gloss || '（无释义）')}</div>
         ${forms ? `<div class="reading-dict-forms">${forms}</div>` : ''}
         <button class="reading-btn small" id="rd-dict-close">关闭</button>`
-      box.querySelector('#rd-dict-close').addEventListener('click', () => (box.hidden = true))
+      box.querySelector('#rd-dict-close').addEventListener('click', () => {
+        box.hidden = true
+        el.querySelectorAll('#rd-text w.active').forEach((x) => x.classList.remove('active'))
+      })
     } catch {
       box.innerHTML = `<div class="reading-dict-word">${escapeHtml(raw)} <button class="reading-btn small" data-tts="${escapeHtml(word)}" title="播放发音">🔊 发音</button></div>
         <p class="reading-dict-body">词典未收录该词。</p>
         <button class="reading-btn small" id="rd-dict-close">关闭</button>`
-      box.querySelector('#rd-dict-close').addEventListener('click', () => (box.hidden = true))
+      box.querySelector('#rd-dict-close').addEventListener('click', () => {
+        box.hidden = true
+        el.querySelectorAll('#rd-text w.active').forEach((x) => x.classList.remove('active'))
+      })
     }
   })
   // TTS 发音（事件委托，词典框内所有 🔊 按钮共用）
@@ -282,15 +260,6 @@ function renderText(text) {
     .join('')
 }
 
-function pickedWords(paras, picked) {
-  let n = 0
-  for (const p of paras) {
-    if (!picked.has(p.dataset.pidx)) continue
-    n += (p.textContent.match(/[A-Za-z0-9'-]+/g) || []).length
-  }
-  return n
-}
-
 function formCn(k) {
   return {
     past: '过去式', past_participle: '过去分词', present_participle: '现在分词',
@@ -311,7 +280,10 @@ function setupRecorder(el, art) {
   let pickedText = ''
   let meterStop = null // 音量条 rAF 停止器
 
-  const pickedParas = () => [...el.querySelectorAll('#rd-text p.picked')]
+  // 录音范围 = 全文：正文段落文本即提交内容
+  const allParas = () => [...el.querySelectorAll('#rd-text p')]
+  const fullText = () =>
+    allParas().map((p) => p.textContent.replace(/\s+/g, ' ').trim()).join('\n\n')
 
   // 录音实时音量条：麦克风被系统静音/未授权时 Chrome 仍返回全零数据，
   // 孩子察觉不到——音量条不动就是最好的即时提示
@@ -368,18 +340,8 @@ function setupRecorder(el, art) {
   btn.addEventListener('click', async () => {
     if (!recording) {
       if (btn.disabled) return
-      const pickedEl = pickedParas()
-      if (!pickedEl.length) {
-        msgEl.textContent = '请先点击文章段落选中录音范围'
-        return
-      }
-      const words = pickedWords([...el.querySelectorAll('#rd-text p')], new Set(pickedEl.map((p) => p.dataset.pidx)))
-      if (words > MAX_PICK_WORDS) {
-        msgEl.textContent = `选中段落 ${words} 词，超过 ${MAX_PICK_WORDS} 词上限`
-        return
-      }
-      // 录音中锁定选中文本（提交时随音频一并上送，供教师对照检查）
-      pickedText = pickedEl.map((p) => p.textContent.replace(/\s+/g, ' ').trim()).join('\n\n')
+      // 录音内容 = 全文（提交时随音频一并上送，供教师对照检查）
+      pickedText = fullText()
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
         recorder = new MediaRecorder(stream)
@@ -417,9 +379,7 @@ function setupRecorder(el, art) {
     clearInterval(timer)
     btn.textContent = '开始录音'
     btn.classList.remove('danger')
-    // 恢复按钮可用性（依据当前选段状态）
-    const pickedEl = pickedParas()
-    btn.disabled = pickedEl.length === 0
+    btn.disabled = art.words > MAX_PICK_WORDS
     const duration = Math.round((Date.now() - startedAt) / 1000)
     timeEl.textContent = ''
     const blob = new Blob(chunks, { type: chunks[0]?.type || 'audio/webm' })
@@ -443,7 +403,7 @@ function setupRecorder(el, art) {
         mime: blob.type || 'audio/webm', duration_sec: duration,
         selected_text: pickedText,
       })
-      msgEl.innerHTML = `✅ 已提交（${fmtSec(duration)}·${pickedText.split(/\s+/).length} 词选段），等待老师批改`
+      msgEl.innerHTML = `✅ 已提交（${fmtSec(duration)} · 全文 ${art.words} 词），等待老师批改`
       console.debug('recording submitted', rec.id)
     } catch (e) {
       msgEl.textContent = `提交失败：${e.message}`

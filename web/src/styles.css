@@ -1565,3 +1565,16 @@ main { --fce-fs: 15px; }
 .grading-stat.warn b { color: #b45309; }
 .grading-action { margin: 8px 0; display: flex; gap: 8px; }
 .reading-review-tools { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+
+/* 查词时点击的单词高亮（保持到词典面板关闭） */
+.reading-article w.active {
+  background: #fde68a;
+  color: #7c2d12;
+  border-bottom: 2px solid #d97706;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+.reading-paper-view .reading-article w.active {
+  background: rgba(217, 119, 6, .28);
+  color: #5c3317;
+}
