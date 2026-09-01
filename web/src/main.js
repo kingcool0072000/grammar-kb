@@ -10,23 +10,31 @@ import { mountFcePapers } from './views/fcePapers.js'
 import { mountReading } from './views/reading.js'
 import { mountReadingAdmin } from './views/readingAdmin.js'
 import { mountGrading } from './views/grading.js'
+import { mountPrep } from './views/prep.js'
+import { mountAnalytics } from './views/analytics.js'
 import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
 
 const app = document.getElementById('app')
 
 // teacher: true 仅教师可见；studentOnly: true 仅学生可见
+// 教师版三大板块：批改中心（首页）/ 备课中心 / 学情分析；
+// 子工具页（courses/vocab/taxonomy/fce/exams/readingAdmin）不进 Tab，
+// 由备课/批改中心跳转进入。
 const VIEWS = [
   { key: 'grading', label: '批改中心', teacher: true },
-  { key: 'courses', label: '课程', teacher: true },
-  { key: 'vocab', label: '词汇表', teacher: true },
+  { key: 'prep', label: '备课中心', teacher: true },
+  { key: 'analytics', label: '学情分析', teacher: true },
   { key: 'recite', label: '背单词', studentOnly: true },
-  { key: 'taxonomy', label: '初中英语', teacher: true },
-  { key: 'fce', label: 'FCE', teacher: true },
   { key: 'fcePapers', label: 'FCE真题' },
-  { key: 'readingAdmin', label: '阅读内容', teacher: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
-  { key: 'exams', label: '哈一作业成绩', teacher: true },
+  // 教师子工具页（不在 Tab 显示，hash 直达）
+  { key: 'courses', hiddenTab: true, teacher: true },
+  { key: 'vocab', hiddenTab: true, teacher: true },
+  { key: 'taxonomy', hiddenTab: true, teacher: true },
+  { key: 'fce', hiddenTab: true, teacher: true },
+  { key: 'exams', hiddenTab: true, teacher: true },
+  { key: 'readingAdmin', hiddenTab: true, teacher: true },
 ]
 
 function h(tag, cls, html) {
@@ -64,7 +72,7 @@ async function bootstrap() {
   // header + main 容器
   const role = auth.role
   const visibleViews = VIEWS.filter(
-    (v) => (!v.teacher || role === 'teacher') && (!v.studentOnly || role !== 'teacher'),
+    (v) => !v.hiddenTab && (!v.teacher || role === 'teacher') && (!v.studentOnly || role !== 'teacher'),
   )
   const header = h('header', 'app-header')
   const headerInner = h('div', 'header-inner')
@@ -191,6 +199,10 @@ async function bootstrap() {
     viewEl.innerHTML = ''
     if (route === 'grading') {
       mountGrading(viewEl)
+    } else if (route === 'prep') {
+      mountPrep(viewEl, ctx)
+    } else if (route === 'analytics') {
+      mountAnalytics(viewEl)
     } else if (route === 'courses') {
       mountCourses(viewEl, { lectures: state.lectures, openLecture: ctx.openLecture })
     } else if (route === 'vocab') {
@@ -209,6 +221,16 @@ async function bootstrap() {
       mountReading(viewEl, { role })
     } else if (route === 'exams') {
       mountExams(viewEl, { lectures: state.lectures })
+    }
+    // 教师子工具页（备课中心跳转进入）：mount 后 prepend 返回条
+    // （mount 内部会覆写 innerHTML，必须在挂载之后插入）
+    const routeDef = VIEWS.find((v) => v.key === route)
+    if (role === 'teacher' && routeDef && routeDef.hiddenTab) {
+      const back = h('button', 'fce-back-btn gd-tool-back', '← 返回备课中心')
+      back.addEventListener('click', () => {
+        location.hash = '/prep'
+      })
+      viewEl.prepend(back)
     }
     window.scrollTo(0, 0)
   }

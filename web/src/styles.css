@@ -1540,3 +1540,64 @@ main { --fce-fs: 15px; }
   border-radius: 3px;
   padding: 0 1px;
 }
+
+/* ================= 教师版三板块 ================= */
+.gd-pend-badge {
+  display: inline-block; margin-left: 8px; padding: 2px 10px;
+  background: #b45309; color: #fdf9ee; border-radius: 999px;
+  font-size: 13px; vertical-align: middle;
+}
+.gd-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 18px; }
+.gd-section {
+  border: 1px solid var(--line); border-radius: 16px;
+  background: var(--card); padding: 18px 20px 14px;
+  box-shadow: var(--shadow);
+}
+.gd-section-head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 12px; padding-bottom: 10px;
+  border-bottom: 2px solid var(--line);
+}
+.gd-section-head h2 { margin: 0; font-size: 17px; color: var(--brand-ink); }
+.gd-section-head nav { display: flex; gap: 6px; flex-wrap: wrap; }
+.gd-subgroup { margin: 14px 0 6px; }
+.gd-subgroup h3 {
+  margin: 0 0 8px; font-size: 13.5px; font-weight: 700;
+  color: var(--ink-soft); letter-spacing: .3px;
+}
+.gd-tool-back { margin-bottom: 14px; }
+
+/* 备课中心卡片 */
+.prep-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.prep-card {
+  display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--bg-soft); cursor: pointer; text-align: left;
+  transition: border-color .15s, transform .12s;
+}
+.prep-card:hover { border-color: var(--brand); transform: translateY(-1px); }
+.prep-card b { font-size: 19px; color: var(--ink); }
+.prep-card span { font-size: 12.5px; color: var(--ink-soft); }
+
+/* 学情分析 */
+.ana-tabs { display: flex; gap: 10px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+.ana-chart {
+  display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;
+  padding: 16px 18px 10px; background: var(--bg-soft);
+  border: 1px solid var(--line); border-radius: 14px;
+}
+.ana-col { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 44px; }
+.ana-bars { display: flex; gap: 4px; align-items: flex-end; height: 110px; }
+.ana-bar-track {
+  width: 11px; height: 100%; border-radius: 4px 4px 0 0;
+  background: rgba(138,109,59,.10); display: flex; align-items: flex-end;
+  overflow: hidden;
+}
+.ana-bar { display: block; width: 100%; border-radius: 4px 4px 0 0; min-height: 0; }
+.ana-col-label { font-size: 11.5px; color: var(--ink-faint); white-space: nowrap; }
+.ana-legend {
+  display: flex; flex-direction: column; gap: 4px; margin-left: auto;
+  font-size: 12px; color: var(--ink-soft);
+}
+.ana-legend span { display: flex; align-items: center; gap: 6px; }
+.ana-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
