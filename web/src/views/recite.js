@@ -256,6 +256,7 @@ export function mountRecite(el, { vocab, role }) {
       pool: p,
       size: Math.min(state.size, p.length),
       mode: state.mode,
+      scope: state.scope,
       onFinish: () => renderBoard(),
     })
   })
@@ -265,7 +266,7 @@ export function mountRecite(el, { vocab, role }) {
 
 // ---- 全屏会话 -------------------------------------------------------------- //
 
-function startSession(rootEl, { pool, size, mode, onFinish }) {
+function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
   // 播放队列：初始题 + 错词重现（答错后间隔 3 题再插一次）
   let queue = buildQuiz(pool, size)
   let done = 0
@@ -290,6 +291,8 @@ function startSession(rootEl, { pool, size, mode, onFinish }) {
     const uniqWrong = [...new Set(wrongEntries.map((e) => e.word))]
     const sec = Math.round((Date.now() - t0) / 1000)
     saveSession(sec, total, uniqWrong.length)
+    // 成绩静默上报教师端（尽力而为：失败不影响本地流程）
+    uploadSession(total, uniqWrong, sec)
     overlay.remove()
     overlay = null
     mountResult(rootEl, {
@@ -300,8 +303,23 @@ function startSession(rootEl, { pool, size, mode, onFinish }) {
       pool,
       size,
       mode,
+      scope,
     })
     if (onFinish) onFinish()
+  }
+
+  function uploadSession(total, uniqWrong, sec) {
+    import('../api.js').then(({ api }) => {
+      return api.reciteSubmit({
+        total,
+        wrong: uniqWrong.length,
+        acc: Math.round(((total - uniqWrong.length) / total) * 100),
+        duration_sec: sec,
+        wrong_words: uniqWrong,
+        mode,
+        scope,
+      })
+    }).catch(() => { /* 离线/未登录时静默丢弃 */ })
   }
 
   overlay = document.createElement('div')
@@ -520,7 +538,7 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
 
 // ---- 结算页 ---------------------------------------------------------------- //
 
-function mountResult(el, { total, uniqWrong, acc, duration, pool, size, mode, onFinish }) {
+function mountResult(el, { total, uniqWrong, acc, duration, pool, size, mode, scope = '', onFinish }) {
   const wrap = document.createElement('div')
   wrap.className = 'recite-result card'
   wrap.innerHTML = `
@@ -535,14 +553,14 @@ function mountResult(el, { total, uniqWrong, acc, duration, pool, size, mode, on
   el.appendChild(wrap)
   wrap.querySelector('#rr-again').addEventListener('click', () => {
     wrap.remove()
-    startSession(el, { pool, size, mode, onFinish })
+    startSession(el, { pool, size, mode, scope, onFinish })
   })
   const $wrong = wrap.querySelector('#rr-wrong')
   if ($wrong)
     $wrong.addEventListener('click', () => {
       const entries = pool.filter((e) => uniqWrong.includes(e.word))
       wrap.remove()
-      startSession(el, { pool: entries, size: Math.min(size, entries.length), mode, onFinish })
+      startSession(el, { pool: entries, size: Math.min(size, entries.length), mode, scope, onFinish })
     })
   wrap.scrollIntoView({ behavior: 'smooth' })
 }

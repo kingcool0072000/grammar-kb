@@ -56,6 +56,11 @@ function renderHome(el, arts, recs) {
   const rv = el.querySelector('#rd-review')
   if (rv) rv.addEventListener('click', () => renderReview(el, recs))
   bindRecRowActions(el, recs)
+  // 批改中心跳转：自动打开批改页
+  if (sessionStorage.getItem('gkb-open-review') === '1') {
+    sessionStorage.removeItem('gkb-open-review')
+    if (rv) rv.click()
+  }
 }
 
 // 最近录音提交行的 删除 / 编辑（改分数与评语）
@@ -315,6 +320,10 @@ async function renderReview(el, recs) {
       <h1>录音批改${pending.length ? `（待批 ${pending.length}）` : ''}</h1>
       <p>试听学生录音，10 分制打分 + 评语。</p>
     </div>
+    <div class="reading-review-tools">
+      <button class="reading-btn" id="rd-export-all">⬇️ 导出全部（音频 + 朗读原文）</button>
+      <span class="reading-pick-info">文件保存到下载目录，可交给其他工具/模型分析</span>
+    </div>
     <div id="rd-review-list"></div>
   `
   const box = el.querySelector('#rd-review-list')
@@ -325,6 +334,7 @@ async function renderReview(el, recs) {
     Promise.all(slice.map((r) => api.readingRecording(r.id).catch(() => null))),
     Promise.all(slice.map((r) => api.readingArticle(r.article_id).catch(() => null))),
   ])
+  const exportable = [] // {blobUrl, name, textName, text} 供导出
   for (let i = 0; i < slice.length; i++) {
     const r = slice[i]
     const full = fulls[i]
@@ -348,6 +358,7 @@ async function renderReview(el, recs) {
         <label>分数 <input type="number" min="0" max="10" value="${r.teacher_score ?? 8}" style="width:56px" data-score></label>
         <input placeholder="评语（流利度/发音/语调建议）" value="${escapeHtml(r.teacher_comment || '')}" data-comment style="flex:1" />
         <button class="reading-btn primary" data-grade>提交批改</button>
+        <button class="reading-btn" data-dl title="下载这条录音（音频 + 朗读原文）">⬇️ 下载</button>
         <button class="reading-btn danger" data-del title="删除这条录音提交">删除</button>
       </div>
       <div class="reading-review-msg"></div>
@@ -364,6 +375,16 @@ async function renderReview(el, recs) {
         audio.src = objectUrl
       } catch { /* 解码失败则留空，播放控件显示无源 */ }
     }
+    // 导出命名（与 CLI export-recordings 一致）
+    const when = (r.created_at || '').slice(0, 16).replace(/[-:T]/g, '')
+    const ext = (full?.mime || 'audio/mp4').includes('webm') ? 'webm' : 'm4a'
+    const audioName = `rec${r.id}_${r.user}_${when}.${ext}`
+    const textName = `rec${r.id}_selected_text.txt`
+    if (objectUrl) exportable.push({ url: objectUrl, name: audioName, textName, text: r.selected_text })
+    row.querySelector('[data-dl]').addEventListener('click', () => {
+      if (objectUrl) dlFileGlobal(objectUrl, audioName)
+      if (r.selected_text) dlTextGlobal(textName, r.selected_text)
+    })
     row.querySelector('[data-grade]').addEventListener('click', async () => {
       const score = Number(row.querySelector('[data-score]').value)
       const comment = row.querySelector('[data-comment]').value
@@ -384,6 +405,8 @@ async function renderReview(el, recs) {
       try {
         await api.readingDeleteRecording(r.id)
         if (objectUrl) URL.revokeObjectURL(objectUrl)
+        const at = exportable.findIndex((x) => x.name === audioName)
+        if (at >= 0) exportable.splice(at, 1)
         row.remove()
       } catch (e) {
         row.querySelector('.reading-review-msg').textContent = `删除失败：${e.message}`
@@ -391,8 +414,36 @@ async function renderReview(el, recs) {
     })
     box.append(row)
   }
+  el.querySelector('#rd-export-all').addEventListener('click', () => {
+    if (!exportable.length) {
+      alert('没有可导出的录音')
+      return
+    }
+    exportable.forEach((x, i) => {
+      setTimeout(() => {
+        dlFileGlobal(x.url, x.name)
+        if (x.text) dlTextGlobal(x.textName, x.text)
+      }, i * 350) // 浏览器对连发下载有拦截，错峰触发
+    })
+  })
   if (!list.length) box.innerHTML = '<p class="reading-hint">暂无录音提交</p>'
   el.querySelector('#rd-back').addEventListener('click', () => mountReadingAdmin(el))
+}
+
+// 下载工具（模块级复用）
+function dlFileGlobal(blobUrl, name) {
+  const a = document.createElement('a')
+  a.href = blobUrl
+  a.download = name
+  document.body.append(a)
+  a.click()
+  a.remove()
+}
+
+function dlTextGlobal(name, text) {
+  const u = URL.createObjectURL(new Blob([text], { type: 'text/plain' }))
+  dlFileGlobal(u, name)
+  setTimeout(() => URL.revokeObjectURL(u), 5000)
 }
 
 function fmtDur(sec) {

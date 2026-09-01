@@ -115,6 +115,10 @@ export const api = {
   readingSubmitRecording: (rec) => reqJson('/reading/recordings', 'POST', rec),
   readingGradeRecording: (id, rec) => reqJson(`/reading/recordings/${id}`, 'PUT', rec),
   readingDeleteRecording: (id) => reqJson(`/reading/recordings/${id}`, 'DELETE'),
+  // 背单词成绩上报（学生自动上报；教师批改中心查看）
+  reciteSubmit: (rec) => reqJson('/recite/sessions', 'POST', rec),
+  reciteSessions: ({ user, limit = 100 } = {}) =>
+    req('/recite/sessions', { searchParams: { user, limit } }),
 }
 
 // 规整单个知识点，保证集合字段为数组

@@ -64,6 +64,11 @@ export async function mountFcePapers(el, { role } = {}) {
   const reviewBtn = el.querySelector('#essay-review')
   if (reviewBtn) reviewBtn.addEventListener('click', () => renderEssayReview(el, pending, myRole))
   bindSubRowActions(el, history)
+  // 批改中心跳转：自动打开作文批改
+  if (sessionStorage.getItem('gkb-open-essay') === '1') {
+    sessionStorage.removeItem('gkb-open-essay')
+    if (reviewBtn) reviewBtn.click()
+  }
 }
 
 function doneCount(history, testId) {

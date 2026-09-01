@@ -96,6 +96,17 @@ try:
         score: int = Field(ge=0, le=10)
         comment: str = Field(default="", max_length=2000)
 
+    class ReciteSessionIn(BaseModel):
+        """学生背单词一组练习的成绩上报。"""
+
+        total: int = Field(ge=1, le=500)
+        wrong: int = Field(default=0, ge=0, le=500)
+        acc: int = Field(default=0, ge=0, le=100)
+        duration_sec: int = Field(default=0, ge=0, le=3600)
+        wrong_words: list = Field(default_factory=list)
+        mode: str = Field(default="", max_length=20)
+        scope: str = Field(default="", max_length=20)
+
 except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
     ExamRecordIn = None
     FceSubmissionIn = None
@@ -104,6 +115,7 @@ except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
     ReadingUpdateIn = None
     ReadingRecordIn = None
     ReadingGradeIn = None
+    ReciteSessionIn = None
 
 
 def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None,
@@ -118,6 +130,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from .auth import UserStore, make_token, read_token
     from .fce_query import FcePaperStore, FceSubmissionStore
     from .reading import ReadingStore
+    from .recite import ReciteStore
 
     kbq = Query(open_db(db_path))
     exams = ExamStore(exam_db_path)
@@ -125,6 +138,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     fce_papers = FcePaperStore(fce_db_path)
     fce_submissions = FceSubmissionStore(fce_db_path)
     reading = ReadingStore(fce_db_path)
+    recite = ReciteStore(fce_db_path)
     app = FastAPI(
         title="grammar-kb 题库 API",
         version=__version__,
@@ -172,6 +186,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("GET", "/reading/articles"),
         ("GET", "/reading/recordings"),
         ("POST", "/reading/recordings"),
+        ("POST", "/recite/sessions"),
+        ("GET", "/recite/sessions"),
     )
 
     @app.middleware("http")
@@ -523,6 +539,29 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         if not reading.delete_recording(rec_id):
             raise HTTPException(status_code=404, detail=f"录音 id={rec_id} 不存在")
         return _ok({"id": rec_id})
+
+    # ---- 背单词成绩上报（学生自动上报，教师批改中心查看） ----
+
+    @app.post("/recite/sessions")
+    def recite_submit(rec: ReciteSessionIn, request: "fastapi.Request"):
+        """学生完成一组背单词练习后上报成绩（前端静默尽力上报）。"""
+        user = _request_user(request)
+        try:
+            return _ok(recite.submit(
+                user, rec.total, rec.wrong, rec.acc, rec.duration_sec,
+                rec.wrong_words, rec.mode, rec.scope,
+            ))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+
+    @app.get("/recite/sessions")
+    def recite_list(
+        request: "fastapi.Request", user: Optional[str] = None, limit: int = 100,
+    ):
+        """背单词练习记录。学生只看自己的；教师看全部。"""
+        if request.state.role != "teacher":
+            user = request.state.user
+        return _ok(recite.list(user=user, limit=limit))
 
     def _require_teacher(request) -> None:
         if getattr(request.state, "role", "teacher") != "teacher":

@@ -1551,3 +1551,17 @@ main { --fce-fs: 15px; }
 .fce-sub-detail .fce-detail-comment { color: var(--ink-soft, #64748b); margin-top: 4px; }
 .fce-sub-row { align-items: center; }
 .fce-sub-row .reading-btn { margin-left: 6px; }
+
+/* 批改中心 */
+.grading-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 22px; }
+.grading-stat {
+  display: flex; flex-direction: column; gap: 4px; padding: 14px 18px;
+  border: 1px solid var(--line, #e2e8f0); border-radius: 14px;
+  background: var(--card, #fff); cursor: pointer; transition: border-color .15s;
+}
+.grading-stat:hover { border-color: #0e7490; }
+.grading-stat b { font-size: 26px; color: var(--ink, #1e293b); }
+.grading-stat span { font-size: 13px; color: var(--ink-soft, #64748b); }
+.grading-stat.warn b { color: #b45309; }
+.grading-action { margin: 8px 0; display: flex; gap: 8px; }
+.reading-review-tools { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }

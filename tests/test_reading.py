@@ -180,3 +180,25 @@ def test_export_recordings(reading_env, tmp_path):
     assert audio.read_bytes() == b"FAKE-AUDIO-BYTES"
     # 按用户过滤：teacher 无录音 → 空
     assert store.export_recordings(str(out / "t"), user="teacher") == []
+
+
+def test_recite_session_report(reading_env):
+    """背单词成绩上报：学生提交，教师看全部，学生只看自己。"""
+    c = _client(reading_env)
+    t, s = _login(c, "teacher"), _login(c, "malin")
+    r = c.post("/recite/sessions", headers=s, json={
+        "total": 20, "wrong": 3, "acc": 85, "duration_sec": 96,
+        "wrong_words": ["receive", "necessary", "separate"],
+        "mode": "type", "scope": "all",
+    })
+    assert r.status_code == 200, r.text
+    d = r.json()["data"]
+    assert d["acc"] == 85 and len(d["wrong_words"]) == 3
+    # 学生只看自己的
+    mine = c.get("/recite/sessions", headers=s).json()["data"]
+    assert len(mine) == 1 and mine[0]["user"] == "malin"
+    # 教师看全部
+    all_ = c.get("/recite/sessions", headers=t).json()["data"]
+    assert len(all_) == 1
+    # 非法数据 422
+    assert c.post("/recite/sessions", headers=s, json={"total": 0}).status_code == 422

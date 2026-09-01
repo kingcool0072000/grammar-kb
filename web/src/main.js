@@ -9,6 +9,7 @@ import { mountFce } from './views/fce.js'
 import { mountFcePapers } from './views/fcePapers.js'
 import { mountReading } from './views/reading.js'
 import { mountReadingAdmin } from './views/readingAdmin.js'
+import { mountGrading } from './views/grading.js'
 import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
 
@@ -16,9 +17,10 @@ const app = document.getElementById('app')
 
 // teacher: true 仅教师可见；studentOnly: true 仅学生可见
 const VIEWS = [
+  { key: 'grading', label: '批改中心', teacher: true },
   { key: 'courses', label: '课程', teacher: true },
   { key: 'vocab', label: '词汇表', teacher: true },
-  { key: 'recite', label: '背单词' },
+  { key: 'recite', label: '背单词', studentOnly: true },
   { key: 'taxonomy', label: '初中英语', teacher: true },
   { key: 'fce', label: 'FCE', teacher: true },
   { key: 'fcePapers', label: 'FCE真题' },
@@ -37,9 +39,9 @@ function h(tag, cls, html) {
 function currentRoute(role) {
   const v = (location.hash.replace(/^#\/?/, '') || '').split('?')[0]
   const view = VIEWS.find((x) => x.key === v)
-  // 学生访问教师页 → 回背单词；教师访问学生页 → 回课程；未匹配同理
+  // 学生访问教师页 → 回背单词；教师访问学生页 → 回批改中心；未匹配同理
   if (!view || (view.teacher && role !== 'teacher') || (view.studentOnly && role === 'teacher')) {
-    return role === 'teacher' ? 'courses' : 'recite'
+    return role === 'teacher' ? 'grading' : 'recite'
   }
   return v
 }
@@ -187,7 +189,9 @@ async function bootstrap() {
       t.classList.toggle('active', t.dataset.view === route),
     )
     viewEl.innerHTML = ''
-    if (route === 'courses') {
+    if (route === 'grading') {
+      mountGrading(viewEl)
+    } else if (route === 'courses') {
       mountCourses(viewEl, { lectures: state.lectures, openLecture: ctx.openLecture })
     } else if (route === 'vocab') {
       mountVocabulary(viewEl, { vocab: state.vocab, openWord: (e) => drawer.showWord(e) })
