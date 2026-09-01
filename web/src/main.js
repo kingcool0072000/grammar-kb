@@ -26,9 +26,9 @@ const VIEWS = [
   { key: 'prep', label: '备课中心', teacher: true },
   { key: 'analytics', label: '学情分析', teacher: true },
   { key: 'recite', label: '背单词', studentOnly: true },
-  { key: 'fcePapers', label: 'FCE真题' },
   { key: 'reading', label: '阅读练习', studentOnly: true },
-  // 教师子工具页（不在 Tab 显示，hash 直达）
+  // 子工具页（不在 Tab 显示，hash 直达）：fcePapers 师生共用
+  { key: 'fcePapers', label: 'FCE真题', hiddenTab: true },
   { key: 'courses', hiddenTab: true, teacher: true },
   { key: 'vocab', hiddenTab: true, teacher: true },
   { key: 'taxonomy', hiddenTab: true, teacher: true },
@@ -72,7 +72,7 @@ async function bootstrap() {
   // header + main 容器
   const role = auth.role
   const visibleViews = VIEWS.filter(
-    (v) => !v.hiddenTab && (!v.teacher || role === 'teacher') && (!v.studentOnly || role !== 'teacher'),
+    (v) => (!v.hiddenTab || role !== 'teacher') && (!v.teacher || role === 'teacher') && (!v.studentOnly || role !== 'teacher'),
   )
   const header = h('header', 'app-header')
   const headerInner = h('div', 'header-inner')
@@ -197,40 +197,46 @@ async function bootstrap() {
       t.classList.toggle('active', t.dataset.view === route),
     )
     viewEl.innerHTML = ''
+    let mounted
     if (route === 'grading') {
-      mountGrading(viewEl)
+      mounted = mountGrading(viewEl)
     } else if (route === 'prep') {
-      mountPrep(viewEl, ctx)
+      mounted = mountPrep(viewEl, ctx)
     } else if (route === 'analytics') {
-      mountAnalytics(viewEl)
+      mounted = mountAnalytics(viewEl)
     } else if (route === 'courses') {
-      mountCourses(viewEl, { lectures: state.lectures, openLecture: ctx.openLecture })
+      mounted = mountCourses(viewEl, { lectures: state.lectures, openLecture: ctx.openLecture })
     } else if (route === 'vocab') {
-      mountVocabulary(viewEl, { vocab: state.vocab, openWord: (e) => drawer.showWord(e) })
+      mounted = mountVocabulary(viewEl, { vocab: state.vocab, openWord: (e) => drawer.showWord(e) })
     } else if (route === 'recite') {
-      mountRecite(viewEl, { vocab: state.vocab, role })
+      mounted = mountRecite(viewEl, { vocab: state.vocab, role })
     } else if (route === 'taxonomy') {
-      mountTaxonomy(viewEl, { pointsById, openKp: ctx.openKp })
+      mounted = mountTaxonomy(viewEl, { pointsById, openKp: ctx.openKp })
     } else if (route === 'fce') {
-      mountFce(viewEl)
+      mounted = mountFce(viewEl)
     } else if (route === 'fcePapers') {
-      mountFcePapers(viewEl, { role })
+      mounted = mountFcePapers(viewEl, { role })
     } else if (route === 'readingAdmin') {
-      mountReadingAdmin(viewEl)
+      mounted = mountReadingAdmin(viewEl)
     } else if (route === 'reading') {
-      mountReading(viewEl, { role })
+      mounted = mountReading(viewEl, { role })
     } else if (route === 'exams') {
-      mountExams(viewEl, { lectures: state.lectures })
+      mounted = mountExams(viewEl, { lectures: state.lectures })
     }
-    // 教师子工具页（备课中心跳转进入）：mount 后 prepend 返回条
-    // （mount 内部会覆写 innerHTML，必须在挂载之后插入）
+    // 教师子工具页（备课/批改中心跳转进入）：mount 完成后 prepend 返回条
+    // （mount 内部会覆写 innerHTML——异步视图须等 settle 后再插入）
     const routeDef = VIEWS.find((v) => v.key === route)
     if (role === 'teacher' && routeDef && routeDef.hiddenTab) {
-      const back = h('button', 'fce-back-btn gd-tool-back', '← 返回备课中心')
-      back.addEventListener('click', () => {
-        location.hash = '/prep'
-      })
-      viewEl.prepend(back)
+      const addBack = () => {
+        if (!viewEl.querySelector('.gd-tool-back')) {
+          const back = h('button', 'fce-back-btn gd-tool-back', '← 返回备课中心')
+          back.addEventListener('click', () => {
+            location.hash = '/prep'
+          })
+          viewEl.prepend(back)
+        }
+      }
+      Promise.resolve(mounted).then(addBack, addBack)
     }
     window.scrollTo(0, 0)
   }
