@@ -1,3 +1,4 @@
+import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
 
 // 背单词：全屏沉浸卡片。三种题型——认词（英→中）、拼写（中→英，打字输入）、
@@ -178,6 +179,7 @@ export function mountRecite(el, { vocab, role }) {
       <button class="btn-primary" id="rc-start">开始背单词</button>
     </div>
     <div class="recite-stats" id="rc-stats"></div>
+    <div id="rc-history"></div>
   `
 
   const state = { scope: 'all', size: 20, mode: 'type' }
@@ -237,6 +239,49 @@ export function mountRecite(el, { vocab, role }) {
     return vocab
   }
 
+
+  // ---- 我的练习记录（云端上报的历史，与本地进度互补）----
+  const renderHistory = async () => {
+    const $h = el.querySelector('#rc-history')
+    if (!$h) return
+    let recs
+    try {
+      recs = await api.reciteSessions({ limit: 50 })
+    } catch {
+      $h.innerHTML = ''
+      return // 接口不可用（离线等）静默隐藏
+    }
+    if (!recs.length) {
+      $h.innerHTML = `
+        <section class="fce-group">
+          <div class="fce-group-title">📝 我的练习记录</div>
+          <p class="reading-hint">完成一组练习后，记录会出现在这里（老师也能看到你的成绩）。</p>
+        </section>`
+      return
+    }
+    const avgAcc = Math.round(recs.reduce((s, x) => s + (x.acc || 0), 0) / recs.length)
+    const totalWords = recs.reduce((s, x) => s + (x.total || 0), 0)
+    const totalMin = Math.round(recs.reduce((s, x) => s + (x.duration_sec || 0), 0) / 60)
+    // 易错词频次（最近 20 组）
+    const freq = new Map()
+    for (const s of recs.slice(0, 20)) {
+      for (const w of s.wrong_words || []) freq.set(w, (freq.get(w) || 0) + 1)
+    }
+    const hardWords = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12)
+    $h.innerHTML = `
+      <section class="fce-group">
+        <div class="fce-group-title">📝 我的练习记录（${recs.length} 组 · 平均正确率 ${avgAcc}% · 累计 ${totalWords} 词次${totalMin ? ` / ${totalMin} 分钟` : ''}）</div>
+        ${recs.slice(0, 8).map((s) => `
+          <div class="fce-his-row">
+            <span class="fce-his-what">${scopeCn(s.scope)}${s.mode === 'flip' ? '（自评）' : ''}</span>
+            <b class="fce-his-score ${s.acc >= 80 ? 'ok' : ''}">${s.acc}%</b>
+            <span class="fce-his-date">${s.total} 词 · 错 ${s.wrong} · ${(s.created_at || '').slice(5, 10)}</span>
+          </div>`).join('')}
+        ${hardWords.length ? `<p class="reading-hint">易错词（最近 20 组）：${hardWords.map(([w, n]) => `${escapeHtml(w)}×${n}`).join('、')}</p>` : ''}
+      </section>`
+  }
+  renderHistory()
+
   el.querySelectorAll('.chip-row').forEach((row) => {
     row.addEventListener('click', (e) => {
       const chip = e.target.closest('.chip')
@@ -257,7 +302,11 @@ export function mountRecite(el, { vocab, role }) {
       size: Math.min(state.size, p.length),
       mode: state.mode,
       scope: state.scope,
-      onFinish: () => renderBoard(),
+      onFinish: () => {
+        renderBoard()
+        // 上报有网络延迟，稍等再拉历史
+        setTimeout(renderHistory, 800)
+      },
     })
   })
 
@@ -563,4 +612,8 @@ function mountResult(el, { total, uniqWrong, acc, duration, pool, size, mode, sc
       startSession(el, { pool: entries, size: Math.min(size, entries.length), mode, scope, onFinish })
     })
   wrap.scrollIntoView({ behavior: 'smooth' })
+}
+
+function scopeCn(scope) {
+  return { all: '全部词表', verb: '只动词', special: '特殊拼写' }[scope] || scope || '全部词表'
 }
