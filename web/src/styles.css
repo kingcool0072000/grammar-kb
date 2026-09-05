@@ -1601,3 +1601,15 @@ main { --fce-fs: 15px; }
 }
 .ana-legend span { display: flex; align-items: center; gap: 6px; }
 .ana-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+/* 学情总结卡 */
+.ana-summary .ana-sum-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.ana-sum-card { border: 1px solid var(--line); border-radius: 11px; padding: 12px 14px; background: var(--bg-soft); }
+.ana-sum-card h4 { margin: 0 0 7px; font-size: 13.5px; color: var(--ink-soft); }
+.ana-sum-card p { margin: 4px 0; font-size: 13.5px; line-height: 1.7; color: var(--ink); }
+.ana-sum-card p b { color: var(--brand-ink); }
+.ana-sum-card.warn { background: #fff7ed; border-color: #fed7aa; }
+.ana-sum-card.warn h4 { color: #c2410c; }
+.ana-sum-card.good { background: #f0fdf4; border-color: #bbf7d0; }
+.ana-sum-card.good h4 { color: #15803d; }
+.ana-sum-tip { font-size: 12.5px; color: var(--ink-faint); }

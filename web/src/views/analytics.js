@@ -42,6 +42,8 @@ export async function mountAnalytics(el) {
         <div class="grading-stat"><b>${agg.cur.recite.length}</b><span>背单词（组）</span></div>
       </div>
 
+      ${summaryHtml(exams, agg)}
+
       <section class="gd-section">
         <header class="gd-section-head"><h2>📈 成绩趋势</h2></header>
         <div class="ana-chart">
@@ -140,6 +142,85 @@ export async function mountAnalytics(el) {
 }
 
 // ---- 周期聚合 ----
+
+// 学情文字总结：全部从最新数据计算，随成绩自动更新。
+// ① 总体态势：近5次 vs 之前均值；② 薄弱讲次（<70 分的最新成绩）；
+// ③ 复刷见效的讲次（第二次比第一次明显提升）；④ 跨多次仍错的题。
+function summaryHtml(exams, agg) {
+  if (!exams || !exams.length) return ''
+  const sorted = exams.slice().sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id))
+  const last5 = sorted.slice(-5)
+  const prev = sorted.slice(0, -5)
+  const avg = (xs) => (xs.length ? Math.round(xs.reduce((s, x) => s + x.score, 0) / xs.length) : null)
+  const a5 = avg(last5), ap = avg(prev)
+  const delta = a5 != null && ap != null ? a5 - ap : null
+
+  // 最新一次
+  const lastExam = sorted[sorted.length - 1]
+
+  // 每讲最新成绩 <70 → 薄弱讲次（标题映射由调用处课程列表给不了，这里用讲次号）
+  const latestByLec = {}
+  for (const r of sorted) latestByLec[r.lecture] = r  // 后写覆盖 → 最新
+  const weak = Object.entries(latestByLec)
+    .filter(([, r]) => r.score < 70)
+    .sort((x, y) => x[1].score - y[1].score)
+
+  // 复刷提升：同一讲 ≥2 次，末次 - 首次 ≥ 8
+  const byLec = {}
+  for (const r of sorted) (byLec[r.lecture] = byLec[r.lecture] || []).push(r)
+  const improved = Object.entries(byLec)
+    .filter(([, rs]) => rs.length >= 2 && rs[rs.length - 1].score - rs[0].score >= 8)
+    .map(([lec, rs]) => ({ lec: +lec, from: rs[0].score, to: rs[rs.length - 1].score }))
+    .sort((a, b) => b.to - b.from - (a.to - a.from))
+
+  // 跨刷次仍错的题（同讲同题错 ≥2 次）
+  const wrongCnt = {}
+  for (const r of sorted) {
+    for (const q of r.wrong || []) {
+      const k = `${r.lecture}-${q}`
+      wrongCnt[k] = (wrongCnt[k] || 0) + 1
+    }
+  }
+  const stubborn = Object.entries(wrongCnt).filter(([, n]) => n >= 2)
+    .map(([k, n]) => { const [lec, q] = k.split('-'); return { lec: +lec, q: +q, n } })
+
+  const trend = delta == null ? '' :
+    delta >= 3 ? `近 5 次平均 <b>${a5}</b> 分，较此前（${ap}）提升 ${delta} 分，状态上行 👍` :
+    delta <= -3 ? `近 5 次平均 <b>${a5}</b> 分，较此前（${ap}）回落 ${-delta} 分，注意保持节奏` :
+    `近 5 次平均 <b>${a5}</b> 分（此前 ${ap}），整体平稳`
+
+  return `
+  <section class="gd-section ana-summary">
+    <header class="gd-section-head"><h2>📋 学情总结（${agg.curLabel}）</h2></header>
+    <div class="ana-sum-grid">
+      <div class="ana-sum-card">
+        <h4>总体态势</h4>
+        <p>${trend}。最近一次：第 ${lastExam.lecture} 讲 <b>${lastExam.score}</b> 分（${lastExam.date}${lastExam.wrong && lastExam.wrong.length ? `，错 ${lastExam.wrong.length} 题` : ''}）。</p>
+      </div>
+      <div class="ana-sum-card ${weak.length ? 'warn' : ''}">
+        <h4>当前薄弱讲次（最新成绩 &lt; 70）</h4>
+        ${weak.length
+          ? `<p>${weak.map(([lec, r]) => `第${lec}讲 <b>${r.score}</b>`).join(' · ')}</p>
+             <p class="ana-sum-tip">优先安排这些讲的复刷（历史经验：复刷平均 +10 分以上）。</p>`
+          : '<p>无 —— 所有已学讲次最新成绩均 ≥ 70 分 🎉</p>'}
+      </div>
+      <div class="ana-sum-card good">
+        <h4>复刷见效</h4>
+        ${improved.length
+          ? `<p>${improved.slice(0, 6).map((x) => `第${x.lec}讲 ${x.from}→<b>${x.to}</b>`).join(' · ')}</p>`
+          : '<p>暂无复刷数据</p>'}
+      </div>
+      <div class="ana-sum-card ${stubborn.length ? 'warn' : ''}">
+        <h4>顽固错题（多刷仍错）</h4>
+        ${stubborn.length
+          ? `<p>${stubborn.map((x) => `第${x.lec}讲第${x.q}题（×${x.n}）`).join(' · ')}</p>
+             <p class="ana-sum-tip">结合错题本里的推理链逐题过一遍，确认卡在哪一步。</p>`
+          : '<p>暂无跨刷次重复错题</p>'}
+      </div>
+    </div>
+  </section>`
+}
+
 function aggregate(recs, fceSubs, recite, exams, n, unit) {
   const fmt = unit === 'week' ? weekLabel : (d) => d.toISOString().slice(0, 7).replace('-', '/')
   const now = new Date()
