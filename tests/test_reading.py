@@ -202,3 +202,35 @@ def test_recite_session_report(reading_env):
     assert len(all_) == 1
     # 非法数据 422
     assert c.post("/recite/sessions", headers=s, json={"total": 0}).status_code == 422
+
+
+def test_reading_model_audio(reading_env, tmp_path, monkeypatch):
+    """范读音频端点：WAV 文件流 + has_audio 标记 + 学生白名单 + 404。"""
+    import shutil as _sh
+
+    # 隔离音频目录：先造一篇派生文拿 id
+    monkeypatch.setenv("GRAMMAR_KB_AUDIO_DIR", str(tmp_path / "audio"))
+    c = _client(reading_env)
+    t, s = _login(c, "teacher"), _login(c, "malin")
+    r = c.post("/reading/articles", headers=t, json={
+        "base_key": "T1P1", "title": "音频测试文", "text": DERIVED_TEXT,
+    })
+    aid = r.json()["data"]["id"]
+
+    # 无音频：has_audio=False、/reading/audio/{id} 404
+    d = c.get(f"/reading/articles/{aid}", headers=s).json()["data"]
+    assert d["has_audio"] is False
+    assert c.get(f"/reading/audio/{aid}", headers=s).status_code == 404
+
+    # 放入 WAV：has_audio=True、学生可拉取音频流（学生白名单放行）
+    (tmp_path / "audio").mkdir()
+    (tmp_path / "audio" / f"{aid}.wav").write_bytes(b"RIFF-fake-wav-bytes")
+    d = c.get(f"/reading/articles/{aid}", headers=s).json()["data"]
+    assert d["has_audio"] is True
+    r = c.get(f"/reading/audio/{aid}", headers=s)
+    assert r.status_code == 200
+    assert r.content == b"RIFF-fake-wav-bytes"
+    assert r.headers["content-type"].startswith("audio/wav")
+
+    # 不存在的文章 id：音频端点也 404
+    assert c.get("/reading/audio/99999", headers=s).status_code == 404

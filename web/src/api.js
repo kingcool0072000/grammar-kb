@@ -66,6 +66,21 @@ async function reqJson(path, method, body) {
   return j.data
 }
 
+// 二进制（音频等）：同样带登录态，返回 Blob
+async function reqBlob(path) {
+  const res = await fetch(new URL(BASE + path, location.origin), { headers: authHeaders() })
+  if (res.status === 401) {
+    handle401()
+    throw new Error('登录已过期，请重新登录')
+  }
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`
+    try { msg = (await res.json()).message || msg } catch { /* 非 JSON 错误体 */ }
+    throw new Error(msg)
+  }
+  return res.blob()
+}
+
 export const api = {
   login: (user, password) => reqJson('/auth/login', 'POST', { user, password }),
   stats: () => req('/stats'),
@@ -106,6 +121,8 @@ export const api = {
   readingArticles: ({ kind } = {}) =>
     req('/reading/articles', { searchParams: { kind } }),
   readingArticle: (id) => req(`/reading/articles/${id}`),
+  // 派生文范读 WAV（二进制流，带登录态）
+  readingAudioBlob: (id) => reqBlob(`/reading/audio/${id}`),
   readingAddDerived: (rec) => reqJson('/reading/articles', 'POST', rec),
   readingUpdateDerived: (id, rec) => reqJson(`/reading/articles/${id}`, 'PUT', rec),
   readingDeleteDerived: (id) => reqJson(`/reading/articles/${id}`, 'DELETE'),

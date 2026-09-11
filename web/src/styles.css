@@ -1432,9 +1432,12 @@ main { --fce-fs: 15px; }
 .reading-tool-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .reading-tool-label { font-size: 14px; color: var(--ink-soft, #64748b); }
 .reading-pick-info { font-size: 13px; color: var(--ink-faint, #94a3b8); }
+.reading-pick-info.active { color: #8a6d3b; font-weight: 600; }
 .reading-hint { font-size: 13px; color: var(--ink-faint, #94a3b8); margin: 0; }
 .reading-btn { border: 1px solid var(--line, #e2e8f0); background: var(--card, #fff); color: var(--ink, #1e293b); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 14px; }
-.reading-btn:hover { border-color: #0e7490; }
+.reading-btn:hover:not(:disabled) { border-color: #0e7490; }
+.reading-btn:disabled { opacity: .45; cursor: default; }
+.reading-btn.primary:disabled { opacity: .55; }
 .reading-btn.primary { background: #8a6d3b; border-color: #8a6d3b; color: #fdf9ee; }
 .reading-btn.primary:hover { background: #79602f; }
 .reading-btn.danger { background: #a33d2e; border-color: #a33d2e; color: #fdf9ee; }

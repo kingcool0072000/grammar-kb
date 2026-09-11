@@ -140,6 +140,12 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     fce_submissions = FceSubmissionStore(fce_db_path)
     reading = ReadingStore(fce_db_path)
     recite = ReciteStore(fce_db_path)
+
+    # 派生文范读 WAV 目录（{article_id}.wav）：TTS 导出后部署放置，不入
+    # git。默认随代码仓 data/audio/reading/，生产可用 GRAMMAR_KB_AUDIO_DIR 改指
+    audio_dir = _P(os.environ.get("GRAMMAR_KB_AUDIO_DIR")
+                   or _P(__file__).resolve().parent.parent / "data" / "audio" / "reading")
+
     app = FastAPI(
         title="grammar-kb 题库 API",
         version=__version__,
@@ -189,6 +195,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("POST", "/fce-submissions"),
         ("GET", "/fce-submissions"),
         ("GET", "/reading/articles"),
+        ("GET", "/reading/audio"),
         ("GET", "/reading/recordings"),
         ("POST", "/reading/recordings"),
         ("POST", "/recite/sessions"),
@@ -454,13 +461,23 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     @app.get("/reading/articles/{article_id}")
     def reading_article_detail(article_id: int, request: "fastapi.Request"):
-        """文章正文。学生访问 base 原文返回 403（只能读派生文）。"""
+        """文章正文（has_audio 标记是否备有范读 WAV）。学生访问 base 原文返回 403。"""
         data = reading.get_article(article_id)
         if data is None:
             raise HTTPException(status_code=404, detail=f"文章 id={article_id} 不存在")
         if data["kind"] == "base" and getattr(request.state, "role", "teacher") != "teacher":
             raise HTTPException(status_code=403, detail="原文段落仅教师可读，学生请练习派生文章")
+        data["has_audio"] = (audio_dir / f"{article_id}.wav").is_file()
         return _ok(data)
+
+    @app.get("/reading/audio/{article_id}")
+    def reading_article_audio_file(article_id: int):
+        """派生文范读 WAV 文件流。"""
+        path = audio_dir / f"{article_id}.wav"
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="该文章暂无范读音频")
+        from fastapi.responses import FileResponse
+        return FileResponse(path, media_type="audio/wav")
 
     @app.post("/reading/articles")
     def reading_add_derived(rec: ReadingDerivedIn, request: "fastapi.Request"):

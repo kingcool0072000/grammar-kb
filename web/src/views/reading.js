@@ -164,6 +164,14 @@ async function renderDetail(el, id, role) {
     </section>` : ''}
     <div class="reading-article" id="rd-text">${renderText(art.text)}</div>
     <div class="reading-toolbar">
+      ${art.has_audio ? `
+      <div class="reading-tool-row">
+        <span class="reading-tool-label">🎧 试听原文：</span>
+        <button class="reading-btn" id="rd-a-play">播放</button>
+        <button class="reading-btn" id="rd-a-pause">暂停</button>
+        <button class="reading-btn" id="rd-a-stop">停止</button>
+        <span class="reading-pick-info" id="rd-a-info">先听一遍范读，再自己朗读</span>
+      </div>` : ''}
       <div class="reading-tool-row">
         <span class="reading-tool-label">🎙 全文朗读：</span>
         <span class="reading-pick-info" id="rd-pickinfo">共 ${art.words} 词，录音将提交整篇内容</span>
@@ -180,6 +188,10 @@ async function renderDetail(el, id, role) {
       <div class="reading-dict" id="rd-dict" hidden></div>
     </div>
   `
+
+  // ---- 试听原文（范读 WAV：播放/暂停/停止三键） ----
+  const aPlay = el.querySelector('#rd-a-play')
+  if (aPlay && art.has_audio) setupAudioPlayer(el, art, aPlay)
 
   // 录音范围 = 全文（派生文 120-300 词）；超上限（理论不该发生）禁用按钮
   if (art.words > MAX_PICK_WORDS) {
@@ -264,6 +276,83 @@ function formCn(k) {
     past: '过去式', past_participle: '过去分词', present_participle: '现在分词',
     third_singular: '三单', plural: '复数', comparative: '比较级', superlative: '最高级',
   }[k] || k
+}
+
+// ---------- 范读播放器（播放/暂停/停止） ----------
+function setupAudioPlayer(el, art, playBtn) {
+  const pauseBtn = el.querySelector('#rd-a-pause')
+  const stopBtn = el.querySelector('#rd-a-stop')
+  const info = el.querySelector('#rd-a-info')
+  let audio = null        // Audio 元素（首次点播放时懒加载）
+  let objUrl = null
+  let loading = false
+
+  const setInfo = (t, active = false) => {
+    info.textContent = t
+    info.classList.toggle('active', active)
+  }
+
+  const syncButtons = () => {
+    const playing = audio && !audio.paused && !audio.ended
+    playBtn.disabled = playing || loading
+    pauseBtn.disabled = loading || !audio || audio.paused
+    stopBtn.disabled = loading || !audio || audio.ended
+  }
+
+  const ensureAudio = async () => {
+    if (audio || loading) return audio
+    loading = true
+    syncButtons()
+    setInfo('范读加载中…')
+    try {
+      const blob = await api.readingAudioBlob(art.id)
+      objUrl = URL.createObjectURL(blob)
+      audio = new Audio(objUrl)
+      audio.addEventListener('timeupdate', () => {
+        if (!audio.paused) setInfo(`播放中 ${fmtSec(Math.floor(audio.currentTime))} / ${fmtSec(Math.ceil(audio.duration || 0))}`, true)
+      })
+      audio.addEventListener('ended', () => {
+        setInfo('播放完毕，轮到你读一遍吧')
+        syncButtons()
+      })
+      audio.addEventListener('pause', () => {
+        if (!audio.ended && audio.currentTime > 0) setInfo(`已暂停 ${fmtSec(Math.floor(audio.currentTime))} / ${fmtSec(Math.ceil(audio.duration || 0))}`, true)
+        syncButtons()
+      })
+      audio.addEventListener('canplay', syncButtons)
+    } catch {
+      setInfo('范读加载失败，请稍后重试')
+    }
+    loading = false
+    syncButtons()
+    return audio
+  }
+
+  playBtn.addEventListener('click', async () => {
+    const a = audio || (await ensureAudio())
+    if (!a) return
+    try { await a.play() } catch { /* 浏览器自动播放策略拦截，用户手点一般不会 */ }
+    setInfo(`播放中 ${fmtSec(Math.floor(a.currentTime))} / ${fmtSec(Math.ceil(a.duration || 0))}`, true)
+    syncButtons()
+  })
+  pauseBtn.addEventListener('click', () => {
+    if (audio && !audio.paused) audio.pause()
+    syncButtons()
+  })
+  stopBtn.addEventListener('click', () => {
+    if (!audio) return
+    audio.pause()
+    audio.currentTime = 0   // 停止 = 回到开头
+    setInfo('已停止，可重新播放')
+    syncButtons()
+  })
+  syncButtons()
+
+  // 离开详情页时释放资源（返回列表按钮在 renderDetail 里绑定）
+  el.querySelector('#rd-back').addEventListener('click', () => {
+    if (audio) { audio.pause(); audio.src = '' }
+    if (objUrl) URL.revokeObjectURL(objUrl)
+  }, { once: true })
 }
 
 // ---------- 录音机 ----------
