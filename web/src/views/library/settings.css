@@ -1,0 +1,250 @@
+/* ============ 泛读馆 · 教师设置（命名空间 .lib-settings，局部变量自持） ============ */
+.lib-settings {
+  --lib-primary: #d65124;
+  --lib-primary-deep: #b8431c;
+  --lib-primary-soft: #fff1ea;
+  --lib-accent: #1d8578;
+  --lib-accent-bright: #2bb3a3;
+  --lib-accent-soft: #e2f5f2;
+  --lib-bg: #faf7f2;
+  --lib-surface: #ffffff;
+  --lib-text: #2b2722;
+  --lib-text-secondary: #7d766c;
+  --lib-border: #eae4da;
+  --lib-danger: #c0392b;
+  --lib-radius: 14px;
+  --lib-shadow: 0 2px 12px rgba(60, 45, 30, 0.07);
+  --lib-shadow-lg: 0 8px 30px rgba(60, 45, 30, 0.14);
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 22px 20px 60px;
+  width: 100%;
+  color: var(--lib-text);
+}
+
+/* ---- 按钮 ---- */
+.lib-settings .lib-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
+  padding: 9px 18px; min-height: 44px; cursor: pointer;
+  background: var(--lib-primary); color: #fff; white-space: nowrap;
+  transition: background 0.15s, transform 0.1s;
+}
+.lib-settings .lib-btn:hover:not(:disabled) { background: var(--lib-primary-deep); }
+.lib-settings .lib-btn:active:not(:disabled) { transform: scale(0.97); }
+.lib-settings .lib-btn:disabled { background: #d9d2c7; color: #8f887d; cursor: not-allowed; }
+.lib-settings .lib-btn.sec { background: var(--lib-surface); color: var(--lib-text); border: 1.5px solid var(--lib-border); }
+.lib-settings .lib-btn.sec:hover:not(:disabled) { background: var(--lib-bg); }
+.lib-settings .lib-btn.sec:disabled { background: var(--lib-surface); color: #b5aea2; }
+.lib-settings .lib-btn.small { padding: 6px 14px; min-height: 38px; font-size: 13px; border-radius: 8px; }
+.lib-settings .lib-spin {
+  display: inline-block; width: 16px; height: 16px; border-radius: 50%; flex: none;
+  border: 2.5px solid rgba(255, 255, 255, 0.35); border-top-color: #fff;
+  animation: lib-spin 0.7s linear infinite;
+}
+.lib-settings .lib-btn.sec .lib-spin { border-color: rgba(0, 0, 0, 0.12); border-top-color: var(--lib-primary); }
+@keyframes lib-spin { to { transform: rotate(360deg); } }
+
+/* ---- 头部 ---- */
+.lib-settings .ls-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.lib-settings .ls-back {
+  border: none; background: none; cursor: pointer; font-family: inherit;
+  color: var(--lib-text-secondary); font-size: 13.5px; font-weight: 600;
+  padding: 8px 10px 8px 0; min-height: 40px; border-radius: 8px; white-space: nowrap;
+}
+.lib-settings .ls-back:hover { color: var(--lib-primary-deep); }
+.lib-settings .ls-head h1 { margin: 0 0 4px; font-size: 20px; }
+.lib-settings .ls-head p { margin: 0; font-size: 13px; color: var(--lib-text-secondary); }
+
+/* ---- 卡片 ---- */
+.lib-settings .ls-card {
+  background: var(--lib-surface); border: 1px solid var(--lib-border);
+  border-radius: var(--lib-radius); box-shadow: var(--lib-shadow);
+  padding: 22px 24px; margin-bottom: 18px;
+}
+.lib-settings .ls-card h3 { margin: 0 0 4px; font-size: 16.5px; display: flex; align-items: center; gap: 8px; }
+.lib-settings .ls-desc { margin: 0 0 16px; font-size: 13px; color: var(--lib-text-secondary); line-height: 1.6; }
+
+/* ---- 设置行 ---- */
+.lib-settings .ls-row {
+  display: flex; align-items: center; gap: 14px; padding: 12px 0;
+  border-bottom: 1px dashed var(--lib-border);
+}
+.lib-settings .ls-row:last-of-type { border-bottom: none; }
+.lib-settings .ls-label { flex: 1; min-width: 0; }
+.lib-settings .ls-label .name { font-size: 14px; font-weight: 600; }
+.lib-settings .ls-label .hint { font-size: 12px; color: var(--lib-text-secondary); margin-top: 2px; line-height: 1.5; }
+.lib-settings .ls-ctrl { flex: none; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+.lib-settings .ls-input {
+  padding: 10px 14px; min-height: 44px; width: 280px; max-width: 100%;
+  border: 1.5px solid var(--lib-border); border-radius: 10px;
+  font-size: 15px; font-family: inherit; background: var(--lib-surface);
+  color: var(--lib-text); outline: none; transition: border-color 0.15s;
+}
+.lib-settings .ls-input:focus { border-color: var(--lib-primary); }
+.lib-settings select.ls-input { width: 220px; }
+.lib-settings .ls-key { width: 280px; }
+
+/* ---- 测试连接反馈 ---- */
+.lib-settings .ls-feedback { font-size: 12.5px; margin: -6px 0 10px; }
+.lib-settings .ls-feedback.ok { color: #2e7d5b; }
+.lib-settings .ls-feedback.err { color: var(--lib-danger); }
+
+/* ---- 分段选择（难度 / 字体） ---- */
+.lib-settings .ls-seg { display: inline-flex; background: var(--lib-bg); border-radius: 10px; padding: 3px; gap: 2px; }
+.lib-settings .ls-seg button {
+  border: none; background: none; cursor: pointer; font-family: inherit;
+  padding: 8px 14px; min-height: 40px; border-radius: 8px; font-size: 13px;
+  color: var(--lib-text-secondary);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.lib-settings .ls-seg button.active {
+  background: var(--lib-surface); color: var(--lib-text); font-weight: 700;
+  box-shadow: var(--lib-shadow);
+}
+
+/* ---- 滑杆（--fill 渐变轨道，webkit/moz 都写） ---- */
+.lib-settings .ls-slider-row { display: flex; align-items: center; gap: 12px; width: 240px; }
+.lib-settings .ls-slider-row input[type='range'] {
+  -webkit-appearance: none; appearance: none;
+  flex: 1; height: 22px; background: transparent; cursor: pointer; --fill: 35%;
+}
+.lib-settings .ls-slider-row input[type='range']::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 3px;
+  background: linear-gradient(to right, var(--lib-primary) var(--fill, 0%), var(--lib-border) var(--fill, 0%));
+}
+.lib-settings .ls-slider-row input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px; border-radius: 50%; margin-top: -6px;
+  background: var(--lib-surface); border: 2px solid var(--lib-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+.lib-settings .ls-slider-row input[type='range']::-moz-range-track {
+  height: 6px; border-radius: 3px;
+  background: linear-gradient(to right, var(--lib-primary) var(--fill, 0%), var(--lib-border) var(--fill, 0%));
+}
+.lib-settings .ls-slider-row input[type='range']::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--lib-surface); border: 2px solid var(--lib-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+.lib-settings .ls-slider-row output {
+  font-size: 12.5px; min-width: 46px; text-align: right; color: var(--lib-text);
+  font-weight: 600; background: var(--lib-primary-soft); border-radius: 99px; padding: 3px 10px;
+}
+
+/* ---- 提示词 ---- */
+.lib-settings .ls-prompt-block { padding: 12px 0; border-bottom: 1px dashed var(--lib-border); }
+.lib-settings .ls-prompt-block .ls-label { margin-bottom: 8px; }
+.lib-settings .ls-textarea {
+  width: 100%; min-height: 200px; resize: vertical;
+  padding: 10px 14px; border: 1.5px solid var(--lib-border); border-radius: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px; line-height: 1.6; white-space: pre-wrap;
+  background: var(--lib-surface); color: var(--lib-text); outline: none;
+  transition: border-color 0.15s;
+}
+.lib-settings .ls-textarea:focus { border-color: var(--lib-primary); }
+
+/* ---- 卡片保存按钮 ---- */
+.lib-settings .ls-card-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+/* ---- 字典开关 ---- */
+.lib-settings .ls-switch { position: relative; display: inline-block; width: 52px; height: 30px; flex: none; }
+.lib-settings .ls-switch input { opacity: 0; width: 0; height: 0; }
+.lib-settings .ls-switch-track {
+  position: absolute; inset: 0; border-radius: 99px; background: #ddd6ca;
+  transition: background 0.18s; cursor: pointer;
+}
+.lib-settings .ls-switch-track::after {
+  content: ''; position: absolute; left: 3px; top: 3px; width: 24px; height: 24px;
+  border-radius: 50%; background: #fff; transition: transform 0.18s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+.lib-settings .ls-switch input:checked + .ls-switch-track { background: var(--lib-primary); }
+.lib-settings .ls-switch input:checked + .ls-switch-track::after { transform: translateX(22px); }
+.lib-settings .ls-switch input:focus-visible + .ls-switch-track {
+  outline: 2px solid var(--lib-primary); outline-offset: 2px;
+}
+
+/* ---- 学生主题预设色卡 ---- */
+.lib-settings .ls-presets { display: flex; gap: 10px; flex-wrap: wrap; }
+.lib-settings .ls-preset {
+  border: 2px solid var(--lib-border); border-radius: 10px; padding: 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  background: var(--lib-surface); font-size: 12px; font-family: inherit;
+  min-width: 78px; cursor: pointer; color: var(--lib-text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.lib-settings .ls-preset:hover { border-color: var(--lib-primary); }
+.lib-settings .ls-preset.active {
+  border-color: var(--lib-primary);
+  box-shadow: 0 0 0 3px var(--lib-primary-soft);
+}
+.lib-settings .ls-swatch {
+  width: 100%; min-width: 60px; height: 34px; border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 700;
+}
+.lib-settings .ls-preset-name { color: var(--lib-text-secondary); }
+.lib-settings .ls-preset.active .ls-preset-name { color: var(--lib-text); font-weight: 600; }
+
+/* ---- 错误卡 / 骨架 ---- */
+.lib-settings .ls-error-card {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding: 50px 24px; text-align: center; color: var(--lib-text-secondary);
+  background: var(--lib-surface); border: 1px solid var(--lib-border);
+  border-radius: var(--lib-radius); box-shadow: var(--lib-shadow);
+}
+.lib-settings .ls-error-card .art { font-size: 44px; line-height: 1; }
+.lib-settings .ls-error-card h3 { margin: 0; font-size: 16px; color: var(--lib-text); }
+.lib-settings .ls-error-card p { margin: 0; font-size: 13.5px; line-height: 1.6; }
+.lib-settings .ls-skel {
+  height: 320px; border-radius: var(--lib-radius);
+  background: linear-gradient(90deg, #eee8df 25%, #f6f1ea 50%, #eee8df 75%);
+  background-size: 200% 100%;
+  animation: lib-shimmer 1.4s infinite;
+}
+@keyframes lib-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* ---- toast ---- */
+.lib-settings .lib-toast-wrap {
+  position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 10000;
+  display: flex; flex-direction: column; gap: 8px; align-items: center;
+  pointer-events: none;
+}
+.lib-settings .lib-toast {
+  pointer-events: auto; padding: 10px 20px; border-radius: 10px;
+  font-size: 14px; font-weight: 500; color: #fff; max-width: min(90vw, 480px);
+  box-shadow: var(--lib-shadow-lg); animation: lib-toast-in 0.25s ease;
+}
+.lib-settings .lib-toast.success { background: #2e7d5b; }
+.lib-settings .lib-toast.error { background: var(--lib-danger); }
+.lib-settings .lib-toast.info { background: #5b6470; }
+.lib-settings .lib-toast.out { opacity: 0; transform: translateY(-10px); transition: all 0.25s ease; }
+@keyframes lib-toast-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+
+/* ---- 移动端 ---- */
+@media (max-width: 768px) {
+  .lib-settings { padding: 14px 14px 50px; }
+  .lib-settings .ls-card { padding: 18px 16px; }
+  .lib-settings .ls-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .lib-settings .ls-ctrl { justify-content: flex-start; }
+  .lib-settings .ls-input, .lib-settings select.ls-input, .lib-settings .ls-key { width: 100%; }
+  .lib-settings .ls-ctrl .lib-btn { flex: 1; }
+  .lib-settings .ls-slider-row { width: 100%; }
+  .lib-settings .ls-card-actions .lib-btn { flex: 1; min-height: 46px; }
+  /* 2×2 网格：四预设色卡在窄屏不折成 3+1 失衡长条 */
+  .lib-settings .ls-presets { justify-content: stretch; display: grid; grid-template-columns: 1fr 1fr; }
+  .lib-settings .ls-preset { flex: none; }
+}
+@media (hover: none) {
+  .lib-settings .lib-btn.small { min-height: 44px; }
+  .lib-settings .ls-seg button { min-height: 44px; }
+  .lib-settings .ls-preset { min-height: 44px; }
+}
+
+/* hidden 属性兜底：display 规则不得压过 hidden */
+.lib-settings [hidden] { display: none !important; }

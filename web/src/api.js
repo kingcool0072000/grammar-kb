@@ -136,6 +136,52 @@ export const api = {
   reciteSubmit: (rec) => reqJson('/recite/sessions', 'POST', rec),
   reciteSessions: ({ user, limit = 100 } = {}) =>
     req('/recite/sessions', { searchParams: { user, limit } }),
+  // 泛读馆：书架 / 阅读器 / 预习 / 设置 / 查词（library.db）
+  libraryBooks: () => req('/library/books'),
+  libraryUpload: (file) => {
+    const fd = new FormData()
+    fd.append('file', file, file.name)
+    return reqUpload('/library/books', fd)
+  },
+  libraryFileBlob: (id) => reqBlob(`/library/books/${id}/file`),
+  libraryCoverBlob: (id) => reqBlob(`/library/books/${id}/cover`),
+  libraryChapters: (bookId) => req(`/library/books/${bookId}/chapters`),
+  libraryDeleteBook: (id) => reqJson(`/library/books/${id}`, 'DELETE'),
+  librarySkipChapter: (bookId, idx, skip) =>
+    reqJson(`/library/books/${bookId}/chapters/${idx}/skip`, 'PUT', { skip }),
+  libraryOpenBook: (bookId) => reqJson(`/library/books/${bookId}/open`, 'POST'),
+  libraryGetProgress: (bookId) => req(`/library/books/${bookId}/progress`),
+  libraryPutProgress: (bookId, rec) =>
+    reqJson(`/library/books/${bookId}/progress`, 'PUT', rec),
+  libraryPrep: (bookId, chapterIndex) =>
+    req(`/library/prep/${bookId}/${chapterIndex}`),
+  libraryPrepBatch: (bookId, chapterIndexes) =>
+    reqJson('/library/prep/batch', 'POST', { bookId, chapterIndexes }),
+  libraryPrepBatchStatus: (jobId) => req(`/library/prep/batch/${jobId}`),
+  libraryPrepSingle: (bookId, chapterIndex) =>
+    reqJson('/library/prep/single', 'POST', { bookId, chapterIndex }),
+  librarySettings: () => req('/library/settings'),
+  librarySaveSettings: (patch) => reqJson('/library/settings', 'PUT', patch),
+  libraryModels: (key) => req('/library/models', { searchParams: { key } }),
+  libraryTestAi: (apiKey) => reqJson('/library/ai/test', 'POST', { apiKey }),
+  libraryDict: (word, context) =>
+    req(`/library/dict/${encodeURIComponent(word)}`, { searchParams: { context } }),
+}
+
+// multipart 上传（epub 等大文件）：带登录态，返回解包后的 data
+async function reqUpload(path, formData) {
+  const res = await fetch(new URL(BASE + path, location.origin), {
+    method: 'POST',
+    headers: authHeaders(),
+    body: formData,
+  })
+  if (res.status === 401) {
+    handle401()
+    throw new Error('登录已过期，请重新登录')
+  }
+  const j = await res.json()
+  if (!res.ok || j.code !== 0) throw new Error(j.detail || j.message || `HTTP ${res.status}`)
+  return j.data
 }
 
 // 规整单个知识点，保证集合字段为数组

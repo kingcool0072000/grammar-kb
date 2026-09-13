@@ -1,0 +1,226 @@
+/* ============ 泛读馆 · 章节预习管理（命名空间 .lib-manage，局部变量自持） ============ */
+.lib-manage {
+  --lib-primary: #d65124;
+  --lib-primary-deep: #b8431c;
+  --lib-primary-soft: #fff1ea;
+  --lib-accent: #1d8578;
+  --lib-accent-bright: #2bb3a3;
+  --lib-accent-soft: #e2f5f2;
+  --lib-bg: #faf7f2;
+  --lib-surface: #ffffff;
+  --lib-text: #2b2722;
+  --lib-text-secondary: #7d766c;
+  --lib-border: #eae4da;
+  --lib-danger: #c0392b;
+  --lib-radius: 14px;
+  --lib-shadow: 0 2px 12px rgba(60, 45, 30, 0.07);
+  --lib-shadow-lg: 0 8px 30px rgba(60, 45, 30, 0.14);
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 22px 20px 40px;
+  width: 100%;
+  color: var(--lib-text);
+}
+.lib-manage .lib-flex { flex: 1; }
+.lib-manage .lm-muted { color: var(--lib-text-secondary); font-size: 13px; }
+
+/* ---- 按钮 / 输入 ---- */
+.lib-manage .lib-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
+  padding: 9px 18px; min-height: 44px; cursor: pointer;
+  background: var(--lib-primary); color: #fff; white-space: nowrap;
+  transition: background 0.15s, transform 0.1s;
+}
+.lib-manage .lib-btn:hover:not(:disabled) { background: var(--lib-primary-deep); }
+.lib-manage .lib-btn:active:not(:disabled) { transform: scale(0.97); }
+.lib-manage .lib-btn:disabled { background: #d9d2c7; color: #8f887d; cursor: not-allowed; }
+.lib-manage .lib-btn.sec { background: var(--lib-surface); color: var(--lib-text); border: 1.5px solid var(--lib-border); }
+.lib-manage .lib-btn.sec:hover:not(:disabled) { background: var(--lib-bg); }
+.lib-manage .lib-btn.sec:disabled { background: var(--lib-surface); color: #b5aea2; }
+.lib-manage .lib-btn.danger { background: var(--lib-danger); }
+.lib-manage .lib-btn.danger:hover:not(:disabled) { background: #a93226; }
+.lib-manage .lib-btn.small { padding: 6px 14px; min-height: 38px; font-size: 13px; border-radius: 8px; }
+.lib-manage .lib-spin {
+  display: inline-block; width: 16px; height: 16px; border-radius: 50%; flex: none;
+  border: 2.5px solid rgba(255, 255, 255, 0.35); border-top-color: #fff;
+  animation: lib-spin 0.7s linear infinite;
+}
+.lib-manage .lib-spin.on-light { border-color: rgba(0, 0, 0, 0.12); border-top-color: var(--lib-primary); }
+@keyframes lib-spin { to { transform: rotate(360deg); } }
+
+/* ---- 头部 ---- */
+.lib-manage .lm-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.lib-manage .lm-back {
+  border: none; background: none; cursor: pointer; font-family: inherit;
+  color: var(--lib-text-secondary); font-size: 13.5px; font-weight: 600;
+  padding: 8px 10px 8px 0; min-height: 40px; border-radius: 8px;
+  white-space: nowrap;
+}
+.lib-manage .lm-back:hover { color: var(--lib-primary-deep); }
+.lib-manage .lm-head-main { flex: 1; min-width: 220px; }
+.lib-manage .lm-head-main h1 { margin: 0 0 4px; font-size: 20px; }
+.lib-manage .lm-sub { margin: 0; font-size: 13px; color: var(--lib-text-secondary); }
+
+/* ---- 进度卡 ---- */
+.lib-manage .lm-prog-card {
+  background: var(--lib-surface); border: 1px solid var(--lib-border);
+  border-radius: var(--lib-radius); box-shadow: var(--lib-shadow);
+  padding: 16px 20px; margin: 0 0 14px;
+}
+.lib-manage .lm-prog-info {
+  display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  font-size: 13.5px; margin-bottom: 8px;
+}
+.lib-manage .lm-prog-track { height: 6px; border-radius: 3px; background: #ece5da; overflow: hidden; }
+.lib-manage .lm-prog-track i {
+  display: block; height: 100%; border-radius: 3px; background: var(--lib-primary);
+  transition: width 0.4s ease;
+}
+.lib-manage .lm-prog-failed {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px;
+}
+
+/* ---- 工具行：筛选 chips + 批量选择 ---- */
+.lib-manage .lm-toolbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 14px 0 12px;
+}
+.lib-manage .lm-chips { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 260px; }
+.lib-manage .lm-chip {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  border: 1.5px solid var(--lib-border); border-radius: 99px;
+  background: var(--lib-surface); color: var(--lib-text-secondary);
+  font-size: 13px; font-weight: 600; font-family: inherit;
+  padding: 7px 14px; min-height: 38px; transition: all 0.15s;
+}
+.lib-manage .lm-chip:hover { border-color: var(--lib-primary); color: var(--lib-primary-deep); }
+.lib-manage .lm-chip.active { background: var(--lib-primary); border-color: var(--lib-primary); color: #fff; }
+.lib-manage .lm-chip-count {
+  background: rgba(0, 0, 0, 0.08); border-radius: 99px; font-size: 11.5px;
+  padding: 1px 8px; min-width: 20px; text-align: center;
+}
+.lib-manage .lm-chip.active .lm-chip-count { background: rgba(255, 255, 255, 0.25); }
+.lib-manage .lm-sel-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ---- 章列表 ---- */
+.lib-manage .lm-list {
+  background: var(--lib-surface); border: 1px solid var(--lib-border);
+  border-radius: var(--lib-radius); box-shadow: var(--lib-shadow);
+  overflow: hidden;
+}
+.lib-manage .lm-row {
+  display: flex; align-items: center; gap: 12px; cursor: pointer;
+  padding: 13px 16px; border-bottom: 1px solid var(--lib-border);
+}
+.lib-manage .lm-row:last-child { border-bottom: none; }
+.lib-manage .lm-row.ineligible { cursor: default; }
+.lib-manage .lm-row input[type='checkbox'] {
+  width: 20px; height: 20px; flex: none; accent-color: var(--lib-primary); cursor: pointer;
+}
+.lib-manage .lm-row input[type='checkbox']:disabled { cursor: default; }
+.lib-manage .lm-row-title { flex: 1; min-width: 0; font-size: 14px; }
+.lib-manage .lm-row-title .t {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lib-manage .lm-row-title .idx {
+  color: var(--lib-text-secondary); font-size: 12px; font-weight: 600;
+  opacity: 0.7; margin-right: 2px;
+}
+.lib-manage .lm-row-title .sub {
+  font-size: 11.5px; color: var(--lib-text-secondary); margin-top: 1px; white-space: normal;
+}
+.lib-manage .lm-row-ops { display: flex; align-items: center; gap: 6px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
+
+/* 徽标 */
+.lib-manage .lm-badge {
+  display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 99px;
+  background: var(--lib-primary-soft); color: var(--lib-primary-deep);
+}
+.lib-manage .lm-badge.green { background: var(--lib-accent-soft); color: var(--lib-accent); }
+.lib-manage .lm-badge.gray { background: #f0ece5; color: var(--lib-text-secondary); }
+.lib-manage .lm-badge.red { background: #fdeaea; color: var(--lib-danger); }
+
+.lib-manage .lm-skip-toggle { min-height: 34px; font-size: 12px; }
+
+/* 列表空态 / 错误态 */
+.lib-manage .lm-list-empty, .lib-manage .lm-error-card {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding: 36px 20px; text-align: center; color: var(--lib-text-secondary);
+}
+.lib-manage .lm-list-empty { padding: 36px 20px; }
+.lib-manage .lm-error-card {
+  background: var(--lib-surface); border: 1px solid var(--lib-border);
+  border-radius: var(--lib-radius); box-shadow: var(--lib-shadow);
+  margin: 40px auto; max-width: 460px; padding: 50px 24px;
+}
+.lib-manage .lm-list-empty .art, .lib-manage .lm-error-card .art { font-size: 44px; line-height: 1; }
+.lib-manage .lm-list-empty h3, .lib-manage .lm-error-card h3 {
+  margin: 0; font-size: 16px; color: var(--lib-text);
+}
+.lib-manage .lm-list-empty p, .lib-manage .lm-error-card p {
+  margin: 0; font-size: 13.5px; line-height: 1.6;
+}
+
+/* 骨架屏 */
+.lib-manage .lm-skel {
+  display: block; height: 18px; flex: 1; border-radius: 8px;
+  background: linear-gradient(90deg, #eee8df 25%, #f6f1ea 50%, #eee8df 75%);
+  background-size: 200% 100%;
+  animation: lib-shimmer 1.4s infinite;
+}
+@keyframes lib-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* ---- 粘底操作栏 ---- */
+.lib-manage .lm-actionbar {
+  position: sticky; bottom: 0; z-index: 50; margin-top: 16px;
+  background: rgba(250, 247, 242, 0.95);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border-top: 1px solid var(--lib-border);
+}
+.lib-manage .lm-actionbar-inner {
+  max-width: 860px; margin: 0 auto; padding: 12px 20px 16px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.lib-manage .lm-sel-info { font-size: 13px; color: var(--lib-text-secondary); }
+
+/* ---- toast ---- */
+.lib-manage .lib-toast-wrap {
+  position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 10000;
+  display: flex; flex-direction: column; gap: 8px; align-items: center;
+  pointer-events: none;
+}
+.lib-manage .lib-toast {
+  pointer-events: auto; padding: 10px 20px; border-radius: 10px;
+  font-size: 14px; font-weight: 500; color: #fff; max-width: min(90vw, 480px);
+  box-shadow: var(--lib-shadow-lg); animation: lib-toast-in 0.25s ease;
+}
+.lib-manage .lib-toast.success { background: #2e7d5b; }
+.lib-manage .lib-toast.error { background: var(--lib-danger); }
+.lib-manage .lib-toast.info { background: #5b6470; }
+.lib-manage .lib-toast.out { opacity: 0; transform: translateY(-10px); transition: all 0.25s ease; }
+@keyframes lib-toast-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+
+/* ---- 移动端 ---- */
+@media (max-width: 768px) {
+  .lib-manage { padding: 14px 14px 24px; }
+  .lib-manage .lm-toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
+  .lib-manage .lm-chips { min-width: 0; }
+  .lib-manage .lm-sel-row .lib-btn { flex: 1; }
+  .lib-manage .lm-row { padding: 12px 10px; gap: 8px; flex-wrap: wrap; }
+  /* 移动端 ops（徽标+toggle，nowrap）换到第二行整行，把宽度还给标题（走查 B5） */
+  .lib-manage .lm-row-title { flex: 1 1 calc(100% - 44px); }
+  .lib-manage .lm-row-ops { flex-wrap: nowrap; flex: 1 1 100%; justify-content: flex-start; }
+  .lib-manage .lm-skip-toggle { padding: 5px 8px; font-size: 11px; }
+  /* 粘底栏压成两行内：信息行 + 按钮行（原三行 ~250px 遮挡列表） */
+  .lib-manage .lm-actionbar-inner { padding: 10px 14px 14px; gap: 8px; }
+  .lib-manage .lm-sel-info { flex: 1 1 100%; font-size: 12px; }
+  /* 两按钮并排一行：允许收缩（否则 nowrap+min-content 278px 会各自折行成三行） */
+  .lib-manage .lm-actionbar-inner .lib-btn { flex: 1; min-height: 46px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+@media (hover: none) {
+  .lib-manage .lib-btn.small { min-height: 44px; }
+}
+
+/* hidden 属性兜底：display 规则不得压过 hidden */
+.lib-manage [hidden] { display: none !important; }

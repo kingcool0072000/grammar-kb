@@ -1,0 +1,887 @@
+/* ============================================================
+   泛读馆 · 阅读器样式（全部以 .lib-reader 为命名空间根，不污染全局）
+   设计 token 对齐 FCEReadingLib global.css，定义在 .lib-reader 局部。
+   ============================================================ */
+
+.lib-reader {
+  --lib-primary: #d65124;
+  --lib-primary-deep: #b8431c;
+  --lib-primary-soft: #fff1ea;
+  --lib-accent: #1d8578;
+  --lib-accent-bright: #2bb3a3;
+  --lib-accent-soft: #e2f5f2;
+  --lib-bg: #faf7f2;
+  --lib-surface: #ffffff;
+  --lib-text: #2b2722;
+  --lib-text-secondary: #7d766c;
+  --lib-border: #eae4da;
+  --lib-danger: #c0392b;
+  --lib-radius: 14px;
+  --lib-shadow: 0 2px 12px rgba(60, 45, 30, 0.07);
+  --lib-shadow-lg: 0 8px 30px rgba(60, 45, 30, 0.14);
+  /* 外壳跟随主题（JS 按当前主题写入；默认=浅色 token） */
+  --lib-shell-bg: var(--lib-surface);
+  --lib-shell-fg: var(--lib-text);
+  --lib-shell-border: var(--lib-border);
+
+  position: fixed;
+  inset: 0;
+  z-index: 200; /* 盖住 app header/main，沉浸式 */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--lib-bg);
+  color: var(--lib-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.lib-reader *,
+.lib-reader *::before,
+.lib-reader *::after {
+  box-sizing: border-box;
+}
+
+/* ---------------- 顶栏 ---------------- */
+.lib-reader .lib-topbar {
+  height: 52px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--lib-shell-border);
+  background: var(--lib-shell-bg);
+  color: var(--lib-shell-fg);
+  z-index: 60;
+}
+
+.lib-reader .lib-icon-btn {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--lib-text-secondary);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.lib-reader .lib-icon-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--lib-text);
+}
+.lib-reader .lib-icon-btn:active {
+  transform: scale(0.96);
+}
+
+.lib-reader .lib-accent-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 38px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 9px;
+  background: var(--lib-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.lib-reader .lib-accent-btn:hover {
+  background: #17695f;
+}
+.lib-reader .lib-accent-btn:active {
+  transform: scale(0.97);
+}
+
+.lib-reader .lib-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.lib-reader .lib-title .s {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--lib-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------- 阅读主体 ---------------- */
+.lib-reader .lib-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: var(--lib-shell-bg);
+  display: flex;
+  flex-direction: column;
+  transition: background 0.2s;
+}
+
+.lib-reader #epub-viewer {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+/* 用 viewer 内首个容器（epubjs 注入的包裹 div）上边距补偿 ~17px 测量误差，
+   避免首屏内容钻到顶栏下（iframe 自身加 padding 会挤压正文列宽） */
+.lib-reader #epub-viewer > div:first-child {
+  margin-top: 17px;
+}
+
+.lib-reader #epub-viewer iframe {
+  border: none;
+}
+
+/* 加载态 */
+.lib-reader .lib-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--lib-bg);
+  color: var(--lib-text-secondary);
+  font-size: 14px;
+}
+
+.lib-reader .lib-spinner {
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid var(--lib-border);
+  border-top-color: var(--lib-primary);
+  animation: lib-spin 0.8s linear infinite;
+}
+@keyframes lib-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 错误态 */
+.lib-reader .lib-error {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 30px 20px;
+  background: var(--lib-bg);
+  text-align: center;
+}
+.lib-reader .lib-error .ico {
+  font-size: 44px;
+  line-height: 1;
+}
+.lib-reader .lib-error h3 {
+  margin: 6px 0 0;
+  font-size: 17px;
+  color: var(--lib-text);
+}
+.lib-reader .lib-error p {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--lib-text-secondary);
+  max-width: 420px;
+  word-break: break-word;
+}
+.lib-reader .lib-btn {
+  min-height: 44px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 10px;
+  background: var(--lib-primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lib-reader .lib-btn:hover {
+  background: var(--lib-primary-deep);
+}
+.lib-reader .lib-btn:active {
+  transform: scale(0.97);
+}
+
+/* ---------------- 划词工具条（深色） ---------------- */
+.lib-reader .lib-selpop {
+  position: absolute;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #2b2722;
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: var(--lib-shadow-lg);
+  transform: translateX(-50%);
+  animation: lib-pop-in 0.15s ease;
+}
+@keyframes lib-pop-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+.lib-reader .lib-selpop button {
+  border: none;
+  background: none;
+  color: #f5efe6;
+  width: 44px;
+  height: 42px;
+  border-radius: 8px;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.lib-reader .lib-selpop button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.lib-reader .lib-selpop .word-label {
+  color: #f5efe6;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 10px;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------- 查词浮层 ---------------- */
+.lib-reader .lib-dictpop {
+  position: absolute;
+  z-index: 75;
+  width: min(340px, calc(100vw - 32px));
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  background: var(--lib-shell-bg);
+  color: var(--lib-shell-fg);
+  border-radius: var(--lib-radius);
+  box-shadow: var(--lib-shadow-lg);
+  padding: 18px;
+  border: 1px solid var(--lib-shell-border);
+  animation: lib-pop-in-plain 0.15s ease;
+}
+@keyframes lib-pop-in-plain {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.lib-reader .lib-dict-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.lib-reader .lib-dict-head .word {
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--lib-text);
+  word-break: break-word;
+}
+.lib-reader .lib-dict-head .ph {
+  color: var(--lib-text-secondary);
+  font-size: 14px;
+}
+.lib-reader .lib-dict-head .sound,
+.lib-reader .lib-dict-head .close {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: var(--lib-accent-soft);
+  color: var(--lib-accent);
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.lib-reader .lib-dict-head .close {
+  margin-left: auto;
+  background: transparent;
+  color: var(--lib-text-secondary);
+}
+.lib-reader .lib-dict-head .close:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--lib-text);
+}
+.lib-reader .lib-dict-head .sound:hover {
+  background: #d2ede8;
+}
+.lib-reader .lib-dict-source {
+  font-size: 11px;
+  color: var(--lib-text-secondary);
+  margin-bottom: 10px;
+}
+.lib-reader .lib-dict-source .ai {
+  color: var(--lib-accent-bright);
+  font-weight: 600;
+}
+.lib-reader .lib-dict-sense {
+  margin-bottom: 10px;
+}
+.lib-reader .lib-dict-sense .pos {
+  display: inline-block;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--lib-accent);
+  background: var(--lib-accent-soft);
+  border-radius: 5px;
+  padding: 1px 8px;
+  margin-bottom: 4px;
+}
+.lib-reader .lib-dict-sense .def {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--lib-text);
+  word-break: break-word;
+}
+.lib-reader .lib-dict-sense .example {
+  font-size: 13px;
+  color: var(--lib-text-secondary);
+  font-style: italic;
+  margin-top: 2px;
+  word-break: break-word;
+}
+.lib-reader .lib-dict-empty {
+  color: var(--lib-text-secondary);
+  font-size: 14px;
+  text-align: center;
+  padding: 10px 0;
+}
+.lib-reader .lib-dict-loading {
+  display: flex;
+  justify-content: center;
+  padding: 18px 0;
+}
+.lib-reader .lib-dict-loading .lib-spinner {
+  width: 22px;
+  height: 22px;
+  border-width: 2.5px;
+}
+
+/* ---------------- 抽屉骨架：遮罩 + 侧栏（transform 过渡 0.25s） ---------------- */
+.lib-reader .lib-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  background: rgba(43, 39, 34, 0.42);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+.lib-reader .lib-mask.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.lib-reader .lib-drawer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  /* 抽屉跟随阅读主题（夜间/护眼不再是纯白面板） */
+  background: var(--lib-shell-bg);
+  color: var(--lib-shell-fg);
+  box-shadow: var(--lib-shadow-lg);
+  visibility: hidden;
+  transition: transform 0.25s ease, visibility 0.25s ease, background 0.2s ease;
+}
+.lib-reader .lib-drawer.left {
+  left: 0;
+  width: min(340px, 88vw);
+  transform: translateX(-100%);
+}
+.lib-reader .lib-drawer.right {
+  right: 0;
+  width: min(400px, 94vw);
+  transform: translateX(100%);
+}
+.lib-reader .lib-drawer.open {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.lib-reader .lib-drawer-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--lib-border);
+}
+.lib-reader .lib-drawer-head h3 {
+  margin: 0;
+  font-size: 16px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.lib-reader .lib-close {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--lib-text-secondary);
+  font-size: 15px;
+  cursor: pointer;
+}
+.lib-reader .lib-close:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--lib-text);
+}
+.lib-reader .lib-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 18px 30px;
+  overscroll-behavior: contain;
+}
+.lib-reader .lib-muted {
+  color: var(--lib-text-secondary);
+  font-size: 13px;
+  margin: 0 0 4px;
+}
+
+/* ---------------- 目录 ---------------- */
+.lib-reader .lib-toc-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 12px;
+  border: none;
+  background: none;
+  border-radius: 9px;
+  font-size: 14px;
+  font-family: inherit;
+  text-align: left;
+  color: var(--lib-text);
+  line-height: 1.4;
+  cursor: pointer;
+  min-height: 44px;
+}
+.lib-reader .lib-toc-item:hover {
+  background: var(--lib-bg);
+}
+.lib-reader .lib-toc-item.active {
+  background: var(--lib-primary-soft);
+  color: var(--lib-primary-deep);
+  font-weight: 700;
+}
+.lib-reader .lib-toc-item .t {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+.lib-reader .lib-toc-item .prep-dot {
+  flex: none;
+  margin-left: auto;
+  font-size: 13px;
+}
+
+/* ---------------- Aa 主题面板 ---------------- */
+.lib-reader .lib-theme-section {
+  margin-bottom: 18px;
+}
+.lib-reader .lib-theme-section h4 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--lib-text-secondary);
+}
+
+.lib-reader .lib-theme-preview {
+  border-radius: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--lib-border);
+  margin-bottom: 16px;
+  transition: background 0.2s, color 0.2s;
+}
+.lib-reader .lib-theme-preview p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.lib-reader .lib-preset-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.lib-reader .lib-preset-card {
+  border: 2px solid var(--lib-border);
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: var(--lib-surface);
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--lib-text);
+  min-width: 74px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.lib-reader .lib-preset-card.active {
+  border-color: var(--lib-primary);
+  box-shadow: 0 0 0 3px var(--lib-primary-soft);
+}
+.lib-reader .lib-preset-card .swatch {
+  width: 100%;
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.lib-reader .lib-custom-colors {
+  display: flex;
+  gap: 12px;
+}
+.lib-reader .lib-custom-colors label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--lib-text-secondary);
+  flex: 1;
+}
+.lib-reader .lib-custom-colors input[type='color'] {
+  width: 100%;
+  height: 44px;
+  border: 1.5px solid var(--lib-border);
+  border-radius: 8px;
+  background: var(--lib-surface);
+  padding: 3px;
+  cursor: pointer;
+}
+
+.lib-reader .lib-seg {
+  display: inline-flex;
+  background: var(--lib-bg);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+.lib-reader .lib-seg button {
+  border: none;
+  background: none;
+  padding: 8px 14px;
+  min-height: 40px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--lib-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.lib-reader .lib-seg button.active {
+  background: var(--lib-surface);
+  color: var(--lib-text);
+  font-weight: 700;
+  box-shadow: var(--lib-shadow);
+}
+
+/* 滑杆（自绘轨道：--fill 内联变量 + 渐变，webkit/moz 双份） */
+.lib-reader .lib-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.lib-reader .lib-slider-row output {
+  font-size: 13px;
+  min-width: 30px;
+  text-align: right;
+  color: var(--lib-text);
+  font-weight: 600;
+}
+.lib-reader .lib-slider-row input[type='range'] {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+  --fill: 0%;
+}
+.lib-reader .lib-slider-row input[type='range']::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--lib-primary) var(--fill, 0%),
+    var(--lib-border) var(--fill, 0%)
+  );
+}
+.lib-reader .lib-slider-row input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  margin-top: -6px;
+  background: var(--lib-surface);
+  border: 2px solid var(--lib-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+.lib-reader .lib-slider-row input[type='range']::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--lib-primary) var(--fill, 0%),
+    var(--lib-border) var(--fill, 0%)
+  );
+}
+.lib-reader .lib-slider-row input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--lib-surface);
+  border: 2px solid var(--lib-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* ---------------- 预习面板 ---------------- */
+.lib-reader .lib-prep-chapter {
+  margin: 0 0 4px;
+}
+.lib-reader .lib-prep-loading {
+  display: flex;
+  justify-content: center;
+  padding: 30px 0;
+}
+.lib-reader .lib-prep-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--lib-text-secondary);
+  margin: 18px 0 10px;
+}
+.lib-reader .lib-prep-group-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--lib-border);
+}
+
+.lib-reader .lib-prep-word {
+  background: var(--lib-surface);
+  border: 1px solid var(--lib-border);
+  border-radius: 12px;
+  padding: 13px 15px;
+  margin-bottom: 10px;
+}
+.lib-reader .lib-prep-word-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lib-reader .lib-prep-word-head .w {
+  font-size: 17px;
+  font-weight: 800;
+}
+.lib-reader .lib-prep-word-head .ph {
+  color: var(--lib-text-secondary);
+  font-size: 13px;
+}
+.lib-reader .lib-prep-word-head .pos {
+  font-size: 12px;
+  color: var(--lib-accent);
+  font-style: italic;
+}
+.lib-reader .lib-prep-sound {
+  margin-left: auto;
+  border: none;
+  background: var(--lib-accent-soft);
+  color: var(--lib-accent);
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  align-self: center;
+}
+.lib-reader .lib-prep-sound:hover {
+  background: #d2ede8;
+}
+.lib-reader .lib-prep-sound.accent {
+  background: rgba(43, 179, 163, 0.15);
+}
+.lib-reader .lib-prep-meaning {
+  font-size: 14px;
+  margin: 5px 0 6px;
+  word-break: break-word;
+}
+.lib-reader .lib-prep-example {
+  font-size: 12.5px;
+  color: var(--lib-text-secondary);
+  line-height: 1.55;
+  border-left: 3px solid var(--lib-border);
+  padding-left: 9px;
+  word-break: break-word;
+}
+.lib-reader .lib-prep-example .zh {
+  display: block;
+  margin-top: 2px;
+}
+
+.lib-reader .lib-prep-idiom {
+  background: var(--lib-accent-soft);
+  border-radius: 12px;
+  padding: 13px 15px;
+  margin-bottom: 10px;
+}
+.lib-reader .lib-prep-idiom .p {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--lib-accent);
+  word-break: break-word;
+}
+.lib-reader .lib-prep-idiom .line {
+  font-size: 13px;
+  margin-top: 4px;
+  line-height: 1.5;
+  color: var(--lib-text);
+}
+.lib-reader .lib-prep-idiom .line b {
+  color: var(--lib-text);
+}
+.lib-reader .lib-prep-idiom .line.usage {
+  color: var(--lib-text-secondary);
+}
+
+.lib-reader .lib-prep-empty {
+  padding: 30px 10px;
+  text-align: center;
+  color: var(--lib-text-secondary);
+}
+.lib-reader .lib-prep-empty .ico {
+  font-size: 44px;
+  line-height: 1;
+}
+.lib-reader .lib-prep-empty h3 {
+  margin: 8px 0 4px;
+  font-size: 16px;
+  color: var(--lib-text);
+}
+.lib-reader .lib-prep-empty p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.lib-reader .lib-prep-start {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 12px;
+  border: none;
+  border-radius: 10px;
+  background: var(--lib-accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.lib-reader .lib-prep-start:hover {
+  background: #17695f;
+}
+.lib-reader .lib-prep-start:active {
+  transform: scale(0.98);
+}
+
+/* ---------------- 移动端（≤768px）---------------- */
+@media (max-width: 768px) {
+  /* 视觉可缩，热区不缩：保持 ≥44px 可点面积（走查 M2） */
+  .lib-reader .lib-icon-btn {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+  .lib-reader .lib-icon-btn svg { width: 18px; height: 18px; }
+  .lib-reader .lib-accent-btn {
+    min-height: 44px;
+    padding: 5px 12px;
+    font-size: 12.5px;
+  }
+  .lib-reader .lib-topbar {
+    padding: 0 8px;
+    gap: 4px;
+  }
+  /* 抽屉全宽 */
+  .lib-reader .lib-drawer.left,
+  .lib-reader .lib-drawer.right {
+    width: 100vw;
+    max-width: 100vw;
+  }
+  .lib-reader .lib-seg {
+    display: flex;
+    width: 100%;
+  }
+  .lib-reader .lib-seg button {
+    flex: 1;
+    min-height: 44px;
+  }
+  .lib-reader .lib-custom-colors {
+    flex-direction: column;
+  }
+}
+
+/* hidden 属性兜底：display 规则不得压过 hidden */
+.lib-reader [hidden] { display: none !important; }

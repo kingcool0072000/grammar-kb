@@ -1,0 +1,255 @@
+/* ============ 泛读馆 · 书架（命名空间 .lib-shelf，局部变量自持，不动全局样式） ============ */
+.lib-shelf {
+  --lib-primary: #d65124;
+  --lib-primary-deep: #b8431c;
+  --lib-primary-soft: #fff1ea;
+  --lib-accent: #1d8578;
+  --lib-accent-bright: #2bb3a3;
+  --lib-accent-soft: #e2f5f2;
+  --lib-bg: #faf7f2;
+  --lib-surface: #ffffff;
+  --lib-text: #2b2722;
+  --lib-text-secondary: #7d766c;
+  --lib-border: #eae4da;
+  --lib-danger: #c0392b;
+  --lib-radius: 14px;
+  --lib-shadow: 0 2px 12px rgba(60, 45, 30, 0.07);
+  --lib-shadow-lg: 0 8px 30px rgba(60, 45, 30, 0.14);
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 22px 20px 60px;
+  width: 100%;
+  color: var(--lib-text);
+}
+.lib-shelf .lib-flex { flex: 1; }
+
+/* hidden 属性兜底：命名空间内任何 display 规则都不得压过 hidden
+   （lib-drop/lib-empty 都栽过这个坑——display:flex 覆盖 UA 的 display:none） */
+.lib-shelf [hidden] { display: none !important; }
+
+/* ---- 按钮 / 输入（本页命名空间内的基础控件） ---- */
+.lib-shelf .lib-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
+  padding: 9px 18px; min-height: 44px; cursor: pointer;
+  background: var(--lib-primary); color: #fff; white-space: nowrap;
+  transition: background 0.15s, transform 0.1s;
+}
+.lib-shelf .lib-btn:hover:not(:disabled) { background: var(--lib-primary-deep); }
+.lib-shelf .lib-btn:active:not(:disabled) { transform: scale(0.97); }
+.lib-shelf .lib-btn:disabled { background: #d9d2c7; color: #8f887d; cursor: not-allowed; }
+.lib-shelf .lib-btn.sec { background: var(--lib-surface); color: var(--lib-text); border: 1.5px solid var(--lib-border); }
+.lib-shelf .lib-btn.sec:hover:not(:disabled) { background: var(--lib-bg); }
+.lib-shelf .lib-btn.sec:disabled { background: var(--lib-surface); color: #b5aea2; }
+.lib-shelf .lib-btn.danger { background: var(--lib-danger); }
+.lib-shelf .lib-btn.danger:hover:not(:disabled) { background: #a93226; }
+.lib-shelf .lib-btn.small { padding: 6px 14px; min-height: 38px; font-size: 13px; border-radius: 8px; }
+.lib-shelf .lib-input {
+  width: 100%; padding: 10px 14px; min-height: 44px;
+  border: 1.5px solid var(--lib-border); border-radius: 10px;
+  font-size: 15px; font-family: inherit; background: var(--lib-surface);
+  color: var(--lib-text); outline: none; transition: border-color 0.15s;
+}
+.lib-shelf .lib-input:focus { border-color: var(--lib-primary); }
+
+/* ---- spinner ---- */
+.lib-shelf .lib-spin {
+  display: inline-block; width: 16px; height: 16px; border-radius: 50%; flex: none;
+  border: 2.5px solid rgba(255, 255, 255, 0.35); border-top-color: #fff;
+  animation: lib-spin 0.7s linear infinite;
+}
+.lib-shelf .lib-spin.on-light { border-color: rgba(0, 0, 0, 0.12); border-top-color: var(--lib-primary); }
+.lib-shelf .lib-spin-big { width: 26px; height: 26px; }
+@keyframes lib-spin { to { transform: rotate(360deg); } }
+
+/* ---- 顶部：标题 + 统计 + 搜索排序 ---- */
+.lib-shelf .lib-head { margin-bottom: 18px; }
+.lib-shelf .lib-titlebar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.lib-shelf .lib-title { margin: 0; font-size: 22px; letter-spacing: 0.5px; }
+.lib-shelf .lib-stats {
+  display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap;
+  background: var(--lib-surface); border: 1px solid var(--lib-border); border-radius: 99px;
+  padding: 5px 14px; font-size: 12.5px; color: var(--lib-text-secondary);
+}
+.lib-shelf .lib-stats b { color: var(--lib-text); }
+.lib-shelf .lib-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.lib-shelf .lib-search { position: relative; flex: 1; min-width: 200px; max-width: 340px; }
+.lib-shelf .lib-search .lib-input { padding-left: 38px; }
+.lib-shelf .lib-search::before {
+  content: ''; position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; opacity: 0.55; pointer-events: none;
+  background: var(--lib-text-secondary); border-radius: 50%;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M229.19,213.59l-43.11-43.11a80.12,80.12,0,1,0-15.66,15.66l43.11,43.11a12,12,0,0,0,17-17ZM148,148a56,56,0,1,1,0-79.2A56,56,0,0,1,148,148Z'/%3E%3C/svg%3E") no-repeat center / contain;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M229.19,213.59l-43.11-43.11a80.12,80.12,0,1,0-15.66,15.66l43.11,43.11a12,12,0,0,0,17-17ZM148,148a56,56,0,1,1,0-79.2A56,56,0,0,1,148,148Z'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+.lib-shelf .lib-sort { width: auto; flex: none; }
+
+/* ---- 书卡网格 ---- */
+.lib-shelf .lib-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 20px;
+}
+.lib-shelf .lib-book {
+  position: relative; display: flex; flex-direction: column;
+  border-radius: var(--lib-radius); overflow: hidden; cursor: pointer;
+  background: var(--lib-surface); box-shadow: var(--lib-shadow);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.lib-shelf .lib-book:hover { transform: translateY(-4px); box-shadow: var(--lib-shadow-lg); }
+
+.lib-shelf .lib-cover {
+  position: relative; aspect-ratio: 2 / 3; overflow: hidden;
+  background: linear-gradient(150deg, #f3ead9, #e4d7c3);
+  display: flex; align-items: center; justify-content: center;
+}
+.lib-shelf .lib-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.lib-shelf .lib-cover-fb { color: var(--lib-text-secondary); opacity: 0.55; display: inline-flex; }
+.lib-shelf .lib-done-flag {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  background: var(--lib-accent); color: #fff; border-radius: 99px;
+  font-size: 11px; font-weight: 700; padding: 3px 9px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.lib-shelf .lib-card-prog {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 5px; z-index: 2;
+  background: rgba(0, 0, 0, 0.12);
+}
+.lib-shelf .lib-card-prog i { display: block; height: 100%; background: var(--lib-primary); }
+
+.lib-shelf .lib-book-info { padding: 10px 12px 12px; }
+.lib-shelf .lib-book-title {
+  margin: 0; font-size: 13.5px; font-weight: 700; line-height: 1.4; min-height: 2.8em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.lib-shelf .lib-book-author {
+  margin-top: 2px; font-size: 12px; color: var(--lib-text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lib-shelf .lib-book-meta { margin-top: 6px; font-size: 11.5px; color: var(--lib-text-secondary); }
+
+/* ---- 教师书卡菜单 ---- */
+.lib-shelf .lib-book-menu-btn {
+  position: absolute; top: 8px; left: 8px; z-index: 5;
+  width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer;
+  background: rgba(255, 255, 255, 0.92); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  font-size: 18px; color: var(--lib-text); line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s;
+}
+.lib-shelf .lib-book:hover .lib-book-menu-btn,
+.lib-shelf .lib-book-menu-btn.open,
+.lib-shelf .lib-book-menu-btn:focus-visible { opacity: 1; }
+/* 触屏无 hover：常显（半透明避免长期遮挡封面） */
+@media (hover: none) {
+  .lib-shelf .lib-book-menu-btn { opacity: 0.85; }
+  .lib-shelf .lib-btn.small { min-height: 44px; }
+}
+.lib-shelf .lib-book-menu {
+  position: absolute; top: 56px; left: 8px; z-index: 20;
+  background: var(--lib-surface); border: 1px solid var(--lib-border);
+  border-radius: 10px; box-shadow: var(--lib-shadow-lg);
+  padding: 6px; min-width: 176px;
+}
+/* 打开菜单期间书卡不得有 transform（hover 抬升会创建 stacking context，
+   让 z-index:20 的菜单困在卡片层内、被挂在 root 的 z-index:15 backdrop 遮挡，
+   点击菜单项会命中 backdrop 反而关闭菜单——复走查 B1） */
+.lib-shelf .lib-book:has(.lib-book-menu:not([hidden])) { transform: none; }
+.lib-shelf .lib-book-menu button {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  min-height: 44px; padding: 9px 12px; border: none; background: none;
+  border-radius: 7px; font-size: 13.5px; font-family: inherit; text-align: left;
+  color: var(--lib-text); cursor: pointer;
+}
+.lib-shelf .lib-book-menu button:hover { background: var(--lib-bg); }
+.lib-shelf .lib-book-menu button.danger { color: var(--lib-danger); }
+.lib-shelf .lib-menu-backdrop { position: fixed; inset: 0; z-index: 9; }
+
+/* ---- 教师上传卡（网格首位虚线卡） ---- */
+.lib-shelf .lib-upload-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  min-height: 180px; padding: 12px; cursor: pointer;
+  border: 2px dashed var(--lib-border); border-radius: var(--lib-radius);
+  background: transparent; box-shadow: none;
+  color: var(--lib-text-secondary); font-size: 14px; font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+.lib-shelf .lib-upload-card:hover:not(:disabled) { border-color: var(--lib-primary); background: var(--lib-primary-soft); }
+.lib-shelf .lib-upload-card:disabled { cursor: wait; opacity: 0.75; }
+.lib-shelf .lib-upload-card .plus { font-size: 34px; font-weight: 300; color: var(--lib-primary); line-height: 1; }
+
+/* ---- 全页拖拽 overlay ---- */
+.lib-shelf .lib-drop {
+  position: fixed; inset: 0; z-index: 9500; pointer-events: none;
+  background: rgba(255, 138, 92, 0.12);
+  border: 3px dashed var(--lib-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 700; color: var(--lib-primary-deep);
+}
+/* display:flex 会压过 hidden 属性的 UA 样式，必须显式关掉 */
+.lib-shelf .lib-drop[hidden] { display: none; }
+
+/* ---- 空态 / 错误态引导卡 ---- */
+.lib-shelf .lib-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding: 60px 20px; text-align: center;
+  background: var(--lib-surface); border: 1px solid var(--lib-border);
+  border-radius: var(--lib-radius); box-shadow: var(--lib-shadow);
+  color: var(--lib-text-secondary);
+}
+.lib-shelf .lib-empty .art { font-size: 52px; line-height: 1; }
+.lib-shelf .lib-empty h3 { margin: 0; font-size: 17px; color: var(--lib-text); }
+.lib-shelf .lib-empty p { margin: 0; font-size: 14px; line-height: 1.6; }
+
+/* ---- 骨架屏 ---- */
+.lib-shelf .lib-skel {
+  aspect-ratio: 2 / 3; border-radius: var(--lib-radius);
+  background: linear-gradient(90deg, #eee8df 25%, #f6f1ea 50%, #eee8df 75%);
+  background-size: 200% 100%;
+  animation: lib-shimmer 1.4s infinite;
+}
+@keyframes lib-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* ---- 自制确认弹窗 ---- */
+.lib-shelf .lib-modal-mask {
+  position: fixed; inset: 0; z-index: 9000; padding: 20px;
+  background: rgba(30, 22, 12, 0.45);
+  display: flex; align-items: center; justify-content: center;
+}
+.lib-shelf .lib-modal {
+  background: var(--lib-surface); border-radius: 16px; padding: 26px;
+  width: min(440px, 100%); box-shadow: var(--lib-shadow-lg);
+  animation: lib-modal-in 0.2s ease;
+}
+.lib-shelf .lib-modal h3 { margin: 0 0 8px; font-size: 17px; }
+.lib-shelf .lib-modal-text { margin: 0; font-size: 14px; line-height: 1.6; color: var(--lib-text-secondary); }
+.lib-shelf .lib-modal-actions {
+  display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; flex-wrap: wrap;
+}
+@keyframes lib-modal-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: none; } }
+
+/* ---- toast ---- */
+.lib-shelf .lib-toast-wrap {
+  position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 10000;
+  display: flex; flex-direction: column; gap: 8px; align-items: center;
+  pointer-events: none;
+}
+.lib-shelf .lib-toast {
+  pointer-events: auto; padding: 10px 20px; border-radius: 10px;
+  font-size: 14px; font-weight: 500; color: #fff; max-width: min(90vw, 480px);
+  box-shadow: var(--lib-shadow-lg); animation: lib-toast-in 0.25s ease;
+}
+.lib-shelf .lib-toast.success { background: #2e7d5b; }
+.lib-shelf .lib-toast.error { background: var(--lib-danger); }
+.lib-shelf .lib-toast.info { background: #5b6470; }
+.lib-shelf .lib-toast.out { opacity: 0; transform: translateY(-10px); transition: all 0.25s ease; }
+@keyframes lib-toast-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+
+/* ---- 移动端 ---- */
+@media (max-width: 768px) {
+  .lib-shelf { padding: 14px 14px 50px; }
+  .lib-shelf .lib-title { font-size: 19px; }
+  .lib-shelf .lib-grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 14px; }
+  .lib-shelf .lib-upload-card { min-height: 0; aspect-ratio: 2 / 3; padding: 10px; font-size: 12px; }
+  .lib-shelf .lib-upload-card .plus { font-size: 26px; }
+  .lib-shelf .lib-toolbar { gap: 8px; }
+  .lib-shelf .lib-search { min-width: 140px; max-width: none; }
+}

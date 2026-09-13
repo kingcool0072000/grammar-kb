@@ -89,6 +89,25 @@ export async function mountPrep(el, ctx) {
           <p class="reading-hint">阅读内容：按 Test/Part 管理原文段落与派生文章（新增/编辑/删除）；真题库查看四套试卷与练习明细。</p>
         </div>
       </section>
+
+      <!-- ================= 泛读馆 ================= -->
+      <section class="gd-section">
+        <header class="gd-section-head">
+          <h2>📚 泛读馆</h2>
+          <nav>
+            <button class="reading-btn small primary" data-go="librarySettings">⚙️ 泛读馆设置</button>
+          </nav>
+        </header>
+        <div class="gd-subgroup">
+          <h3>⚙️ 全馆设置</h3>
+          <div class="prep-cards">
+            <button class="prep-card" data-go="librarySettings">
+              <b>泛读馆设置</b><span>AI 预习 · 字典 · 学生主题</span>
+            </button>
+          </div>
+          <p class="reading-hint">配置预习生成的 AI 模型与难度、查词兜底、学生阅读配色与字体；书架与书籍管理在顶部「泛读馆」页签。</p>
+        </div>
+      </section>
     </div>
   `
 

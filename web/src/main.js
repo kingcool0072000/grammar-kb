@@ -9,6 +9,10 @@ import { mountFce } from './views/fce.js'
 import { mountFcePapers } from './views/fcePapers.js'
 import { mountReading } from './views/reading.js'
 import { mountReadingAdmin } from './views/readingAdmin.js'
+import { mountLibraryShelf } from './views/library/shelf.js'
+import { mountLibraryReader } from './views/library/reader.js'
+import { mountLibraryManage } from './views/library/manage.js'
+import { mountLibrarySettings } from './views/library/settings.js'
 import { mountGrading } from './views/grading.js'
 import { mountPrep } from './views/prep.js'
 import { mountAnalytics } from './views/analytics.js'
@@ -27,6 +31,7 @@ const VIEWS = [
   { key: 'analytics', label: '学情分析', teacher: true },
   { key: 'recite', label: '背单词', studentOnly: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
+  { key: 'library', label: '泛读馆' },
   // 子工具页（不在 Tab 显示，hash 直达）：fcePapers 师生共用
   { key: 'fcePapers', label: 'FCE真题', hiddenTab: true },
   { key: 'courses', hiddenTab: true, teacher: true },
@@ -35,7 +40,19 @@ const VIEWS = [
   { key: 'fce', hiddenTab: true, teacher: true },
   { key: 'exams', hiddenTab: true, teacher: true },
   { key: 'readingAdmin', hiddenTab: true, teacher: true },
+  // 泛读馆子页：阅读器 hash 带 /{bookId}；noTab = 双角色都不进 Tab，hash 直达
+  { key: 'libraryReader', hiddenTab: true, noTab: true },
+  { key: 'libraryManage', hiddenTab: true, noTab: true, teacher: true },
+  { key: 'librarySettings', hiddenTab: true, noTab: true, teacher: true },
 ]
+
+// hash 路径切段：#/libraryReader/7 -> ['libraryReader','7']
+function routeSegs() {
+  return (location.hash.replace(/^#\/?/, '') || '')
+    .split('?')[0]
+    .split('/')
+    .filter(Boolean)
+}
 
 function h(tag, cls, html) {
   const e = document.createElement(tag)
@@ -45,7 +62,7 @@ function h(tag, cls, html) {
 }
 
 function currentRoute(role) {
-  const v = (location.hash.replace(/^#\/?/, '') || '').split('?')[0]
+  const [v] = routeSegs()
   const view = VIEWS.find((x) => x.key === v)
   // 学生访问教师页 → 回背单词；教师访问学生页 → 回批改中心；未匹配同理
   if (!view || (view.teacher && role !== 'teacher') || (view.studentOnly && role === 'teacher')) {
@@ -72,7 +89,11 @@ async function bootstrap() {
   // header + main 容器
   const role = auth.role
   const visibleViews = VIEWS.filter(
-    (v) => (!v.hiddenTab || role !== 'teacher') && (!v.teacher || role === 'teacher') && (!v.studentOnly || role !== 'teacher'),
+    (v) =>
+      !v.noTab &&
+      (!v.hiddenTab || role !== 'teacher') &&
+      (!v.teacher || role === 'teacher') &&
+      (!v.studentOnly || role !== 'teacher'),
   )
   const header = h('header', 'app-header')
   const headerInner = h('div', 'header-inner')
@@ -220,13 +241,23 @@ async function bootstrap() {
       mounted = mountReadingAdmin(viewEl)
     } else if (route === 'reading') {
       mounted = mountReading(viewEl, { role })
+    } else if (route === 'library') {
+      mounted = mountLibraryShelf(viewEl, { role })
+    } else if (route === 'libraryReader') {
+      mounted = mountLibraryReader(viewEl, { role, bookId: Number(routeSegs()[1]) })
+    } else if (route === 'libraryManage') {
+      mounted = mountLibraryManage(viewEl, { bookId: Number(routeSegs()[1]) })
+    } else if (route === 'librarySettings') {
+      mounted = mountLibrarySettings(viewEl)
     } else if (route === 'exams') {
       mounted = mountExams(viewEl, { lectures: state.lectures })
     }
     // 教师子工具页（备课/批改中心跳转进入）：mount 完成后 prepend 返回条
     // （mount 内部会覆写 innerHTML——异步视图须等 settle 后再插入）
+    // libraryManage 例外：页内已有「← 返回书架」（主路径从书架进入），
+    // 再叠全局条会双返回堆叠（复走查 Major）
     const routeDef = VIEWS.find((v) => v.key === route)
-    if (role === 'teacher' && routeDef && routeDef.hiddenTab) {
+    if (role === 'teacher' && routeDef && routeDef.hiddenTab && route !== 'libraryManage') {
       const addBack = () => {
         if (!viewEl.querySelector('.gd-tool-back')) {
           const back = h('button', 'fce-back-btn gd-tool-back', '← 返回备课中心')
