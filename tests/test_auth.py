@@ -114,3 +114,13 @@ def test_teacher_full_access(client):
 def test_bad_token_401(client):
     h = {"Authorization": "Bearer garbage.token"}
     assert client.get("/stats", headers=h).status_code == 401
+
+
+def test_mxy_default_user_seeded(tmp_path):
+    """mxy/mxy123 学生账号随默认播种（2026-09-13 预置）。"""
+    import os
+    os.environ["GRAMMAR_KB_USERS"] = str(tmp_path / "users.json")
+    from grammar_kb.auth import UserStore
+    s = UserStore()
+    assert s.verify("mxy", "mxy123") == "student"
+    assert s.verify("mxy", "wrong") is None

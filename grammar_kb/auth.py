@@ -23,6 +23,7 @@ from pathlib import Path
 
 DEFAULT_USERS = {
     "malin": ("123456", "student"),
+    "mxy": ("mxy123", "student"),
     "teacher": ("123456", "teacher"),
 }
 TOKEN_TTL = 30 * 24 * 3600  # 30 天

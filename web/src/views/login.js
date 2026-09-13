@@ -12,7 +12,7 @@ export function mountLogin(el, { onLogin }) {
         <form id="login-form">
           <label class="login-field">
             <span>用户名</span>
-            <input id="login-user" autocomplete="username" placeholder="student / teacher" required />
+            <input id="login-user" autocomplete="username" placeholder="malin / mxy / teacher" required />
           </label>
           <label class="login-field">
             <span>密码</span>
