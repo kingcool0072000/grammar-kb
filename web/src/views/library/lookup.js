@@ -1,6 +1,7 @@
 // 泛读馆阅读器 · 划词工具条（SelectionPopup）+ 查词浮层（DictPopover）。
 // 直译自 FCEReadingLib client/src/components/reader/SelectionPopup.tsx。
 // 两个浮层挂在 .lib-body（position:relative）内，坐标为该容器坐标系。
+// 阅读练习模块（reading.js）也复用本层（container 参数化）。
 
 import { api } from '../../api.js'
 import { escapeHtml } from '../../render.js'
@@ -24,16 +25,32 @@ export function speak(text) {
 }
 
 /**
- * 创建划词/查词浮层组，挂到容器（.lib-body）。
+ * 创建划词/查词浮层组，挂到容器（需 position:relative）。
  * 返回 { showSelection, showDict, hideAll, destroy }。
  */
-export function createLookupLayer(bodyEl) {
+export function createLookupLayer(bodyEl, opts = {}) {
   let currentSel = null
   let dictTimer = null
   let dictSeq = 0
   let dictWord = ''
 
-  // ---- 划词工具条（深色）----
+  // 选区完成 → 立即塌缩选区：Chrome/安卓 WebView 的系统文本菜单
+  // （复制/分享/全选…）锚定在活动选区上，塌缩后不会弹出，只剩我们的工具条。
+  // 字词已提取进 currentSel，后续发音/查词不再依赖选区本身。
+  let selectionWindow = opts.selectionWindow || null
+  function collapseSelection() {
+    try {
+      const w = selectionWindow || window
+      const s = w.getSelection && w.getSelection()
+      if (s && s.rangeCount) s.removeAllRanges()
+    } catch { /* 跨 iframe 失败可忽略 */ }
+  }
+  /** 泛读馆阅读器：把 epub iframe 的 window 传进来，选区塌缩才能作用到正文选区。 */
+  function setSelectionWindow(w) {
+    if (w) selectionWindow = w
+  }
+
+  // ---- 划词工具条（深色；仅发音 + 查词）----
   const popEl = document.createElement('div')
   popEl.className = 'lib-selpop'
   popEl.style.display = 'none'
@@ -42,7 +59,6 @@ export function createLookupLayer(bodyEl) {
     <span class="word-label"></span>
     <button type="button" data-act="sound" title="发音" aria-label="发音">${ICONS.sound(15)}</button>
     <button type="button" data-act="dict" title="查词" aria-label="查词">${ICONS.search(15)}</button>
-    <button type="button" data-act="copy" title="复制" aria-label="复制">${ICONS.copy(15)}</button>
   `
   // 防止按下时清掉正文选区
   popEl.addEventListener('pointerdown', (e) => e.preventDefault())
@@ -55,13 +71,6 @@ export function createLookupLayer(bodyEl) {
       speak(currentSel.word)
     } else if (act === 'dict') {
       showDict(currentSel)
-    } else if (act === 'copy') {
-      try {
-        if (navigator.clipboard) navigator.clipboard.writeText(currentSel.word).catch(() => {})
-      } catch {
-        /* 剪贴板不可用则忽略 */
-      }
-      hideSelection()
     }
   })
 
@@ -92,9 +101,38 @@ export function createLookupLayer(bodyEl) {
   bodyEl.append(popEl, dictEl)
 
   // ---- 划词工具条 ----
+  // 选区塌缩后 ::selection 高亮会消失（走查 M1）：payload.range 存在时
+  // 给选中文字包一层装饰性 <mark>，工具条/浮层关闭时撤除，保住词位反馈
+  function anchorMark(payload) {
+    clearAnchorMark()
+    try {
+      const range = payload && payload.range
+      if (!range || !range.surroundContents) return
+      const doc = range.startContainer && range.startContainer.ownerDocument
+      if (!doc) return
+      const mark = doc.createElement('mark')
+      mark.setAttribute('data-lib-anchor', '')
+      range.surroundContents(mark)
+      anchorEl = mark
+    } catch { /* 跨节点包裹失败则放弃锚点 */ }
+  }
+  let anchorEl = null
+  function clearAnchorMark() {
+    if (!anchorEl) return
+    try {
+      const parent = anchorEl.parentNode
+      while (anchorEl.firstChild) parent.insertBefore(anchorEl.firstChild, anchorEl)
+      parent.removeChild(anchorEl)
+      parent.normalize()
+    } catch { /* ignore */ }
+    anchorEl = null
+  }
+
   function showSelection(payload) {
     hideDict()
     currentSel = payload
+    collapseSelection()
+    anchorMark(payload)
     popEl.querySelector('.word-label').textContent = payload.word
     const bodyW = bodyEl.clientWidth || 800
     const HALF = 110
@@ -107,6 +145,7 @@ export function createLookupLayer(bodyEl) {
   function hideSelection() {
     currentSel = null
     popEl.style.display = 'none'
+    clearAnchorMark()
   }
 
   // ---- 查词浮层 ----
@@ -201,5 +240,5 @@ export function createLookupLayer(bodyEl) {
     dictEl.remove()
   }
 
-  return { showSelection, showDict, hideSelection, hideDict, hideAll, destroy }
+  return { showSelection, showDict, hideSelection, hideDict, hideAll, destroy, collapseSelection, setSelectionWindow }
 }

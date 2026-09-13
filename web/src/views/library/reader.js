@@ -313,6 +313,10 @@ export function mountLibraryReader(viewEl, ctx) {
     if (!doc) return
     try {
       doc.addEventListener('click', () => lookup.hideAll())
+      // 专注模式：iframe 内右键也拦（主文档的全局拦截够不到这里；走查 M1）
+      doc.addEventListener('contextmenu', (e) => e.preventDefault())
+      // 选区塌缩要作用到 iframe 的 window（lookup 层默认只清主文档；走查 M2）
+      lookup.setSelectionWindow(contents.window || doc.defaultView)
     } catch {
       /* ignore */
     }

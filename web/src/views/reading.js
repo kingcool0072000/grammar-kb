@@ -1,9 +1,11 @@
 import { api, getAuth } from '../api.js'
 import { escapeHtml } from '../render.js'
+import { createLookupLayer } from './library/lookup.js'
 
-// 阅读练习：派生文章列表 → 详情（阅读 + 选段录音提交 + 选中单词查 ECDICT）。
+// 阅读练习：派生文章列表 → 详情（阅读 + 选段录音提交 + 点词查词典）。
 // 学生视角：列表只见派生文（后端已过滤），显示字数；
 // 详情页可朗读录音（一段 ≤300 词、≤5 分钟），提交后待教师 10 分制批改。
+// 查词/发音完全复用泛读馆的划词浮层（lookup.js）：点词 → 工具条（发音/查词）→ 查词浮层。
 const MAX_PICK_WORDS = 300
 const MAX_RECORD_SEC = 300
 
@@ -184,10 +186,38 @@ async function renderDetail(el, id, role) {
         </span>
         <span class="reading-pick-info" id="rd-recmsg"></span>
       </div>
-      <p class="reading-hint">点击单词可查词典（ECDICT）。一次只查一个单词。</p>
-      <div class="reading-dict" id="rd-dict" hidden></div>
+      <p class="reading-hint">点击单词 → 工具条里可发音、查词（ECDICT · AI 兜底）。一次一个单词。</p>
     </div>
   `
+
+  // ---- 点词查词（复用泛读馆 lookup：工具条 + 查词浮层） ----
+  const lookup = createLookupLayer(el.querySelector('.reading-article'))
+  el.querySelector('#rd-text').addEventListener('click', (e) => {
+    const w = e.target.closest('w')
+    if (!w) return
+    // 单词高亮：清除旧高亮，点亮当前词
+    el.querySelectorAll('#rd-text w.active').forEach((x) => x.classList.remove('active'))
+    w.classList.add('active')
+    // 所有格/复数所有格还原：children's → children、dogs' → dogs
+    const raw = w.dataset.w
+    const word = raw.endsWith("s'") ? raw.slice(0, -1) : raw.replace(/'s$/, '').replace(/'s$/, '')
+    const r = w.getBoundingClientRect()
+    const host = el.querySelector('.reading-article').getBoundingClientRect()
+    // 与泛读馆划词同构的 payload：词 + 坐标（工具条将出现在词上方）
+    lookup.showSelection({
+      word,
+      context: (w.textContent || word),
+      x: r.left - host.left + r.width / 2,
+      y: r.top - host.top,
+    })
+  })
+  // 关闭浮层时清掉单词高亮（点空白处 lookup 自行处理）
+  el.querySelector('.reading-article').addEventListener('click', (e) => {
+    if (!e.target.closest('w')) {
+      el.querySelectorAll('#rd-text w.active').forEach((x) => x.classList.remove('active'))
+      lookup.hideAll()
+    }
+  })
 
   // ---- 试听原文（范读 WAV：播放/暂停/停止三键） ----
   const aPlay = el.querySelector('#rd-a-play')
@@ -198,59 +228,6 @@ async function renderDetail(el, id, role) {
     el.querySelector('#rd-pickinfo').textContent =
       `全文 ${art.words} 词，超过 ${MAX_PICK_WORDS} 词上限，请联系老师`
   }
-
-  // ---- 查词（一次一个单词；点击的单词高亮） ----
-  el.querySelector('#rd-text').addEventListener('click', async (e) => {
-    const w = e.target.closest('w')
-    if (!w) return
-    // 单词高亮：清除旧高亮，点亮当前词（面板关闭时一并清除）
-    el.querySelectorAll('#rd-text w.active').forEach((x) => x.classList.remove('active'))
-    w.classList.add('active')
-    // 所有格/复数所有格还原：children's → children、dogs' → dogs
-    const raw = w.dataset.w
-    const word = raw.endsWith("s'") ? raw.slice(0, -1) : raw.replace(/'s$/, '').replace(/’s$/, '')
-    const box = el.querySelector('#rd-dict')
-    box.hidden = false
-    box.innerHTML = `<div class="reading-dict-word">${escapeHtml(raw)}</div><p class="reading-dict-body">查询中…</p>`
-    try {
-      const entry = await api.dict(word)
-      const lines = (entry.gloss_lines || [])
-        .map((g) => `<div class="reading-dict-line">${g.pos ? `<i>${escapeHtml(g.pos)}</i>` : ''} ${escapeHtml(g.text)}</div>`)
-        .join('')
-      const forms = Object.entries(entry.forms || {})
-        .map(([k, v]) => `${formCn(k)} ${escapeHtml(v)}`)
-        .join(' · ')
-      box.innerHTML = `
-        <div class="reading-dict-word">${escapeHtml(entry.word)} <span class="reading-dict-ph">${escapeHtml(entry.phonetic)}</span> <button class="reading-btn small" data-tts="${escapeHtml(entry.word)}" title="播放发音">🔊 发音</button></div>
-        <div class="reading-dict-body">${lines || escapeHtml(entry.gloss || '（无释义）')}</div>
-        ${forms ? `<div class="reading-dict-forms">${forms}</div>` : ''}
-        <button class="reading-btn small" id="rd-dict-close">关闭</button>`
-      box.querySelector('#rd-dict-close').addEventListener('click', () => {
-        box.hidden = true
-        el.querySelectorAll('#rd-text w.active').forEach((x) => x.classList.remove('active'))
-      })
-    } catch {
-      box.innerHTML = `<div class="reading-dict-word">${escapeHtml(raw)} <button class="reading-btn small" data-tts="${escapeHtml(word)}" title="播放发音">🔊 发音</button></div>
-        <p class="reading-dict-body">词典未收录该词。</p>
-        <button class="reading-btn small" id="rd-dict-close">关闭</button>`
-      box.querySelector('#rd-dict-close').addEventListener('click', () => {
-        box.hidden = true
-        el.querySelectorAll('#rd-text w.active').forEach((x) => x.classList.remove('active'))
-      })
-    }
-  })
-  // TTS 发音（事件委托，词典框内所有 🔊 按钮共用）
-  el.querySelector('#rd-dict').addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-tts]')
-    if (!b) return
-    try {
-      const u = new SpeechSynthesisUtterance(b.dataset.tts)
-      u.lang = 'en-US'
-      u.rate = 0.9
-      speechSynthesis.cancel()
-      speechSynthesis.speak(u)
-    } catch { /* 浏览器不支持 TTS 时静默 */ }
-  })
 
   // ---- 录音 ----
   setupRecorder(el, art)
@@ -269,13 +246,6 @@ function renderText(text) {
       return `<p data-pidx="${i}">${html}</p>`
     })
     .join('')
-}
-
-function formCn(k) {
-  return {
-    past: '过去式', past_participle: '过去分词', present_participle: '现在分词',
-    third_singular: '三单', plural: '复数', comparative: '比较级', superlative: '最高级',
-  }[k] || k
 }
 
 // ---------- 范读播放器（播放/暂停/停止） ----------

@@ -19,6 +19,13 @@ import { mountAnalytics } from './views/analytics.js'
 import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
 
+// 专注模式：禁正文右键系统菜单（输入框保留）；查词交互只走我们的浮层
+document.addEventListener('contextmenu', (e) => {
+  const t = e.target
+  const editable = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
+  if (!editable) e.preventDefault()
+})
+
 const app = document.getElementById('app')
 
 // teacher: true 仅教师可见；studentOnly: true 仅学生可见

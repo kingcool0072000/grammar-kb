@@ -140,6 +140,13 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
           margin: 2.2em 0 1.2em;
         }
         .fce-chapter-end { text-align: center; margin: 2.5em 0 1.5em; }
+        /* 划词锚点高亮：选区塌缩后保持词位反馈（色值随主题对比自动适配） */
+        mark[data-lib-anchor] {
+          background: rgba(255, 138, 92, 0.32);
+          color: inherit;
+          border-radius: 2px;
+          padding: 0 1px;
+        }
       `
       if (doc.head) doc.head.appendChild(style)
     }
@@ -217,6 +224,8 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
         text,
         word,
         context,
+        // 原始选区 range（克隆）：lookup 层用它做装饰性锚点高亮（塌缩选区后仍能看见词位）
+        range: range.cloneRange(),
         x: frameRect.left - containerRect.left + rect.left + rect.width / 2,
         y: frameRect.top - containerRect.top + rect.top,
       })
@@ -335,6 +344,10 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
         'font-size': `${t.fontSize}px !important`,
         'line-height': `${t.lineHeight} !important`,
         padding: '0 18px !important',
+        // 专注模式：长按菜单（iOS/安卓 WebView）；正文保持可选中——
+        // 划词查词依赖选区，user-select:none 会连自家 selected 事件一起杀掉
+        //（走查 B1）。系统文本菜单由 APK 层 ActionMode + 选区塌缩压制。
+        '-webkit-touch-callout': 'none !important',
       },
       'p, div, span, li': {
         'background-color': 'transparent !important',
