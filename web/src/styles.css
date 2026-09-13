@@ -1550,7 +1550,8 @@ main { --fce-fs: 15px; }
   background: #b45309; color: #fdf9ee; border-radius: 999px;
   font-size: 13px; vertical-align: middle;
 }
-.gd-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 18px; }
+/* minmax 下限用 min() 收敛：窄视口（≤420px，如 390 手机）自动单列，不撑横向滚动 */
+.gd-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 18px; }
 .gd-section {
   border: 1px solid var(--line); border-radius: 16px;
   background: var(--card); padding: 18px 20px 14px;
@@ -1616,3 +1617,26 @@ main { --fce-fs: 15px; }
 .ana-sum-card.good { background: #f0fdf4; border-color: #bbf7d0; }
 .ana-sum-card.good h4 { color: #15803d; }
 .ana-sum-tip { font-size: 12.5px; color: var(--ink-faint); }
+
+/* ---- 学情分析 · AI 周报卡（手动触发，模型配置复用泛读馆设置） ---- */
+.ana-ai .gd-section-head { flex-wrap: wrap; gap: 8px; }
+.ana-ai .ana-ai-meta { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
+.ana-ai .ana-ai-range { font-size: 13px; font-weight: 600; color: var(--ink); }
+.ana-ai .ana-ai-info { font-size: 12px; color: var(--ink-faint); }
+.ana-ai .ana-ai-body { font-size: 14px; line-height: 1.75; }
+.ana-ai .ana-ai-body h2 { font-size: 15px; margin: 14px 0 6px; color: var(--ink); }
+.ana-ai .ana-ai-body h2:first-child { margin-top: 0; }
+.ana-ai .ana-ai-body p { margin: 6px 0; }
+.ana-ai .ana-ai-body ul, .ana-ai .ana-ai-body ol { margin: 6px 0; padding-left: 20px; }
+.ana-ai .ana-ai-error { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+/* 只染红错误消息本身；引导 hint（.reading-hint）保持暖灰（走查 B1 连坐修复） */
+.ana-ai .ana-ai-error p:not(.reading-hint) { margin: 0; color: #b42318; }
+.ana-ai [data-ai-gen]:disabled { opacity: 0.6; cursor: wait; }
+/* 报告正文列宽上限：桌面满卡 75+ 字/行阅读负担重（走查 M2） */
+.ana-ai .ana-ai-body { max-width: 72ch; }
+/* 生成中呼吸反馈：长请求期间按钮文案要有可见动态（走查 M2） */
+.ana-ai [data-ai-gen]:disabled { animation: ana-ai-breath 1.4s ease-in-out infinite; }
+@keyframes ana-ai-breath { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.95; } }
+/* 空态引导：正文级对比度（非最弱 hint），入口与错误态一致 */
+.ana-ai .ana-ai-empty { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.ana-ai .ana-ai-empty p { margin: 0; font-size: 14px; line-height: 1.7; color: var(--ink-soft); }

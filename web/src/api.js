@@ -136,8 +136,7 @@ export const api = {
   reciteSubmit: (rec) => reqJson('/recite/sessions', 'POST', rec),
   reciteSessions: ({ user, limit = 100 } = {}) =>
     req('/recite/sessions', { searchParams: { user, limit } }),
-  // 泛读馆：书架 / 阅读器 / 预习 / 设置 / 查词（library.db）
-  libraryBooks: () => req('/library/books'),
+  // 泛读馆：书架 / 阅读器 / 预习 / 设置 / 查词（library.db）  libraryBooks: () => req('/library/books'),
   libraryUpload: (file) => {
     const fd = new FormData()
     fd.append('file', file, file.name)
@@ -166,6 +165,10 @@ export const api = {
   libraryTestAi: (apiKey) => reqJson('/library/ai/test', 'POST', { apiKey }),
   libraryDict: (word, context) =>
     req(`/library/dict/${encodeURIComponent(word)}`, { searchParams: { context } }),
+  // 学情分析 · AI 周报（手动触发上一自然周，教师专属；模型配置复用泛读馆设置）
+  analyticsAiTrigger: () => reqJson('/analytics/ai/weekly', 'POST', {}),
+  analyticsAiReports: ({ limit = 12 } = {}) =>
+    req('/analytics/ai/reports', { searchParams: { limit } }),
 }
 
 // multipart 上传（epub 等大文件）：带登录态，返回解包后的 data

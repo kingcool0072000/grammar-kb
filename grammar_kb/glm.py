@@ -300,3 +300,45 @@ def explain_word(api_key: str, model: str, word: str, context: Optional[str] = N
         "meaning": str(parsed.get("meaning") or ""),
         "example": str(parsed.get("example") or ""),
     }
+
+
+def chat_prose(
+    api_key: str,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    temperature: float = 0.4,
+    max_tokens: int = 6144,
+) -> str:
+    """通用 prose 对话：返回模型正文（Markdown 文本，非 JSON 场景用）。
+
+    与 generate_prep 共用请求模式；无 response_format，输出直接取
+    message.content（剥掉思考型模型偶发的前后杂文由调用方自行处理）。
+    """
+    body: dict = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    body.update(_thinking_adjusted(model))
+    res = _fetch("/chat/completions", api_key, body)
+    if res.status_code != 200:
+        if res.status_code == 401:
+            raise GlmError("API Key 无效或未授权", 401)
+        raise GlmError(f"智谱 API 调用失败 (HTTP {res.status_code}): {(res.text or '')[:300]}")
+    try:
+        data = res.json()
+    except ValueError as e:
+        raise GlmError("智谱 API 返回内容不是 JSON") from e
+    choices = data.get("choices") or []
+    first = choices[0] if choices else {}
+    if first.get("finish_reason") == "length":
+        raise GlmError("AI 输出被截断，请重试或更换模型")
+    content = ((first.get("message") or {}).get("content")) or ""
+    if not content.strip():
+        raise GlmError("AI 未返回有效内容，请重试")
+    return content.strip()

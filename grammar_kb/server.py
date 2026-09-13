@@ -134,6 +134,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from .prep_queue import PrepQueue, generate_prep_for_chapter
     from .reading import ReadingStore
     from .recite import ReciteStore
+    from .analytics_ai import AnalyticsAI
 
     kbq = Query(open_db(db_path))
     exams = ExamStore(exam_db_path)
@@ -141,6 +142,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     fce_papers = FcePaperStore(fce_db_path)
     fce_submissions = FceSubmissionStore(fce_db_path)
     reading = ReadingStore(fce_db_path)
+    analytics_ai = AnalyticsAI(exam_db_path)
     recite = ReciteStore(fce_db_path)
     # 泛读馆（整本书英文泛读）：路径解析沿 fce_query 模式
     # （GRAMMAR_KB_LIBRARY_DB/GRAMMAR_KB_LIBRARY_DIR → data/）
@@ -598,6 +600,38 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         if request.state.role != "teacher":
             user = request.state.user
         return _ok(recite.list(user=user, limit=limit))
+
+    # ---- 学情分析 · AI 周报（手动触发，分析上一自然周；教师专属） ----
+
+    @app.get("/analytics/ai/reports")
+    def analytics_ai_reports(request: "fastapi.Request", limit: int = 12):
+        """已生成的 AI 周报列表（最近优先）。"""
+        _require_teacher(request)
+        return _ok({"reports": analytics_ai.list_reports(limit=limit)})
+
+    @app.post("/analytics/ai/weekly")
+    def analytics_ai_weekly(request: "fastapi.Request"):
+        """手动触发生成上周学情分析：聚合四类作业 + 前四周基线 → GLM → 存档。
+
+        模型与 Key 复用泛读馆设置（library_settings.ai_json）；按周覆盖存档。
+        """
+        from . import glm as _glm
+
+        _require_teacher(request)
+        settings = library.get_settings()
+        try:
+            report = analytics_ai.generate_weekly(
+                settings,
+                stores={
+                    "exams": exams,
+                    "fce_submissions": fce_submissions,
+                    "reading": reading,
+                    "recite": recite,
+                },
+            )
+        except _glm.GlmError as e:
+            raise HTTPException(status_code=getattr(e, "status", 502), detail=str(e))
+        return _ok(report)
 
     def _require_teacher(request) -> None:
         if getattr(request.state, "role", "teacher") != "teacher":
