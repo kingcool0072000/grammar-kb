@@ -31,3 +31,6 @@ web/node_modules/
 data/users.json
 data/auth_secret.key
 data/audio/
+
+# 泛读馆用户内容（epub/封面，不入库；library.db 沿 data/*.db 规则）
+data/library/

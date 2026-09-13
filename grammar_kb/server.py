@@ -130,6 +130,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from .exam_store import ExamStore
     from .auth import UserStore, make_token, read_token
     from .fce_query import FcePaperStore, FceSubmissionStore
+    from .library import LibraryError, LibraryStore
+    from .prep_queue import PrepQueue, generate_prep_for_chapter
     from .reading import ReadingStore
     from .recite import ReciteStore
 
@@ -140,6 +142,10 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     fce_submissions = FceSubmissionStore(fce_db_path)
     reading = ReadingStore(fce_db_path)
     recite = ReciteStore(fce_db_path)
+    # 泛读馆（整本书英文泛读）：路径解析沿 fce_query 模式
+    # （GRAMMAR_KB_LIBRARY_DB/GRAMMAR_KB_LIBRARY_DIR → data/）
+    library = LibraryStore()
+    prep_queue = PrepQueue(library)
 
     # 派生文范读 WAV 目录（{article_id}.wav）：TTS 导出后部署放置，不入
     # git。默认随代码仓 data/audio/reading/，生产可用 GRAMMAR_KB_AUDIO_DIR 改指
@@ -200,6 +206,14 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("POST", "/reading/recordings"),
         ("POST", "/recite/sessions"),
         ("GET", "/recite/sessions"),
+        # 泛读馆（结尾斜杠不可省：前缀匹配语义）——上传 POST /library/books 本体不带斜杠，仍仅教师
+        ("GET", "/library/books"),
+        ("GET", "/library/books/"),
+        ("GET", "/library/dict/"),
+        ("GET", "/library/prep/"),
+        ("GET", "/library/settings"),
+        ("POST", "/library/books/"),  # 放行 /{id}/open（skip 等教师端点内有 _require_teacher 兜底）
+        ("PUT", "/library/books/"),   # 放行 /{id}/progress（skip 端点内有 _require_teacher 兜底）
     )
 
     @app.middleware("http")
@@ -476,7 +490,6 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         path = audio_dir / f"{article_id}.wav"
         if not path.is_file():
             raise HTTPException(status_code=404, detail="该文章暂无范读音频")
-        from fastapi.responses import FileResponse
         return FileResponse(path, media_type="audio/wav")
 
     @app.post("/reading/articles")
@@ -590,6 +603,15 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         if getattr(request.state, "role", "teacher") != "teacher":
             raise HTTPException(status_code=403, detail="该功能仅教师账号可用")
 
+    def _to_int(v, default=None):
+        """宽松 int 转换（body 里可能是 int/str/None）。"""
+        if v is None or isinstance(v, bool):
+            return default
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return default
+
     # ---- 作业成绩（可写；独立 exam.db，默认放 iCloud Drive 跨设备同步） ----
 
     @app.get("/exams")
@@ -613,6 +635,206 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             raise HTTPException(status_code=404, detail=f"成绩记录 id={exam_id} 不存在")
         return _ok({"id": exam_id})
 
+    # ---- 泛读馆（整本书英文泛读：书架 / epub 导入 / AI 章节预习 / 查词 / 进度） ----
+    # 注意：/library/prep/batch 系列具名路由必须注册在参数路由
+    # /library/prep/{book_id}/{chapter_index} 之前，否则 "batch" 会被当 bookId 吞掉。
+    from fastapi.responses import FileResponse
+
+    def _require_teacher_lib(request) -> None:
+        """泛读馆教师端点兜底（中间件是粗闸门，端点是细闸门，两层都要有）。"""
+        _require_teacher(request)
+
+    @app.post("/library/prep/batch")
+    def lib_prep_batch(rec: dict, request: "fastapi.Request"):
+        """批量生成预习（教师）：跳过已生成与 skip_prep 章；有活干建 job 异步跑。"""
+        _require_teacher_lib(request)
+        book_id = _to_int(rec.get("bookId"))
+        indexes = rec.get("chapterIndexes")
+        if not book_id or not isinstance(indexes, list) or not indexes:
+            raise HTTPException(status_code=400, detail="参数不完整")
+        todo = library.filter_batch(book_id, [int(i) for i in indexes])
+        if todo is None:
+            raise HTTPException(status_code=404, detail="书籍不存在")
+        if not todo:
+            return _ok({"jobId": None, "skipped": True})
+        job_id = prep_queue.create_job(book_id, _request_user(request), todo)
+        return _ok({"jobId": job_id, "skipped": False})
+
+    @app.get("/library/prep/batch/{job_id}")
+    def lib_prep_job(job_id: int, request: "fastapi.Request"):
+        """批量任务进度轮询（教师）。"""
+        _require_teacher_lib(request)
+        view = library.get_job_view(job_id)
+        if view is None:
+            raise HTTPException(status_code=404, detail="任务不存在")
+        return _ok(view)
+
+    @app.post("/library/prep/single")
+    def lib_prep_single(rec: dict, request: "fastapi.Request"):
+        """单章立即生成/重试（教师，同步等待）。缓存命中直接返回。"""
+        _require_teacher_lib(request)
+        book_id = _to_int(rec.get("bookId"))
+        chapter_index = _to_int(rec.get("chapterIndex"))
+        if not book_id or chapter_index is None:
+            raise HTTPException(status_code=400, detail="参数不完整")
+        try:
+            generate_prep_for_chapter(library, book_id, chapter_index)
+        except RuntimeError as e:
+            raise HTTPException(status_code=502, detail=str(e))
+        return _ok({"ok": True})
+
+    @app.get("/library/prep/{book_id}/{chapter_index}")
+    def lib_prep_get(book_id: int, chapter_index: int):
+        """读某章预习（师生可读）。未生成返回 data=null（区别于参考实现直接 404）。"""
+        payload = library.get_prep(book_id, chapter_index)
+        return _ok(payload)
+
+    @app.get("/library/books")
+    def lib_books_list(request: "fastapi.Request"):
+        """书架 + 当前用户阅读统计。"""
+        return _ok(library.list_books(_request_user(request)))
+
+    @app.post("/library/books")
+    async def lib_books_upload(request: "fastapi.Request", file: "fastapi.UploadFile"):
+        """上传 epub（教师）：仅 .epub ≤100MB；内存解析成功后事务落库+文件落盘。"""
+        _require_teacher_lib(request)
+        content = await file.read()
+        try:
+            book = library.add_book(
+                _request_user(request), file.filename or "",
+                file.content_type or "", content,
+            )
+        except LibraryError as e:
+            raise HTTPException(status_code=e.status, detail=str(e))
+        return _ok(book)
+
+    @app.get("/library/books/{book_id}/file")
+    def lib_book_file(book_id: int):
+        got = library.get_file(book_id)
+        if got is None:
+            raise HTTPException(status_code=404, detail="书籍不存在或文件丢失")
+        return FileResponse(got[0], media_type=got[1])
+
+    @app.get("/library/books/{book_id}/cover")
+    def lib_book_cover(book_id: int):
+        got = library.get_cover(book_id)
+        if got is None:
+            raise HTTPException(status_code=404, detail="无封面")
+        return FileResponse(got[0], media_type=got[1])
+
+    @app.get("/library/books/{book_id}/chapters")
+    def lib_book_chapters(book_id: int):
+        chapters = library.list_chapters(book_id)
+        if chapters is None:
+            raise HTTPException(status_code=404, detail="书籍不存在")
+        return _ok({"chapters": chapters})
+
+    @app.delete("/library/books/{book_id}")
+    def lib_book_delete(book_id: int, request: "fastapi.Request"):
+        """删除书（教师）：事务删 5 表关联 + unlink epub/封面。"""
+        _require_teacher_lib(request)
+        deleted = library.delete_book(book_id)
+        if deleted is None:
+            raise HTTPException(status_code=404, detail="书籍不存在")
+        return _ok({"id": deleted})
+
+    @app.put("/library/books/{book_id}/chapters/{idx}/skip")
+    def lib_chapter_skip(book_id: int, idx: int, rec: dict, request: "fastapi.Request"):
+        """标记/取消「无需生成预习」（教师）。学生经 PUT 前缀白名单进到这，必须拦下。"""
+        _require_teacher_lib(request)
+        skip = bool(rec.get("skip"))
+        out = library.set_skip(book_id, idx, skip)
+        if out is None:
+            raise HTTPException(status_code=404, detail="章节不存在")
+        return _ok(out)
+
+    @app.post("/library/books/{book_id}/open")
+    def lib_book_open(book_id: int):
+        """记录"打开书"行为（更新 last_opened_at）。"""
+        library.touch_open(book_id)
+        return _ok({"ok": True})
+
+    @app.get("/library/books/{book_id}/progress")
+    def lib_progress_get(book_id: int, request: "fastapi.Request"):
+        """当前用户在某书的阅读进度（未开始返回 data=null）。"""
+        return _ok(library.get_progress(book_id, _request_user(request)))
+
+    @app.put("/library/books/{book_id}/progress")
+    def lib_progress_put(book_id: int, rec: dict, request: "fastapi.Request"):
+        """上报阅读进度：percent 夹 0-100、delta 夹 0-3600，UPSERT。"""
+        body = rec if isinstance(rec, dict) else {}
+        cfi = body.get("cfi") or ""
+        chapter_index = _to_int(body.get("chapterIndex"), 0)
+        try:
+            percent = float(body.get("percent") or 0)
+        except (TypeError, ValueError):
+            percent = 0.0
+        delta = _to_int(body.get("readingSecondsDelta"), 0)
+        out = library.put_progress(book_id, _request_user(request), str(cfi),
+                                   chapter_index, percent, delta)
+        if out is None:
+            raise HTTPException(status_code=404, detail="书籍不存在")
+        return _ok(out)
+
+    @app.get("/library/settings")
+    def lib_settings(request: "fastapi.Request"):
+        """设置视图：教师完整版；学生只有 student + hasKey（绝不泄漏 apiKey/model/prompt）。"""
+        is_teacher = getattr(request.state, "role", "teacher") == "teacher"
+        return _ok(library.settings_view(is_teacher))
+
+    @app.put("/library/settings")
+    def lib_settings_put(rec: dict, request: "fastapi.Request"):
+        """保存设置（教师，可部分传 ai/dict/student 浅合并）；返回教师视图。"""
+        _require_teacher_lib(request)
+        body = rec if isinstance(rec, dict) else {}
+        ai_patch = body.get("ai") if isinstance(body.get("ai"), dict) else None
+        dict_patch = body.get("dict") if isinstance(body.get("dict"), dict) else None
+        student_patch = body.get("student") if isinstance(body.get("student"), dict) else None
+        return _ok(library.update_settings(ai_patch, dict_patch, student_patch))
+
+    @app.get("/library/models")
+    def lib_models(request: "fastapi.Request", key: Optional[str] = None):
+        """智谱模型列表（教师；未传 key 时用已保存的）；失败回退 FALLBACK_MODELS。"""
+        from . import glm as _glm
+
+        _require_teacher_lib(request)
+        k = (key or "").strip() or library.get_settings()["ai"].get("apiKey") or ""
+        if not k:
+            raise HTTPException(status_code=400, detail="请先填写 API Key")
+        try:
+            models = _glm.list_models(k)
+            if not models:
+                raise RuntimeError("模型列表为空")
+            return _ok({"models": models})
+        except Exception as e:  # noqa: BLE001 - 接口异常时回退内置候选
+            return _ok({"models": list(_glm.FALLBACK_MODELS), "fallback": True,
+                        "message": str(e)})
+
+    @app.post("/library/ai/test")
+    def lib_ai_test(rec: dict, request: "fastapi.Request"):
+        """连通性测试（教师）。"""
+        from . import glm as _glm
+
+        _require_teacher_lib(request)
+        body = rec if isinstance(rec, dict) else {}
+        k = (body.get("apiKey") or "").strip() or library.get_settings()["ai"].get("apiKey") or ""
+        if not k:
+            raise HTTPException(status_code=400, detail="请先填写 API Key")
+        result = _glm.test_api_key(k)
+        if not result.get("ok"):
+            raise HTTPException(status_code=502, detail=result.get("message") or "连接失败")
+        return _ok({"ok": True, "message": result.get("message", "")})
+
+    @app.get("/library/dict/{word}")
+    def lib_dict(word: str, context: Optional[str] = None):
+        """查词（师生）：缓存 → ECDICT → AI 兜底 → not_found。"""
+        w = (word or "").strip()
+        if not w or len(w) > 40:
+            raise HTTPException(status_code=400, detail="无效单词")
+        entry = library.dict_lookup(w, context=(context or "")[:300] or None)
+        return _ok({"entry": entry})
+
+
     # ---- 静态前端（可选）：web/dist 构建产物由本进程直接服务 ----
     # 前端以 /api 调后端；开发期走 Vite 代理（剥前缀），部署期由下面
     # 的中间件承担同样的剥前缀工作，无需 nginx。GRAMMAR_KB_STATIC=0 关闭。
@@ -627,11 +849,11 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             return await call_next(request)
 
         from fastapi.staticfiles import StaticFiles
-        from fastapi.responses import FileResponse
+        from fastapi.responses import FileResponse as _IndexFileResponse
 
         @app.get("/", include_in_schema=False)
         def _index():
-            return FileResponse(web_dist / "index.html")
+            return _IndexFileResponse(web_dist / "index.html")
 
         app.mount("/", StaticFiles(directory=web_dist, html=True), name="web")
     else:

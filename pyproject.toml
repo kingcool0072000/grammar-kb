@@ -21,7 +21,8 @@ server = [
     "fastapi>=0.110",
     "httpx>=0.28.1",
     "uvicorn>=0.27",
-]  # HTTP 服务（可选）
+    "python-multipart>=0.0.20",
+]  # HTTP 服务（可选；python-multipart 供 epub 上传）
 
 [dependency-groups]
 dev = ["pytest>=8.0"]
