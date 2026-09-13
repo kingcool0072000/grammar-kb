@@ -170,6 +170,11 @@ export const api = {
   analyticsAiTrigger: () => reqJson('/analytics/ai/weekly', 'POST', {}),
   analyticsAiReports: ({ limit = 12 } = {}) =>
     req('/analytics/ai/reports', { searchParams: { limit } }),
+  // 专注力（泛读馆阅读器行为采集；学生上报，教师批改中心查看）
+  focusSubmit: (rec) => reqJson('/focus/sessions', 'POST', rec),
+  focusSessions: ({ user, limit = 50 } = {}) =>
+    req('/focus/sessions', { searchParams: { user, limit } }),
+  focusSession: (id) => req(`/focus/sessions/${id}`),
 }
 
 // multipart 上传（epub 等大文件）：带登录态，返回解包后的 data

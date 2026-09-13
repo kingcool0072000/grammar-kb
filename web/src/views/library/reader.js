@@ -10,6 +10,7 @@ import { createEpubRenderer } from './epubcore.js'
 import { createLookupLayer } from './lookup.js'
 import { ICONS } from './icons.js'
 import { createTocDrawer, createThemeDrawer, createPrepDrawer, THEME_PRESETS, FONT_STACKS } from './drawers.js'
+import { createFocusTracker } from './focus.js'
 
 const DEFAULT_THEME = {
   preset: 'paper',
@@ -200,7 +201,17 @@ export function mountLibraryReader(viewEl, ctx) {
     theme.fontSize = Math.min(28, Math.max(14, Math.round(Number(theme.fontSize) || 19)))
     saveTheme(theme)
     applyThemeNow()
+    focusTracker.hooks.onThemeAdjust()
   }
+
+  // ---- 专注力采集（教师自己读书不追踪；学生开关未到前先采，确认关闭后 disable）----
+  const focusTracker = createFocusTracker({
+    readerRoot: root,
+    viewerEl,
+    bookId,
+    bookTitle: '',
+    enabled: !isTeacher,
+  })
 
   // 学生账号：配色与字体由教师统一配置（字号仍可自调）
   if (!isTeacher) {
@@ -208,10 +219,13 @@ export function mountLibraryReader(viewEl, ctx) {
       .librarySettings()
       .then((s) => {
         if (cleaned) return
-        if (s && s.student && (s.student.preset || s.student.fontFamily)) {
-          studentOverride = s.student
+        const stu = s && s.student
+        if (stu && (stu.preset || stu.fontFamily)) {
+          studentOverride = stu
           applyThemeNow()
         }
+        // 专注力开关：focus !== false 才采集（默认开）
+        if (stu && stu.focus === false) focusTracker.disable()
       })
       .catch(() => {})
   }
@@ -219,8 +233,11 @@ export function mountLibraryReader(viewEl, ctx) {
   // 首帧即应用主题（阅读主体底色与 epub 主题一致；rendition 未建时只记 currentTheme）
   applyThemeNow()
 
-  // ---- 划词/查词浮层 ----
-  const lookup = createLookupLayer(bodyEl)
+  // ---- 划词/查词浮层（onLookup/onSpeak 喂给专注力采集）----
+  const lookup = createLookupLayer(bodyEl, {
+    onLookup: focusTracker.hooks.onLookup,
+    onSpeak: focusTracker.hooks.onSpeak,
+  })
   // 点击阅读主体空白处清浮层（浮层自身 stopPropagation）
   bodyEl.addEventListener('click', () => lookup.hideAll())
 
@@ -238,12 +255,15 @@ export function mountLibraryReader(viewEl, ctx) {
       // 手动关闭过的章本次会话不再自动弹
       if (prepOpenChapterIdx != null) closedPrepChapters.add(prepOpenChapterIdx)
     },
-    onStart: () => {},
+    onStart: () => {
+      focusTracker.hooks.onPrepStart()
+    },
   })
   root.append(tocDrawer.el, themeDrawer.el, prepDrawer.el)
 
   function openPrep(idx, label) {
     prepOpenChapterIdx = idx
+    focusTracker.hooks.onPrepOpen()
     prepDrawer.open(bookId, idx, label)
   }
 
@@ -269,6 +289,7 @@ export function mountLibraryReader(viewEl, ctx) {
     progress.cfi = info.cfi
     progress.chapterIndex = info.chapterIndex
     progress.percent = info.percent
+    focusTracker.hooks.onReloc(info.percent)
     chapterIndex = info.chapterIndex
     const merged = mergedChapterAt(chapterIndex)
     chapterLabel = info.chapterTitle || (merged && merged.title) || ''
@@ -317,6 +338,8 @@ export function mountLibraryReader(viewEl, ctx) {
       doc.addEventListener('contextmenu', (e) => e.preventDefault())
       // 选区塌缩要作用到 iframe 的 window（lookup 层默认只清主文档；走查 M2）
       lookup.setSelectionWindow(contents.window || doc.defaultView)
+      // 专注力：iframe 正文内鼠标轨迹（幂等，重复渲染不重挂）
+      focusTracker.hooks.attachIframeDoc(doc)
     } catch {
       /* ignore */
     }
@@ -324,6 +347,7 @@ export function mountLibraryReader(viewEl, ctx) {
 
   // 章级导航：以合并章的 spineIndex 定位（后端 chapters 已按 spine 对齐）
   function gotoChapter(targetSpineIndex) {
+    focusTracker.hooks.onChapterNav()
     if (!renderer) return
     const href = renderer.spineHref(targetSpineIndex)
     if (href) renderer.displayTarget(href)
@@ -447,6 +471,11 @@ export function mountLibraryReader(viewEl, ctx) {
     }
     try {
       lookup.destroy()
+    } catch {
+      /* ignore */
+    }
+    try {
+      focusTracker.destroy()
     } catch {
       /* ignore */
     }

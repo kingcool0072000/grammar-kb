@@ -1,19 +1,22 @@
 import { api, getAuth } from '../api.js'
 import { escapeHtml } from '../render.js'
 
-// 教师版 · 批改中心（首页）：学生提交的作业按两大板块归类——
+// 教师版 · 批改中心（首页）：学生提交的作业按三大板块归类——
 //   FCE 听说读写（朗读录音批改 / 作文批改 / 练习明细）
 //   哈1 语法（哈一作业成绩 / 背单词记录）
+//   专注力 · 泛读阅读（泛读馆阅读器行为采集，点会话行看详情弹窗）
 // 每个分区：待办数字 + 最近动态 + 一键跳到对应工具。
 export async function mountGrading(el) {
   el.innerHTML = '<div class="view-head"><h1>批改中心</h1><p>加载中…</p></div>'
-  let recs, fceSubs, recite, exams
+  let recs, fceSubs, recite, exams, focus
   try {
-    ;[recs, fceSubs, recite, exams] = await Promise.all([
+    ;[recs, fceSubs, recite, exams, focus] = await Promise.all([
       api.readingRecordings({ limit: 200 }),
       api.fceSubmissions({ limit: 200 }),
       api.reciteSessions({ limit: 100 }),
       api.examsList(),
+      // 专注力后端并行开发中，失败不拖垮整页
+      api.focusSessions({ limit: 50 }).catch(() => []),
     ])
   } catch (e) {
     el.querySelector('p').innerHTML = `<span style="color:#b42318">加载失败：${escapeHtml(e.message)}</span>`
@@ -27,6 +30,23 @@ export async function mountGrading(el) {
   const reciteToday = recite.filter((s) => (s.created_at || '').slice(0, 10) === today)
   const latestExam = exams[0]
   const totalPend = pendRec.length + pendEssay.length
+
+  // ---- 专注力 · 近 7 天汇总（统计卡 + 板块汇总行共用）----
+  const weekMs = 7 * 24 * 3600 * 1000
+  const nowMs = Date.now()
+  focus = Array.isArray(focus) ? focus : []
+  const focusWeek = focus.filter(
+    (s) => s && new Date(s.started_at || s.created_at || 0).getTime() >= nowMs - weekMs,
+  )
+  const weekScores = focusWeek.filter((s) => typeof s.score === 'number')
+  const focusWeekAvg = weekScores.length
+    ? Math.round(weekScores.reduce((a, s) => a + s.score, 0) / weekScores.length)
+    : null
+  const focusWeekMin = Math.round(focusWeek.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)
+  // 展示用：按开始时间倒序
+  const focusRecent = [...focus]
+    .filter((s) => s && s.id !== undefined)
+    .sort((a, b) => String(b.started_at || b.created_at || '').localeCompare(String(a.started_at || a.created_at || '')))
 
   el.innerHTML = `
     <div class="view-head">
@@ -46,6 +66,9 @@ export async function mountGrading(el) {
       </div>
       <div class="grading-stat" data-go="recite" title="背单词练习记录">
         <b>${reciteToday.length}</b><span>今日背单词（组）</span>
+      </div>
+      <div class="grading-stat gd-focus-stat" title="泛读馆阅读专注评分 · 近 7 天会话平均">
+        <b>${focusWeekAvg ?? '—'}</b><span>本周专注均分${focusWeek.length ? `（${focusWeek.length} 次）` : ''}</span>
       </div>
     </div>
 
@@ -99,12 +122,379 @@ export async function mountGrading(el) {
           ${recite.length ? `<p class="reading-hint">易错词（最近）：${topWrongWords(recite)}</p>` : ''}
         </div>
       </section>
+
+      <!-- ================= 专注力 · 泛读阅读 ================= -->
+      <section class="gd-section gd-focus-section">
+        <header class="gd-section-head">
+          <h2>👁 专注力 · 泛读阅读</h2>
+          <nav><span class="gd-focus-head-hint">点会话查看专注详情</span></nav>
+        </header>
+        <div class="gd-subgroup">
+          <h3>📖 阅读会话 · 最近</h3>
+          ${focusRecent.length
+            ? focusRecent.slice(0, 8).map((s) => focusRow(s)).join('')
+            : '<p class="reading-hint">暂无阅读专注数据——学生在泛读馆读书后自动生成</p>'}
+          ${focusRecent.length
+            ? `<p class="reading-hint">近 7 天 ${focusWeek.length} 次会话 · 平均 ${focusWeekAvg ?? '—'} 分 · 累计专注 ${focusWeekMin} 分钟</p>`
+            : ''}
+        </div>
+      </section>
     </div>
   `
 
   el.querySelectorAll('[data-go]').forEach((b) => {
     b.addEventListener('click', () => go(b.dataset.go))
   })
+
+  // 专注会话行 → 详情弹窗
+  el.querySelectorAll('[data-focus-id]').forEach((row) => {
+    row.addEventListener('click', () => openFocusDetail(Number(row.dataset.focusId)))
+  })
+}
+
+// 专注会话行（fce-his-row 风格，可点开详情）
+function focusRow(s) {
+  const score = typeof s.score === 'number' ? Math.round(s.score) : null
+  const scoreCls = score === null ? 'pend' : score >= 80 ? 'ok' : score >= 60 ? '' : 'bad'
+  const chips = [
+    `查词 ${s.lookups || 0}`,
+    `发音 ${s.plays || 0}`,
+    `离开 ${s.away_count || 0} 次`,
+    ...(s.fast_scroll_flags ? [`快滚 ${s.fast_scroll_flags}`] : []),
+  ]
+    .map((c) => `<i class="gd-focus-chip">${c}</i>`)
+    .join('')
+  return `
+    <div class="fce-his-row gd-focus-row" data-focus-id="${s.id}" title="点开专注详情">
+      <span class="fce-his-what">${escapeHtml(s.book_title || `#${s.book_id}`)}</span>
+      <b class="fce-his-score ${scoreCls}">${score === null ? '—' : score}</b>
+      <span class="fce-his-date">${fmtDur(s.total_sec || 0)} · ${(s.started_at || s.created_at || '').slice(5, 16).replace('T', ' ')}</span>
+      <span class="gd-focus-chips">${chips}</span>
+    </div>`
+}
+
+// ---------- 专注会话详情弹窗 ----------
+async function openFocusDetail(id) {
+  let s
+  try {
+    s = await api.focusSession(id)
+  } catch (err) {
+    alert(`加载专注详情失败：${err.message}`)
+    return
+  }
+  if (!s || typeof s !== 'object') {
+    alert('该专注会话不存在或已删除')
+    return
+  }
+  closeFocusDetail() // 防重复叠加
+
+  const score = typeof s.score === 'number' ? Math.round(s.score) : null
+  const scoreCls = score === null ? '' : score >= 80 ? 'ok' : score >= 60 ? '' : 'bad'
+  const sd = s.score_detail || {}
+  const pct = (v) => {
+    const n = Number(v)
+    return Number.isFinite(n) ? Math.round(Math.min(1, Math.max(0, n)) * 100) : 0
+  }
+  // 三项正向（绿色，0-1 归一）+ 两项惩罚（橙色，按各自上限归一：离开≤12、乱晃≤5，
+  // 显示绝对扣分值——满条=扣满上限，避免「惩罚 3 分显示 100%」的语义误导）
+  const bars = [
+    ['有效时长占比', pct(sd.effective_ratio), false, null],
+    ['参与度', pct(sd.engagement), false, null],
+    ['阅读进度', pct(sd.progress), false, null],
+    ['离开惩罚', pct((Number(sd.away_penalty) || 0) / 12), true, `-${(Number(sd.away_penalty) || 0).toFixed(1)}`],
+    ['乱晃惩罚', pct((Number(sd.jitter_penalty) || 0) / 5), true, `-${(Number(sd.jitter_penalty) || 0).toFixed(1)}`],
+  ]
+    .map(([name, p, neg, valText]) => `
+      <div class="gd-focus-bar">
+        <span class="gd-focus-bar-label">${name}</span>
+        <span class="gd-focus-bar-track"><i class="${neg ? 'neg' : 'pos'}" style="width:${p}%"></i></span>
+        <span class="gd-focus-bar-val">${valText || p + '%'}</span>
+      </div>`)
+    .join('')
+
+  const startCn = (s.started_at || '').slice(0, 16).replace('T', ' ')
+  const endCn = (s.ended_at || '').slice(11, 16)
+  const activePct = s.total_sec ? Math.round(((s.active_sec || 0) / s.total_sec) * 100) : 0
+  const awayMin = ((s.away_sec || 0) / 60).toFixed(1).replace(/\.0$/, '')
+
+  const mm = s.mouse_metrics || {}
+  const fmtPx = (v) => {
+    const n = Number(v)
+    if (!Number.isFinite(n)) return '—'
+    return n >= 1000 ? `${(n / 1000).toFixed(1)}k px` : `${Math.round(n)} px`
+  }
+  const fmtSpeed = (v) => {
+    const n = Number(v)
+    return Number.isFinite(n) ? `${fmtPx(n)}/s` : '—'
+  }
+  const jit = Number(mm.jitter)
+  const jitterOk = Number.isFinite(jit)
+  const jitterHigh = jitterOk && jit > 0.6
+  const metricCards = [
+    ['总位移', fmtPx(mm.distance_px), false],
+    ['平均速度', fmtSpeed(mm.avg_speed), false],
+    ['P95 速度', fmtSpeed(mm.p95_speed), false],
+    [
+      '活跃占比',
+      Number.isFinite(Number(mm.active_ratio)) ? `${Math.round(mm.active_ratio * 100)}%` : '—',
+      false,
+    ],
+    ['乱晃指数', jitterOk ? (jitterHigh ? '偏高' : '正常') : '—', jitterHigh, jitterOk ? jit.toFixed(2) : ''],
+    ['静止空档', `${(Array.isArray(mm.idle_gaps) ? mm.idle_gaps : []).length} 段`, false],
+  ]
+    .map(
+      ([name, val, warn, sub]) => `
+      <div class="gd-focus-mm ${warn ? 'warn' : ''}">
+        <span>${name}</span><b>${val}${sub ? ` <i>${sub}</i>` : ''}</b>
+      </div>`,
+    )
+    .join('')
+
+  const overlay = document.createElement('div')
+  overlay.className = 'gd-focus-detail'
+  overlay.innerHTML = `
+    <div class="gd-focus-detail-mask" data-close></div>
+    <div class="gd-focus-detail-card">
+      <div class="gd-focus-detail-head">
+        <div class="gd-focus-detail-title">
+          <b>${escapeHtml(s.book_title || `#${s.book_id}`)}</b>
+          <span>${escapeHtml(s.user || '')} · ${startCn}${endCn ? ` → ${endCn}` : ''}</span>
+        </div>
+        <button class="reading-btn small" data-close>关闭</button>
+      </div>
+      <div class="gd-focus-detail-body">
+        <p class="gd-focus-dur">总时长 <b>${fmtDur(s.total_sec || 0)}</b> · 有效阅读 <b>${fmtDur(s.active_sec || 0)}</b>（${activePct}%） · 滚动 ${s.scroll_count || 0} 次 · 章节跳转 ${s.chapter_navs || 0} 次</p>
+        <div class="gd-focus-score-wrap">
+          <div class="gd-focus-score-bars">${bars}</div>
+          <div class="gd-focus-score-total">
+            <b class="${scoreCls}">${score === null ? '—' : score}</b>
+            <span>专注评分</span>
+          </div>
+        </div>
+        <div class="gd-focus-chart-block">
+          <div class="gd-focus-chart-title">鼠标活动强度 <span>（10 秒聚合 · 对数归一）</span></div>
+          <canvas class="gd-focus-canvas"></canvas>
+          <p class="gd-focus-chart-note">离开 ${s.away_count || 0} 次共 ${awayMin} 分钟 · 最长单次离开 ${fmtDur(s.longest_away_sec || 0)}</p>
+        </div>
+        <div class="gd-focus-mms">${metricCards}</div>
+        <div class="gd-focus-trail-block">
+          <div class="gd-focus-chart-title">鼠标轨迹缩略图 <span>（{PTS} 个点 · <i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22a06b;vertical-align:-1px"></i> 起点 <i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#b42318;vertical-align:-1px"></i> 终点）</span></div>
+          <canvas class="gd-focus-trail" width="200" height="150"></canvas>
+        </div>
+      </div>
+    </div>`
+  document.body.append(overlay)
+
+  // Esc 关闭（仅本弹窗存活期间监听）
+  const onKey = (e) => {
+    if (e.key === 'Escape') closeFocusDetail()
+  }
+  document.addEventListener('keydown', onKey)
+  overlay._onKey = onKey
+  overlay.querySelectorAll('[data-close]').forEach((x) =>
+    x.addEventListener('click', closeFocusDetail),
+  )
+
+  drawFocusIntensity(overlay.querySelector('.gd-focus-canvas'), s)
+  const polyPts = Array.isArray(s.polyline) ? s.polyline.length : 0
+  const tEl = overlay.querySelector('.gd-focus-trail-block .gd-focus-chart-title span')
+  if (tEl) tEl.innerHTML = tEl.innerHTML.replace('{PTS}', String(polyPts))
+  drawFocusTrail(overlay.querySelector('.gd-focus-trail'), s)
+}
+
+function closeFocusDetail() {
+  const overlay = document.querySelector('.gd-focus-detail')
+  if (!overlay) return
+  if (overlay._onKey) document.removeEventListener('keydown', overlay._onKey)
+  overlay.remove()
+}
+
+// 时间线：把 polyline 的 t 聚合到 10s 桶（桶内移动距离→强度，log 归一），面积图填充
+/** 秒 → m:ss / mm:ss 刻度文字 */
+function fmtMin(sec) {
+  const m = Math.floor(sec / 60)
+  const r = Math.round(sec % 60)
+  return m === 0 ? `${r}s` : `${m}:${String(r).padStart(2, '0')}`
+}
+
+function drawFocusIntensity(canvas, session) {
+  if (!canvas) return
+  const poly = Array.isArray(session.polyline) ? session.polyline : []
+  const total = Math.max(1, Math.floor(session.total_sec || 0))
+  const dpr = window.devicePixelRatio || 1
+  const w = Math.max(200, canvas.clientWidth || 560)
+  const h = 120
+  canvas.width = Math.round(w * dpr)
+  canvas.height = Math.round(h * dpr)
+  canvas.style.height = `${h}px`
+  const ctx = canvas.getContext('2d')
+  ctx.scale(dpr, dpr)
+  const padB = 12
+  const plotH = h - padB - 8
+  // 背景网格：每 5 分钟一条 + 刻度标签（60s 线太密读成纹理——走查 M1）
+  ctx.strokeStyle = 'rgba(138,109,59,.16)'
+  ctx.lineWidth = 1
+  ctx.fillStyle = 'rgba(110,103,84,.65)'
+  ctx.font = '10px sans-serif'
+  ctx.textAlign = 'center'
+  const gridStep = total <= 90 ? 30 : total <= 600 ? 60 : 300 // 短会话 30s / 中 1min / 长 5min
+  for (let t = gridStep; t < total; t += gridStep) {
+    const x = Math.round((t / total) * (w - 16) + 8) + 0.5
+    ctx.beginPath()
+    ctx.moveTo(x, 6)
+    ctx.lineTo(x, h - padB)
+    ctx.stroke()
+    ctx.fillText(fmtMin(t), x, h - 1.5)
+  }
+  // 基线
+  ctx.strokeStyle = 'rgba(138,109,59,.4)'
+  ctx.beginPath()
+  ctx.moveTo(8, h - padB + 0.5)
+  ctx.lineTo(w - 8, h - padB + 0.5)
+  ctx.stroke()
+
+  if (poly.length < 2) {
+    ctx.fillStyle = 'rgba(110,103,84,.75)'
+    ctx.font = '12px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('本会话没有鼠标轨迹数据', w / 2, h / 2)
+    return
+  }
+  const bucketSec = 10
+  const nBuckets = Math.max(1, Math.ceil(total / bucketSec))
+  const dist = new Float64Array(nBuckets)
+  for (let i = 1; i < poly.length; i++) {
+    const a = poly[i - 1]
+    const b = poly[i]
+    if (!Array.isArray(a) || !Array.isArray(b)) continue
+    const t = Number(b[2])
+    if (!Number.isFinite(t) || t < 0) continue
+    const bi = Math.floor(t / bucketSec)
+    if (bi >= nBuckets) continue
+    const dx = Number(b[0]) - Number(a[0])
+    const dy = Number(b[1]) - Number(a[1])
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) continue
+    dist[bi] += Math.hypot(dx, dy)
+  }
+  // log 归一：安静阅读时段桶内位移小，剧烈晃动大，log 压数量级后线性映射
+  const vals = new Float64Array(nBuckets)
+  let vmax = 0
+  for (let i = 0; i < nBuckets; i++) {
+    const v = dist[i] > 0 ? Math.log10(1 + dist[i]) : 0
+    vals[i] = v
+    if (v > vmax) vmax = v
+  }
+  const x0 = 8
+  const x1 = w - 8
+  const bw = (x1 - x0) / nBuckets
+  const yOf = (v) => h - padB - (vmax > 0 ? (v / vmax) * plotH : 0)
+  // 数据桶过少（<3）时画离散柱而非插值面积——避免"先升后降"的假象（走查 M3）
+  const filledBuckets = dist.reduce((n, v) => n + (v > 0 ? 1 : 0), 0)
+  if (filledBuckets < 3) {
+    const barW = Math.max(4, bw * 0.5)
+    ctx.fillStyle = 'rgba(214,81,36,.35)'
+    for (let i = 0; i < nBuckets; i++) {
+      if (dist[i] <= 0) continue
+      const cx = x0 + bw * (i + 0.5)
+      const yTop = yOf(vals[i])
+      ctx.fillRect(cx - barW / 2, yTop, barW, h - padB - yTop)
+    }
+  } else {
+    ctx.beginPath()
+    ctx.moveTo(x0, h - padB)
+    for (let i = 0; i < nBuckets; i++) {
+      const cx = x0 + bw * (i + 0.5)
+      ctx.lineTo(cx, yOf(vals[i]))
+    }
+    ctx.lineTo(x1, h - padB)
+    ctx.closePath()
+    ctx.fillStyle = 'rgba(214,81,36,.28)'
+    ctx.fill()
+  }
+  // 顶部描线
+  ctx.beginPath()
+  for (let i = 0; i < nBuckets; i++) {
+    const cx = x0 + bw * (i + 0.5)
+    if (i === 0) ctx.moveTo(cx, yOf(vals[i]))
+    else ctx.lineTo(cx, yOf(vals[i]))
+  }
+  ctx.strokeStyle = 'rgba(214,81,36,.85)'
+  ctx.lineWidth = 1.5
+  ctx.stroke()
+  // 时长标注
+  ctx.fillStyle = 'rgba(110,103,84,.8)'
+  ctx.font = '10.5px sans-serif'
+  ctx.textAlign = 'left'
+  ctx.fillText('0:00', x0, h - 1.5)
+  ctx.textAlign = 'right'
+  ctx.fillText(fmtDur(total), x1, h - 1.5)
+}
+
+// 轨迹缩略图：前 2000 点归一化画到 200×150
+function drawFocusTrail(canvas, session) {
+  if (!canvas) return
+  const poly = Array.isArray(session.polyline) ? session.polyline : []
+  const pts = []
+  for (const p of poly) {
+    if (pts.length >= 2000) break
+    if (!Array.isArray(p)) continue
+    const x = Number(p[0])
+    const y = Number(p[1])
+    if (Number.isFinite(x) && Number.isFinite(y)) pts.push([x, y])
+  }
+  const dpr = window.devicePixelRatio || 1
+  // 跟随 CSS 尺寸（宽满容器 ≤560、高 240——走查 M4 邮票图放大）
+  const rect = canvas.getBoundingClientRect()
+  const w = Math.max(200, Math.round(rect.width || 200))
+  const h = Math.max(120, Math.round(rect.height || 150))
+  canvas.width = Math.round(w * dpr)
+  canvas.height = Math.round(h * dpr)
+  canvas.style.width = `${w}px`
+  canvas.style.height = `${h}px`
+  const ctx = canvas.getContext('2d')
+  ctx.scale(dpr, dpr)
+  if (pts.length < 2) {
+    ctx.fillStyle = 'rgba(110,103,84,.75)'
+    ctx.font = '12px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('无轨迹', w / 2, h / 2)
+    return
+  }
+  let minX = Infinity
+  let maxX = -Infinity
+  let minY = Infinity
+  let maxY = -Infinity
+  for (const [x, y] of pts) {
+    if (x < minX) minX = x
+    if (x > maxX) maxX = x
+    if (y < minY) minY = y
+    if (y > maxY) maxY = y
+  }
+  const pad = 8
+  const sx = (w - pad * 2) / (maxX - minX || 1)
+  const sy = (h - pad * 2) / (maxY - minY || 1)
+  // 等比缩放：取较小者，避免轨迹被拉伸
+  const sEq = Math.min(sx, sy)
+  const cx0 = (minX + maxX) / 2
+  const cy0 = (minY + maxY) / 2
+  const gx = (x) => w / 2 + (x - cx0) * sEq
+  const gy = (y) => h / 2 - (y - cy0) * sEq
+  ctx.strokeStyle = 'rgba(214,81,36,.45)'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(gx(pts[0][0]), gy(pts[0][1]))
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(gx(pts[i][0]), gy(pts[i][1]))
+  ctx.stroke()
+  // 起终点小标记
+  ctx.fillStyle = 'rgba(34,160,107,.9)'
+  ctx.beginPath()
+  ctx.arc(gx(pts[0][0]), gy(pts[0][1]), 2.5, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = 'rgba(180,35,24,.9)'
+  ctx.beginPath()
+  const last = pts[pts.length - 1]
+  ctx.arc(gx(last[0]), gy(last[1]), 2.5, 0, Math.PI * 2)
+  ctx.fill()
 }
 
 function recRow(r) {

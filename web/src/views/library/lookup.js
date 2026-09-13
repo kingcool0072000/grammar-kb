@@ -26,9 +26,14 @@ export function speak(text) {
 
 /**
  * 创建划词/查词浮层组，挂到容器（需 position:relative）。
+ * opts.onLookup(word)：查词漏斗（showDict 入口）触发；
+ * opts.onSpeak(word)：工具条/浮层发音钮触发。
+ * 不传回调时行为完全不变（阅读练习 reading.js 复用本层不受影响）。
  * 返回 { showSelection, showDict, hideAll, destroy }。
  */
 export function createLookupLayer(bodyEl, opts = {}) {
+  const onLookupCb = typeof opts.onLookup === 'function' ? opts.onLookup : null
+  const onSpeakCb = typeof opts.onSpeak === 'function' ? opts.onSpeak : null
   let currentSel = null
   let dictTimer = null
   let dictSeq = 0
@@ -69,6 +74,7 @@ export function createLookupLayer(bodyEl, opts = {}) {
     const act = btn.dataset.act
     if (act === 'sound') {
       speak(currentSel.word)
+      if (onSpeakCb) onSpeakCb(currentSel.word)
     } else if (act === 'dict') {
       showDict(currentSel)
     }
@@ -95,7 +101,10 @@ export function createLookupLayer(bodyEl, opts = {}) {
   const dictWordEl = dictEl.querySelector('.lib-dict-head .word')
   const dictPhEl = dictEl.querySelector('.lib-dict-head .ph')
   const dictSourceEl = dictEl.querySelector('.lib-dict-source')
-  dictEl.querySelector('.lib-dict-head .sound').addEventListener('click', () => speak(dictWord))
+  dictEl.querySelector('.lib-dict-head .sound').addEventListener('click', () => {
+    speak(dictWord)
+    if (onSpeakCb) onSpeakCb(dictWord)
+  })
   dictEl.querySelector('.lib-dict-head .close').addEventListener('click', hideDict)
 
   bodyEl.append(popEl, dictEl)
@@ -151,6 +160,7 @@ export function createLookupLayer(bodyEl, opts = {}) {
   // ---- 查词浮层 ----
   function showDict(lookup) {
     hideSelection()
+    if (onLookupCb) onLookupCb(lookup && lookup.word)
     dictSeq += 1
     const seq = dictSeq
     if (dictTimer) clearTimeout(dictTimer)

@@ -403,7 +403,7 @@ class TestSettings:
         assert data["ai"]["maxWords"] == 12
         assert data["ai"]["apiKey"] == ""
         assert data["dict"] == {"aiFallback": True}
-        assert data["student"] == {"preset": "paper", "fontFamily": "serif"}
+        assert data["student"] == {"preset": "paper", "fontFamily": "serif", "focus": True}
         assert data["hasKey"] is False
         assert "defaultPrompt" in data and "辅导老师" in data["defaultPrompt"]
 
@@ -423,7 +423,7 @@ class TestSettings:
             "/library/settings", json={"student": {"preset": "night", "fontFamily": "kai"}}
         ).json()["data"]
         assert r2["ai"]["maxWords"] == 25  # 浅合并保留
-        assert r2["student"] == {"preset": "night", "fontFamily": "kai"}
+        assert r2["student"] == {"preset": "night", "fontFamily": "kai", "focus": True}
         # prompt 空串 = 恢复默认
         r3 = teacher.put("/library/settings", json={"ai": {"prompt": ""}}).json()["data"]
         assert r3["ai"]["prompt"] == ""

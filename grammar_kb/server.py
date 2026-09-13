@@ -108,6 +108,31 @@ try:
         mode: str = Field(default="", max_length=20)
         scope: str = Field(default="", max_length=20)
 
+    class FocusSessionIn(BaseModel):
+        """泛读馆阅读器专注力心跳上报（累计值，按 session_id 幂等覆盖）。"""
+
+        session_id: str = Field(min_length=1, max_length=64)
+        book_id: Optional[int] = None
+        book_title: str = Field(default="", max_length=200)
+        started_at: str = Field(default="", max_length=32)
+        ended_at: str = Field(default="", max_length=32)
+        total_sec: int = Field(default=0, ge=0, le=14400)
+        active_sec: int = Field(default=0, ge=0, le=14400)
+        away_sec: int = Field(default=0, ge=0, le=14400)
+        longest_away_sec: int = Field(default=0, ge=0, le=14400)
+        away_count: int = Field(default=0, ge=0, le=9999)
+        scroll_count: int = Field(default=0, ge=0, le=9999)
+        chapter_navs: int = Field(default=0, ge=0, le=9999)
+        lookups: int = Field(default=0, ge=0, le=9999)
+        plays: int = Field(default=0, ge=0, le=9999)
+        prep_opens: int = Field(default=0, ge=0, le=9999)
+        prep_starts: int = Field(default=0, ge=0, le=9999)
+        fast_scroll_flags: int = Field(default=0, ge=0, le=9999)
+        percent_start: float = Field(default=0.0, ge=0, le=100)
+        percent_end: float = Field(default=0.0, ge=0, le=100)
+        mouse_metrics: Optional[dict] = None
+        polyline: Optional[str] = Field(default=None, max_length=200000)
+
 except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
     ExamRecordIn = None
     FceSubmissionIn = None
@@ -117,6 +142,7 @@ except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
     ReadingRecordIn = None
     ReadingGradeIn = None
     ReciteSessionIn = None
+    FocusSessionIn = None
 
 
 def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None,
@@ -134,6 +160,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from .prep_queue import PrepQueue, generate_prep_for_chapter
     from .reading import ReadingStore
     from .recite import ReciteStore
+    from .focus import FocusStore
     from .analytics_ai import AnalyticsAI
 
     kbq = Query(open_db(db_path))
@@ -144,6 +171,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     reading = ReadingStore(fce_db_path)
     analytics_ai = AnalyticsAI(exam_db_path)
     recite = ReciteStore(fce_db_path)
+    focus = FocusStore(fce_db_path)
     # 泛读馆（整本书英文泛读）：路径解析沿 fce_query 模式
     # （GRAMMAR_KB_LIBRARY_DB/GRAMMAR_KB_LIBRARY_DIR → data/）
     library = LibraryStore()
@@ -208,6 +236,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("POST", "/reading/recordings"),
         ("POST", "/recite/sessions"),
         ("GET", "/recite/sessions"),
+        ("POST", "/focus/sessions"),
+        ("GET", "/focus/sessions"),  # /{id} 详情学生仍被端点内 _require_teacher 拦 403
         # 泛读馆（结尾斜杠不可省：前缀匹配语义）——上传 POST /library/books 本体不带斜杠，仍仅教师
         ("GET", "/library/books"),
         ("GET", "/library/books/"),
@@ -601,6 +631,35 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             user = request.state.user
         return _ok(recite.list(user=user, limit=limit))
 
+    # ---- 专注力采集（泛读馆阅读器学生静默上报，教师查看） ----
+
+    @app.post("/focus/sessions")
+    def focus_submit(rec: FocusSessionIn, request: "fastapi.Request"):
+        """专注力心跳上报：前端每 60 秒重传累计值，按 session_id 幂等覆盖。"""
+        user = _request_user(request)
+        try:
+            return _ok(focus.submit(user, **rec.model_dump()))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+
+    @app.get("/focus/sessions")
+    def focus_list(
+        request: "fastapi.Request", user: Optional[str] = None, limit: int = 100,
+    ):
+        """专注力会话列表（不含轨迹/鼠标明细）。学生只看自己的；教师看全部。"""
+        if request.state.role != "teacher":
+            user = request.state.user
+        return _ok(focus.list(user=user, limit=limit))
+
+    @app.get("/focus/sessions/{row_id}")
+    def focus_detail(row_id: int, request: "fastapi.Request"):
+        """专注力会话详情（含鼠标指标与进度折线）。教师专属。"""
+        _require_teacher(request)
+        data = focus.get(row_id)
+        if data is None:
+            raise HTTPException(status_code=404, detail=f"会话 id={row_id} 不存在")
+        return _ok(data)
+
     # ---- 学情分析 · AI 周报（手动触发，分析上一自然周；教师专属） ----
 
     @app.get("/analytics/ai/reports")
@@ -824,7 +883,10 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ai_patch = body.get("ai") if isinstance(body.get("ai"), dict) else None
         dict_patch = body.get("dict") if isinstance(body.get("dict"), dict) else None
         student_patch = body.get("student") if isinstance(body.get("student"), dict) else None
-        return _ok(library.update_settings(ai_patch, dict_patch, student_patch))
+        try:
+            return _ok(library.update_settings(ai_patch, dict_patch, student_patch))
+        except LibraryError as e:
+            raise HTTPException(status_code=e.status, detail=str(e))
 
     @app.get("/library/models")
     def lib_models(request: "fastapi.Request", key: Optional[str] = None):

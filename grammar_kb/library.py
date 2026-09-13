@@ -565,6 +565,8 @@ class LibraryStore:
         student = {
             "preset": s["student"].get("preset") or "paper",
             "fontFamily": s["student"].get("fontFamily") or "serif",
+            # 专注力采集开关（泛读馆阅读器）：默认开，教师可在设置里关
+            "focus": bool(s["student"].get("focus", True)),
         }
         has_key = bool(s["ai"].get("apiKey"))
         if not teacher:
@@ -612,6 +614,10 @@ class LibraryStore:
                 student["preset"] = student_patch["preset"]
             if student_patch.get("fontFamily") in ("serif", "sans", "kai"):
                 student["fontFamily"] = student_patch["fontFamily"]
+            if "focus" in student_patch:
+                if not isinstance(student_patch["focus"], bool):
+                    raise LibraryError("student.focus 须为布尔值（true/false）", status=422)
+                student["focus"] = student_patch["focus"]
 
         with self._tx() as conn:
             conn.execute(
