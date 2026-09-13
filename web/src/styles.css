@@ -1421,12 +1421,22 @@ main { --fce-fs: 15px; }
 .reading-card-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--ink-faint, #94a3b8); }
 .reading-card-src { font-size: 12px; color: var(--ink-faint, #94a3b8); }
 
-.reading-article { line-height: 1.9; font-size: 16.5px; color: var(--ink, #1e293b); position: relative; /* lookup 查词浮层挂载点 */ }
-.reading-article p { margin: 0 0 1em; padding: 6px 10px; border-radius: 8px; transition: background .15s; }
+/* 正文（泛读馆复刻：衬线 19px/行高1.9/620px 窄栏；主题底色文字色由 JS 按学生配置注入） */
+.reading-article {
+  position: relative; /* lookup 查词浮层挂载点 */
+  font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', Palatino, serif;
+  font-size: 19px; line-height: 1.9;
+  background: #f5ecd9; color: #5b4636; /* 默认护眼米黄（与服务端学生主题一致的兜底） */
+  border-radius: 14px; padding: 26px 18px;
+  box-shadow: 0 2px 12px rgba(60,45,30,.07);
+  -webkit-touch-callout: none; /* 长按系统菜单（iOS）；正文保持可选中——划词查词依赖选区 */
+}
+.reading-article p {
+  margin: 0.9em auto; max-width: 620px; padding: 0;
+  text-align: left;
+}
 .reading-article p.picked { background: rgba(14,116,144,.1); outline: 1px dashed #0e7490; }
-.reading-article w { cursor: pointer; border-bottom: 1px dotted #0e7490; }
-.reading-article w:hover { background: rgba(14,116,144,.14); }
-.reading-article strong { color: #0e7490; font-weight: 700; }
+.reading-article strong { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 
 .reading-toolbar { margin-top: 18px; padding: 14px 16px; border: 1px solid var(--line, #e2e8f0); border-radius: 12px; background: var(--card, #fff); display: flex; flex-direction: column; gap: 10px; }
 .reading-tool-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -1641,14 +1651,198 @@ main { --fce-fs: 15px; }
 .ana-ai .ana-ai-empty { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .ana-ai .ana-ai-empty p { margin: 0; font-size: 14px; line-height: 1.7; color: var(--ink-soft); }
 
-/* ---- 禁系统文本选择弹窗（专注模式：只允许我们的划词/点词工具条） ----
-   1) 正文区禁用原生选择交互：Chrome/安卓 WebView 的系统文本菜单
-      （复制/分享/全选）依赖用户主动拖选/双击选词，禁掉 selection 的
-      视觉与交互入口后不会触发；
-   2) 输入框仍需正常选择（登录、搜索），排除之。 */
-.reading-article, .reading-article * {
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none; /* iOS 长按系统菜单 */
+
+/* ---- 查词浮层组件（lookup.js 专属类，泛读馆/阅读练习共用；源自 reader.css 解耦） ----
+   --lib-* 变量兜底：泛读馆在 .lib-reader 作用域内有自己的定义（优先于此处） */
+:root {
+  --lib-text: #2b2722;
+  --lib-text-secondary: #7d766c;
+  --lib-accent: #1d8578;
+  --lib-accent-bright: #2bb3a3;
+  --lib-accent-soft: #e2f5f2;
+  --lib-radius: 14px;
+  --lib-shadow-lg: 0 8px 30px rgba(60, 45, 30, 0.14);
+  --lib-shell-bg: #ffffff;
+  --lib-shell-fg: var(--lib-text);
+  --lib-shell-border: #eae4da;
 }
-.reading-article input, .reading-article textarea { -webkit-user-select: auto; user-select: auto; }
+/* ---------------- 划词工具条（深色） ---------------- */
+.lib-selpop {
+  position: absolute;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #2b2722;
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: var(--lib-shadow-lg);
+  transform: translateX(-50%);
+  animation: lib-pop-in 0.15s ease;
+}
+@keyframes lib-pop-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+.lib-selpop button {
+  border: none;
+  background: none;
+  color: #f5efe6;
+  width: 44px;
+  height: 42px;
+  border-radius: 8px;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.lib-selpop button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.lib-selpop .word-label {
+  color: #f5efe6;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 10px;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------- 查词浮层 ---------------- */
+.lib-dictpop {
+  position: absolute;
+  z-index: 75;
+  width: min(340px, calc(100vw - 32px));
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  background: var(--lib-shell-bg);
+  color: var(--lib-shell-fg);
+  border-radius: var(--lib-radius);
+  box-shadow: var(--lib-shadow-lg);
+  padding: 18px;
+  border: 1px solid var(--lib-shell-border);
+  animation: lib-pop-in-plain 0.15s ease;
+}
+@keyframes lib-pop-in-plain {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.lib-dict-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.lib-dict-head .word {
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--lib-text);
+  word-break: break-word;
+}
+.lib-dict-head .ph {
+  color: var(--lib-text-secondary);
+  font-size: 14px;
+}
+.lib-dict-head .sound,
+.lib-dict-head .close {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: var(--lib-accent-soft);
+  color: var(--lib-accent);
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.lib-dict-head .close {
+  margin-left: auto;
+  background: transparent;
+  color: var(--lib-text-secondary);
+}
+.lib-dict-head .close:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--lib-text);
+}
+.lib-dict-head .sound:hover {
+  background: #d2ede8;
+}
+.lib-dict-source {
+  font-size: 11px;
+  color: var(--lib-text-secondary);
+  margin-bottom: 10px;
+}
+.lib-dict-source .ai {
+  color: var(--lib-accent-bright);
+  font-weight: 600;
+}
+.lib-dict-sense {
+  margin-bottom: 10px;
+}
+.lib-dict-sense .pos {
+  display: inline-block;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--lib-accent);
+  background: var(--lib-accent-soft);
+  border-radius: 5px;
+  padding: 1px 8px;
+  margin-bottom: 4px;
+}
+.lib-dict-sense .def {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--lib-text);
+  word-break: break-word;
+}
+.lib-dict-sense .example {
+  font-size: 13px;
+  color: var(--lib-text-secondary);
+  font-style: italic;
+  margin-top: 2px;
+  word-break: break-word;
+}
+.lib-dict-empty {
+  color: var(--lib-text-secondary);
+  font-size: 14px;
+  text-align: center;
+  padding: 10px 0;
+}
+.lib-dict-loading {
+  display: flex;
+  justify-content: center;
+  padding: 18px 0;
+}
+.lib-dict-loading .lib-spinner {
+  width: 22px;
+  height: 22px;
+  border-width: 2.5px;
+}
+
+/* 主文档（非 epub iframe）里的划词锚点高亮——与 epubcore 注入 iframe 的样式同源 */
+mark[data-lib-anchor] {
+  background: rgba(255, 138, 92, 0.32);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}

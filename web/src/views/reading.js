@@ -186,38 +186,17 @@ async function renderDetail(el, id, role) {
         </span>
         <span class="reading-pick-info" id="rd-recmsg"></span>
       </div>
-      <p class="reading-hint">点击单词 → 工具条里可发音、查词（ECDICT · AI 兜底）。一次一个单词。</p>
+      <p class="reading-hint">选中（拖选/双击）单词 → 工具条里可发音、查词（ECDICT · AI 兜底）。</p>
     </div>
   `
 
-  // ---- 点词查词（复用泛读馆 lookup：工具条 + 查词浮层） ----
-  const lookup = createLookupLayer(el.querySelector('.reading-article'))
-  el.querySelector('#rd-text').addEventListener('click', (e) => {
-    const w = e.target.closest('w')
-    if (!w) return
-    // 单词高亮：清除旧高亮，点亮当前词
-    el.querySelectorAll('#rd-text w.active').forEach((x) => x.classList.remove('active'))
-    w.classList.add('active')
-    // 所有格/复数所有格还原：children's → children、dogs' → dogs
-    const raw = w.dataset.w
-    const word = raw.endsWith("s'") ? raw.slice(0, -1) : raw.replace(/'s$/, '').replace(/'s$/, '')
-    const r = w.getBoundingClientRect()
-    const host = el.querySelector('.reading-article').getBoundingClientRect()
-    // 与泛读馆划词同构的 payload：词 + 坐标（工具条将出现在词上方）
-    lookup.showSelection({
-      word,
-      context: (w.textContent || word),
-      x: r.left - host.left + r.width / 2,
-      y: r.top - host.top,
-    })
-  })
-  // 关闭浮层时清掉单词高亮（点空白处 lookup 自行处理）
-  el.querySelector('.reading-article').addEventListener('click', (e) => {
-    if (!e.target.closest('w')) {
-      el.querySelectorAll('#rd-text w.active').forEach((x) => x.classList.remove('active'))
-      lookup.hideAll()
-    }
-  })
+  // ---- 划词查词（完全复刻泛读馆：selectionchange 式取词 → 塌缩 → 工具条） ----
+  const articleEl = el.querySelector('.reading-article')
+  const lookup = createLookupLayer(articleEl)
+  setupSelectionLookup(articleEl, lookup)
+
+  // ---- 正文主题跟随教师配置（与泛读馆学生端同一份 student 主题） ----
+  applyStudentTheme(articleEl, role)
 
   // ---- 试听原文（范读 WAV：播放/暂停/停止三键） ----
   const aPlay = el.querySelector('#rd-a-play')
@@ -234,15 +213,85 @@ async function renderDetail(el, id, role) {
   el.querySelector('#rd-back').addEventListener('click', () => mountReading(el, { role }))
 }
 
+/** 学生端：正文底色/文字色用教师统一配置的主题（与泛读馆同源；教师默认纸白）。 */
+const RD_THEMES = {
+  paper: { bg: '#FFFFFF', fg: '#1F2933' },
+  sepia: { bg: '#F5ECD9', fg: '#5B4636' },
+  night: { bg: '#22272E', fg: '#C9CDD3' },
+  contrast: { bg: '#000000', fg: '#FFFFFF' },
+}
+function applyStudentTheme(articleEl, role) {
+  if (role === 'teacher') {
+    articleEl.style.background = RD_THEMES.paper.bg
+    articleEl.style.color = RD_THEMES.paper.fg
+    return
+  }
+  api.librarySettings()
+    .then((s) => {
+      const t = s && s.student && RD_THEMES[s.student.preset]
+      if (!t) return
+      articleEl.style.background = t.bg
+      articleEl.style.color = t.fg
+    })
+    .catch(() => { /* 取不到配置则保持默认护眼底 */ })
+}
+
+/**
+ * 划词查词（泛读馆 epubcore.onSelected 的主文档版）：
+ * 拖选/双击结束后读选区 → 清洗提取单词（>80 字符忽略）→ 交给 lookup
+ * （showSelection 内部塌缩选区防系统菜单，并用 range 做 mark 锚点高亮）。
+ */
+function setupSelectionLookup(articleEl, lookup) {
+  let timer = null
+  const handle = () => {
+    if (timer) clearTimeout(timer)
+    // 250ms debounce（与 epubjs selected 事件的节奏一致）
+    timer = setTimeout(() => {
+      const sel = window.getSelection()
+      const text = (sel && sel.toString().trim()) || ''
+      if (!sel || !sel.rangeCount) return
+      const range = sel.getRangeAt(0)
+      if (range.collapsed) {
+        // 选区被清空（点了空白）→ 收起浮层
+        lookup.hideAll()
+        return
+      }
+      if (!articleEl.contains(range.commonAncestorContainer)) return
+      if (!text || text.length > 80) return
+      const word = text.replace(/[^A-Za-z'’-]/g, '')
+      if (!word) return
+      const context = text.replace(/\s+/g, ' ').trim().slice(0, 200)
+      const rect = range.getBoundingClientRect()
+      const host = articleEl.getBoundingClientRect()
+      lookup.showSelection({
+        word,
+        context,
+        range: range.cloneRange(),
+        x: rect.left - host.left + rect.width / 2,
+        y: rect.top - host.top,
+      })
+    }, 250)
+  }
+  // 与 epubjs 同源：selectionchange（拖选/双击/触屏长按/编程选区全覆盖）
+  document.addEventListener('selectionchange', handle)
+  // 离开详情页时移除（reading 视图重挂载会重建）
+  const mo = new MutationObserver(() => {
+    if (!articleEl.isConnected) {
+      document.removeEventListener('selectionchange', handle)
+      if (timer) clearTimeout(timer)
+      mo.disconnect()
+    }
+  })
+  mo.observe(document.getElementById('app') || document.body, { childList: true, subtree: true })
+}
+
 function renderText(text) {
-  // 段落分行；单词包 <w> 供查词。**加粗**（填空答案）保留 strong 标记
+  // 段落分行（与泛读馆正文同构的纯 <p> 结构）；**加粗**（填空答案）保留 strong 标记
   return (text || '')
     .split(/\n+/)
     .filter((p) => p.trim())
     .map((p, i) => {
-      const html = escapeHtml(p)
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/[A-Za-z][A-Za-z'-]*/g, (w) => `<w data-w="${w.toLowerCase()}">${w}</w>`)
+      const html = escapeHtml(p).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       return `<p data-pidx="${i}">${html}</p>`
     })
     .join('')
