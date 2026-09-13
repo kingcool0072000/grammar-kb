@@ -136,7 +136,8 @@ export const api = {
   reciteSubmit: (rec) => reqJson('/recite/sessions', 'POST', rec),
   reciteSessions: ({ user, limit = 100 } = {}) =>
     req('/recite/sessions', { searchParams: { user, limit } }),
-  // 泛读馆：书架 / 阅读器 / 预习 / 设置 / 查词（library.db）  libraryBooks: () => req('/library/books'),
+  // 泛读馆：书架 / 阅读器 / 预习 / 设置 / 查词（library.db）
+  libraryBooks: () => req('/library/books'),
   libraryUpload: (file) => {
     const fd = new FormData()
     fd.append('file', file, file.name)
