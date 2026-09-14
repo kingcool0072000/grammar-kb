@@ -188,17 +188,23 @@ class GrammarDB:
     # ---- 讲次 ------------------------------------------------------------ #
 
     def clear_lecture(self, number: int) -> None:
-        """删除某讲及其全部知识点/标志词/关系/块（级联）。"""
+        """删除某讲及其全部知识点/标志词/关系/块（级联）。
+
+        kp_fts 是 external-content 表（索引挂在内容表行上）：必须趁
+        knowledge_point 行还在时先删 FTS 索引，再删 lecture——反过来会让
+        ON DELETE CASCADE 先清空内容表，子查询恒为空集，FTS 孤儿索引
+        永远删不掉（复用 rowid 重新导入后，旧关键词会误命中新知识点）。
+        """
         with self.transaction() as c:
             row = c.execute("SELECT id FROM lecture WHERE number=?", (number,)).fetchone()
             if row:
-                c.execute("DELETE FROM lecture WHERE id=?", (row["id"],))
-                # 级联清理 kp/marker/relation/block；FTS 需手动清
                 c.execute(
                     "DELETE FROM kp_fts WHERE rowid IN "
                     "(SELECT id FROM knowledge_point WHERE lecture_id=?)",
                     (row["id"],),
                 )
+                # 级联清理 kp/marker/relation/block
+                c.execute("DELETE FROM lecture WHERE id=?", (row["id"],))
 
     def upsert_lecture(self, lec: Lecture) -> int:
         with self.transaction() as c:

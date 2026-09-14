@@ -15,7 +15,8 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
-from typing import Any, Optional
+from contextlib import closing, contextmanager
+from typing import Any, Iterator, Optional
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS exam_records (
@@ -50,13 +51,24 @@ class ExamStore:
     def __init__(self, path: Optional[str] = None):
         self.path = path or default_exam_db_path()
         os.makedirs(os.path.dirname(os.path.abspath(self.path)), exist_ok=True)
-        with self._conn() as con:
+        with self._tx() as con:
             con.executescript(_SCHEMA)
 
     def _conn(self) -> sqlite3.Connection:
         con = sqlite3.connect(self.path)
         con.row_factory = sqlite3.Row
         return con
+
+    @contextmanager
+    def _tx(self) -> Iterator[sqlite3.Connection]:
+        """事务 + 连接关闭双保证。
+
+        sqlite3 连接的 ``with con`` 只管事务提交/回滚、不关连接；本库靠
+        「每次操作短连接」兼容 iCloud 整文件替换，连接必须显式 close，
+        否则句柄悬滞会与 iCloud 的文件替换互相干扰。
+        """
+        with closing(self._conn()) as con, con:
+            yield con
 
     @staticmethod
     def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
@@ -70,14 +82,14 @@ class ExamStore:
         }
 
     def list(self) -> list[dict[str, Any]]:
-        with self._conn() as con:
+        with self._tx() as con:
             rows = con.execute(
                 "SELECT * FROM exam_records ORDER BY date DESC, id DESC"
             ).fetchall()
         return [self._row_to_dict(r) for r in rows]
 
     def add(self, lecture: int, date: str, score: int = 0, wrong: list[int] | None = None) -> dict[str, Any]:
-        with self._conn() as con:
+        with self._tx() as con:
             cur = con.execute(
                 "INSERT INTO exam_records (lecture, date, score, wrong) VALUES (?, ?, ?, ?)",
                 (lecture, date, score, json.dumps(sorted(set(wrong or [])))),
@@ -96,7 +108,7 @@ class ExamStore:
         wrong: list[int] | None = None,
     ) -> Optional[dict[str, Any]]:
         """整条更新；记录不存在返回 None。"""
-        with self._conn() as con:
+        with self._tx() as con:
             cur = con.execute(
                 "UPDATE exam_records SET lecture = ?, date = ?, score = ?, wrong = ?,"
                 " updated_at = datetime('now') WHERE id = ?",
@@ -108,5 +120,5 @@ class ExamStore:
         return self._row_to_dict(row)
 
     def delete(self, id: int) -> bool:
-        with self._conn() as con:
+        with self._tx() as con:
             return con.execute("DELETE FROM exam_records WHERE id = ?", (id,)).rowcount > 0
