@@ -149,11 +149,11 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
               fce_db_path: Optional[str] = None):
     """构造 FastAPI 应用。``db_path`` 为 None 时走默认库（GRAMMAR_KB_DB 或 data/grammar.db）；
     ``exam_db_path`` 为成绩库路径（默认 iCloud Drive 或 data/exam.db）。"""
-    from fastapi import FastAPI, HTTPException, Query as FQuery, Request
+    from fastapi import FastAPI, HTTPException, Query as FQuery
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
 
-    from .exam_store import ExamStore
+    from .exam_store import ExamStore, default_exam_db_path
     from .auth import UserStore, make_token, read_token
     from .fce_query import FcePaperStore, FceSubmissionStore
     from .library import LibraryError, LibraryStore
@@ -163,6 +163,11 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from .focus import FocusStore
     from .analytics_ai import AnalyticsAI
 
+    # exam 库路径在此先落定：ExamStore 内部会自解析默认路径，但
+    # AnalyticsAI 拿到 None 会 str(None)="None" → sqlite3.connect("None")
+    # 在 cwd 生成名为 None 的脏文件。fce 系 store 均内部解析默认（无此风险）。
+    if exam_db_path is None:
+        exam_db_path = default_exam_db_path()
     kbq = Query(open_db(db_path))
     exams = ExamStore(exam_db_path)
     users = UserStore()
@@ -250,6 +255,11 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     @app.middleware("http")
     async def _auth(request, call_next):  # noqa: ANN001
+        # CORS 预检放行：本中间件在 CORSMiddleware 外层（后添加者更外），
+        # 而浏览器预检 OPTIONS 按规范不带 Authorization——不先放行会被 401
+        # 挡死，CORS 等于失效。预检由 CORSMiddleware 直接短路，不会触达端点。
+        if request.method == "OPTIONS":
+            return await call_next(request)
         path = request.url.path.rstrip("/") or "/"
         if path in _AUTH_OPEN or path.startswith(_STATIC_PREFIXES):
             return await call_next(request)
@@ -468,10 +478,13 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         )
 
     @app.get("/fce-submissions/{sub_id}")
-    def fce_submission_detail(sub_id: int):
+    def fce_submission_detail(sub_id: int, request: "fastapi.Request"):
+        """提交详情（含逐题对错明细）。学生只能看自己的，防越权读他人提交。"""
         data = fce_submissions.get(sub_id)
         if data is None:
             raise HTTPException(status_code=404, detail=f"提交记录 id={sub_id} 不存在")
+        if request.state.role != "teacher" and data["user"] != request.state.user:
+            raise HTTPException(status_code=403, detail="只能查看自己的练习提交")
         return _ok(data)
 
     @app.put("/fce-submissions/{sub_id}")

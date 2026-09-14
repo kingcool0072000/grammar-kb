@@ -16,8 +16,8 @@
 
 CLI::
 
-    uv run grammar-kb sync-aicloud --phone 18610087156
-    # 密码默认读环境变量 AICLOUD_PASSWORD
+    uv run grammar-kb sync-aicloud --phone <手机号>
+    # 手机号默认读环境变量 GRAMMAR_KB_AICLOUD_PHONE，密码读 AICLOUD_PASSWORD
 """
 from __future__ import annotations
 
@@ -200,7 +200,8 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         prog="grammar-kb sync-aicloud",
         description="从爱问云拉取测验成绩同步进成绩库")
-    p.add_argument("--phone", default=os.environ.get("AICLOUD_PHONE", "18610087156"))
+    p.add_argument("--phone", default=os.environ.get("GRAMMAR_KB_AICLOUD_PHONE"),
+                   help="默认读环境变量 GRAMMAR_KB_AICLOUD_PHONE")
     p.add_argument("--password", default=os.environ.get("AICLOUD_PASSWORD"),
                    help="默认读环境变量 AICLOUD_PASSWORD")
     p.add_argument("--group", type=int,
@@ -211,6 +212,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.password:
         p.error("需要 --password 或环境变量 AICLOUD_PASSWORD")
+    if not args.phone:
+        p.error("需要 --phone 或环境变量 GRAMMAR_KB_AICLOUD_PHONE")
 
     for row in sync(args.phone, args.password, args.group, dry_run=args.dry_run):
         if row["action"] == "add":
