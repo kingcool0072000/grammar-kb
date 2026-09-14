@@ -14,7 +14,6 @@ fitz/pdfplumber 仅作为薄封装。
 from __future__ import annotations
 
 import os
-import re
 import statistics
 import sys
 from contextlib import contextmanager
@@ -236,7 +235,6 @@ def _silence_stdio() -> Iterator[None]:
 
 def extract_spans(page) -> list[Span]:
     """从 fitz page 抽取所有水平方向的 span。"""
-    import fitz  # type: ignore
 
     d = page.get_text("dict")
     out: list[Span] = []
@@ -375,7 +373,6 @@ def iter_page_elements(
                 return True
         return False
 
-    elements: list[PageElement] = []
     # 用 (top, kind_order) 排序：表格与文本行混排
     pending: list[tuple[float, int, PageElement]] = []
 

@@ -1,4 +1,8 @@
 """知识点主题体系归类测试。"""
+from pathlib import Path
+
+import pytest
+
 from grammar_kb.models import KnowledgePoint
 from grammar_kb.taxonomy import classify
 
@@ -41,14 +45,23 @@ def test_other_fallback():
     assert t == "其它"
 
 
-def test_theme_notes_cover_all_populated_themes():
-    """每个有知识点的主题都配有讲义（统一讲解形式：summary/points/formula/tips）。"""
+@pytest.fixture(scope="module")
+def taxonomy():
+    """真实库主题体系。data/grammar.db 是本地 ingest 构建产物（不入 git），
+    CI 全新 checkout 没有——缺失时整批跳过而非 error（同 conftest 的
+    GRAMMAR_TEST_PDF_DIR 跳过模式）。"""
+    db = Path("data/grammar.db")
+    if not db.is_file():
+        pytest.skip(f"{db} 不存在（本地构建产物，未入库），跳过真实库用例")
     from grammar_kb.db import GrammarDB
     from grammar_kb.query import Query
-    from grammar_kb.theme_notes import THEME_NOTES
 
-    q = Query(GrammarDB("data/grammar.db"))
-    t = q.taxonomy()
+    return Query(GrammarDB(str(db))).taxonomy()
+
+
+def test_theme_notes_cover_all_populated_themes(taxonomy):
+    """每个有知识点的主题都配有讲义（统一讲解形式：summary/points/formula/tips）。"""
+    t = taxonomy
     missing = []
     for g in t["groups"]:
         for th in g["themes"]:
@@ -62,13 +75,9 @@ def test_theme_notes_cover_all_populated_themes():
     assert not missing, f"缺讲义的主题: {missing}"
 
 
-def test_theme_examples_use_corpus():
+def test_theme_examples_use_corpus(taxonomy):
     """主题例句来自教材语料（中英对、完整句、非语法标注行）。"""
-    from grammar_kb.db import GrammarDB
-    from grammar_kb.query import Query
-
-    q = Query(GrammarDB("data/grammar.db"))
-    t = q.taxonomy()
+    t = taxonomy
     total = sum(len(th["examples"]) for g in t["groups"] for th in g["themes"])
     assert total >= 40, f"教材例句过少: {total}"
     for g in t["groups"]:
@@ -78,24 +87,18 @@ def test_theme_examples_use_corpus():
                 assert 4 <= len(ex["zh"]) <= 45
 
 
-def test_review_routed_to_grammar_themes():
+def test_review_routed_to_grammar_themes(taxonomy):
     """综合复习不是知识点：全部按考察主题分流，体系里不再有综合复习组。"""
-    from grammar_kb.db import GrammarDB
-    from grammar_kb.query import Query
-
-    t = Query(GrammarDB("data/grammar.db")).taxonomy()
+    t = taxonomy
     groups = [g["group"] for g in t["groups"]]
     assert "综合复习" not in groups
     # 知识点总数不丢
     assert t["total"] == 359
 
 
-def test_items_have_brief():
+def test_items_have_brief(taxonomy):
     """每个知识点条目带一句话释义。"""
-    from grammar_kb.db import GrammarDB
-    from grammar_kb.query import Query
-
-    t = Query(GrammarDB("data/grammar.db")).taxonomy()
+    t = taxonomy
     for g in t["groups"]:
         for th in g["themes"]:
             for it in th["items"]:

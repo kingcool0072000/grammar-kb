@@ -92,7 +92,7 @@ def test_build_vocabulary_extracts_and_pairs():
     # 停用词被排除
     assert "has" not in words and "to" not in words
     # 至少一个词带释义
-    e = next(e for e in voc if e.word in ("studied", "goes", "school", "abroad", "years"))
+    next(e for e in voc if e.word in ("studied", "goes", "school", "abroad", "years"))
     # school/abroad 配到中文释义
     assert any(e.meanings for e in voc)
 
@@ -311,7 +311,7 @@ def test_proper_display_capital_gloss():
 
 def test_dict_fallback_and_vocabulary_source(tmp_path):
     """build_vocabulary 无词典环境可用（slim 兜底）；dict_db 传入时词条信息来自词典。"""
-    from grammar_kb.dict_db import DictDB, import_ecdict
+    from grammar_kb.dict_db import DictDB
     from grammar_kb.vocabulary import build_vocabulary
 
     kps = [

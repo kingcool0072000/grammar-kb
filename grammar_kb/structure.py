@@ -28,7 +28,7 @@ from .classify import (
     parse_filename,
 )
 from .models import Block, KnowledgePoint, Lecture, TableData
-from .pdf_parser import PageElement, ParsedPdf
+from .pdf_parser import ParsedPdf
 
 
 # --------------------------------------------------------------------------- #

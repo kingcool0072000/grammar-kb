@@ -784,8 +784,6 @@ def build_vocabulary(
         lambda: {"freq": 0, "sources": {}, "meanings": [], "cap": 0,
                  "examples": [], "forms_seen": set(), "spellings": {}}
     )
-    # 语料词 → 该词条允许的变形集合（例句高亮时把 went/going/goes 都认作 go）
-    lemma_forms: dict = defaultdict(set)
     mapping, ambiguous = _get_inflect_maps()
 
     for kp in kps:

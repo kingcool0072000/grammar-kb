@@ -32,6 +32,19 @@ grammar-kb = "grammar_kb.cli:main"
 grammar-kb-server = "grammar_kb.server:main"
 grammar-kb-mcp = "grammar_kb.mcp_server:main"
 
+[tool.ruff]
+# 行宽按现有代码风格（绝大多数行 ≤100）放宽到 110；规则用 ruff 传统默认集
+# （E4/E7/E9/F：pyflakes + 核心 pycodestyle 错误），不启用激进规则。
+# 注意：ruff ≥0.12 起默认集已扩到数百条（UP/SIM/S 等），这里显式钉住以防
+# 版本升级引入海量新违规。
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+# E741（变量名 l 歧义）：PDF/OCR 解析循环里 `l` 作"行"是局部惯用，改名纯噪音
+ignore = ["E741"]
+
 [tool.setuptools.packages.find]
 include = ["grammar_kb*"]
 

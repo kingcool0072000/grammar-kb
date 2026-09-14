@@ -1,0 +1,50 @@
+# 最小 CI：Python 测试 + lint，web 前端构建。
+# 注意：CI 是全新 checkout——data/*.db 与 GRAMMAR_TEST_PDF_DIR 均缺失，
+# 相关真实库/真实 PDF 用例靠测试内的 skip 守卫自动跳过（见 tests/conftest.py、
+# tests/test_taxonomy.py），ruff 由 pyproject.toml [tool.ruff] 钉在 E4/E7/E9/F。
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: 安装依赖（server extra + dev）
+        run: uv sync --extra server --dev
+
+      - name: Ruff lint
+        run: uvx ruff check .
+
+      - name: Pytest
+        run: uv run pytest -q
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 构建
+        run: npm run build

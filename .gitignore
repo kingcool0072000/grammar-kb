@@ -24,6 +24,9 @@ data/*.db-shm
 # OS
 .DS_Store
 
+# 本地工具产物（会话 plan 等）
+.zcode/
+
 # Web frontend
 web/node_modules/
 

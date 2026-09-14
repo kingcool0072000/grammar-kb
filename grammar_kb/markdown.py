@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 
-from typing import Iterable, Optional, TYPE_CHECKING
+from typing import Iterable, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .models import KnowledgePoint, Lecture, Block, TableData

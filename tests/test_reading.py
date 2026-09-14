@@ -24,7 +24,7 @@ DERIVED_TEXT = (
 @pytest.fixture()
 def reading_env(tmp_path, monkeypatch):
     """独立 fce.db（只留 1 段 base）+ 独立认证/成绩库。"""
-    src = shutil.copy(
+    shutil.copy(
         __file__.rsplit("/", 1)[0] + "/../data/fce.db", tmp_path / "fce.db"
     )
     conn = sqlite3.connect(tmp_path / "fce.db")
@@ -206,7 +206,6 @@ def test_recite_session_report(reading_env):
 
 def test_reading_model_audio(reading_env, tmp_path, monkeypatch):
     """范读音频端点：WAV 文件流 + has_audio 标记 + 学生白名单 + 404。"""
-    import shutil as _sh
 
     # 隔离音频目录：先造一篇派生文拿 id
     monkeypatch.setenv("GRAMMAR_KB_AUDIO_DIR", str(tmp_path / "audio"))

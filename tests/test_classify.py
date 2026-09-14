@@ -1,8 +1,10 @@
 """classify 模块单测：讲次分类、文件名解析、标志词抽取、关系检测。"""
 from grammar_kb.classify import (
+    EXAM_SIGNALS,
     TENSE_MARKERS,
     classify_lecture_title,
     detect_relations,
+    exam_signals_for_kp,
     extract_markers,
     guess_tense_of_kp,
     parse_filename,
@@ -146,7 +148,6 @@ def test_guess_tense():
 # 考点信号
 # --------------------------------------------------------------------------- #
 
-from grammar_kb.classify import exam_signals_for_kp, EXAM_SIGNALS
 
 
 def test_exam_signal_tense():

@@ -1,7 +1,6 @@
 """学情分析 AI 周报测试：周窗口 / 四源聚合 / 生成与存档 / 端点权限。"""
-import json
 import os
-from datetime import date, datetime, timedelta
+from datetime import date
 
 import pytest
 

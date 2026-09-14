@@ -1127,7 +1127,6 @@ def validate(db_path: str) -> list[str]:
 
 
 if __name__ == "__main__":
-    import sys
     import argparse
 
     ap = argparse.ArgumentParser(description="FCE 青少版 PDF → fce.db")

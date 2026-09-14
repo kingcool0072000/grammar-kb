@@ -8,7 +8,9 @@
 from __future__ import annotations
 
 import json
+import re as _re
 import sqlite3
+from datetime import datetime, timezone as _tz
 from pathlib import Path
 from typing import Optional
 
@@ -113,7 +115,6 @@ class FcePaperStore:
             except ValueError:
                 return (len(PAPER_ORDER), p)
 
-        sec_by_key = {(s["paper"], s["part"]): dict(s) for s in sections}
         out_sections = []
         for s in sorted(sections, key=lambda s: (paper_rank(s["paper"]), s["part"])):
             d = dict(s)
@@ -147,9 +148,6 @@ def _question_out(q: sqlite3.Row) -> dict:
 # --------------------------------------------------------------------------- #
 # 练习记录 + 自动批改
 # --------------------------------------------------------------------------- #
-
-import re as _re
-from datetime import datetime, timezone as _tz
 
 SUBMISSION_SCHEMA = """
 CREATE TABLE IF NOT EXISTS fce_submission (

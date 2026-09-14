@@ -189,7 +189,6 @@ class AnalyticsAI:
         base = []
         all_exams = exams.list()
         all_fce = fce_submissions.list(limit=1000)
-        all_rec = reading.list_recordings(limit=1000)
         all_recite = recite.list(limit=1000)
         for i in range(1, 5):  # 紧邻前 4 周（start-7 … start-28）
             mon = start - timedelta(days=7 * i)
@@ -200,7 +199,6 @@ class AnalyticsAI:
                 return t is not None and b_lo <= t < b_hi
             exs = [r for r in all_exams if _in(r.get("date"))]
             fcs = [r for r in all_fce if _in(r.get("created_at")) and r.get("status") == "auto"]
-            rcs = [r for r in all_rec if _in(r.get("created_at")) and r.get("status") == "graded"]
             rts = [r for r in all_recite if _in(r.get("created_at"))]
             base.append({
                 "week": mon.isoformat(),

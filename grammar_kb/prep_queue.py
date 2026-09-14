@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from . import glm
 from .wordfreq import extract_hard_words
