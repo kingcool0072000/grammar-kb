@@ -1,5 +1,5 @@
 import { api, getAuth } from '../api.js'
-import { escapeHtml } from '../render.js'
+import { escapeHtml, escAttr } from '../render.js'
 
 // FCE 真题练习（青少版模拟卷，data/fce.db）：按「一个大题（Part）」为练习单位。
 // 流程：选 Test → 选大题（带历史成绩）→ 做题（阅读原文优化排版）→ 提交自动批改；
@@ -85,7 +85,7 @@ function subRow(s, role) {
       : '<b class="fce-his-score pend">待批改</b>'
   const isAdmin = role === 'teacher'
   return `
-    <div class="fce-his-row fce-sub-row" data-sub="${s.id}" data-user="${escapeHtml(s.user || '')}">
+    <div class="fce-his-row fce-sub-row" data-sub="${s.id}" data-user="${escAttr(s.user || '')}">
       <span class="fce-his-what">${isAdmin && s.user ? `${escapeHtml(s.user)} · ` : ''}T${s.test_id} ${PAPER_CN[s.paper] || s.paper} P${s.part}</span>
       ${score}
       <span class="fce-his-date">${when}</span>
@@ -239,9 +239,10 @@ async function renderPractice(el, testId, sec, role) {
   const section = data.sections.find(
     (s) => s.paper === sec.paper && s.part === sec.part
   )
-  // 学生练习模式：电子书护眼背景 + 防误触（禁右键/选择/拖拽）；教师阅卷不受限
+  // 学生练习模式：电子书护眼背景 + 防误触（禁右键/选择/拖拽）；教师阅卷不受限。
+  // class/监听挂在容器 el 上，并登记到 _cleanups：路由切换由 main.js 统一撤销，
+  // 页内返回/重进也先撤销——否则护眼底色、禁选择、计时器会泄漏到其它页面
   const isStudent = myRoleNow() !== 'teacher'
-  if (isStudent) el.classList.add('fce-reading-mode')
   const noMenu = (e) => e.preventDefault()
   const noSelect = (e) => {
     // 输入框/文本域里正常选择作答，其余区域禁止
@@ -249,10 +250,26 @@ async function renderPractice(el, testId, sec, role) {
   }
   const noDragStart = (e) => e.preventDefault()
   if (isStudent) {
+    el.classList.add('fce-reading-mode')
     el.addEventListener('contextmenu', noMenu)
     el.addEventListener('selectstart', noSelect)
     el.addEventListener('dragstart', noDragStart)
   }
+  let timer = null
+  // 一键收干净本练习页的全部模式态（幂等，可重复调用）
+  const stopPracticeMode = () => {
+    if (isStudent) {
+      el.removeEventListener('contextmenu', noMenu)
+      el.removeEventListener('selectstart', noSelect)
+      el.removeEventListener('dragstart', noDragStart)
+      el.classList.remove('fce-reading-mode')
+    }
+    if (timer) { clearInterval(timer); timer = null }
+  }
+  // 同一容器重进练习（「再练一次」不经过大题列表）先撤销上一轮，防监听/interval 叠加
+  const cleanups = (el._cleanups ||= [])
+  cleanups.splice(0).forEach((fn) => fn())
+  cleanups.push(stopPracticeMode)
   const qs = section.questions
   const isEssay = qs.every((q) => q.type.startsWith('essay'))
   const isChoice = qs.every((q) => ['mcq3', 'mcq4', 'matchSentence', 'matchPerson', 'matchOpinion'].includes(q.type))
@@ -309,19 +326,16 @@ async function renderPractice(el, testId, sec, role) {
   // ---- 计时（进入练习页即开始，提交时随答案上报） ----
   const startAt = Date.now()
   const timerEl = el.querySelector('#fce-timer-num')
-  const timer = setInterval(() => {
+  timer = setInterval(() => {
+    // 保险：容器已脱离文档（路由切走）时自停，避免空转（参考 manage.js 轮询）
+    if (!el.isConnected) { clearInterval(timer); timer = null; return }
     const s = Math.floor((Date.now() - startAt) / 1000)
     timerEl.textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
   }, 1000)
   const elapsed = () => Math.round((Date.now() - startAt) / 1000)
 
   el.querySelector('#fce-back').addEventListener('click', () => {
-    if (isStudent) {
-      el.removeEventListener('contextmenu', noMenu)
-      el.removeEventListener('selectstart', noSelect)
-      el.removeEventListener('dragstart', noDragStart)
-      el.classList.remove('fce-reading-mode')
-    }
+    stopPracticeMode()
     renderPartList(el, testId, role, [])
   })
   const $form = el.querySelector('#fce-form')

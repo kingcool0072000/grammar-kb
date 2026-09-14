@@ -1,5 +1,5 @@
 import { api } from '../api.js'
-import { renderMd, escapeHtml } from '../render.js'
+import { renderMd, escapeHtml, escAttr } from '../render.js'
 import { catColor } from '../theme.js'
 
 // 右侧详情抽屉：
@@ -118,12 +118,12 @@ export function createDrawer(ctx = {}) {
       const uniqMarkers = [...new Set(ms.map((m) => m.marker))]
       html += `
         <div class="signal-row">
-          <button class="signal-tense" data-signal="tense" data-key="${escapeHtml(tense)}">${escapeHtml(tense)}</button>
+          <button class="signal-tense" data-signal="tense" data-key="${escAttr(tense)}">${escapeHtml(tense)}</button>
           <div class="signal-markers">
             ${uniqMarkers
               .map(
                 (mk) =>
-                  `<button class="signal-marker" data-signal="marker" data-key="${escapeHtml(
+                  `<button class="signal-marker" data-signal="marker" data-key="${escAttr(
                     mk,
                   )}">${escapeHtml(mk)}</button>`,
               )

@@ -1,10 +1,7 @@
 import { api } from '../../api.js'
 import { ICONS } from './icons.js'
-import { escapeHtml } from '../../render.js'
+import { escapeHtml, escAttr } from '../../render.js'
 import './shelf.css'
-
-// 属性上下文转义：escapeHtml 不处理引号，title="..." 里含 " 会截断属性
-const escAttr = (s) => escapeHtml(s).replace(/"/g, '&#34;').replace(/'/g, '&#39;')
 
 // 泛读馆 · 书架（教师/学生共用）
 // 自 FCEReadingLib LibraryPage 直译为原生 JS：书卡网格、搜索排序、阅读统计 chips；
@@ -97,14 +94,9 @@ export async function mountLibraryShelf(viewEl, { role } = {}) {
     })
   }
 
-  // 路由切走时回收 objectURL（root 从 viewEl 移除即视为卸载）
-  const mo = new MutationObserver(() => {
-    if (!root.isConnected) {
-      revokeCovers()
-      mo.disconnect()
-    }
-  })
-  mo.observe(viewEl, { childList: true })
+  // 路由切走时回收 objectURL。原方案是 MutationObserver 盯 viewEl 的 childList，
+  // 改造后路由容器由 main.js 统一换血，改为往容器上登记清理函数（语义等价）
+  ;(viewEl._cleanups ||= []).push(revokeCovers)
 
   // ---------- 过滤 + 排序 ----------
   function visibleBooks() {

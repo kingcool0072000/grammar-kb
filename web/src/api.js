@@ -61,8 +61,18 @@ async function reqJson(path, method, body) {
     handle401()
     throw new Error('登录已过期，请重新登录')
   }
+  // 错误体可能是网关/代理返回的非 JSON（如 502 的 HTML 页），直接 res.json() 会抛
+  // 难懂的 SyntaxError——对齐 reqBlob：先判 ok，再尝试按 JSON 取 detail/message
+  if (!res.ok) {
+    let msg = `HTTP ${res.status} ${res.statusText} @ ${path}`
+    try {
+      const j = await res.json()
+      msg = j.detail || j.message || msg
+    } catch { /* 非 JSON 错误体，保留上面的 HTTP 消息 */ }
+    throw new Error(msg)
+  }
   const j = await res.json()
-  if (!res.ok || j.code !== 0) throw new Error(j.detail || j.message || `HTTP ${res.status}`)
+  if (j.code !== 0) throw new Error(j.detail || j.message || `HTTP ${res.status}`)
   return j.data
 }
 

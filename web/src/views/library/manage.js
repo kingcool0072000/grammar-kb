@@ -480,14 +480,9 @@ export async function mountLibraryManage(viewEl, { bookId } = {}) {
   genSelBtn.addEventListener('click', () => submitBatch())
   genAllBtn.addEventListener('click', () => submitBatch(todoList().map((c) => c.idx)))
 
-  // 卸载清理：停轮询（root 从 viewEl 移除即视为离开本页）
-  const mo = new MutationObserver(() => {
-    if (!root.isConnected) {
-      stopPoll()
-      mo.disconnect()
-    }
-  })
-  mo.observe(viewEl, { childList: true })
+  // 卸载清理：停轮询。原方案是 MutationObserver 盯 viewEl 的 childList，
+  // 改造后路由容器由 main.js 统一换血，改为往容器上登记清理函数（语义等价）
+  ;(viewEl._cleanups ||= []).push(stopPoll)
 
   // ---------- 数据加载 ----------
   async function load() {

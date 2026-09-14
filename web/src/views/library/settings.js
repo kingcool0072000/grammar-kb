@@ -1,10 +1,7 @@
 import { api } from '../../api.js'
 import { ICONS } from './icons.js'
-import { escapeHtml } from '../../render.js'
+import { escapeHtml, escAttr } from '../../render.js'
 import './settings.css'
-
-// 属性上下文转义：escapeHtml 不处理引号，placeholder="..." 里含 " 会截断属性
-const escAttr = (s) => escapeHtml(s).replace(/"/g, '&#34;').replace(/'/g, '&#39;')
 
 // 泛读馆 · 教师设置（三张卡：AI 学习 / 字典 / 学生阅读主题）
 // 自 FCEReadingLib SettingsPage 的全局段直译；账号管理与个人偏好卡不复刻（本项目有自己的 auth）。
@@ -230,7 +227,7 @@ export async function mountLibrarySettings(viewEl) {
     function rebuildModelOptions(current) {
       const base = models.length ? models : FALLBACK_MODELS
       const list = [...new Set([current, ...base])]
-      modelSel.innerHTML = list.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('')
+      modelSel.innerHTML = list.map((m) => `<option value="${escAttr(m)}">${escapeHtml(m)}</option>`).join('')
       modelSel.value = current
     }
 

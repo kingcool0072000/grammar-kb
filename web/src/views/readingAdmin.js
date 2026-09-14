@@ -1,5 +1,5 @@
 import { api } from '../api.js'
-import { escapeHtml } from '../render.js'
+import { escapeHtml, escAttr } from '../render.js'
 
 // 教师版 · 阅读内容管理：
 // 1) 基础 FCE 阅读原文（50 段 base，按 Test/Part 分组，1 段为一篇）
@@ -92,7 +92,7 @@ function bindRecRowActions(el, recs) {
       editor.className = 'reading-rec-editor'
       editor.innerHTML = `
         <label>分数 <input type="number" min="0" max="10" value="${r.teacher_score ?? 8}" style="width:56px" data-ed-score></label>
-        <input placeholder="评语（流利度/发音/语调建议）" value="${escapeHtml(r.teacher_comment || '')}" data-ed-comment style="flex:1">
+        <input placeholder="评语（流利度/发音/语调建议）" value="${escAttr(r.teacher_comment || '')}" data-ed-comment style="flex:1">
         <button class="reading-btn small primary" data-ed-save>保存</button>
         <button class="reading-btn small" data-ed-cancel>取消</button>
       `
@@ -181,7 +181,7 @@ function renderTest(el, arts, test, recs) {
           ${g.list.map((b) => {
             const d = derived.filter((x) => x.base_key === b.base_key)
             return `
-            <button class="reading-card" data-id="${b.id}" data-key="${escapeHtml(b.base_key)}">
+            <button class="reading-card" data-id="${b.id}" data-key="${escAttr(b.base_key)}">
               <span class="reading-card-title">${escapeHtml(b.title)}</span>
               <span class="reading-card-meta">
                 <span class="tag" style="--cat-color:#8a6d3b">原文 ${b.words} 词</span>
@@ -356,7 +356,7 @@ async function renderReview(el, recs) {
       <audio controls preload="metadata" style="width:100%;margin:8px 0"></audio>
       <div class="reading-review-grade">
         <label>分数 <input type="number" min="0" max="10" value="${r.teacher_score ?? 8}" style="width:56px" data-score></label>
-        <input placeholder="评语（流利度/发音/语调建议）" value="${escapeHtml(r.teacher_comment || '')}" data-comment style="flex:1" />
+        <input placeholder="评语（流利度/发音/语调建议）" value="${escAttr(r.teacher_comment || '')}" data-comment style="flex:1" />
         <button class="reading-btn primary" data-grade>提交批改</button>
         <button class="reading-btn" data-dl title="下载这条录音（音频 + 朗读原文）">⬇️ 下载</button>
         <button class="reading-btn danger" data-del title="删除这条录音提交">删除</button>

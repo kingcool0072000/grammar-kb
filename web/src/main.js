@@ -224,40 +224,48 @@ async function bootstrap() {
     headerInner.querySelectorAll('.tab').forEach((t) =>
       t.classList.toggle('active', t.dataset.view === route),
     )
-    viewEl.innerHTML = ''
+    // 竞态守卫：每次路由切换都新建子容器并同步挂到 viewEl，再把 container 传给
+    // mount——hash 快速切换时，旧视图 await 后的 innerHTML 写入只会落到已脱离
+    // 文档的旧容器上，不再覆写新视图的 DOM（也免去旧视图查询器在新 DOM 上取到
+    // null 的 TypeError）。
+    const prev = viewEl.firstElementChild
+    // 切换前先跑旧容器登记的清理（护眼 class / 事件监听 / 计时器等，见各视图 _cleanups）
+    if (prev && Array.isArray(prev._cleanups)) prev._cleanups.forEach((fn) => fn())
+    const container = h('div')
+    viewEl.replaceChildren(container)
     let mounted
     if (route === 'grading') {
-      mounted = mountGrading(viewEl)
+      mounted = mountGrading(container)
     } else if (route === 'prep') {
-      mounted = mountPrep(viewEl, ctx)
+      mounted = mountPrep(container, ctx)
     } else if (route === 'analytics') {
-      mounted = mountAnalytics(viewEl)
+      mounted = mountAnalytics(container)
     } else if (route === 'courses') {
-      mounted = mountCourses(viewEl, { lectures: state.lectures, openLecture: ctx.openLecture })
+      mounted = mountCourses(container, { lectures: state.lectures, openLecture: ctx.openLecture })
     } else if (route === 'vocab') {
-      mounted = mountVocabulary(viewEl, { vocab: state.vocab, openWord: (e) => drawer.showWord(e) })
+      mounted = mountVocabulary(container, { vocab: state.vocab, openWord: (e) => drawer.showWord(e) })
     } else if (route === 'recite') {
-      mounted = mountRecite(viewEl, { vocab: state.vocab, role })
+      mounted = mountRecite(container, { vocab: state.vocab, role })
     } else if (route === 'taxonomy') {
-      mounted = mountTaxonomy(viewEl, { pointsById, openKp: ctx.openKp })
+      mounted = mountTaxonomy(container, { pointsById, openKp: ctx.openKp })
     } else if (route === 'fce') {
-      mounted = mountFce(viewEl)
+      mounted = mountFce(container)
     } else if (route === 'fcePapers') {
-      mounted = mountFcePapers(viewEl, { role })
+      mounted = mountFcePapers(container, { role })
     } else if (route === 'readingAdmin') {
-      mounted = mountReadingAdmin(viewEl)
+      mounted = mountReadingAdmin(container)
     } else if (route === 'reading') {
-      mounted = mountReading(viewEl, { role })
+      mounted = mountReading(container, { role })
     } else if (route === 'library') {
-      mounted = mountLibraryShelf(viewEl, { role })
+      mounted = mountLibraryShelf(container, { role })
     } else if (route === 'libraryReader') {
-      mounted = mountLibraryReader(viewEl, { role, bookId: Number(routeSegs()[1]) })
+      mounted = mountLibraryReader(container, { role, bookId: Number(routeSegs()[1]) })
     } else if (route === 'libraryManage') {
-      mounted = mountLibraryManage(viewEl, { bookId: Number(routeSegs()[1]) })
+      mounted = mountLibraryManage(container, { bookId: Number(routeSegs()[1]) })
     } else if (route === 'librarySettings') {
-      mounted = mountLibrarySettings(viewEl)
+      mounted = mountLibrarySettings(container)
     } else if (route === 'exams') {
-      mounted = mountExams(viewEl, { lectures: state.lectures })
+      mounted = mountExams(container, { lectures: state.lectures })
     }
     // 教师子工具页（备课/批改中心跳转进入）：mount 完成后 prepend 返回条
     // （mount 内部会覆写 innerHTML——异步视图须等 settle 后再插入）
@@ -266,12 +274,14 @@ async function bootstrap() {
     const routeDef = VIEWS.find((v) => v.key === route)
     if (role === 'teacher' && routeDef && routeDef.hiddenTab && route !== 'libraryManage') {
       const addBack = () => {
-        if (!viewEl.querySelector('.gd-tool-back')) {
+        // 必须插在 container 内：视图自身 re-render（innerHTML 覆写）时返回条随之
+        // 消失，与改造前行为一致；若插在 viewEl 上会跨页残留
+        if (!container.querySelector('.gd-tool-back')) {
           const back = h('button', 'fce-back-btn gd-tool-back', '← 返回备课中心')
           back.addEventListener('click', () => {
             location.hash = '/prep'
           })
-          viewEl.prepend(back)
+          container.prepend(back)
         }
       }
       Promise.resolve(mounted).then(addBack, addBack)

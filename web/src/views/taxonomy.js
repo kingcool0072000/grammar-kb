@@ -1,4 +1,4 @@
-import { escapeHtml } from '../render.js'
+import { escapeHtml, escAttr } from '../render.js'
 import { api } from '../api.js'
 
 // 初中英语知识体系视图：按 语法大类 → 主题 两级树聚合零散知识点。
@@ -29,7 +29,7 @@ export async function mountTaxonomy(el, { pointsById, openKp }) {
       const themes = g.themes
         .map(
           (t) => `
-        <div class="tax-theme" data-theme="${escapeHtml(t.theme)}">
+        <div class="tax-theme" data-theme="${escAttr(t.theme)}">
           <button class="tax-theme-head">
             <span class="tax-arrow">▸</span>
             <span class="tax-theme-name">${escapeHtml(t.theme)}</span>

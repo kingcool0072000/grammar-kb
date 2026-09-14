@@ -3,7 +3,7 @@
 // 抽屉开关：transform translateX 过渡 0.25s + 遮罩淡入淡出。
 
 import { api } from '../../api.js'
-import { escapeHtml } from '../../render.js'
+import { escapeHtml, escAttr } from '../../render.js'
 import { speak } from './lookup.js'
 import { ICONS } from './icons.js'
 
@@ -287,7 +287,7 @@ export function createPrepDrawer({ onClose, onStart }) {
             <div class="lib-prep-word">
               <div class="lib-prep-word-head">
                 <span class="w">${escapeHtml(w.word)}</span>${ph}${pos}
-                <button type="button" class="lib-prep-sound" data-tts="${escapeHtml(w.word)}" title="发音" aria-label="发音 ${escapeHtml(w.word)}">${ICONS.sound(16)}</button>
+                <button type="button" class="lib-prep-sound" data-tts="${escAttr(w.word)}" title="发音" aria-label="发音 ${escAttr(w.word)}">${ICONS.sound(16)}</button>
               </div>
               <div class="lib-prep-meaning">${escapeHtml(w.meaning || '')}</div>
               ${ex}
@@ -305,7 +305,7 @@ export function createPrepDrawer({ onClose, onStart }) {
             <div class="lib-prep-idiom">
               <div class="lib-prep-word-head">
                 <span class="p">${escapeHtml(p.phrase)}</span>
-                <button type="button" class="lib-prep-sound accent" data-tts="${escapeHtml(p.phrase)}" title="发音" aria-label="发音 ${escapeHtml(p.phrase)}">${ICONS.sound(16)}</button>
+                <button type="button" class="lib-prep-sound accent" data-tts="${escAttr(p.phrase)}" title="发音" aria-label="发音 ${escAttr(p.phrase)}">${ICONS.sound(16)}</button>
               </div>
               <div class="line">字面：<b>${escapeHtml(p.literal || '')}</b></div>
               <div class="line">实义：<b>${escapeHtml(p.actual || '')}</b></div>
