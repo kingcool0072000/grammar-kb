@@ -136,7 +136,7 @@ export function mountLibraryReader(viewEl, ctx) {
 
   // ---- 进度上报（节流）----
   const progress = { cfi: '', chapterIndex: 0, percent: 0 }
-  const reported = { cfi: '', time: 0 }
+  const reported = { cfi: '', pct: -1, time: 0 }
   let secondsAccum = 0
   let lastTick = Date.now()
 
@@ -144,8 +144,10 @@ export function mountLibraryReader(viewEl, ctx) {
     if (!Number.isFinite(bookId)) return
     const now = Date.now()
     if (!progress.cfi) return
-    if (!force && progress.cfi === reported.cfi && now - reported.time < 5000) return
+    // 节流键用 percent：滚动中 cfi 不变但精确百分比在变，旧键会漏报新位置
+    if (!force && progress.percent === reported.pct && now - reported.time < 5000) return
     reported.cfi = progress.cfi
+    reported.pct = progress.percent
     reported.time = now
     const seconds = Math.round(secondsAccum / 1000)
     secondsAccum = 0
@@ -314,15 +316,17 @@ export function mountLibraryReader(viewEl, ctx) {
   })
 
   // ---- epub 事件 ----
+  let hasPrecisePct = false // 滚动驱动的精确百分比到过一次后，relocated 不再回写迟钝的 location 值
   function handleReloc(info) {
     progress.cfi = info.cfi
     progress.chapterIndex = info.chapterIndex
-    progress.percent = info.percent
-    focusTracker.hooks.onReloc(info.percent)
+    if (!hasPrecisePct) progress.percent = info.percent
+    focusTracker.hooks.onReloc(progress.percent)
     chapterIndex = info.chapterIndex
     const merged = mergedChapterAt(chapterIndex)
     chapterLabel = info.chapterTitle || (merged && merged.title) || ''
-    labelEl.textContent = `${chapterLabel}${info.percent > 0 ? ` · ${Math.round(info.percent)}%` : ''}`
+    const shownPct = hasPrecisePct ? progress.percent : info.percent
+    labelEl.textContent = `${chapterLabel}${shownPct > 0 ? ` · ${Math.round(shownPct)}%` : ''}`
     try {
       localStorage.setItem(`gkb-lib-cfi-${bookId}`, info.cfi || '')
     } catch {
@@ -464,6 +468,12 @@ export function mountLibraryReader(viewEl, ctx) {
   renderer = createEpubRenderer(bookId, viewerEl, themeStyleNow(), {
     progressSync,
     onReloc: handleReloc,
+    // 视线带下缘精确百分比（滚动实时刷新，替代 1024 粒度 location 的迟钝跳动）
+    onPrecisePercent: (pct) => {
+      hasPrecisePct = true
+      progress.percent = pct
+      labelEl.textContent = `${chapterLabel}${pct > 0 ? ` · ${pct}%` : ''}`
+    },
     onSelect: handleSelect,
     onInjectChapterLinks,
     onChapterLinkClick: gotoChapter,

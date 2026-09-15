@@ -458,6 +458,12 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
     } catch {
       return
     }
+    // 精确百分比（视线引导带下缘口径）：带下缘 = scrollTop + 30% 视口高，
+    // 该线在滚动流中的位置 / 滚动流总高。比 epubjs 的 1024 字符粒度 location
+    // 精确得多，且随滚动实时刷新（走查反馈：% 变化不灵敏）。
+    const scrollStreamH = maskScrollEl.scrollHeight || 1
+    const gazeLine = Math.min(scrollStreamH, scrollTop + viewH * 0.3)
+    const precisePct = Math.max(0, Math.min(100, (gazeLine / scrollStreamH) * 100))
     for (const contents of contentsList) {
       const doc = contents && contents.document
       if (!doc || !doc.body) continue
@@ -488,7 +494,14 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
       mask.style.height = `${h}%`
       mask.style.background = `linear-gradient(to bottom, rgba(60,50,35,0.6) 0%, rgba(60,50,35,0.6) ${Math.max(0, h - 6)}%, rgba(60,50,35,0) ${h}%)`
     }
+    // 回调精确百分比（整数变化才发，避免每像素刷顶栏）
+    const rounded = Math.round(precisePct)
+    if (rounded !== lastPrecisePct) {
+      lastPrecisePct = rounded
+      if (callbacks.onPrecisePercent) callbacks.onPrecisePercent(rounded)
+    }
   }
+  let lastPrecisePct = -1
 
   function injectChapterLinksNow() {
     if (!rendition || !rendition.getContents || !injectHandler) return
