@@ -322,6 +322,19 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
               if (scroller && target > 2) {
                 scroller.scrollTop = target
                 updateReadMask()
+                // 自愈滚动不触发 epubjs 的 relocated——直接设 scrollTop 后
+                // progress.cfi 停留在恢复 display 时报告的旧值，退出时会用旧 cfi
+                // 覆盖云端进度（表现为"进 17% 不动退出回退到 2%"）。
+                // 用 currentLocation()（按真实滚动位置计算）重报一次。
+                setTimeout(() => {
+                  if (destroyed || !rendition) return
+                  try {
+                    const loc = rendition.currentLocation()
+                    if (loc && loc.start) emitReloc(loc.start)
+                  } catch {
+                    /* ignore */
+                  }
+                }, 120)
               }
             } catch {
               /* 自愈失败维持 epubjs 原行为 */
@@ -450,8 +463,10 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
     if (destroyed || !rendition || !maskScrollEl) return
     const scrollTop = maskScrollEl.scrollTop
     const viewH = maskScrollEl.clientHeight || 1
-    // 已读 = 已滚过的内容（当前视口上缘之上的部分）
-    const readPx = Math.max(0, scrollTop)
+    // 书最顶部（滚动量小于半个视口）：不加已读遮罩（需求②）
+    const atTop = scrollTop < viewH * 0.5
+    // 已读 = 已滚过的内容（当前视口上缘之上的部分）；顶部半屏内视为未读
+    const readPx = atTop ? 0 : Math.max(0, scrollTop)
     let contentsList = []
     try {
       contentsList = rendition.getContents ? rendition.getContents() : []
@@ -495,7 +510,8 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
       mask.style.background = `linear-gradient(to bottom, rgba(60,50,35,0.6) 0%, rgba(60,50,35,0.6) ${Math.max(0, h - 6)}%, rgba(60,50,35,0) ${h}%)`
     }
     // 回调精确百分比（整数变化才发，避免每像素刷顶栏）
-    const rounded = Math.round(precisePct)
+    const shownPct = atTop ? Math.max(0, Math.round((scrollTop + viewH * 0.3) / scrollStreamH * 100)) : Math.round(precisePct)
+    const rounded = shownPct
     if (rounded !== lastPrecisePct) {
       lastPrecisePct = rounded
       if (callbacks.onPrecisePercent) callbacks.onPrecisePercent(rounded)
