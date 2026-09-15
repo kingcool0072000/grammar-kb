@@ -83,6 +83,8 @@ export function mountLibraryReader(viewEl, ctx) {
     <div class="lib-body">
       <div class="lib-loading"><span class="lib-spinner"></span><p>正在打开书籍…</p></div>
       <div id="epub-viewer"></div>
+      <!-- 视线引导带：屏幕上部 30% 常驻柔和遮罩，让孩子视线落在中段 -->
+      <div class="lib-gaze-band" aria-hidden="true"></div>
     </div>
   `
   viewEl.innerHTML = ''
@@ -205,7 +207,7 @@ export function mountLibraryReader(viewEl, ctx) {
   function applyThemeNow() {
     const t = effectiveTheme()
     bodyEl.style.background = t.bg
-    // 外壳（顶栏/抽屉/遮罩）跟随主题：夜间/护眼时同步换深浅面色与文字色。
+    // 外壳（顶栏/抽屉/遮罩）跟随主题：夜间/高对比时同步换深浅面色与文字色。
     // 变量必须挂在 root（.lib-reader）——顶栏是 bodyEl 的兄弟、抽屉挂在 root 下，
     // 挂 bodyEl 的话变量传不到它们（复走查 B2）
     root.style.setProperty('--lib-shell-bg', t.bg)
@@ -214,6 +216,10 @@ export function mountLibraryReader(viewEl, ctx) {
       '--lib-shell-border',
       t.fg === '#C9CDD3' || t.fg === '#FFFFFF' ? 'rgba(255,255,255,0.16)' : 'var(--lib-border)',
     )
+    // 视线引导带配色切换：夜间/高对比用纯黑墨（data-theme-dark 选择器）
+    const dark = t.fg === '#C9CDD3' || t.fg === '#FFFFFF'
+    if (dark) root.setAttribute('data-theme-dark', '')
+    else root.removeAttribute('data-theme-dark')
     if (renderer) renderer.applyTheme(themeStyleNow())
   }
 
