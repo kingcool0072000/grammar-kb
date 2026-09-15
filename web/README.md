@@ -1,6 +1,9 @@
-# web · 语法知识库学习地图
+# web · 和爸学前端
 
-grammar-kb 题库 API 的学习前端（主仓 [`grammar-kb`](../README.md) 的 `web/` 子目录），面向学生按 **课程 / 词汇表 / 知识体系** 三种方式浏览英语语法讲义。
+grammar-kb 题库 API 的学习前端（主仓 [`grammar-kb`](../README.md) 的 `web/` 子目录）。
+从早期的「课程 / 词汇表 / 知识体系」三视图起步，现已覆盖完整学习闭环——学生端
+（背单词 / FCE 真题 / 阅读训练 / 泛读馆）与教师端（批改中心 / 备课中心 / 学情分析），
+功能清单见主仓 README 的「Web 学习前端」一节。
 
 ## 功能
 
@@ -24,7 +27,7 @@ npm run preview  # 预览构建产物
 
 ## 技术栈
 
-Vite + 原生 ES Modules · ECharts（力导向图）· marked（Markdown 渲染）。无框架依赖。
+Vite + 原生 ES Modules · epubjs（泛读馆电子书渲染）· marked（Markdown 渲染）· DOMPurify（AI 生成内容消毒）。无框架依赖。
 
 ## 已知限制
 
