@@ -168,7 +168,7 @@ function focusRow(s) {
     <div class="fce-his-row gd-focus-row" data-focus-id="${s.id}" title="点开专注详情">
       <span class="fce-his-what">${escapeHtml(s.book_title || `#${s.book_id}`)}</span>
       <b class="fce-his-score ${scoreCls}">${score === null ? '—' : score}</b>
-      <span class="fce-his-date">${fmtDur(s.total_sec || 0)} · ${(s.started_at || s.created_at || '').slice(5, 16).replace('T', ' ')}</span>
+      <span class="fce-his-date">${fmtDur(s.total_sec || 0)} · ${fmtCnTime(s.started_at || s.created_at)}</span>
       <span class="gd-focus-chips">${chips}</span>
     </div>`
 }
@@ -212,8 +212,8 @@ async function openFocusDetail(id) {
       </div>`)
     .join('')
 
-  const startCn = (s.started_at || '').slice(0, 16).replace('T', ' ')
-  const endCn = (s.ended_at || '').slice(11, 16)
+  const startCn = fmtCnTime(s.started_at || s.created_at)
+  const endCn = fmtCnTime(s.ended_at, false)
   const activePct = s.total_sec ? Math.round(((s.active_sec || 0) / s.total_sec) * 100) : 0
   const awayMin = ((s.away_sec || 0) / 60).toFixed(1).replace(/\.0$/, '')
 
@@ -310,6 +310,19 @@ function closeFocusDetail() {
 }
 
 // 时间线：把 polyline 的 t 聚合到 10s 桶（桶内移动距离→强度，log 归一），面积图填充
+/** ISO 时间（UTC 带 Z / 本地串）→ 北京时间「MM-DD HH:mm」。
+ *  采集端 isoSec() 生成 UTC 字符串，直接 slice 会早 8 小时——必须经 Date 转换。
+ *  无 Z 后缀的裸串（历史数据/本地时钟）按已是中国时间直解。 */
+function fmtCnTime(iso, withDate = true) {
+  if (!iso) return '—'
+  const raw = String(iso)
+  const d = new Date(/[Z+]/.test(raw.slice(-6)) ? raw : raw + '+08:00')
+  if (isNaN(d.getTime())) return raw.slice(0, 16).replace('T', ' ')
+  const p = (n) => String(n).padStart(2, '0')
+  const hm = `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+  return withDate ? hm : hm.slice(6)
+}
+
 /** 秒 → m:ss / mm:ss 刻度文字 */
 function fmtMin(sec) {
   const m = Math.floor(sec / 60)
