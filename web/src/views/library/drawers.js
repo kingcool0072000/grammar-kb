@@ -324,7 +324,7 @@ export function createPrepDrawer({ onClose, onStart }) {
         </div>`
     }
 
-    inner += `<button type="button" class="lib-prep-start">开始阅读 →</button>`
+    inner += `<button type="button" class="lib-prep-start">已预习完，继续阅读 →</button>`
     d.body.innerHTML = inner
 
     d.body.querySelectorAll('[data-tts]').forEach((btn) => {
@@ -343,7 +343,15 @@ export function createPrepDrawer({ onClose, onStart }) {
         <div class="ico">${ICONS.seedling(40)}</div>
         <h3>本章还没有预习</h3>
         <p>请老师在书籍的「章节预习管理」页为这一章生成预习</p>
-      </div>`
+      </div>
+      <button type="button" class="lib-prep-start">已预习完，继续阅读 →</button>`
+    const btn = d.body.querySelector('.lib-prep-start')
+    if (btn) {
+      btn.addEventListener('click', () => {
+        d.close()
+        if (onStart) onStart()
+      })
+    }
   }
 
   function renderError(msg) {

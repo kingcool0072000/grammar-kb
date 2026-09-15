@@ -111,6 +111,27 @@ export function mountLibraryReader(viewEl, ctx) {
   let prepOpenChapterIdx = null
   const closedPrepChapters = new Set()
 
+  // 「已预习完」章集合：按书持久化（localStorage），点过按钮的章跨会话不再自动弹预习
+  const PREPPED_KEY = `gkb-lib-prepped-${getAuth() && getAuth().user}-${bookId}`
+  function loadPreppedSet() {
+    try {
+      const arr = JSON.parse(localStorage.getItem(PREPPED_KEY) || '[]')
+      return new Set(Array.isArray(arr) ? arr.map(Number).filter(Number.isFinite) : [])
+    } catch {
+      return new Set()
+    }
+  }
+  let preppedDoneSet = loadPreppedSet()
+  function markPreppedDone(chapterIdx) {
+    if (chapterIdx == null || preppedDoneSet.has(chapterIdx)) return
+    preppedDoneSet.add(chapterIdx)
+    try {
+      localStorage.setItem(PREPPED_KEY, JSON.stringify([...preppedDoneSet]))
+    } catch {
+      /* 配额满则跳过持久化（内存态仍生效） */
+    }
+  }
+
   // ---- 进度上报（节流）----
   const progress = { cfi: '', chapterIndex: 0, percent: 0 }
   const reported = { cfi: '', time: 0 }
@@ -256,6 +277,8 @@ export function mountLibraryReader(viewEl, ctx) {
       if (prepOpenChapterIdx != null) closedPrepChapters.add(prepOpenChapterIdx)
     },
     onStart: () => {
+      // 点「已预习完」：记录该章（跨会话不再自动弹），下次打开直达记忆位置
+      markPreppedDone(prepOpenChapterIdx)
       focusTracker.hooks.onPrepStart()
     },
   })
@@ -299,10 +322,10 @@ export function mountLibraryReader(viewEl, ctx) {
     } catch {
       /* ignore */
     }
-    // 进入新合并章：自动弹预习（若已生成、偏好开启、本次会话未手动关过）
+    // 进入新合并章：自动弹预习（若已生成、偏好开启、未点过「已预习完」且本次会话未手动关过）
     if (merged && merged.idx !== lastAutoPrepChapter) {
       lastAutoPrepChapter = merged.idx
-      if (theme.autoPrep && merged.prepped && !closedPrepChapters.has(merged.idx)) {
+      if (theme.autoPrep && merged.prepped && !preppedDoneSet.has(merged.idx) && !closedPrepChapters.has(merged.idx)) {
         openPrep(merged.idx, chapterLabel)
       }
     }

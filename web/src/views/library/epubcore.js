@@ -198,6 +198,9 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
       const list = rendition.getContents ? rendition.getContents() : []
       if (list && list[0]) injectHandler(list[0])
     }, 200)
+    // 已读遮罩：确保滚动监听挂上并立即按当前滚动位刷新
+    setupReadMaskScroll()
+    updateReadMask()
   }
 
   // 划词：iframe 内坐标 + iframe 元素自身偏移 → 阅读容器坐标
@@ -237,6 +240,9 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
     const contents = view && view.contents ? view.contents : null
     if (contents && callbacks.onRendered) callbacks.onRendered(contents)
     injectChapterLinks(contents)
+    // 新帧渲染后重挂滚动监听并刷新已读遮罩
+    setupReadMaskScroll()
+    updateReadMask()
   }
 
   // locations 生成（异步一次性；完成后用当前位置刷新百分比）
@@ -283,9 +289,47 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
     // 恢复进度（走 navChain，与用户导航严格排序）
     navigate(() => {
       const stored = localStorage.getItem(`gkb-lib-cfi-${bookId}`)
-      return stored
+      const p = stored
         ? rendition.display(stored).catch(() => rendition.display())
         : rendition.display()
+      // epubjs scrolled 帧式渲染的恢复自愈：display(cfi) 时目标可能落在尚未 append 的
+      // 后续帧里，moveTo 的 scrollTo 被 clamp 回 0。等帧真正显示后按目标 offset 再滚一次。
+      if (stored) {
+        p.then(() => {
+          setTimeout(() => {
+            if (destroyed || !rendition) return
+            try {
+              const range = rendition.getRange(stored)
+              const node = range && range.startContainer
+              if (!node) return
+              let el = node.nodeType === 1 ? node : node.parentElement
+              let top = 0
+              const doc = node.ownerDocument
+              while (el && el !== doc.body) {
+                top += el.offsetTop || 0
+                el = el.offsetParent
+              }
+              // 换算到滚动容器：iframe 自身相对容器偏移 + 帧内 offsetTop
+              const frameEl = doc.defaultView && doc.defaultView.frameElement
+              let frameTop = 0
+              let fe = frameEl
+              const scroller = container ? container.querySelector('.epub-container') : null
+              while (fe && fe !== scroller && scroller) {
+                frameTop += fe.offsetTop || 0
+                fe = fe.offsetParent
+              }
+              const target = frameTop + top
+              if (scroller && target > 2) {
+                scroller.scrollTop = target
+                updateReadMask()
+              }
+            } catch {
+              /* 自愈失败维持 epubjs 原行为 */
+            }
+          }, 350)
+        })
+      }
+      return p
     })
 
     generateLocations()
@@ -337,6 +381,10 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
         'background-color': `${t.bg} !important`,
         color: `${t.fg} !important`,
       },
+      html: {
+        // 已读遮罩（absolute）的定位基准
+        'position': 'relative !important',
+      },
       body: {
         background: `${t.bg} !important`,
         color: `${t.fg} !important`,
@@ -377,6 +425,71 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
   }
 
   /** 对当前渲染帧补注入章导航链接（chapters 数据晚到时用） */
+  /**
+   * 已读遮罩（微信读书式"读完感"）：已滚过（记忆位置以上）的正文盖 60% 半透明层。
+   * epubjs scrolled 帧式渲染：滚动元素是 .epub-container（overflow:auto），iframe
+   * 按帧高渲染——跨帧 relocated 粒度太粗，改由 scroll 驱动：
+   *   已读高度 = container.scrollTop（跨多帧时累加前面帧的文档高度）。
+   * 当前帧内的遮罩高度 = (已读总高 - 当前帧文档起点) / 当前帧文档高。
+   */
+  let maskScrollEl = null
+  let maskScrollHandler = null
+  function setupReadMaskScroll() {
+    if (destroyed || !container) return
+    const scroller = container.querySelector('.epub-container') || container
+    if (scroller === maskScrollEl) return
+    if (maskScrollEl && maskScrollHandler) {
+      maskScrollEl.removeEventListener('scroll', maskScrollHandler)
+    }
+    maskScrollEl = scroller
+    maskScrollHandler = () => requestAnimationFrame(updateReadMask)
+    scroller.addEventListener('scroll', maskScrollHandler, { passive: true })
+  }
+
+  function updateReadMask() {
+    if (destroyed || !rendition || !maskScrollEl) return
+    const scrollTop = maskScrollEl.scrollTop
+    const viewH = maskScrollEl.clientHeight || 1
+    // 已读 = 已滚过的内容（当前视口上缘之上的部分）
+    const readPx = Math.max(0, scrollTop)
+    let contentsList = []
+    try {
+      contentsList = rendition.getContents ? rendition.getContents() : []
+    } catch {
+      return
+    }
+    for (const contents of contentsList) {
+      const doc = contents && contents.document
+      if (!doc || !doc.body) continue
+      const docH = doc.body.scrollHeight || 1
+      // 该帧在整书滚动流中的起点：iframe 元素相对滚动容器的 offsetTop
+      const frameEl = doc.defaultView && doc.defaultView.frameElement
+      let frameTop = 0
+      let el = frameEl
+      while (el && el !== maskScrollEl) {
+        frameTop += el.offsetTop || 0
+        el = el.offsetParent
+      }
+      if (el === null) frameTop = 0 // 不在滚动流内（理论不发生）
+      // 帧内已读高度：总已读 − 本帧起点（clamp 到 0..docH）
+      const readInFrame = Math.min(docH, Math.max(0, readPx - frameTop))
+      let mask = doc.getElementById('gkb-lib-readmask')
+      if (readInFrame <= 2) {
+        if (mask) mask.remove()
+        continue
+      }
+      if (!mask) {
+        mask = doc.createElement('div')
+        mask.id = 'gkb-lib-readmask'
+        mask.setAttribute('style', 'position:absolute;left:0;right:0;top:0;pointer-events:none;z-index:0;')
+        ;(doc.body.parentElement || doc.body).appendChild(mask)
+      }
+      const h = Math.round((readInFrame / docH) * 10000) / 100
+      mask.style.height = `${h}%`
+      mask.style.background = `linear-gradient(to bottom, rgba(60,50,35,0.6) 0%, rgba(60,50,35,0.6) ${Math.max(0, h - 6)}%, rgba(60,50,35,0) ${h}%)`
+    }
+  }
+
   function injectChapterLinksNow() {
     if (!rendition || !rendition.getContents || !injectHandler) return
     const list = rendition.getContents() || []
@@ -385,6 +498,11 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
 
   function destroy() {
     destroyed = true
+    if (maskScrollEl && maskScrollHandler) {
+      maskScrollEl.removeEventListener('scroll', maskScrollHandler)
+      maskScrollEl = null
+      maskScrollHandler = null
+    }
     try {
       if (rendition) rendition.destroy()
     } catch {
@@ -415,6 +533,7 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
     displayTarget: (target) => navigate(() => (rendition ? rendition.display(target) : Promise.resolve())),
     spineHref,
     injectChapterLinksNow,
+    updateReadMask,
     applyTheme,
     destroy,
   }
