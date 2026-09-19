@@ -18,6 +18,7 @@ import { mountPrep } from './views/prep.js'
 import { mountAnalytics } from './views/analytics.js'
 import { mountTopics } from './views/topics.js'
 import { mountTtsConf } from './views/ttsconf.js'
+import { mountReadConf } from './views/readconf.js'
 import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
 
@@ -48,6 +49,8 @@ const VIEWS = [
   // 注意 hiddenTab 的语义是「教师不进 Tab、学生仍显示」（FCE真题即如此），
   // 真隐藏须用 noTab。
   { key: 'ttsconf', label: '发音设置', hiddenTab: true, noTab: true },
+  // 阅读练习排版（字号/栏宽）：隐藏配置页 #/readconf
+  { key: 'readconf', label: '阅读排版', hiddenTab: true, noTab: true },
   { key: 'courses', hiddenTab: true, teacher: true },
   { key: 'vocab', hiddenTab: true, teacher: true },
   { key: 'taxonomy', hiddenTab: true, teacher: true },
@@ -273,6 +276,9 @@ async function bootstrap() {
     } else if (route === 'ttsconf') {
       // TTS 发音设置（隐藏页 #/ttsconf）
       mounted = mountTtsConf(container)
+    } else if (route === 'readconf') {
+      // 阅读练习排版（隐藏页 #/readconf）
+      mounted = mountReadConf(container)
     } else if (route === 'taxonomy') {
       mounted = mountTaxonomy(container, { pointsById, openKp: ctx.openKp })
     } else if (route === 'fce') {

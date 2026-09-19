@@ -1,6 +1,7 @@
 import { api, getAuth } from '../api.js'
 import { escapeHtml } from '../render.js'
 import { createLookupLayer } from './library/lookup.js'
+import { applyReadPref } from '../readpref.js'
 import { createFocusTracker } from './library/focus.js'
 
 // 阅读练习：派生文章列表 → 详情（阅读 + 选段录音提交 + 点词查词典）。
@@ -241,7 +242,9 @@ const RD_THEMES = {
   night: { bg: '#22272E', fg: '#C9CDD3' },
   contrast: { bg: '#000000', fg: '#FFFFFF' },
 }
+/** 学生端：正文底色/文字色用教师统一配置的主题（与泛读馆同源；教师默认纸白）。 */
 function applyStudentTheme(articleEl, role) {
+  applyReadPref(articleEl) // 排版偏好（#/readconf）：字号/栏宽走 CSS 变量
   if (role === 'teacher') {
     articleEl.style.background = RD_THEMES.paper.bg
     articleEl.style.color = RD_THEMES.paper.fg

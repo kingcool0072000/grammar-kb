@@ -1430,14 +1430,15 @@ main { --fce-fs: 15px; }
 .reading-article {
   position: relative; /* lookup 查词浮层挂载点 */
   font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', Palatino, serif;
-  font-size: 19px; line-height: 1.9;
+  /* 排版偏好（#/readconf）：变量缺省回落默认 19px */
+  font-size: var(--rd-fs, 19px); line-height: 1.9;
   background: #f5ecd9; color: #5b4636; /* 默认护眼米黄（与服务端学生主题一致的兜底） */
   border-radius: 14px; padding: 26px 18px;
   box-shadow: 0 2px 12px rgba(60,45,30,.07);
   -webkit-touch-callout: none; /* 长按系统菜单（iOS）；正文保持可选中——划词查词依赖选区 */
 }
 .reading-article p {
-  margin: 0.9em auto; max-width: 620px; padding: 0;
+  margin: 0.9em auto; max-width: var(--rd-w, 620px); padding: 0;
   text-align: left;
 }
 .reading-article p.picked { background: rgba(14,116,144,.1); outline: 1px dashed #0e7490; }
@@ -2248,3 +2249,18 @@ li.open .topic-reveal-btn { display: none; }
   .tts-hero { padding: 20px 18px; }
   .tts-vtag { display: none; }
 }
+
+
+/* ---------- 阅读排版设置（隐藏页 #/readconf） ---------- */
+.rdc-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--ink); }
+.rdc-row label { font-weight: 600; flex: none; }
+.rdc-row input[type="range"] { flex: 1; min-width: 160px; accent-color: var(--brand); }
+.rdc-row b { font-variant-numeric: tabular-nums; min-width: 52px; }
+.rdc-preview {
+  margin-top: 12px; padding: 18px 16px; border-radius: 12px; background: #f5ecd9;
+  color: #5b4636; font-family: Georgia, 'Palatino Linotype', serif; line-height: 1.9;
+  max-width: 620px; transition: font-size .12s ease, max-width .12s ease;
+}
+.rdc-preview p { margin: 0; }
+.rdc-widthbar { height: 8px; border-radius: 999px; background: var(--bg-soft); margin-top: 10px; overflow: hidden; }
+.rdc-widthbar i { display: block; height: 100%; width: 28%; background: linear-gradient(90deg, #b08d57, #8a6d3b); border-radius: 999px; transition: width .12s ease; }
