@@ -1,7 +1,7 @@
 // TTS 设置（隐藏页 #/ttsconf，不进 Tab）：列出本设备可用音色，
 // 点选默认音色（localStorage，本设备生效）+ 试听 + 语速微调。
 // 适配安卓 WebView：音色列表异步加载（waitForVoices），空列表给引擎提示。
-import { speak, getTtsPref, setTtsPref, waitForVoices, findVoiceByURI } from '../tts.js'
+import { speak, speakWithVoice, getTtsPref, setTtsPref, waitForVoices, ttsDiagnostics } from '../tts.js'
 import { escapeHtml, escAttr } from '../render.js'
 
 const SAMPLE = 'Hello! This is how I sound when I read for you.'
@@ -29,25 +29,6 @@ function voiceRow(v, selected) {
     ${tags.map((t) => `<span class="tts-vtag">${escapeHtml(t)}</span>`).join('')}
     <span class="tts-vtest" data-test="${escAttr(v.voiceURI)}" title="试听">🔊</span>
   </button>`
-}
-
-/** 用「现查」的音色对象发音（不用页面快照的旧引用——引擎可能已整体重建
- * 音色数组，旧对象会触发 not-found 报错静默无声）。 */
-function speakWithVoice(uri, rate) {
-  try {
-    const synth = window.speechSynthesis
-    synth.cancel()
-    const u = new SpeechSynthesisUtterance(SAMPLE)
-    const v = findVoiceByURI(uri)
-    if (v) {
-      u.voice = v
-      u.lang = v.lang
-    } else {
-      u.lang = 'en-GB'
-    }
-    u.rate = rate || 0.9
-    synth.speak(u)
-  } catch { /* 引擎异常时静默 */ }
 }
 
 export async function mountTtsConf(el) {
@@ -126,6 +107,11 @@ export async function mountTtsConf(el) {
   statusEl.textContent = voices.length
     ? `本设备共 ${voices.length} 个音色（其中英语 ${voices.filter(isEn).length} 个）。点一条即设为默认。`
     : '未取到音色列表。'
+  // 若点了没声音：控制台（浏览器菜单 → 更多工具 → 开发者工具）里找 [TTS] 开头的行
+  const diag = ttsDiagnostics()
+  if (!diag.ok) {
+    ttsLogHint(statusEl, diag)
+  }
 
   // 事件委托：整行＝选中默认；🔊＝只试听（都用现查音色，不碰旧引用）
   voicesEl.addEventListener('click', (e) => {
@@ -142,4 +128,13 @@ export async function mountTtsConf(el) {
     statusEl.textContent = '已设为默认 ✓ 查词和朗读会用这个声音。'
     speak(SAMPLE)
   })
+}
+
+function ttsLogHint(statusEl, diag) {
+  const d = document.createElement('div')
+  d.style.cssText = 'margin-top:6px;color:#b3541e;font-size:13px'
+  d.textContent = diag.reason === 'no-speechSynthesis'
+    ? '⚠️ 此浏览器不支持语音合成（speechSynthesis 不可用）。'
+    : '⚠️ 引擎暂未报告任何音色。试听若无声，请打开浏览器控制台把 [TTS] 开头的日志发给开发。'
+  statusEl.appendChild(d)
 }
