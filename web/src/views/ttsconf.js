@@ -1,8 +1,8 @@
 // TTS 设置（隐藏页 #/ttsconf，不进 Tab）：列出本设备可用音色，
 // 点选默认音色（localStorage，本设备生效）+ 试听 + 语速微调。
 // 适配安卓 WebView：音色列表异步加载（waitForVoices），空列表给引擎提示。
-import { speak, getTtsPref, setTtsPref, waitForVoices } from '../tts.js'
-import { escapeHtml } from '../render.js'
+import { speak, getTtsPref, setTtsPref, waitForVoices, findVoiceByURI } from '../tts.js'
+import { escapeHtml, escAttr } from '../render.js'
 
 const SAMPLE = 'Hello! This is how I sound when I read for you.'
 
@@ -10,22 +10,44 @@ function langOf(v) {
   return (v.lang || '').replace('_', '-')
 }
 
+function isEn(v) {
+  return langOf(v).toLowerCase().startsWith('en')
+}
+
 function voiceRow(v, selected) {
-  const isEn = langOf(v).toLowerCase().startsWith('en')
   const tags = [
     v.default ? '系统默认' : '',
     v.localService === false ? '在线' : '本地',
-    isEn ? '' : '非英语',
+    isEn(v) ? '' : '非英语',
   ].filter(Boolean)
   return `
-  <button class="tts-voice ${selected ? 'selected' : ''} ${isEn ? '' : 'dim'}"
-          data-uri="${escapeHtml(v.voiceURI)}" type="button">
+  <button class="tts-voice ${selected ? 'selected' : ''} ${isEn(v) ? '' : 'dim'}"
+          data-uri="${escAttr(v.voiceURI)}" type="button">
     <span class="tts-radio"></span>
     <span class="tts-vname">${escapeHtml(v.name)}</span>
     <span class="tts-vlang">${escapeHtml(langOf(v))}</span>
     ${tags.map((t) => `<span class="tts-vtag">${escapeHtml(t)}</span>`).join('')}
-    <span class="tts-vtest" data-test="${escapeHtml(v.voiceURI)}" title="试听">🔊</span>
+    <span class="tts-vtest" data-test="${escAttr(v.voiceURI)}" title="试听">🔊</span>
   </button>`
+}
+
+/** 用「现查」的音色对象发音（不用页面快照的旧引用——引擎可能已整体重建
+ * 音色数组，旧对象会触发 not-found 报错静默无声）。 */
+function speakWithVoice(uri, rate) {
+  try {
+    const synth = window.speechSynthesis
+    synth.cancel()
+    const u = new SpeechSynthesisUtterance(SAMPLE)
+    const v = findVoiceByURI(uri)
+    if (v) {
+      u.voice = v
+      u.lang = v.lang
+    } else {
+      u.lang = 'en-GB'
+    }
+    u.rate = rate || 0.9
+    synth.speak(u)
+  } catch { /* 引擎异常时静默 */ }
 }
 
 export async function mountTtsConf(el) {
@@ -64,7 +86,6 @@ export async function mountTtsConf(el) {
   const rateInput = el.querySelector('#tts-rate')
   const rateVal = el.querySelector('#tts-rate-val')
 
-  // 语速即时保存
   rateInput.addEventListener('input', () => {
     rateVal.textContent = Number(rateInput.value).toFixed(2)
     setTtsPref({ rate: Number(rateInput.value) })
@@ -85,14 +106,14 @@ export async function mountTtsConf(el) {
     if (!list.length) {
       voicesEl.innerHTML = `
       <div class="tts-box tts-empty">
-        这台设备没有报告任何语音音色（安卓 WebView 常见于未安装 TTS 引擎）。<br>
+        这台设备没有报告任何语音音色（常见于未安装 TTS 引擎的浏览器/系统）。<br>
         可在系统设置 → 语言和输入 → 文字转语音输出 里安装/切换
         「Google 文字转语音」或「讯飞语音+」，装好后回到本页刷新。
       </div>`
       return
     }
-    const en = list.filter((v) => langOf(v).toLowerCase().startsWith('en'))
-    const other = list.filter((v) => !langOf(v).toLowerCase().startsWith('en'))
+    const en = list.filter(isEn)
+    const other = list.filter((v) => !isEn(v))
     voicesEl.innerHTML = `
       ${en.length ? `<h2 class="tts-group">英语声音（推荐用这些）</h2>
       <div class="tts-list">${en.map((v) => voiceRow(v, v.voiceURI === selectedUri)).join('')}</div>` : ''}
@@ -103,24 +124,15 @@ export async function mountTtsConf(el) {
   const cur = getTtsPref().voiceURI || ''
   renderVoices(voices, cur)
   statusEl.textContent = voices.length
-    ? `本设备共 ${voices.length} 个音色（其中英语 ${voices.filter((v) => langOf(v).toLowerCase().startsWith('en')).length} 个）。点一条即设为默认。`
+    ? `本设备共 ${voices.length} 个音色（其中英语 ${voices.filter(isEn).length} 个）。点一条即设为默认。`
     : '未取到音色列表。'
 
-  // 事件委托：整行＝选中默认；🔊＝只试听
+  // 事件委托：整行＝选中默认；🔊＝只试听（都用现查音色，不碰旧引用）
   voicesEl.addEventListener('click', (e) => {
     const test = e.target.closest('[data-test]')
     if (test) {
       e.stopPropagation()
-      const v = voices.find((x) => x.voiceURI === test.dataset.test)
-      if (!v) return
-      try {
-        window.speechSynthesis.cancel()
-        const u = new SpeechSynthesisUtterance(SAMPLE)
-        u.voice = v
-        u.lang = v.lang
-        u.rate = Number(rateInput.value) || 0.9
-        window.speechSynthesis.speak(u)
-      } catch { /* 静默 */ }
+      speakWithVoice(test.dataset.test, Number(rateInput.value))
       return
     }
     const row = e.target.closest('.tts-voice')

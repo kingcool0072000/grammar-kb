@@ -405,9 +405,9 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
         'font-size': `${t.fontSize}px !important`,
         'line-height': `${t.lineHeight} !important`,
         padding: '0 18px !important',
-        // 专注模式：长按菜单（iOS/安卓 WebView）；正文保持可选中——
+        // 专注模式：长按菜单（iOS Safari/WebView）；正文保持可选中——
         // 划词查词依赖选区，user-select:none 会连自家 selected 事件一起杀掉
-        //（走查 B1）。系统文本菜单由 APK 层 ActionMode + 选区塌缩压制。
+        //（走查 B1）。系统文本菜单靠选区塌缩压制（安卓壳已下线）。
         '-webkit-touch-callout': 'none !important',
       },
       'p, div, span, li': {
