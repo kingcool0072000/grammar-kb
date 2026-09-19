@@ -136,6 +136,20 @@ async function bootstrap() {
   app.append(header, main, boot)
   main.append(boot)
 
+  // Tab / 退出按钮在 header 挂载后立即绑定：bootstrap 后续还有多个 await
+  // （知识点/词汇表加载，生产首次可达数秒），期间点击 Tab 若无监听会被静默
+  // 吞掉（hash 不变，看似「没反应」）。绑定不依赖异步数据，先挂先得。
+  headerInner.querySelector('#tabs').addEventListener('click', (e) => {
+    const t = e.target.closest('.tab')
+    if (!t) return
+    location.hash = `/${t.dataset.view}`
+  })
+  headerInner.querySelector('#logout-btn').addEventListener('click', () => {
+    setAuth(null)
+    restartApp()
+  })
+
+
   // 详情抽屉（注入考点信号反向索引，知识点加载后再填充）
   const signalCtx = { points: [], byTense: new Map(), byMarker: new Map() }
   const drawer = createDrawer(signalCtx)
@@ -294,15 +308,7 @@ async function bootstrap() {
     window.scrollTo(0, 0)
   }
 
-  headerInner.querySelector('#tabs').addEventListener('click', (e) => {
-    const t = e.target.closest('.tab')
-    if (!t) return
-    location.hash = `/${t.dataset.view}`
-  })
-  headerInner.querySelector('#logout-btn').addEventListener('click', () => {
-    setAuth(null)
-    restartApp()
-  })
+  // Tab / 退出的监听已在 header 挂载后立即绑定（见上方），此处不再重复
   window.addEventListener('hashchange', render)
   render()
 }
