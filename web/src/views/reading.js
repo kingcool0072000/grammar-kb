@@ -1,6 +1,7 @@
 import { api, getAuth } from '../api.js'
 import { escapeHtml } from '../render.js'
 import { createLookupLayer } from './library/lookup.js'
+import { createFocusTracker } from './library/focus.js'
 
 // 阅读练习：派生文章列表 → 详情（阅读 + 选段录音提交 + 点词查词典）。
 // 学生视角：列表只见派生文（后端已过滤），显示字数；
@@ -192,8 +193,28 @@ async function renderDetail(el, id, role) {
 
   // ---- 划词查词（完全复刻泛读馆：selectionchange 式取词 → 塌缩 → 工具条） ----
   const articleEl = el.querySelector('.reading-article')
-  const lookup = createLookupLayer(articleEl)
-  setupSelectionLookup(articleEl, lookup)
+
+  // ---- 专注力采集（精读场景：module=reading，范围=本篇文章） ----
+  const focusTracker = createFocusTracker({
+    readerRoot: articleEl, viewerEl: articleEl, bookId: id, bookTitle: art.title || '',
+    enabled: role !== 'teacher', module: 'reading',
+    initialRangeLabel: `${art.title || ''}(${art.words}词)`.slice(0, 120),
+  })
+  // 精读无「书内进度」概念：整篇即范围 0 → 100
+  focusTracker.hooks.onReloc(0, `${art.title || ''}(${art.words}词)`.slice(0, 120))
+  focusTracker.hooks.onReloc(100)
+  const lookup = createLookupLayer(articleEl, {
+    onLookup: focusTracker.hooks.onLookup,
+    onSpeak: focusTracker.hooks.onSpeak,
+    onSelect: focusTracker.hooks.onSelect,
+  })
+  // 教师开关：student.focus=false 时静默停采（与泛读馆同一开关）
+  if (role !== 'teacher') {
+    api.librarySettings().then((cfg) => {
+      if (cfg && cfg.student && cfg.student.focus === false) focusTracker.disable()
+    }).catch(() => {})
+  }
+  setupSelectionLookup(articleEl, lookup, () => focusTracker.destroy())
 
   // ---- 正文主题跟随教师配置（与泛读馆学生端同一份 student 主题） ----
   applyStudentTheme(articleEl, role)
@@ -241,7 +262,7 @@ function applyStudentTheme(articleEl, role) {
  * 拖选/双击结束后读选区 → 清洗提取单词（>80 字符忽略）→ 交给 lookup
  * （showSelection 内部塌缩选区防系统菜单，并用 range 做 mark 锚点高亮）。
  */
-function setupSelectionLookup(articleEl, lookup) {
+function setupSelectionLookup(articleEl, lookup, onUnmount) {
   let timer = null
   const handle = () => {
     if (timer) clearTimeout(timer)
@@ -279,6 +300,7 @@ function setupSelectionLookup(articleEl, lookup) {
     if (!articleEl.isConnected) {
       document.removeEventListener('selectionchange', handle)
       if (timer) clearTimeout(timer)
+      if (onUnmount) onUnmount()
       mo.disconnect()
     }
   })
@@ -457,10 +479,12 @@ function setupRecorder(el, art) {
         recorder.onstop = () => {
           stream.getTracks().forEach((t) => t.stop())
           if (meterStop) { meterStop(); meterStop = null }
+          focusTracker.hooks.onRecord() // 录音结束
           submit()
         }
         recorder.start()
         recording = true
+        focusTracker.hooks.onRecord() // 专注力：录音开始记入活动时间线
         btn.dataset.recording = '1'
         startedAt = Date.now()
         btn.textContent = '停止录音'

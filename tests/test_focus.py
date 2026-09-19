@@ -60,7 +60,8 @@ def test_focus_submit_and_heartbeat(focus_env):
     d = r.json()["data"]
     assert 0 <= d["score"] <= 100
     assert set(d["score_detail"]) == {
-        "effective_ratio", "engagement", "progress", "away_penalty", "jitter_penalty"}
+        "effective_ratio", "engagement", "progress", "away_penalty",
+        "jitter_penalty", "idle_penalty"}
     assert d["mouse_metrics"]["jitter"] == 0.2  # 上报响应即完整行（含明细）
     assert d["session_id"] == "focus-abc-1" and d["user"] == "malin"
 
@@ -156,3 +157,80 @@ def test_compute_score_known_inputs():
     assert good_detail["effective_ratio"] == 1.0
     zero_score, zero_detail = compute_score({"total_sec": 0, "active_sec": 0})
     assert zero_score == 0 and all(v == 0 for v in zero_detail.values())
+
+
+# ---- v2：内容监控 + 学习范围 + 评分升级 ----
+
+def test_v2_migration_idempotent(tmp_path):
+    """旧 schema 库（无 v2 列）实例化后新列可用、旧数据不丢。"""
+    import sqlite3
+    from grammar_kb.focus import FocusStore
+    db = tmp_path / "old.db"
+    con = sqlite3.connect(db)
+    # 手工建 v1 列集 + 一行旧数据
+    con.execute("""CREATE TABLE focus_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL UNIQUE,
+        user TEXT NOT NULL, book_id INTEGER, book_title TEXT, started_at TEXT,
+        ended_at TEXT, total_sec INTEGER, active_sec INTEGER, away_count INTEGER,
+        away_sec INTEGER, longest_away_sec INTEGER, scroll_count INTEGER,
+        chapter_navs INTEGER, lookups INTEGER, plays INTEGER, prep_opens INTEGER,
+        prep_starts INTEGER, percent_start REAL, percent_end REAL,
+        fast_scroll_flags INTEGER, mouse_metrics TEXT, polyline TEXT,
+        score INTEGER, score_detail TEXT, created_at TEXT)""")
+    con.execute("INSERT INTO focus_sessions (session_id, user, total_sec, score) VALUES ('old1','malin',100,50)")
+    con.commit(); con.close()
+    store = FocusStore(str(db))  # 触发迁移
+    got = store.get(store.list()[0]["id"])
+    assert got["module"] == "library" and got["range_label"] == ""  # 旧行有默认值
+    # 幂等：二次实例化不炸、新写入带 v2 字段落库
+    FocusStore(str(db))
+    rec = store.submit("malin", "new1", total_sec=300, module="reading",
+                       range_start=10, range_end=25, range_label="T1P7(180词)",
+                       lookup_words=[["mysterious", 2], ["chill", 1]],
+                       activity=[{"t": 5, "type": "lookup", "w": "mysterious"}])
+    assert rec["module"] == "reading" and rec["range_label"] == "T1P7(180词)"
+    d = store.get(rec["id"])
+    assert d["lookup_words"][0] == {"w": "mysterious", "n": 2}
+    assert d["activity"] == [{"t": 5, "type": "lookup", "w": "mysterious"}]
+
+
+def test_word_clean_forms_equivalent():
+    from grammar_kb.focus import _clean_words
+    a = _clean_words([["cat", 2], ["dog", 1]])
+    b = _clean_words([{"w": "cat", "n": 2}, {"w": "dog", "n": 1}])
+    c = _clean_words({"cat": 2, "dog": 1})
+    assert a == b == c == [{"w": "cat", "n": 2}, {"w": "dog", "n": 1}]
+
+
+def test_score_v2_dedup_and_idle():
+    from grammar_kb.focus import compute_score
+    # 同词重复查 5 次 vs 5 个不同词各查 1 次：后者 engagement 明显更高
+    base = {"total_sec": 600, "active_sec": 600}
+    s1, d1 = compute_score({**base, "lookups": 5, "lookup_words": [["cat", 5]]})
+    s2, d2 = compute_score({**base, "lookups": 5,
+                            "lookup_words": [["a", 1], ["b", 1], ["c", 1], ["d", 1], ["e", 1]]})
+    assert d2["engagement"] > d1["engagement"] and s2 > s1
+    # idle_gaps 有 >300s 段：idle_penalty 每段 4
+    _, d3 = compute_score({**base, "mouse_metrics": {"idle_gaps": [[10, 320], [500, 560]]}})
+    assert d3["idle_penalty"] == 4.0  # 只有一段 >300s
+    # 旧字段兜底（无词表）不崩
+    _, d4 = compute_score({**base, "lookups": 3, "plays": 2})
+    assert d4["engagement"] > 0
+
+
+def test_list_has_module_range(focus_env):
+    c = _client(focus_env)
+    h = _login(c, "malin")
+    r = c.post("/focus/sessions", headers=h, json={
+        "session_id": "v2-list-1", "total_sec": 60, "module": "reading",
+        "range_label": "T3P6", "range_start": 0, "range_end": 100,
+        "lookup_words": [["word", 1]], "activity": [{"t": 1, "type": "lookup", "w": "word"}]})
+    assert r.status_code == 200, r.text
+    items = c.get("/focus/sessions", headers=h).json()["data"]
+    mine = [x for x in items if x["session_id"] == "v2-list-1"][0]
+    assert mine["module"] == "reading" and mine["range_label"] == "T3P6"
+    tid = mine["id"]
+    detail = _login(c, "teacher")  # 教师查详情
+    d = c.get(f"/focus/sessions/{tid}", headers=detail).json()["data"]
+    assert d["lookup_words"] == [{"w": "word", "n": 1}]
+    assert d["activity"] == [{"t": 1, "type": "lookup", "w": "word"}]

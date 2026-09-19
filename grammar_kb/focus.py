@@ -48,7 +48,16 @@ CREATE TABLE IF NOT EXISTS focus_sessions (
     polyline         TEXT,
     score            INTEGER,
     score_detail     TEXT,
-    created_at       TEXT
+    created_at       TEXT,
+    -- v2：内容监控 + 学习范围（存量库经 _migrate_v2 ALTER 补列）
+    lookup_words     TEXT,
+    speak_words      TEXT,
+    selected_words   TEXT,
+    activity_json    TEXT,
+    module           TEXT DEFAULT 'library',
+    range_start      REAL,
+    range_end        REAL,
+    range_label      TEXT DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_fs_user ON focus_sessions(user, created_at);
 """
@@ -85,6 +94,88 @@ def _jitter_of(metrics) -> float:
         return 0.0
 
 
+_WORD_TYPES = ("select", "lookup", "speak", "chapter", "prep", "record")
+
+
+def _clean_words(data, cap: int = 50) -> list[dict]:
+    """词表清洗：接受 [[w,n]] / [{w,n}] / {w:n}，统一 [{"w","n"}] 按 n 降序截前 cap。"""
+    items: list[tuple[str, int]] = []
+    if isinstance(data, dict):
+        for w, n in data.items():
+            items.append((str(w), n))
+    elif isinstance(data, list):
+        for it in data:
+            if isinstance(it, dict):
+                items.append((str(it.get("w") or it.get("word") or ""),
+                              it.get("n", it.get("count", 1))))
+            elif isinstance(it, (list, tuple)) and len(it) >= 1:
+                n = it[1] if len(it) >= 2 else 1
+                items.append((str(it[0]), n))
+    out = []
+    for w, n in items:
+        w = w.strip()[:60]
+        if not w:
+            continue
+        try:
+            n = max(1, min(99, int(n)))
+        except (TypeError, ValueError):
+            n = 1
+        out.append({"w": w, "n": n})
+    out.sort(key=lambda x: -x["n"])
+    return out[:cap]
+
+
+def _clean_activity(data, cap: int = 500) -> list[dict]:
+    """activity 时间线清洗：[{t,type,w?}]，t 秒夹取、type 白名单、截前 cap。"""
+    if not isinstance(data, list):
+        return []
+    out = []
+    for it in data:
+        if not isinstance(it, dict):
+            continue
+        t = _clamp_int(it.get("t"), 0, 86400)
+        typ = str(it.get("type") or "")
+        if typ not in _WORD_TYPES:
+            continue
+        rec = {"t": t, "type": typ}
+        w = str(it.get("w") or "").strip()[:60]
+        if w:
+            rec["w"] = w
+        out.append(rec)
+    return out[:cap]
+
+
+def _uniq_words(data) -> int:
+    """词表去重词数（评分用；容错 dict/list 两形态）。"""
+    if isinstance(data, dict):
+        return len(data)
+    if isinstance(data, list):
+        ws = set()
+        for it in data:
+            if isinstance(it, dict):
+                w = it.get("w") or it.get("word")
+            elif isinstance(it, (list, tuple)) and it:
+                w = it[0]
+            else:
+                w = None
+            if w:
+                ws.add(str(w))
+        return len(ws)
+    return 0
+
+
+def _idle_gaps_of(metrics) -> list:
+    if isinstance(metrics, str):
+        try:
+            metrics = json.loads(metrics)
+        except (ValueError, TypeError):
+            metrics = None
+    if not isinstance(metrics, dict):
+        return []
+    gaps = metrics.get("idle_gaps")
+    return gaps if isinstance(gaps, list) else []
+
+
 def compute_score(d: dict) -> tuple[int, dict]:
     """综合评分（纯函数，不碰库）：正向四项合计权重 100，惩罚两项扣减。
 
@@ -105,26 +196,43 @@ def compute_score(d: dict) -> tuple[int, dict]:
     p_end = _clamp_float(d.get("percent_end") or 0, 0, 100)
 
     zeros = {"effective_ratio": 0.0, "engagement": 0.0, "progress": 0.0,
-             "away_penalty": 0.0, "jitter_penalty": 0.0}
+             "away_penalty": 0.0, "jitter_penalty": 0.0, "idle_penalty": 0.0}
     if total <= 0:
         return 0, zeros
 
+    # v2：内容互动密度——去重词数（同词重复查只计 1 次防刷分）；
+    # 无词表数据（旧客户端）回退用计数字段估算去重数
+    uniq_look = _uniq_words(d.get("lookup_words"))
+    uniq_speak = _uniq_words(d.get("speak_words"))
+    if uniq_look == 0 and lookups > 0:
+        uniq_look = min(lookups, 20)
+    if uniq_speak == 0 and plays > 0:
+        uniq_speak = min(plays, 20)
+
     er = min(1.0, active / total)
-    engagement = min(1.0, (lookups * 2 + plays + prep_opens) / max(1.0, total / 300))
+    # 每 5 分钟 1.5 个不同词互动记满（查词双计）
+    engagement = min(1.0, (uniq_look * 2 + uniq_speak + (1 if prep_opens else 0))
+                     / max(1.0, total / 300 * 1.5))
     progress = min(1.0, max(0.0, p_end - p_start) / max(1.0, total / 600 * 15))
     away_penalty = min(12.0, away_count * (total / 600) * 0.5)
     jitter = _jitter_of(d.get("mouse_metrics"))
     jitter_penalty = min(5.0, (jitter - 0.6) * 12.5) if jitter > 0.6 else 0.0
+    # v2：idle 惩罚——>5 分钟静止空档每段扣 4，封顶 8（拆分机制兜底残留）
+    big_gaps = sum(1 for g in _idle_gaps_of(d.get("mouse_metrics"))
+                   if isinstance(g, (list, tuple)) and len(g) >= 2
+                   and (g[1] - g[0]) > 300)
+    idle_penalty = min(8.0, big_gaps * 4.0)
 
     score = max(0, min(100, round(
         45 * er + 25 * engagement + 15 * progress + 15 * min(1.0, engagement * 2)
-        - away_penalty - jitter_penalty)))
+        - away_penalty - jitter_penalty - idle_penalty)))
     detail = {
         "effective_ratio": round(er, 3),
         "engagement": round(engagement, 3),
         "progress": round(progress, 3),
         "away_penalty": round(away_penalty, 3),
         "jitter_penalty": round(jitter_penalty, 3),
+        "idle_penalty": round(idle_penalty, 3),
     }
     return score, detail
 
@@ -132,16 +240,35 @@ def compute_score(d: dict) -> tuple[int, dict]:
 class FocusStore:
     """focus_sessions 读写。"""
 
+    _V2_COLUMNS = ("lookup_words", "speak_words", "selected_words", "activity_json",
+                   "module", "range_start", "range_end", "range_label")
+
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or _default_db_path()
         if Path(self.db_path).exists():
             with self._connect() as conn:
                 conn.executescript(SCHEMA)
+                self._migrate_v2(conn)
+
+    @staticmethod
+    def _migrate_v2(conn: sqlite3.Connection) -> None:
+        """存量库幂等补 v2 列（CREATE TABLE IF NOT EXISTS 对旧表不生效）。"""
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(focus_sessions)")}
+        defaults = {"module": "'library'", "range_label": "''"}
+        for col in FocusStore._V2_COLUMNS:
+            if col not in cols:
+                conn.execute(
+                    f"ALTER TABLE focus_sessions ADD COLUMN {col} "
+                    f"TEXT DEFAULT {defaults.get(col, 'NULL')}"
+                    if col in defaults
+                    else f"ALTER TABLE focus_sessions ADD COLUMN {col} TEXT"
+                )
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         conn.executescript(SCHEMA)
+        self._migrate_v2(conn)
         return conn
 
     def submit(
@@ -156,6 +283,10 @@ class FocusStore:
         percent_start: float = 0.0, percent_end: float = 0.0,
         fast_scroll_flags: int = 0, mouse_metrics: Optional[dict] = None,
         polyline: Optional[str] = None,
+        module: str = "library", range_start: Optional[float] = None,
+        range_end: Optional[float] = None, range_label: str = "",
+        lookup_words=None, speak_words=None, selected_words=None,
+        activity=None,
     ) -> dict:
         """按 session_id 幂等写入（心跳重传覆盖累计值），返回完整行。"""
         user = (user or "").strip()[:60]
@@ -184,7 +315,15 @@ class FocusStore:
             "percent_end": _clamp_float(percent_end, 0, 100),
             "fast_scroll_flags": _clamp_int(fast_scroll_flags, 0, 9999),
         }
-        score, detail = compute_score({**row, "mouse_metrics": mouse_metrics})
+        module = module if module in ("library", "reading") else "library"
+        lw = _clean_words(lookup_words)
+        sw = _clean_words(speak_words)
+        selw = _clean_words(selected_words)
+        act = _clean_activity(activity)
+        score, detail = compute_score({
+            **row, "mouse_metrics": mouse_metrics,
+            "lookup_words": lw, "speak_words": sw,
+        })
         metrics_json = ""
         if mouse_metrics:
             try:
@@ -197,13 +336,18 @@ class FocusStore:
             ).fetchone()
             created_at = ((old["created_at"] if old else None)
                           or datetime.now(_tz.utc).isoformat(timespec="seconds"))
+            def _wj(items) -> str:
+                return json.dumps(items, ensure_ascii=False)[:10000] if items else ""
+
             conn.execute(
                 "INSERT OR REPLACE INTO focus_sessions (session_id, user, book_id,"
                 " book_title, started_at, ended_at, total_sec, active_sec, away_count,"
                 " away_sec, longest_away_sec, scroll_count, chapter_navs, lookups,"
                 " plays, prep_opens, prep_starts, percent_start, percent_end,"
                 " fast_scroll_flags, mouse_metrics, polyline, score, score_detail,"
-                " created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " created_at, lookup_words, speak_words, selected_words,"
+                " activity_json, module, range_start, range_end, range_label)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (sid, row["user"], row["book_id"], row["book_title"],
                  row["started_at"], row["ended_at"], row["total_sec"],
                  row["active_sec"], row["away_count"], row["away_sec"],
@@ -211,7 +355,13 @@ class FocusStore:
                  row["lookups"], row["plays"], row["prep_opens"], row["prep_starts"],
                  row["percent_start"], row["percent_end"], row["fast_scroll_flags"],
                  metrics_json, (polyline or "")[:200000], score,
-                 json.dumps(detail, ensure_ascii=False), created_at),
+                 json.dumps(detail, ensure_ascii=False), created_at,
+                 _wj(lw), _wj(sw), _wj(selw),
+                 json.dumps(act, ensure_ascii=False)[:30000] if act else "",
+                 module,
+                 None if range_start is None else _clamp_float(range_start, 0, 100),
+                 None if range_end is None else _clamp_float(range_end, 0, 100),
+                 (range_label or "")[:120]),
             )
             saved = conn.execute(
                 "SELECT * FROM focus_sessions WHERE session_id = ?", (sid,)
@@ -268,6 +418,10 @@ def _out(r: sqlite3.Row, detail: bool = False) -> dict:
         "score": r["score"], "score_detail": score_detail,
         "created_at": r["created_at"],
         "mouse_metrics": None, "polyline": None,  # 列表默认不带明细
+        "module": r["module"] or "library",
+        "range_label": r["range_label"] or "",
+        "range_start": r["range_start"],
+        "range_end": r["range_end"],
     }
     if detail:
         try:
@@ -275,4 +429,8 @@ def _out(r: sqlite3.Row, detail: bool = False) -> dict:
         except (ValueError, TypeError):
             out["mouse_metrics"] = None
         out["polyline"] = _maybe_json(r["polyline"])
+        out["lookup_words"] = _maybe_json(r["lookup_words"]) or []
+        out["speak_words"] = _maybe_json(r["speak_words"]) or []
+        out["selected_words"] = _maybe_json(r["selected_words"]) or []
+        out["activity"] = _maybe_json(r["activity_json"]) or []
     return out

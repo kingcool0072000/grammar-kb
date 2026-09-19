@@ -33,6 +33,7 @@ export function speak(text) {
  */
 export function createLookupLayer(bodyEl, opts = {}) {
   const onLookupCb = typeof opts.onLookup === 'function' ? opts.onLookup : null
+  const onSelectCb = typeof opts.onSelect === 'function' ? opts.onSelect : null
   const onSpeakCb = typeof opts.onSpeak === 'function' ? opts.onSpeak : null
   let currentSel = null
   let dictTimer = null
@@ -140,6 +141,7 @@ export function createLookupLayer(bodyEl, opts = {}) {
   function showSelection(payload) {
     hideDict()
     currentSel = payload
+    if (onSelectCb && payload && payload.word) onSelectCb(payload.word)
     collapseSelection()
     anchorMark(payload)
     popEl.querySelector('.word-label').textContent = payload.word

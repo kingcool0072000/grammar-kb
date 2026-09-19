@@ -8,6 +8,7 @@ import { api, getAuth } from '../../api.js'
 
 const SCROLL_THROTTLE_MS = 500 // 滚动计数节流
 const HEARTBEAT_MS = 60000 // 心跳上报间隔
+const IDLE_SPLIT_MS = 5 * 60 * 1000 // 超时不动即拆分会话（v2 需求①）
 const FAST_WINDOW_MS = 10000 // 快滚判定窗口
 const FAST_PERCENT_GAIN = 8 // 窗口内推进阈值（percent 为 0-100）
 const FAST_COOLDOWN_MS = 30000 // 快滚触发后冷却
@@ -171,17 +172,21 @@ export function compressMouse(points) {
  * @param {boolean} opts.enabled false：不挂任何监听、flush 直接 return（教师端/开关关闭）
  * @returns {{ hooks, flush, destroy, disable, enable }}
  */
-export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '', enabled = true }) {
-  const startedAt = Date.now()
-  const sessionId = makeSessionId()
+export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '', enabled = true,
+                                       module = 'library', initialRangeLabel = '', idleMs = IDLE_SPLIT_MS }) {
+  // 会话可变状态（超时不活跃拆分时整体重置）
+  let startedAt = Date.now()
+  let sessionId = makeSessionId()
   // 创建时 enabled=false：tracker 是空壳（教师不追踪；开关关闭时由 reader 调 disable）
   let created = !!enabled
   let collecting = created
   let alive = true
   let stopped = false
   let intervalId = null
+  let lastActiveAt = Date.now() // idle 拆分判定的活动时钟
 
-  const st = {
+  let st = null
+  const newSt = () => ({
     awayCount: 0,
     awayMs: 0,
     longestAwayMs: 0,
@@ -195,8 +200,15 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     percentStart: null,
     percentEnd: null,
     fastScrollFlags: 0,
-  }
-  const mouse = [] // {x,y,t}，t 相对会话开始 ms，不去抖不采样
+  })
+  st = newSt()
+  // 内容漏斗（v2）：词 → 次数；selected 为「选了但没查没听」的词
+  let lookupMap = new Map()
+  let speakMap = new Map()
+  let selectedMap = new Map()
+  let activity = [] // {t 秒, type, w?} 内容互动时间线
+  let curChapterLabel = ''
+  let mouse = [] // {x,y,t}，t 相对会话开始 ms，不去抖不采样
   const scrollSamples = [] // {t, percent} 快滚判定滑动窗口
   let lastEngageAt = -Infinity // 最近一次查词/预习互动（快滚抑制）
   let lastFastAt = -Infinity // 最近一次快滚触发（冷却）
@@ -204,6 +216,40 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
   const boundIframeDocs = new WeakSet() // 幂等：已注入 mousemove 的 iframe document
 
   const relNow = () => Date.now() - startedAt
+  const touchActive = () => { lastActiveAt = Date.now() }
+
+  const wordsToArray = (m) => [...m.entries()].map(([w, n]) => [w, n]).sort((a, b) => b[1] - a[1])
+  const pushActivity = (type, w) => {
+    if (activity.length >= 500) return
+    const rec = { t: Math.floor(relNow() / 1000), type }
+    if (w) rec.w = String(w).slice(0, 60)
+    activity.push(rec)
+  }
+
+  /**
+   * 会话拆分（①：超 5 分钟不活跃）：结算当前段（ended_at 取最后活动时刻，
+   * idle 时长不计入）并静默开启新会话。心跳/滚动/鼠标路径都会检查。
+   */
+  function checkIdleSplit() {
+    if (!collecting || stopped) return
+    if (document.visibilityState === 'hidden') return // 切走由 away 段管，回来 touchActive
+    if (Date.now() - lastActiveAt <= idleMs) return
+    // 结算旧段：截到最后活动时刻
+    const endTs = lastActiveAt
+    if (endTs > startedAt) {
+      try { api.focusSubmit(buildRec(endTs)).catch(() => {}) } catch { /* ignore */ }
+    }
+    // 重置为新会话
+    sessionId = makeSessionId()
+    startedAt = Date.now()
+    lastActiveAt = startedAt
+    st = newSt()
+    lookupMap = new Map(); speakMap = new Map(); selectedMap = new Map()
+    activity = []
+    mouse = []
+    scrollSamples.length = 0
+    lastEngageAt = -Infinity; lastFastAt = -Infinity
+  }
 
   function pushMouse(x, y) {
     mouse.push({ x: Math.round(x), y: Math.round(y), t: relNow() })
@@ -214,12 +260,15 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     if (!collecting) return
     if (document.visibilityState === 'hidden') {
       st.awayStart = Date.now()
-    } else if (st.awayStart) {
-      const dur = Date.now() - st.awayStart
-      st.awayMs += dur
-      if (dur > st.longestAwayMs) st.longestAwayMs = dur
-      st.awayCount += 1
-      st.awayStart = 0
+    } else {
+      touchActive() // 回到可见即活动（idle 时钟重置，切走期间不计 idle）
+      if (st.awayStart) {
+        const dur = Date.now() - st.awayStart
+        st.awayMs += dur
+        if (dur > st.longestAwayMs) st.longestAwayMs = dur
+        st.awayCount += 1
+        st.awayStart = 0
+      }
     }
   }
 
@@ -242,9 +291,11 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
 
   function onScroll() {
     if (!collecting) return
+    checkIdleSplit() // 滚动是活动：先看有没有该结算的 idle 段
     const now = Date.now()
     if (now - lastScrollAt < SCROLL_THROTTLE_MS) return
     lastScrollAt = now
+    touchActive()
     st.scrollCount += 1
     scrollSamples.push({ t: relNow(), percent: st.percentEnd })
     checkFastScroll()
@@ -253,6 +304,8 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
   // ---- 主文档鼠标轨迹 ----
   function onRootMouseMove(e) {
     if (!collecting) return
+    checkIdleSplit()
+    touchActive()
     try {
       const r = readerRoot.getBoundingClientRect()
       pushMouse(e.clientX - r.left, e.clientY - r.top)
@@ -285,7 +338,10 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     if (viewerEl) viewerEl.addEventListener('scroll', onScroll, { passive: true })
     if (readerRoot) readerRoot.addEventListener('mousemove', onRootMouseMove, { passive: true })
     intervalId = setInterval(() => {
-      if (alive && !stopped) flush(false)
+      if (alive && !stopped) {
+        checkIdleSplit()
+        flush(false)
+      }
     }, HEARTBEAT_MS)
   }
 
@@ -332,6 +388,15 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
       mouse_metrics: computeMetrics(mouse),
       // 后端契约：polyline 为字符串（max_length 200k）；空轨迹给空串
       polyline: mouse.length ? JSON.stringify(compressMouse(mouse)) : '',
+      // v2：内容监控 + 学习范围
+      module,
+      range_start: st.percentStart == null ? null : Math.round(st.percentStart * 100) / 100,
+      range_end: st.percentEnd == null ? null : Math.round(st.percentEnd * 100) / 100,
+      range_label: (curChapterLabel || initialRangeLabel || '').slice(0, 120),
+      lookup_words: wordsToArray(lookupMap),
+      speak_words: wordsToArray(speakMap),
+      selected_words: wordsToArray(selectedMap),
+      activity,
     }
   }
 
@@ -394,45 +459,79 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
 
   return {
     hooks: {
-      /** 查词（lookup 层 showDict 漏斗调用） */
-      onLookup() {
+      /** 划词选中（lookup 层工具条弹出即报；查/听之后会从中移除——漏斗上层） */
+      onSelect(word) {
         if (!collecting) return
+        touchActive()
+        const w = String(word || '').trim()
+        if (!w) return
+        selectedMap.set(w, (selectedMap.get(w) || 0) + 1)
+        pushActivity('select', w)
+      },
+      /** 查词（lookup 层 showDict 漏斗调用，带词） */
+      onLookup(word) {
+        if (!collecting) return
+        touchActive()
         st.lookups += 1
         lastEngageAt = relNow()
+        const w = String(word || '').trim()
+        if (!w) return
+        lookupMap.set(w, (lookupMap.get(w) || 0) + 1)
+        selectedMap.delete(w) // 已进入下层，不算「选了没查」
+        pushActivity('lookup', w)
       },
-      /** 发音（工具条/查词浮层发音钮） */
-      onSpeak() {
+      /** 发音（工具条/查词浮层发音钮，带词） */
+      onSpeak(word) {
         if (!collecting) return
+        touchActive()
         st.plays += 1
+        const w = String(word || '').trim()
+        if (!w) return
+        speakMap.set(w, (speakMap.get(w) || 0) + 1)
+        selectedMap.delete(w)
+        pushActivity('speak', w)
+      },
+      /** 录音开始/结束（阅读练习精读场景） */
+      onRecord() {
+        if (!collecting) return
+        touchActive()
+        pushActivity('record')
       },
       /** 打开预习抽屉 */
       onPrepOpen() {
         if (!collecting) return
+        touchActive()
         st.prepOpens += 1
         lastEngageAt = relNow()
+        pushActivity('prep')
       },
       /** 预习开始 */
       onPrepStart() {
         if (!collecting) return
+        touchActive()
         st.prepStarts += 1
         lastEngageAt = relNow()
       },
       /** 章级导航 */
       onChapterNav() {
         if (!collecting) return
+        touchActive()
         st.chapterNavs += 1
+        pushActivity('chapter')
       },
       /** 排版调整（后端契约暂无对应字段，占位保接线完整） */
       onThemeAdjust() {
         if (!collecting) return
       },
-      /** 阅读进度（handleReloc 调用，percent 为 0-100） */
-      onReloc(percent) {
+      /** 阅读进度（handleReloc 调用，percent 0-100；label 为章标题/范围标签） */
+      onReloc(percent, label) {
         if (!collecting) return
         const p = Number(percent)
-        if (!Number.isFinite(p)) return
-        if (st.percentStart == null) st.percentStart = p
-        st.percentEnd = p
+        if (Number.isFinite(p)) {
+          if (st.percentStart == null) st.percentStart = p
+          st.percentEnd = p
+        }
+        if (label) curChapterLabel = String(label).slice(0, 120)
       },
       /**
        * iframe 正文鼠标轨迹（reader 的 onRendered 通道调用，幂等防重复挂）。
@@ -447,6 +546,8 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
           boundIframeDocs.add(doc)
           doc.addEventListener('mousemove', (e) => {
             if (!collecting) return
+            checkIdleSplit()
+            touchActive()
             try {
               const rootRect = readerRoot.getBoundingClientRect()
               const ifRect = iframe.getBoundingClientRect()

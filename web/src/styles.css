@@ -1971,3 +1971,41 @@ mark[data-lib-anchor] {
 .gd-board .gd-section.gd-focus-section { grid-column: 1 / -1; }
 /* 轨迹图放大为全宽（原 200px 邮票太小——走查 M4） */
 .gd-focus-trail { width: 100%; max-width: 560px; height: 240px; }
+
+/* ---- 专注力 v2：模块徽标 / 词汇卡 / 范围卡 ---- */
+.gd-focus-mod {
+  font-style: normal; font-size: 11px; font-weight: 700; line-height: 1;
+  padding: 3px 8px; border-radius: 99px; background: #fff1ea; color: #b8431c;
+  flex-shrink: 0;
+}
+.gd-focus-mod.reading { background: #e2f5f2; color: #146e63; }
+.gd-focus-range {
+  border: 1px solid var(--line); border-radius: 12px; background: var(--bg-soft);
+  padding: 10px 14px; margin-bottom: 12px;
+}
+.gd-focus-range-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.gd-focus-range-label { font-size: 13px; font-weight: 600; color: var(--ink); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gd-focus-range-pct { font-size: 12px; color: var(--ink-faint); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.gd-focus-range-track { position: relative; height: 6px; border-radius: 3px; background: rgba(138,109,59,.14); }
+.gd-focus-range-track i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: #d65124; }
+.gd-focus-words {
+  border: 1px solid var(--line); border-radius: 12px; background: var(--bg-soft);
+  padding: 10px 14px; margin-bottom: 12px;
+}
+.gd-focus-funnel { font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; }
+.gd-focus-funnel b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.gd-focus-funnel-old { font-size: 11px; color: var(--ink-faint); }
+.gd-focus-word-group { display: flex; gap: 8px; align-items: baseline; margin-top: 6px; flex-wrap: wrap; }
+.gd-focus-word-label { font-size: 11.5px; color: var(--ink-faint); flex-shrink: 0; }
+.gd-focus-word-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.gd-focus-word {
+  font-style: normal; font-size: 12.5px; color: var(--ink);
+  background: var(--card, #fff); border: 1px solid var(--line); border-radius: 6px;
+  padding: 2px 7px; line-height: 1.4;
+}
+.gd-focus-word sup { font-size: 9.5px; color: var(--ink-faint); margin-left: 1px; }
+.gd-focus-word-list em { font-style: normal; font-size: 11.5px; color: var(--ink-faint); align-self: center; }
+@media (max-width: 768px) {
+  .gd-focus-word-group { flex-direction: column; gap: 4px; }
+  .gd-focus-range-track { width: 100%; }
+}

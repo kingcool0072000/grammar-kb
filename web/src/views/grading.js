@@ -156,21 +156,69 @@ export async function mountGrading(el) {
 function focusRow(s) {
   const score = typeof s.score === 'number' ? Math.round(s.score) : null
   const scoreCls = score === null ? 'pend' : score >= 80 ? 'ok' : score >= 60 ? '' : 'bad'
+  const mod = s.module === 'reading' ? '精读' : '泛读'
+  const modCls = s.module === 'reading' ? 'gd-focus-mod reading' : 'gd-focus-mod'
   const chips = [
-    `查词 ${s.lookups || 0}`,
-    `发音 ${s.plays || 0}`,
-    `离开 ${s.away_count || 0} 次`,
-    ...(s.fast_scroll_flags ? [`快滚 ${s.fast_scroll_flags}`] : []),
-  ]
-    .map((c) => `<i class="gd-focus-chip">${c}</i>`)
-    .join('')
+    `<i class="${modCls}">${mod}</i>`,
+    `<i class="gd-focus-chip">查词 ${s.lookups || 0}</i>`,
+    `<i class="gd-focus-chip">发音 ${s.plays || 0}</i>`,
+    `<i class="gd-focus-chip">离开 ${s.away_count || 0} 次</i>`,
+    ...(s.fast_scroll_flags ? [`<i class="gd-focus-chip">快滚 ${s.fast_scroll_flags}</i>`] : []),
+  ].join('')
+  const rangeTip = s.range_label ? ` · ${escapeHtml(s.range_label)}` : ''
   return `
-    <div class="fce-his-row gd-focus-row" data-focus-id="${s.id}" title="点开专注详情">
+    <div class="fce-his-row gd-focus-row" data-focus-id="${s.id}" title="点开专注详情${rangeTip}">
       <span class="fce-his-what">${escapeHtml(s.book_title || `#${s.book_id}`)}</span>
       <b class="fce-his-score ${scoreCls}">${score === null ? '—' : score}</b>
       <span class="fce-his-date">${fmtDur(s.total_sec || 0)} · ${fmtCnTime(s.started_at || s.created_at)}</span>
       <span class="gd-focus-chips">${chips}</span>
     </div>`
+}
+
+/** 学习范围卡：模块徽标 + 范围标签 + 本段进度条 */
+function focusRangeCard(s) {
+  const mod = s.module === 'reading' ? '精读' : '泛读'
+  const modCls = s.module === 'reading' ? 'gd-focus-mod reading' : 'gd-focus-mod'
+  const label = s.range_label || s.book_title || ''
+  const rs = Number.isFinite(Number(s.range_start)) ? Number(s.range_start) : 0
+  const re = Number.isFinite(Number(s.range_end)) ? Number(s.range_end) : 0
+  const left = Math.min(100, Math.max(0, rs))
+  const width = Math.max(0, Math.min(100 - left, re - left))
+  return `
+  <div class="gd-focus-range">
+    <div class="gd-focus-range-head">
+      <i class="${modCls}">${mod}</i>
+      <span class="gd-focus-range-label">${escapeHtml(label)}</span>
+      <span class="gd-focus-range-pct">${left.toFixed(0)}% → ${re.toFixed(0)}%</span>
+    </div>
+    <div class="gd-focus-range-track"><i style="left:${left}%;width:${width}%"></i></div>
+  </div>`
+}
+
+/** 词汇互动卡：漏斗统计 + 三组词 chips（v2 数据缺省时回落计数字段） */
+function focusWordsCard(s) {
+  const lw = Array.isArray(s.lookup_words) ? s.lookup_words : []
+  const sw = Array.isArray(s.speak_words) ? s.speak_words : []
+  const selw = Array.isArray(s.selected_words) ? s.selected_words : []
+  const hasDetail = lw.length || sw.length || selw.length
+  const nLook = hasDetail ? new Set(lw.map((x) => x.w)).size : (s.lookups || 0)
+  const nSpeak = hasDetail ? new Set(sw.map((x) => x.w)).size : (s.plays || 0)
+  const nSel = hasDetail ? new Set(selw.map((x) => x.w)).size : 0
+  if (!nLook && !nSpeak && !nSel) {
+    return `<div class="gd-focus-words"><div class="gd-focus-funnel">本会话无词汇互动</div></div>`
+  }
+  const group = (title, arr) => {
+    if (!arr.length) return ''
+    const sup = (n) => (n > 1 ? `<sup>${n > 99 ? '99+' : n}</sup>` : '')
+    const shown = arr.slice(0, 12).map((x) => `<i class="gd-focus-word">${escapeHtml(String(x.w))}${sup(x.n)}</i>`).join('')
+    const more = arr.length > 12 ? `<em>+${arr.length - 12}</em>` : ''
+    return `<div class="gd-focus-word-group"><span class="gd-focus-word-label">${title}</span><span class="gd-focus-word-list">${shown}${more}</span></div>`
+  }
+  return `
+  <div class="gd-focus-words">
+    <div class="gd-focus-funnel">选中 <b>${nSel + nLook}</b> → 查词 <b>${nLook}</b> → 发音 <b>${nSpeak}</b>${hasDetail ? '' : ' <span class="gd-focus-funnel-old">（旧版会话：按次计）</span>'}</div>
+    ${hasDetail ? group('查词', lw) + group('发音', sw) + group('选中未查', selw) : ''}
+  </div>`
 }
 
 // ---------- 专注会话详情弹窗 ----------
@@ -199,10 +247,11 @@ async function openFocusDetail(id) {
   // 显示绝对扣分值——满条=扣满上限，避免「惩罚 3 分显示 100%」的语义误导）
   const bars = [
     ['有效时长占比', pct(sd.effective_ratio), false, null],
-    ['参与度', pct(sd.engagement), false, null],
+    ['内容互动', pct(sd.engagement), false, null],
     ['阅读进度', pct(sd.progress), false, null],
     ['离开惩罚', pct((Number(sd.away_penalty) || 0) / 12), true, `-${(Number(sd.away_penalty) || 0).toFixed(1)}`],
     ['乱晃惩罚', pct((Number(sd.jitter_penalty) || 0) / 5), true, `-${(Number(sd.jitter_penalty) || 0).toFixed(1)}`],
+    ['发呆惩罚', pct((Number(sd.idle_penalty) || 0) / 8), true, `-${(Number(sd.idle_penalty) || 0).toFixed(1)}`],
   ]
     .map(([name, p, neg, valText]) => `
       <div class="gd-focus-bar">
@@ -264,6 +313,8 @@ async function openFocusDetail(id) {
       </div>
       <div class="gd-focus-detail-body">
         <p class="gd-focus-dur">总时长 <b>${fmtDur(s.total_sec || 0)}</b> · 有效阅读 <b>${fmtDur(s.active_sec || 0)}</b>（${activePct}%） · 滚动 ${s.scroll_count || 0} 次 · 章节跳转 ${s.chapter_navs || 0} 次</p>
+        ${focusRangeCard(s)}
+        ${focusWordsCard(s)}
         <div class="gd-focus-score-wrap">
           <div class="gd-focus-score-bars">${bars}</div>
           <div class="gd-focus-score-total">
@@ -441,6 +492,39 @@ function drawFocusIntensity(canvas, session) {
   ctx.fillText('0:00', x0, h - 1.5)
   ctx.textAlign = 'right'
   ctx.fillText(fmtDur(total), x1, h - 1.5)
+
+  // v2：内容互动事件标记（activity 时间线）——查词 ● / 发音 ▲ 顶部一排，同点错开
+  const acts = Array.isArray(session.activity) ? session.activity : []
+  const marks = acts.filter((a) => a && (a.type === 'lookup' || a.type === 'speak'))
+  if (marks.length) {
+    let laneToggle = 0
+    for (const a of marks) {
+      const t = Math.max(0, Math.min(total, Number(a.t) || 0))
+      const x = x0 + (t / total) * (x1 - x0)
+      const y = 10 + (laneToggle++ % 3) * 7
+      ctx.beginPath()
+      if (a.type === 'lookup') {
+        ctx.fillStyle = '#d65124'
+        ctx.arc(x, y, 3, 0, Math.PI * 2)
+        ctx.fill()
+      } else {
+        ctx.fillStyle = '#1d8578'
+        ctx.moveTo(x, y - 4); ctx.lineTo(x - 4, y + 3); ctx.lineTo(x + 4, y + 3)
+        ctx.closePath(); ctx.fill()
+      }
+    }
+    // 微图例（右上角）
+    ctx.font = '10px sans-serif'
+    ctx.textAlign = 'right'
+    ctx.fillStyle = '#d65124'
+    ctx.beginPath(); ctx.arc(x1 - 74, 10, 3, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = 'rgba(110,103,84,.85)'
+    ctx.fillText('查词', x1 - 66, 13)
+    ctx.fillStyle = '#1d8578'
+    ctx.beginPath(); ctx.moveTo(x1 - 32, 6); ctx.lineTo(x1 - 36, 13); ctx.lineTo(x1 - 28, 13); ctx.closePath(); ctx.fill()
+    ctx.fillStyle = 'rgba(110,103,84,.85)'
+    ctx.fillText('发音', x1 - 24, 13)
+  }
 }
 
 // 轨迹缩略图：前 2000 点归一化画到 200×150

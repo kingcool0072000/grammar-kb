@@ -266,6 +266,7 @@ export function mountLibraryReader(viewEl, ctx) {
   const lookup = createLookupLayer(bodyEl, {
     onLookup: focusTracker.hooks.onLookup,
     onSpeak: focusTracker.hooks.onSpeak,
+    onSelect: focusTracker.hooks.onSelect,
   })
   // 点击阅读主体空白处清浮层（浮层自身 stopPropagation）
   bodyEl.addEventListener('click', () => lookup.hideAll())
@@ -321,10 +322,10 @@ export function mountLibraryReader(viewEl, ctx) {
     progress.cfi = info.cfi
     progress.chapterIndex = info.chapterIndex
     if (!hasPrecisePct) progress.percent = info.percent
-    focusTracker.hooks.onReloc(progress.percent)
     chapterIndex = info.chapterIndex
     const merged = mergedChapterAt(chapterIndex)
     chapterLabel = info.chapterTitle || (merged && merged.title) || ''
+    focusTracker.hooks.onReloc(progress.percent, chapterLabel)
     const shownPct = hasPrecisePct ? progress.percent : info.percent
     labelEl.textContent = `${chapterLabel}${shownPct > 0 ? ` · ${Math.round(shownPct)}%` : ''}`
     try {
@@ -473,6 +474,7 @@ export function mountLibraryReader(viewEl, ctx) {
       hasPrecisePct = true
       progress.percent = pct
       labelEl.textContent = `${chapterLabel}${pct > 0 ? ` · ${pct}%` : ''}`
+      focusTracker.hooks.onReloc(pct, chapterLabel)
     },
     onSelect: handleSelect,
     onInjectChapterLinks,

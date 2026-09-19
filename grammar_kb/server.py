@@ -110,6 +110,14 @@ try:
 
     class FocusSessionIn(BaseModel):
         """泛读馆阅读器专注力心跳上报（累计值，按 session_id 幂等覆盖）。"""
+        module: str = Field(default="library", max_length=16)
+        range_start: Optional[float] = None
+        range_end: Optional[float] = None
+        range_label: str = Field(default="", max_length=120)
+        lookup_words: Optional[list] = None
+        speak_words: Optional[list] = None
+        selected_words: Optional[list] = None
+        activity: Optional[list] = None
 
         session_id: str = Field(min_length=1, max_length=64)
         book_id: Optional[int] = None
