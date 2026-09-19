@@ -424,3 +424,50 @@ def test_exam_db_path_resolved_not_none(tmp_path, monkeypatch):
     assert "exam_records" in tables       # ExamStore 用了该路径
     assert "ai_weekly_reports" in tables   # AnalyticsAI 用了同一具体路径
     assert not (tmp_path / "None").exists()
+
+
+def test_topics_progress_flow(isolated_app):
+    """专题学习进度：学生写入/读取自己的行；白名单放行；教师可查任意学生。"""
+    with TestClient(isolated_app) as c:
+        stu = _login(c, "malin")
+
+        # 初始无记录 → 空进度
+        r = c.get("/topics/tense-26-28/progress", headers=stu)
+        assert r.status_code == 200, r.text
+        assert r.json()["data"]["done_keys"] == []
+
+        # 写入两个主题 → 读回一致（去重排序）
+        r = c.put(
+            "/topics/tense-26-28/progress",
+            json={"done_keys": ["t2", "t1", "t2"], "assigned_user": "malin"},
+            headers=stu,
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["data"]["done_keys"] == ["t1", "t2"]
+        assert r.json()["data"]["assigned_user"] == "malin"
+
+        # 列表：学生只见自己的行
+        r = c.get("/topics/progress", headers=stu)
+        assert r.status_code == 200, r.text
+        rows = r.json()["data"]
+        assert len(rows) == 1 and rows[0]["user"] == "malin"
+
+        # 另一学生读 malin 的进度：只能读到自己的（空）
+        stu_b = _login(c, "mxy", "mxy123")
+        r = c.get("/topics/tense-26-28/progress", headers=stu_b)
+        assert r.status_code == 200, r.text
+        assert r.json()["data"]["done_keys"] == []
+        assert r.json()["data"]["user"] == "mxy"
+
+        # 教师可带 user 参数查任意学生
+        teacher = _login(c, "teacher")
+        r = c.get(
+            "/topics/tense-26-28/progress",
+            params={"user": "malin"},
+            headers=teacher,
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["data"]["done_keys"] == ["t1", "t2"]
+
+        # 未登录 401
+        assert c.get("/topics/progress").status_code == 401

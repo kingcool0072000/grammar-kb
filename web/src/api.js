@@ -185,6 +185,14 @@ export const api = {
   focusSessions: ({ user, limit = 50 } = {}) =>
     req('/focus/sessions', { searchParams: { user, limit } }),
   focusSession: (id) => req(`/focus/sessions/${id}`),
+  // 专题学习（学生自学手册进度；谁登录记谁的行，跨设备同步）
+  topicsProgress: () => req('/topics/progress'),
+  topicProgress: (topicId) => req(`/topics/${encodeURIComponent(topicId)}/progress`),
+  topicPutProgress: (topicId, doneKeys, assignedUser = '') =>
+    reqJson(`/topics/${encodeURIComponent(topicId)}/progress`, 'PUT', {
+      done_keys: doneKeys,
+      assigned_user: assignedUser,
+    }),
 }
 
 // multipart 上传（epub 等大文件）：带登录态，返回解包后的 data

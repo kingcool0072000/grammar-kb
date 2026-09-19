@@ -141,16 +141,23 @@ try:
         mouse_metrics: Optional[dict] = None
         polyline: Optional[str] = Field(default=None, max_length=200000)
 
+    class TopicProgressIn(BaseModel):
+        """专题学习「我学完了」进度覆盖（done_keys＝已学完主题 key 集合）。"""
+
+        done_keys: list[str] = Field(default_factory=list)
+        assigned_user: str = Field(default="", max_length=60)
+
 except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
     ExamRecordIn = None
     FceSubmissionIn = None
-    FceGradeIn = None
+    FceDerivedIn = None
     ReadingDerivedIn = None
     ReadingUpdateIn = None
     ReadingRecordIn = None
     ReadingGradeIn = None
     ReciteSessionIn = None
     FocusSessionIn = None
+    TopicProgressIn = None
 
 
 def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None,
@@ -169,6 +176,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from .reading import ReadingStore
     from .recite import ReciteStore
     from .focus import FocusStore
+    from .topics import TopicStore
     from .analytics_ai import AnalyticsAI
 
     # exam 库路径在此先落定：ExamStore 内部会自解析默认路径，但
@@ -185,6 +193,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     analytics_ai = AnalyticsAI(exam_db_path)
     recite = ReciteStore(fce_db_path)
     focus = FocusStore(fce_db_path)
+    topics = TopicStore(fce_db_path)
     # 泛读馆（整本书英文泛读）：路径解析沿 fce_query 模式
     # （GRAMMAR_KB_LIBRARY_DB/GRAMMAR_KB_LIBRARY_DIR → data/）
     library = LibraryStore()
@@ -251,6 +260,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("GET", "/recite/sessions"),
         ("POST", "/focus/sessions"),
         ("GET", "/focus/sessions"),  # /{id} 详情学生仍被端点内 _require_teacher 拦 403
+        # 专题学习（学生自学手册进度；/topics/{id}/progress 学生只能写自己的行）
+        ("GET", "/topics/"),
+        ("PUT", "/topics/"),
         # 泛读馆（结尾斜杠不可省：前缀匹配语义）——上传 POST /library/books 本体不带斜杠，仍仅教师
         ("GET", "/library/books"),
         ("GET", "/library/books/"),
@@ -680,6 +692,36 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         if data is None:
             raise HTTPException(status_code=404, detail=f"会话 id={row_id} 不存在")
         return _ok(data)
+
+    # ---- 专题学习（学生自学手册「我学完了」进度；进度行绑定学生本人） ----
+
+    @app.get("/topics/progress")
+    def topics_progress_list(request: "fastapi.Request"):
+        """专题进度列表。学生只看自己的；教师看全部。"""
+        return _ok(topics.list_for(
+            _request_user(request), getattr(request.state, "role", ""),
+        ))
+
+    @app.get("/topics/{topic_id}/progress")
+    def topics_progress_get(topic_id: str, request: "fastapi.Request"):
+        """单个专题进度（学生本人；教师可带 ?user= 查任意学生）。"""
+        user = _request_user(request)
+        if request.state.role == "teacher":
+            user = request.query_params.get("user") or user
+        return _ok(topics.get(user, topic_id))
+
+    @app.put("/topics/{topic_id}/progress")
+    def topics_progress_put(
+        topic_id: str, rec: "TopicProgressIn", request: "fastapi.Request",
+    ):
+        """覆盖写入当前学生的专题进度（谁登录记谁的行，教师代记也记在教师名下）。"""
+        try:
+            return _ok(topics.put(
+                _request_user(request), topic_id, rec.done_keys,
+                assigned_user=rec.assigned_user,
+            ))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
 
     # ---- 学情分析 · AI 周报（手动触发，分析上一自然周；教师专属） ----
 

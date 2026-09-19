@@ -16,6 +16,7 @@ import { mountLibrarySettings } from './views/library/settings.js'
 import { mountGrading } from './views/grading.js'
 import { mountPrep } from './views/prep.js'
 import { mountAnalytics } from './views/analytics.js'
+import { mountTopics } from './views/topics.js'
 import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
 
@@ -38,6 +39,7 @@ const VIEWS = [
   { key: 'analytics', label: '学情分析', teacher: true },
   { key: 'recite', label: '背单词', studentOnly: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
+  { key: 'topics', label: '专题学习', studentOnly: true },
   { key: 'library', label: '泛读馆' },
   // 子工具页（不在 Tab 显示，hash 直达）：fcePapers 师生共用
   { key: 'fcePapers', label: 'FCE真题', hiddenTab: true },
@@ -246,6 +248,9 @@ async function bootstrap() {
       mounted = mountVocabulary(container, { vocab: state.vocab, openWord: (e) => drawer.showWord(e) })
     } else if (route === 'recite') {
       mounted = mountRecite(container, { vocab: state.vocab, role })
+    } else if (route === 'topics') {
+      // 专题学习：#/topics 列表 / #/topics/{id} 手册详情（视图内部按 hash 分发）
+      mounted = mountTopics(container, { role })
     } else if (route === 'taxonomy') {
       mounted = mountTaxonomy(container, { pointsById, openKp: ctx.openKp })
     } else if (route === 'fce') {
