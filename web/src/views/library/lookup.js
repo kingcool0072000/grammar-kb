@@ -8,8 +8,11 @@ import { escapeHtml } from '../../render.js'
 import { ICONS } from './icons.js'
 
 // TTS 发音的唯一实现在 ../../tts.js（#/ttsconf 配置默认音色/语速）。
-// 这里 re-export 维持 drawers.js 等既有引用不变。
-export { speak } from '../../tts.js'
+// import + 再 export：纯 re-export（export {x} from）不把名字引入本模块
+// 作用域，本文件内部（划词条/查词浮层的 🔊）也要调 speak，曾因此
+// ReferenceError: speak is not defined。
+import { speak } from '../../tts.js'
+export { speak }
 
 /**
  * 创建划词/查词浮层组，挂到容器（需 position:relative）。
