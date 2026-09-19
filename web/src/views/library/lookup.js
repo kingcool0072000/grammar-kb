@@ -7,22 +7,9 @@ import { api } from '../../api.js'
 import { escapeHtml } from '../../render.js'
 import { ICONS } from './icons.js'
 
-/** TTS 发音：先 cancel 再 speak；en-GB 优先，rate 0.9，按 lang 匹配 voice */
-export function speak(text) {
-  if (!text || !('speechSynthesis' in window)) return
-  try {
-    window.speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(text)
-    u.lang = 'en-GB'
-    u.rate = 0.9
-    const voices = window.speechSynthesis.getVoices()
-    const match = voices.find((v) => v.lang.replace('_', '-') === u.lang)
-    if (match) u.voice = match
-    window.speechSynthesis.speak(u)
-  } catch {
-    /* 浏览器不支持 TTS 时静默 */
-  }
-}
+// TTS 发音的唯一实现在 ../../tts.js（#/ttsconf 配置默认音色/语速）。
+// 这里 re-export 维持 drawers.js 等既有引用不变。
+export { speak } from '../../tts.js'
 
 /**
  * 创建划词/查词浮层组，挂到容器（需 position:relative）。

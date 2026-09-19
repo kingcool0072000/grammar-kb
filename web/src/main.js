@@ -17,6 +17,7 @@ import { mountGrading } from './views/grading.js'
 import { mountPrep } from './views/prep.js'
 import { mountAnalytics } from './views/analytics.js'
 import { mountTopics } from './views/topics.js'
+import { mountTtsConf } from './views/ttsconf.js'
 import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
 
@@ -43,6 +44,10 @@ const VIEWS = [
   { key: 'library', label: '泛读馆' },
   // 子工具页（不在 Tab 显示，hash 直达）：fcePapers 师生共用
   { key: 'fcePapers', label: 'FCE真题', hiddenTab: true },
+  // TTS 发音设置：隐藏配置页 #/ttsconf（音色列表 + 默认音色），双角色不进 Tab
+  // 注意 hiddenTab 的语义是「教师不进 Tab、学生仍显示」（FCE真题即如此），
+  // 真隐藏须用 noTab。
+  { key: 'ttsconf', label: '发音设置', hiddenTab: true, noTab: true },
   { key: 'courses', hiddenTab: true, teacher: true },
   { key: 'vocab', hiddenTab: true, teacher: true },
   { key: 'taxonomy', hiddenTab: true, teacher: true },
@@ -265,6 +270,9 @@ async function bootstrap() {
     } else if (route === 'topics') {
       // 专题学习：#/topics 列表 / #/topics/{id} 手册详情（视图内部按 hash 分发）
       mounted = mountTopics(container, { role })
+    } else if (route === 'ttsconf') {
+      // TTS 发音设置（隐藏页 #/ttsconf）
+      mounted = mountTtsConf(container)
     } else if (route === 'taxonomy') {
       mounted = mountTaxonomy(container, { pointsById, openKp: ctx.openKp })
     } else if (route === 'fce') {
