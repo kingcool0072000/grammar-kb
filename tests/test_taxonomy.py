@@ -45,14 +45,27 @@ def test_other_fallback():
     assert t == "其它"
 
 
+def _has_knowledge_points(db: Path) -> bool:
+    import sqlite3
+
+    try:
+        with sqlite3.connect(str(db)) as con:
+            n = con.execute("SELECT COUNT(*) FROM knowledge_point").fetchone()[0]
+        return n > 0
+    except sqlite3.Error:
+        return False
+
+
 @pytest.fixture(scope="module")
 def taxonomy():
     """真实库主题体系。data/grammar.db 是本地 ingest 构建产物（不入 git），
     CI 全新 checkout 没有——缺失时整批跳过而非 error（同 conftest 的
     GRAMMAR_TEST_PDF_DIR 跳过模式）。"""
     db = Path("data/grammar.db")
-    if not db.is_file():
-        pytest.skip(f"{db} 不存在（本地构建产物，未入库），跳过真实库用例")
+    # 双重守卫：文件存在 + 库里有知识点。裸 create_app() 会在默认路径
+    # 新建空库（CI 上曾被前序测试骗过此守卫），空库跑出来全是 0
+    if not db.is_file() or not _has_knowledge_points(db):
+        pytest.skip(f"{db} 不存在或为空库（本地构建产物，未入库），跳过真实库用例")
     from grammar_kb.db import GrammarDB
     from grammar_kb.query import Query
 

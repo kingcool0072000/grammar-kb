@@ -27,7 +27,14 @@ jobs:
         run: uvx ruff check .
 
       - name: Pytest
+        # CI 无真实库（data/*.db 均为本地构建产物，被 .gitignore 排除）：
+        # 1) 把默认语法库指到 tmp——防止 create_app() 裸调在 data/ 下新建
+        #    空库，骗过 test_taxonomy 的「文件存在」skip 守卫（连锁失败根因）
+        # 2) 依赖真库的用例（taxonomy 例句/复习分流、ECDICT 查词、FCE
+        #    reading 流程）由测试内守卫按库可用性自动跳过
         run: uv run pytest -q
+        env:
+          GRAMMAR_KB_DB: /tmp/gkb-ci-grammar.db
 
   web:
     runs-on: ubuntu-latest

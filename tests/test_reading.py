@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import shutil
 import sqlite3
+from pathlib import Path
 
 import pytest
 
@@ -21,12 +22,18 @@ DERIVED_TEXT = (
 )
 
 
+REAL_FCE_DB = Path(__file__).resolve().parent.parent / "data" / "fce.db"
+
+
 @pytest.fixture()
 def reading_env(tmp_path, monkeypatch):
-    """独立 fce.db（只留 1 段 base）+ 独立认证/成绩库。"""
-    shutil.copy(
-        __file__.rsplit("/", 1)[0] + "/../data/fce.db", tmp_path / "fce.db"
-    )
+    """独立 fce.db（只留 1 段 base）+ 独立认证/成绩库。
+
+    data/fce.db 是 OCR 入库的本地构建产物（未入 git）：CI 缺库时跳过
+    本文件全部真库用例，避免 shutil.copy 抛 FileNotFoundError。"""
+    if not REAL_FCE_DB.is_file():
+        pytest.skip("data/fce.db 不存在（本地构建产物，未入库），跳过真实库流程用例")
+    shutil.copy(REAL_FCE_DB, tmp_path / "fce.db")
     conn = sqlite3.connect(tmp_path / "fce.db")
     conn.execute("DELETE FROM reading_article WHERE kind != 'base' OR base_key NOT IN ('T1P1')")
     conn.commit()

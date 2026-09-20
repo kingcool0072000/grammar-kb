@@ -544,8 +544,20 @@ class TestPrep:
 
 # ---- API：查词（ECDICT 真库；AI 兜底 mock） ----
 
+def _real_ecdict_available() -> bool:
+    from grammar_kb.dict_db import DEFAULT_DB
+
+    return DEFAULT_DB.is_file() and DEFAULT_DB.stat().st_size > 1_000_000
+
+
+requires_real_ecdict = pytest.mark.skipif(
+    not _real_ecdict_available(),
+    reason="data/ecdict.db 不存在（45MB 本地构建产物，未入 git），跳过真库查词用例",
+)
+
 
 class TestDict:
+    @requires_real_ecdict
     def test_ecdict_hit(self, teacher):
         data = teacher.get("/library/dict/test").json()["data"]["entry"]
         assert data["source"] == "ecdict"
@@ -553,6 +565,7 @@ class TestDict:
         assert data["senses"]
         assert data["phonetic"]
 
+    @requires_real_ecdict
     def test_normalization_variants(self, teacher):
         # ECDICT 精确命中优先：carried 本身有词条（形容词）
         data = teacher.get("/library/dict/carried").json()["data"]["entry"]
@@ -585,6 +598,7 @@ class TestDict:
         nf = store.dict_lookup("zzzqqq")
         assert nf["source"] == "not_found"
 
+    @requires_real_ecdict
     def test_possessive(self, teacher):
         # children's → 所有格归一 → children（词典收录其 pl. 词条）
         data = teacher.get("/library/dict/children's").json()["data"]["entry"]
