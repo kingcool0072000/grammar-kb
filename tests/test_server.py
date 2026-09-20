@@ -97,31 +97,37 @@ def test_root(client):
         assert body["data"]["service"] == "grammar-kb"
 
 
-def test_api_prefix_strip(client):
+def test_api_prefix_strip(client, tmp_path, monkeypatch):
     """单进程部署：前端 /api/* 前缀被中间件剥掉后正常路由。
 
-    剥前缀中间件只在 serve_static=True（web/dist 存在）时注册：
-    本地开发机有 dist、CI 的 test job 不构建前端。CI 环境下用最小
-    假 dist 让应用按「部署形态」装配，保持该行为始终被测到。"""
+    剥前缀中间件只在 serve_static=True（web/dist 存在）时注册，而 CI 的
+    test job 不构建前端——所以本测试自带独立 app：先把 dist 指到临时
+    目录（GRAMMAR_KB_STATIC 无法换目录，直接用仓库 web/dist 位置，
+    已存在则直接用 client；不存在则造最小假 dist 后重建 app 再清理）。"""
     import pathlib
+    import shutil
 
     web_dist = pathlib.Path(__file__).resolve().parent.parent / "web" / "dist"
-    if not web_dist.is_dir():
-        web_dist.mkdir(parents=True)
-        (web_dist / "index.html").write_text("<html></html>", encoding="utf-8")
-        try:
-            r = client.get("/api/api-info")
-            assert r.status_code == 200, r.text
-            assert r.json()["data"]["service"] == "grammar-kb"
-        finally:
-            # 只清理本测试造的假产物；真实 dist（本地/构建产物）不动
-            import shutil
-
-            shutil.rmtree(web_dist, ignore_errors=True)
+    if web_dist.is_dir():
+        r = client.get("/api/api-info")
+        assert r.status_code == 200, r.text
+        assert r.json()["data"]["service"] == "grammar-kb"
         return
-    r = client.get("/api/api-info")
-    assert r.status_code == 200
-    assert r.json()["data"]["service"] == "grammar-kb"
+
+    # CI：无 dist——造最小假 dist 让 app 按「部署形态」装配
+    web_dist.mkdir(parents=True)
+    (web_dist / "index.html").write_text("<html></html>", encoding="utf-8")
+    try:
+        with tempfile.TemporaryDirectory() as d:
+            monkeypatch.setenv("GRAMMAR_KB_USERS", os.path.join(d, "users.json"))
+            monkeypatch.setenv("GRAMMAR_KB_AUTH_SECRET", os.path.join(d, "secret.key"))
+            app = create_app(str(pathlib.Path(d) / "g.db"))
+            with TestClient(app) as c:
+                r = c.get("/api/api-info")
+                assert r.status_code == 200, r.text
+                assert r.json()["data"]["service"] == "grammar-kb"
+    finally:
+        shutil.rmtree(web_dist, ignore_errors=True)  # 只清理本测试造的假 dist
 
 
 def test_lectures_list(client):
