@@ -1012,7 +1012,12 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
         @app.get("/", include_in_schema=False)
         def _index():
-            return _IndexFileResponse(web_dist / "index.html")
+            # 入口页禁缓存：index.html 引用按内容 hash 命名的 JS/CSS，资源可
+            # 长缓存，但入口本身若被浏览器启发式缓存，发版后用户会一直加载
+            # 旧 bundle（多次「线上已修好、用户仍报旧错」的根源）
+            resp = _IndexFileResponse(web_dist / "index.html")
+            resp.headers["Cache-Control"] = "no-cache"
+            return resp
 
         app.mount("/", StaticFiles(directory=web_dist, html=True), name="web")
     else:
