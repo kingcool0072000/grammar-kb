@@ -259,6 +259,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("POST", "/reading/recordings"),
         ("POST", "/recite/sessions"),
         ("GET", "/recite/sessions"),
+        ("GET", "/recite/wrongbook"),  # 错词本（学生只看自己的）
         ("POST", "/focus/sessions"),
         ("GET", "/focus/sessions"),  # /{id} 详情学生仍被端点内 _require_teacher 拦 403
         # 专题学习（学生自学手册进度；/topics/{id}/progress 学生只能写自己的行）
@@ -451,14 +452,25 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         return _ok(kbq.vocabulary(limit=limit, min_freq=min_freq))
 
     @app.get("/vocab-levels")
-    def vocab_levels(max_level: int = 7):
+    def vocab_levels(request: "fastapi.Request", max_level: int = 7):
         """分层词库（vocab_word 表）：单词 + L0-L7 级别 + 释义/例句。
 
         L0=哈一课本高频词（与 /vocabulary min_freq=2 同源，带语料增强）；
         L1-L7 为外部词表增量（孩子侧只显示 L 编号，级别名不下发）。
         max_level 截断层数（如 5 = L0-L5）。
         """
-        max_level = max(0, min(7, int(max_level)))
+        req_level = max(0, min(7, int(max_level)))
+        # 学生端受教师解锁约束：vocabUnlock=0 只能取 L0；教师不受限。
+        # counts 始终按 req_level 给全量（锁定层也要显示词数），items 才截断。
+        max_level = req_level
+        if request.state.role != "teacher":
+            try:
+                unlock = int(
+                    (library.get_settings().get("student") or {}).get("vocabUnlock") or 0
+                )
+            except Exception:  # noqa: BLE001 —— 设置读取失败按最保守处理
+                unlock = 0
+            max_level = min(req_level, max(0, min(5, unlock)))
         import json as _json
 
         def _j(s, dft):
@@ -468,6 +480,14 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
                 return _json.loads(dft)
 
         with kbq.db.conn as conn:
+            counts_all = dict(
+                (lv, n)
+                for lv, n in conn.execute(
+                    "SELECT level, COUNT(*) FROM vocab_word WHERE level <= ?"
+                    " GROUP BY level",
+                    (req_level,),
+                ).fetchall()
+            )
             rows = conn.execute(
                 "SELECT word, level, pos, gloss, meanings, example, extra"
                 " FROM vocab_word WHERE level <= ?",
@@ -488,10 +508,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             -(int(x["extra"].get("freq") or 0)) if x["level"] == 0 else x["word"],
             x["word"],
         ))
-        counts: dict[int, int] = {}
-        for it in items:
-            counts[it["level"]] = counts.get(it["level"], 0) + 1
-        return _ok({"counts": counts, "items": items})
+        return _ok({"counts": counts_all, "unlocked": max_level, "items": items})
 
     # ---- FCE 真题（只读；独立 data/fce.db，由 fce_paper 模块入库） ----
 
@@ -698,6 +715,16 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             ))
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
+
+    @app.get("/recite/wrongbook")
+    def recite_wrongbook(request: "fastapi.Request", user: Optional[str] = None, limit: int = 500):
+        """背单词错词本：聚合学生会话错词（错次/最近错时间）。学生只看自己的。"""
+        u = _request_user(request)
+        if request.state.role != "teacher":
+            u = _request_user(request)
+        elif user:
+            u = user
+        return _ok(recite.wrongbook(u, limit=limit))
 
     @app.get("/recite/sessions")
     def recite_list(

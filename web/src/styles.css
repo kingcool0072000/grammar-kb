@@ -2264,3 +2264,13 @@ li.open .topic-reveal-btn { display: none; }
 .rdc-preview p { margin: 0; }
 .rdc-widthbar { height: 8px; border-radius: 999px; background: var(--bg-soft); margin-top: 10px; overflow: hidden; }
 .rdc-widthbar i { display: block; height: 100%; width: 28%; background: linear-gradient(90deg, #b08d57, #8a6d3b); border-radius: 999px; transition: width .12s ease; }
+
+/* ---------- 背单词：层级锁定 + 错题本 ---------- */
+.chip.locked { opacity: .45; cursor: not-allowed; }
+.chip.locked:hover { border-color: var(--line); }
+.rc-wb-words { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.rc-wb-word {
+  font-size: 14px; color: var(--ink); background: var(--card);
+  border: 1px solid var(--line); border-radius: 8px; padding: 3px 10px; cursor: default;
+}
+.rc-wb-word sup { font-size: 10px; color: #b3541e; margin-left: 2px; font-weight: 700; }

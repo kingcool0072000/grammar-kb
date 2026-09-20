@@ -567,6 +567,8 @@ class LibraryStore:
             "fontFamily": s["student"].get("fontFamily") or "serif",
             # 专注力采集开关（泛读馆阅读器）：默认开，教师可在设置里关
             "focus": bool(s["student"].get("focus", True)),
+            # 分层词库解锁（背单词）：0=仅 L0；N=已解锁到 L N（0-5）
+            "vocabUnlock": max(0, min(5, int(s["student"].get("vocabUnlock") or 0))),
         }
         has_key = bool(s["ai"].get("apiKey"))
         if not teacher:
@@ -618,6 +620,11 @@ class LibraryStore:
                 if not isinstance(student_patch["focus"], bool):
                     raise LibraryError("student.focus 须为布尔值（true/false）", status=422)
                 student["focus"] = student_patch["focus"]
+            if "vocabUnlock" in student_patch:
+                vu = student_patch["vocabUnlock"]
+                if not isinstance(vu, int) or isinstance(vu, bool) or not 0 <= vu <= 5:
+                    raise LibraryError("student.vocabUnlock 须为 0-5 整数", status=422)
+                student["vocabUnlock"] = vu
 
         with self._tx() as conn:
             conn.execute(

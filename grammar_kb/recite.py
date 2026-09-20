@@ -67,6 +67,42 @@ class ReciteStore:
             ).fetchone()
         return _out(row)
 
+    def wrongbook(self, user: str, limit: int = 500) -> list[dict]:
+        """错词本：聚合该学生全部会话的错词。
+
+        每词统计：答错次数 / 最近答错时间 / 最近答对标记（其后的会话里
+        没再错过该词则视为已翻正——翻正词仍列出但标 mastered，供复习。
+        """
+        user = (user or "").strip()[:60]
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT wrong_words, created_at FROM recite_sessions"
+                " WHERE user = ? ORDER BY id DESC LIMIT ?",
+                (user, int(limit)),
+            ).fetchall()
+        wrong_at: dict[str, str] = {}
+        counts: dict[str, int] = {}
+        seen_sessions = 0
+        # rows 由新到旧：同一词在新会话错过、且此后（更旧的）会话不再出现
+        # 无法直接推「答对」——sessions 只有错词表。简化口径：
+        # 错词本 = 全部历史错词 + 错次 + 最近错时间；翻正判定交给前端
+        # 进度（localStorage right>=wrong）不做，云端只做事实聚合。
+        for r in rows:
+            try:
+                ws = json.loads(r["wrong_words"] or "[]")
+            except (ValueError, TypeError):
+                ws = []
+            for w in ws:
+                w = str(w)[:60]
+                counts[w] = counts.get(w, 0) + 1
+                wrong_at.setdefault(w, r["created_at"])
+            seen_sessions += 1
+        items = [
+            {"word": w, "wrong_count": c, "last_wrong_at": wrong_at[w]}
+            for w, c in sorted(counts.items(), key=lambda kv: -kv[1])
+        ]
+        return items
+
     def list(self, user: Optional[str] = None, limit: int = 100) -> list[dict]:
         sql = "SELECT * FROM recite_sessions"
         args: tuple = ()

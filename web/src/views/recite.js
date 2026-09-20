@@ -7,7 +7,6 @@ import { escapeHtml } from '../render.js'
 //
 // 基础词库来自 /vocabulary（哈一讲义词表）；进阶词库为静态
 // advanced-vocab.json（孩子侧只叫「进阶」，不提来源级别）。
-import advancedVocab from '../data/advanced-vocab.json'
 
 const POS_CN = { v: '动词', n: '名词', adj: '形容词', adv: '副词', prep: '介词', conj: '连词', pron: '代词', num: '数词', proper: '专名' }
 const FORM_CN = {
@@ -138,7 +137,7 @@ function fmtDuration(sec) {
 
 // ---- 视图 ----------------------------------------------------------------- //
 
-export function mountRecite(el, { vocab, role }) {
+export async function mountRecite(el, { vocab, role }) {
   // 学生只能提交记录，不能清除（与成绩管理权限一致）
   const canClear = role === 'teacher'
 
@@ -151,10 +150,7 @@ export function mountRecite(el, { vocab, role }) {
     <div class="recite-setup card">
       <div class="recite-field">
         <label>词库</label>
-        <div class="chip-row" id="rc-scope">
-          <button class="chip active" data-scope="all">基础（哈一 ${vocab.length} 词）</button>
-          <button class="chip" data-scope="advanced">进阶（${advancedVocab.length} 词）</button>
-        </div>
+        <div class="chip-row" id="rc-scope">词库加载中…</div>
       </div>
       <div class="recite-field">
         <label>每组数量</label>
@@ -166,17 +162,49 @@ export function mountRecite(el, { vocab, role }) {
     </div>
     <div class="recite-stats" id="rc-stats"></div>
     <div id="rc-history"></div>
+    <div id="rc-wrongbook"></div>
   `
 
   const state = { scope: 'all', size: 20, mode: 'flip' }
 
-  // 看板 + 统计一起渲染（哈1常见单词表进度）
+  // ---- 词库层级选择（/vocab-levels 按解锁截断：拿不到的层=锁定） ----
+  const LEVEL_MAX = 5
+  let levelCounts = {}
+  let unlocked = 0
+  try {
+    const d = await api.vocabLevels({ maxLevel: LEVEL_MAX })
+    levelCounts = d.counts || {}
+    unlocked = Number(d.unlocked ?? 0)
+  } catch { /* 兜底：chips 退化为基础一项 */ }
+
+  function renderScopeChips() {
+    const row = el.querySelector('#rc-scope')
+    if (!row) return
+    if (!Object.keys(levelCounts).length) {
+      row.innerHTML = `<button class="chip active" data-scope="all">基础（哈一 ${vocab.length} 词）</button>`
+      state.scope = 'all'
+      return
+    }
+    const cur = state.scope === 'all' ? 0 : Number(state.scope)
+    row.innerHTML = [0, 1, 2, 3, 4, 5]
+      .map((lv) => {
+        const n = levelCounts[String(lv)] || 0
+        const locked = lv > unlocked
+        const label = lv === 0 ? 'L0 课本' : `L${lv}`
+        return `<button class="chip ${lv === cur ? 'active' : ''} ${locked ? 'locked' : ''}"
+          data-scope="${lv === 0 ? 'all' : lv}" ${locked ? 'disabled title="先把前面的级别背完，请老师解锁"' : ''}>${locked ? '🔒 ' : ''}${label} · ${n} 词</button>`
+      })
+      .join('')
+  }
+  renderScopeChips()
+
+  // 看板 + 统计一起渲染（当前层单词表进度）
   function renderBoard() {
     const $dash = el.querySelector('#rc-dash')
     const $stats = el.querySelector('#rc-stats')
     const p = loadProgress()
     const words = Object.keys(p)
-    const total = vocab.length
+    const total = pool().length
     const learned = words.length
     const mastered = words.filter((w) => p[w].right > 0 && p[w].right >= p[w].wrong).length
     const hardN = words.filter((w) => p[w].wrong > p[w].right).length
@@ -186,7 +214,7 @@ export function mountRecite(el, { vocab, role }) {
 
     $dash.innerHTML = `
       <div class="recite-dash-head">
-        <h3>${state.scope === 'advanced' ? '进阶单词表' : '哈1常见单词表'}</h3>
+        <h3>${state.scope === 'all' ? 'L0 课本单词' : 'L' + state.scope + ' 单词'}</h3>
         <span class="recite-dash-pct">${pct}%</span>
       </div>
       <div class="dash-bar"><i style="width:${pct}%"></i></div>
@@ -219,9 +247,22 @@ export function mountRecite(el, { vocab, role }) {
       })
   }
 
+  // 分层词库词条（/vocab-levels 与上面 chips 共用同一次加载思路；
+  // （独立请求 items，与 chips 那次分开，避免耦合渲染顺序）
+  let levelVocab = []
+  try {
+    levelVocab = (await api.vocabLevels({ maxLevel: LEVEL_MAX })).items || []
+  } catch {
+    levelVocab = [] // 接口失败时仍可用基础词表（下方兜底）
+  }
+  const byLevel = (lv) => levelVocab.filter((e) => e.level === lv)
+
   function pool() {
-    if (state.scope === 'advanced') return advancedVocab
-    return vocab
+    if (state.scope === 'all') {
+      // 兜底：接口失败时用传入的哈一基础表（与 L0 同源）
+      return levelVocab.length ? byLevel(0) : vocab
+    }
+    return byLevel(Number(state.scope))
   }
 
 
@@ -267,6 +308,69 @@ export function mountRecite(el, { vocab, role }) {
   }
   renderHistory()
 
+  // ---- 错题本（云端聚合：错次 / 最近答错） ----
+  const renderWrongbook = async () => {
+    const host = el.querySelector('#rc-wrongbook')
+    if (!host) return
+    let words
+    try {
+      words = await api.wrongbook()
+    } catch {
+      host.innerHTML = ''
+      return
+    }
+    if (!words.length) {
+      host.innerHTML = `
+        <section class="fce-group">
+          <div class="fce-group-title">📕 错题本</div>
+          <p class="reading-hint">答错的单词会自动收进来。错了不可怕，练到全对它就会变成你的词。</p>
+        </section>`
+      return
+    }
+    const findEntry = (w) =>
+      levelVocab.find((x) => x.word === w) ||
+      vocab.find((x) => x.word === w) || {
+        word: w, pos: [], meanings: [], gloss: '', level: -1,
+        // 最小可出题兜底：认词题至少有词本身
+        example: {}, extra: {},
+      }
+    host.innerHTML = `
+      <section class="fce-group">
+        <div class="fce-group-title">📕 错题本（${words.length} 词）</div>
+        <div class="rc-wb-words">
+          ${words.slice(0, 60).map((w) => {
+            const e = findEntry(w.word)
+            return `<span class="rc-wb-word" title="${e && e.gloss ? escapeHtml(e.gloss.slice(0, 40)) : ''}">${escapeHtml(w.word)}<sup>${w.wrong_count}</sup></span>`
+          }).join('')}
+          ${words.length > 60 ? `<span class="reading-hint">…共 ${words.length} 词</span>` : ''}
+        </div>
+        <div class="chip-row" style="margin-top:10px">
+          <button class="btn-primary" id="rc-wb-drill">只练错词（${Math.min(20, words.length)} 词）</button>
+        </div>
+      </section>`
+    const drill = host.querySelector('#rc-wb-drill')
+    if (drill)
+      drill.addEventListener('click', () => {
+        const entries = shuffle(words.map((w) => findEntry(w.word))).slice(0, 20).map((e) => ({
+          ...e,
+          display: '',
+          examples: e.example && e.example.en ? [e.example] : (e.examples || []),
+        }))
+        if (!entries.length) return
+        startSession(el, {
+          pool: entries,
+          size: entries.length,
+          mode: 'flip',
+          scope: 'wrongbook',
+          onFinish: () => {
+            renderBoard()
+            setTimeout(renderWrongbook, 800)
+          },
+        })
+      })
+  }
+  renderWrongbook()
+
   el.querySelectorAll('.chip-row').forEach((row) => {
     row.addEventListener('click', (e) => {
       const chip = e.target.closest('.chip')
@@ -275,7 +379,7 @@ export function mountRecite(el, { vocab, role }) {
       const d = chip.dataset
       if (d.scope) state.scope = d.scope
       if (d.size) state.size = Number(d.size)
-      if (d.scope) renderBoard() // 切词库：看板随之切换
+      if (d.scope) { renderScopeChips(); renderBoard() } // 切词库：chips 与看板随之切换
     })
   })
 
