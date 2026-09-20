@@ -98,7 +98,27 @@ def test_root(client):
 
 
 def test_api_prefix_strip(client):
-    """单进程部署：前端 /api/* 前缀被中间件剥掉后正常路由。"""
+    """单进程部署：前端 /api/* 前缀被中间件剥掉后正常路由。
+
+    剥前缀中间件只在 serve_static=True（web/dist 存在）时注册：
+    本地开发机有 dist、CI 的 test job 不构建前端。CI 环境下用最小
+    假 dist 让应用按「部署形态」装配，保持该行为始终被测到。"""
+    import pathlib
+
+    web_dist = pathlib.Path(__file__).resolve().parent.parent / "web" / "dist"
+    if not web_dist.is_dir():
+        web_dist.mkdir(parents=True)
+        (web_dist / "index.html").write_text("<html></html>", encoding="utf-8")
+        try:
+            r = client.get("/api/api-info")
+            assert r.status_code == 200, r.text
+            assert r.json()["data"]["service"] == "grammar-kb"
+        finally:
+            # 只清理本测试造的假产物；真实 dist（本地/构建产物）不动
+            import shutil
+
+            shutil.rmtree(web_dist, ignore_errors=True)
+        return
     r = client.get("/api/api-info")
     assert r.status_code == 200
     assert r.json()["data"]["service"] == "grammar-kb"
