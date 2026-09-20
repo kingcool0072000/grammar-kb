@@ -22,6 +22,19 @@ DERIVED_TEXT = (
 )
 
 
+def _has_base_articles(db: Path) -> bool:
+    import sqlite3 as _sq
+
+    try:
+        with _sq.connect(str(db)) as con:
+            n = con.execute(
+                "SELECT COUNT(*) FROM reading_article WHERE kind = 'base'"
+            ).fetchone()[0]
+        return n > 0
+    except _sq.Error:
+        return False
+
+
 REAL_FCE_DB = Path(__file__).resolve().parent.parent / "data" / "fce.db"
 
 
@@ -31,8 +44,10 @@ def reading_env(tmp_path, monkeypatch):
 
     data/fce.db 是 OCR 入库的本地构建产物（未入 git）：CI 缺库时跳过
     本文件全部真库用例，避免 shutil.copy 抛 FileNotFoundError。"""
-    if not REAL_FCE_DB.is_file():
-        pytest.skip("data/fce.db 不存在（本地构建产物，未入库），跳过真实库流程用例")
+    if not REAL_FCE_DB.is_file() or not _has_base_articles(REAL_FCE_DB):
+        # 双重守卫：裸 create_app() 可能在默认路径造出「空壳」fce.db
+        #（FceSubmissionStore 连接即建表），文件存在≠真库
+        pytest.skip("data/fce.db 不存在或无 base 原文段（本地构建产物，未入库），跳过真实库流程用例")
     shutil.copy(REAL_FCE_DB, tmp_path / "fce.db")
     conn = sqlite3.connect(tmp_path / "fce.db")
     conn.execute("DELETE FROM reading_article WHERE kind != 'base' OR base_key NOT IN ('T1P1')")

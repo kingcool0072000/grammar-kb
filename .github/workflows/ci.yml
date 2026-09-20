@@ -35,6 +35,10 @@ jobs:
         run: uv run pytest -q
         env:
           GRAMMAR_KB_DB: /tmp/gkb-ci-grammar.db
+          # fce.db 同理：裸 create_app() 的 FceSubmissionStore 首次连接即
+          # sqlite3.connect 建空文件（executescript 建表），若不隔离会在
+          # data/ 下造出空 fce.db，骗过 test_reading 的真库 skip 守卫
+          GRAMMAR_KB_FCE_DB: /tmp/gkb-ci-fce.db
 
   web:
     runs-on: ubuntu-latest
