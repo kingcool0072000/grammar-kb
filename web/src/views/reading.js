@@ -231,7 +231,10 @@ async function renderDetail(el, id, role) {
   }
 
   // ---- 录音 ----
-  setupRecorder(el, art)
+  // focusTracker 是本函数的局部采集器，必须显式传入：曾按名直接引用
+  //（setupRecorder 与本函数作用域不同），点「开始录音」即 ReferenceError，
+  // 录音功能自 8ec47ff 起损坏
+  setupRecorder(el, art, focusTracker)
   el.querySelector('#rd-back').addEventListener('click', () => mountReading(el, { role }))
 }
 
@@ -400,7 +403,8 @@ function setupAudioPlayer(el, art, playBtn) {
 }
 
 // ---------- 录音机 ----------
-function setupRecorder(el, art) {
+// focusTracker：专注力采集器（renderArticle 传入；录音开始/结束记入活动时间线）
+function setupRecorder(el, art, focusTracker) {
   const btn = el.querySelector('#rd-record')
   const timeEl = el.querySelector('#rd-rectime')
   const msgEl = el.querySelector('#rd-recmsg')
