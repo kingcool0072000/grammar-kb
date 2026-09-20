@@ -178,7 +178,8 @@ def test_v2_migration_idempotent(tmp_path):
         fast_scroll_flags INTEGER, mouse_metrics TEXT, polyline TEXT,
         score INTEGER, score_detail TEXT, created_at TEXT)""")
     con.execute("INSERT INTO focus_sessions (session_id, user, total_sec, score) VALUES ('old1','malin',100,50)")
-    con.commit(); con.close()
+    con.commit()
+    con.close()
     store = FocusStore(str(db))  # 触发迁移
     got = store.get(store.list()[0]["id"])
     assert got["module"] == "library" and got["range_label"] == ""  # 旧行有默认值

@@ -39,8 +39,8 @@ class TopicStore:
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or _default_db_path()
         if Path(self.db_path).exists():
-            with self._connect() as conn:
-                pass  # SCHEMA 在 _connect 内执行
+            # 打开一次触发建表（SCHEMA 在 _connect 内执行）
+            self._connect().close()
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
