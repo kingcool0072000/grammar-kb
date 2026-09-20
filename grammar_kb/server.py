@@ -245,6 +245,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     _STUDENT_ALLOW = (
         ("GET", "/stats"),
         ("GET", "/vocabulary"),
+        ("GET", "/vocab-levels"),  # 分层词库（背单词 L0-L7）
         ("GET", "/dict/"),
         ("GET", "/exams"),
         ("POST", "/exams"),
@@ -448,6 +449,49 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     def vocabulary(limit: int = 300, min_freq: int = 2):
         """基于讲义语料的单词表（释义/词性/词形变化/来源）。"""
         return _ok(kbq.vocabulary(limit=limit, min_freq=min_freq))
+
+    @app.get("/vocab-levels")
+    def vocab_levels(max_level: int = 7):
+        """分层词库（vocab_word 表）：单词 + L0-L7 级别 + 释义/例句。
+
+        L0=哈一课本高频词（与 /vocabulary min_freq=2 同源，带语料增强）；
+        L1-L7 为外部词表增量（孩子侧只显示 L 编号，级别名不下发）。
+        max_level 截断层数（如 5 = L0-L5）。
+        """
+        max_level = max(0, min(7, int(max_level)))
+        import json as _json
+
+        def _j(s, dft):
+            try:
+                return _json.loads(s or dft)
+            except (ValueError, TypeError):
+                return _json.loads(dft)
+
+        with kbq.db.conn as conn:
+            rows = conn.execute(
+                "SELECT word, level, pos, gloss, meanings, example, extra"
+                " FROM vocab_word WHERE level <= ?",
+                (max_level,),
+            ).fetchall()
+        items = [{
+            "word": r["word"],
+            "level": r["level"],
+            "pos": _j(r["pos"], "[]"),
+            "gloss": r["gloss"] or "",
+            "meanings": _j(r["meanings"], "[]"),
+            "example": _j(r["example"], "{}"),
+            "extra": _j(r["extra"], "{}"),
+        } for r in rows]
+        # L0 按语料词频降序（跟「背单词」原有顺序一致），L1+ 按字母序
+        items.sort(key=lambda x: (
+            x["level"],
+            -(int(x["extra"].get("freq") or 0)) if x["level"] == 0 else x["word"],
+            x["word"],
+        ))
+        counts: dict[int, int] = {}
+        for it in items:
+            counts[it["level"]] = counts.get(it["level"], 0) + 1
+        return _ok({"counts": counts, "items": items})
 
     # ---- FCE 真题（只读；独立 data/fce.db，由 fce_paper 模块入库） ----
 
