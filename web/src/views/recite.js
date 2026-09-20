@@ -1,27 +1,21 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
 
-// 背单词：全屏沉浸卡片。三种题型——认词（英→中）、拼写（中→英，打字输入）、
-// 动词变形（go 的过去式？）。错词间隔重现直到答对；进度存 localStorage。
+// 背单词：全屏沉浸卡片。三种题型——认词（英→中）、拼写（中→英）、
+// 动词变形（go 的过去式？），统一「翻面自评」作答；错词间隔重现直到答对；
+// 进度存 localStorage（基础/进阶两个词库各自独立）。
 //
-// 数据来自 /vocabulary（讲义词表）；特殊拼写词（special_spellings 非空，
-// 即不规则动词/辅音双写/y→i 等）在拼写题里优先出。
+// 基础词库来自 /vocabulary（哈一讲义词表）；进阶词库为静态
+// advanced-vocab.json（孩子侧只叫「进阶」，不提来源级别）。
+import advancedVocab from '../data/advanced-vocab.json'
+
 const POS_CN = { v: '动词', n: '名词', adj: '形容词', adv: '副词', prep: '介词', conj: '连词', pron: '代词', num: '数词', proper: '专名' }
 const FORM_CN = {
   past: '过去式', past_participle: '过去分词', present_participle: '现在分词',
   third_singular: '第三人称单数', plural: '复数', comparative: '比较级', superlative: '最高级',
 }
 const FORM_KEYS = ['past', 'past_participle', 'present_participle', 'third_singular', 'comparative', 'superlative', 'plural']
-// 孩子按年级习惯用全拼，但音标键太挤；去掉重复的 ci/ck 后恰好能全放下
-const KEY_ROWS = [
-  'qwertyuiop'.split(''),
-  'asdfghjkl'.split(''),
-  ['⇧', ...'zxcvbnm'.split(''), '⌫'],
-  ['我记住了', '不认识'],
-]
-const GROUP_SIZES = [10, 20, 30]
-
-// ---- 出题 ----------------------------------------------------------------- //
+const GROUP_SIZES = [20, 30]
 
 function shuffle(arr) {
   const a = arr.slice()
@@ -156,24 +150,16 @@ export function mountRecite(el, { vocab, role }) {
     <div class="card recite-dash" id="rc-dash"></div>
     <div class="recite-setup card">
       <div class="recite-field">
-        <label>背哪些词</label>
+        <label>词库</label>
         <div class="chip-row" id="rc-scope">
-          <button class="chip active" data-scope="all">全部</button>
-          <button class="chip" data-scope="verb">只动词</button>
-          <button class="chip" data-scope="special">特殊拼写</button>
+          <button class="chip active" data-scope="all">基础（哈一 ${vocab.length} 词）</button>
+          <button class="chip" data-scope="advanced">进阶（${advancedVocab.length} 词）</button>
         </div>
       </div>
       <div class="recite-field">
         <label>每组数量</label>
         <div class="chip-row" id="rc-size">
-          ${GROUP_SIZES.map((n, i) => `<button class="chip ${i === 1 ? 'active' : ''}" data-size="${n}">${n} 词</button>`).join('')}
-        </div>
-      </div>
-      <div class="recite-field">
-        <label>拼写作答方式</label>
-        <div class="chip-row" id="rc-mode">
-          <button class="chip active" data-mode="type">打字输入</button>
-          <button class="chip" data-mode="flip">翻面自评</button>
+          ${GROUP_SIZES.map((n, i) => `<button class="chip ${i === 0 ? 'active' : ''}" data-size="${n}">${n} 词</button>`).join('')}
         </div>
       </div>
       <button class="btn-primary" id="rc-start">开始背单词</button>
@@ -182,7 +168,7 @@ export function mountRecite(el, { vocab, role }) {
     <div id="rc-history"></div>
   `
 
-  const state = { scope: 'all', size: 20, mode: 'type' }
+  const state = { scope: 'all', size: 20, mode: 'flip' }
 
   // 看板 + 统计一起渲染（哈1常见单词表进度）
   function renderBoard() {
@@ -200,7 +186,7 @@ export function mountRecite(el, { vocab, role }) {
 
     $dash.innerHTML = `
       <div class="recite-dash-head">
-        <h3>哈1常见单词表</h3>
+        <h3>${state.scope === 'advanced' ? '进阶单词表' : '哈1常见单词表'}</h3>
         <span class="recite-dash-pct">${pct}%</span>
       </div>
       <div class="dash-bar"><i style="width:${pct}%"></i></div>
@@ -234,8 +220,7 @@ export function mountRecite(el, { vocab, role }) {
   }
 
   function pool() {
-    if (state.scope === 'verb') return vocab.filter((e) => (e.pos || []).includes('v'))
-    if (state.scope === 'special') return vocab.filter((e) => (e.special_spellings || []).length)
+    if (state.scope === 'advanced') return advancedVocab
     return vocab
   }
 
@@ -290,7 +275,7 @@ export function mountRecite(el, { vocab, role }) {
       const d = chip.dataset
       if (d.scope) state.scope = d.scope
       if (d.size) state.size = Number(d.size)
-      if (d.mode) state.mode = d.mode
+      if (d.scope) renderBoard() // 切词库：看板随之切换
     })
   })
 
@@ -443,13 +428,11 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
       <div class="rc-answer-area"></div>
       <div class="rc-extra"></div>
     </div>
-    <div class="rc-kb">${KEY_ROWS.map((row) => `<div class="rc-kb-row">${row.map((k) => `<button class="rc-key" data-key="${k}">${k}</button>`).join('')}</div>`).join('')}</div>
   `
 
   const $card = overlay.querySelector('.rc-card')
   const $area = overlay.querySelector('.rc-answer-area')
   const $extra = overlay.querySelector('.rc-extra')
-  const $kb = overlay.querySelector('.rc-kb')
 
   overlay.querySelector('.rc-quit').addEventListener('click', onQuit)
 
@@ -464,21 +447,25 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
               `<span class="rc-form"><i>${FORM_CN[k]}</i> ${k === q.key && q.type === 'form' ? `<b>${escapeHtml(v)}</b>` : escapeHtml(v)}</span>`,
           )
           .join('')}
-        ${example ? `<div class="rc-example">${escapeHtml(example.en)}<br/><span class="muted">${escapeHtml(example.zh)}</span></div>` : ''}
+        ${example
+          ? `<div class="rc-example">${escapeHtml(example.en)}<br/><span class="muted">${escapeHtml(example.zh)}</span></div>`
+          : e.example
+            ? `<div class="rc-example">${escapeHtml(e.example)}<br/><span class="muted">${escapeHtml(e.example_cn || '')}</span></div>`
+            : ''}
       </div>
     `
   }
 
-  if (q.type === 'en2zh' || (q.type !== 'form' && mode === 'flip')) {
-    // 认词 / 翻面自评：先看正面，点击卡片或按空格翻面自评
+  {
+    // 统一翻面自评：正面看提示（词/释义/变形问法），翻面看答案三键自评
     $card.dataset.state = 'front'
     $area.innerHTML = '<div class="rc-hint">点击卡片或按空格键翻面</div>'
-    $kb.style.display = 'none'
     const flip = () => {
       if ($card.dataset.state !== 'front') return
       $card.dataset.state = 'back'
       revealDetail()
       $area.innerHTML = `
+        ${q.type !== 'en2zh' ? `<div class="rc-word">${escapeHtml(q.answer)}</div>` : ''}
         <div class="rc-self">
           <button class="rc-btn wrong" data-r="0">不认识</button>
           <button class="rc-btn fuzzy" data-r="1">模糊</button>
@@ -503,85 +490,6 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
     document.addEventListener('keydown', onKey)
     // 会话结束后移除监听：卡片被替换前挂到 overlay 生命周期
     overlay.__removeKey = () => document.removeEventListener('keydown', onKey)
-  } else {
-    // 拼写 / 变形：打字输入判定
-    let input = ''
-    const answer = q.answer
-    $kb.style.display = ''
-    let shift = false
-
-    const paint = () => {
-      const shown = input || ''
-      $area.innerHTML = `<div class="rc-input">${escapeHtml(shown) || '<span class="muted">输入答案…</span>'}</div>`
-    }
-    paint()
-
-    const submit = (force = false) => {
-      const val = input.trim()
-      if (!val && !force) return
-      const correct = val ? eqIgnoringCase(val, answer) : false
-      // 判分后立即摘掉打字监听：回车交给"下一题"，字母不再改写判分展示
-      document.removeEventListener('keydown', onPhys)
-      $kb.style.display = 'none'
-      revealDetail()
-      $area.innerHTML = `
-        <div class="rc-input final">${diffHtml(answer, input)}</div>
-        <div class="rc-verdict ${correct ? 'ok' : 'no'}">${correct ? '✓ 正确' : '✗ 正确答案：' + escapeHtml(answer)}</div>
-        <button class="rc-btn ${correct ? 'right' : 'wrong'}" id="rc-next">下一题（回车）</button>`
-      overlay.querySelector('#rc-next').addEventListener('click', next)
-      const onEnter = (ev) => {
-        if (ev.key === 'Enter') {
-          ev.preventDefault()
-          next()
-        }
-      }
-      document.addEventListener('keydown', onEnter)
-      overlay.__removeKey = () => {
-        document.removeEventListener('keydown', onEnter)
-      }
-      function next() {
-        if (overlay.__removeKey) overlay.__removeKey()
-        onAnswer(correct)
-      }
-    }
-
-    const typeKey = (k) => {
-      if (k === '⌫') input = input.slice(0, -1)
-      else if (k === '⇧') {
-        shift = !shift
-        $kb.querySelectorAll('.rc-key[data-key]').forEach((b) => {
-          if (/^[a-z]$/.test(b.dataset.key)) b.textContent = shift ? b.dataset.key.toUpperCase() : b.dataset.key
-        })
-        return
-      } else if (k === '我记住了' || k === '不认识') {
-        // 自评放弃：记住了=直接判对；不认识=强制交卷展示正确答案
-        input = k === '我记住了' ? answer : ''
-        submit(true)
-        return
-      } else input += k
-      paint()
-    }
-
-    $kb.addEventListener('click', (ev) => {
-      const key = ev.target.closest('.rc-key')
-      if (key) typeKey(key.dataset.key)
-    })
-
-    const onPhys = (ev) => {
-      if (ev.key === 'Enter') {
-        ev.preventDefault()
-        submit()
-      } else if (ev.key === 'Backspace') {
-        ev.preventDefault()
-        input = input.slice(0, -1)
-        paint()
-      } else if (/^[a-zA-Z]$/.test(ev.key)) {
-        input += ev.key
-        paint()
-      }
-    }
-    document.addEventListener('keydown', onPhys)
-    overlay.__removeKey = () => document.removeEventListener('keydown', onPhys)
   }
 }
 
@@ -615,5 +523,5 @@ function mountResult(el, { total, uniqWrong, acc, duration, pool, size, mode, sc
 }
 
 function scopeCn(scope) {
-  return { all: '全部词表', verb: '只动词', special: '特殊拼写' }[scope] || scope || '全部词表'
+  return { all: '基础词表', advanced: '进阶词表', verb: '只动词', special: '特殊拼写' }[scope] || scope || '基础词表'
 }
