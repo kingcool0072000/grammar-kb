@@ -166,6 +166,10 @@ export async function mountRecite(el, { vocab, role }) {
   `
 
   const state = { scope: 'all', size: 20, mode: 'flip' }
+  // 词库加载完成前禁用开始钮：mount 的两次 await vocab-levels 期间点击
+  // 会因 pool 为空而静默无反应（e2e 时序假故障的根源）
+  const startBtn = el.querySelector('#rc-start')
+  startBtn.disabled = true
 
   // ---- 词库层级选择（/vocab-levels 按解锁截断：拿不到的层=锁定） ----
   const LEVEL_MAX = 5
@@ -254,6 +258,8 @@ export async function mountRecite(el, { vocab, role }) {
     levelVocab = (await api.vocabLevels({ maxLevel: LEVEL_MAX })).items || []
   } catch {
     levelVocab = [] // 接口失败时仍可用基础词表（下方兜底）
+  } finally {
+    startBtn.disabled = false
   }
   const byLevel = (lv) => levelVocab.filter((e) => e.level === lv)
 
