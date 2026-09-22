@@ -553,8 +553,8 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
           .join('')}
         ${example
           ? `<div class="rc-example">${escapeHtml(example.en)}<br/><span class="muted">${escapeHtml(example.zh)}</span></div>`
-          : e.example
-            ? `<div class="rc-example">${escapeHtml(e.example)}<br/><span class="muted">${escapeHtml(e.example_cn || '')}</span></div>`
+          : e.example && e.example.en
+            ? `<div class="rc-example">${escapeHtml(e.example.en)}<br/><span class="muted">${escapeHtml(e.example.zh || '')}</span></div>`
             : ''}
       </div>
     `
