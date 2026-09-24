@@ -64,10 +64,11 @@ export async function mountConfig(el) {
       <div class="rdc-row">
         <label>正文宽度</label>
         <div class="lib-seg" id="cfg-libwidth">
-          <button type="button" data-v="standard" class="${lib.libWidth !== 'wide' ? 'active' : ''}">标准</button>
+          <button type="button" data-v="standard" class="${!lib.libWidth || lib.libWidth === 'standard' ? 'active' : ''}">标准</button>
+          <button type="button" data-v="semiwide" class="${lib.libWidth === 'semiwide' ? 'active' : ''}">稍宽（60%）</button>
           <button type="button" data-v="wide" class="${lib.libWidth === 'wide' ? 'active' : ''}">宽（80%）</button>
         </div>
-        <span class="tts-vtag">下次打开书籍生效</span>
+        <span class="tts-vtag">下次打开书籍生效；标准=620px 窄栏，稍宽/宽按屏宽百分比</span>
       </div>
     </div>
 

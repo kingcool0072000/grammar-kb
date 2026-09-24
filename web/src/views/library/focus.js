@@ -44,11 +44,30 @@ function dist(ax, ay, bx, by) {
 // 纯函数（导出供单元测试）：输入 [{x,y,t}]（t 为相对会话开始的 ms）
 // ---------------------------------------------------------------------------
 
-/** 鼠标指标：总位移 / 活跃均速 / p95 速度 / 活跃桶占比 / 空闲空档 / 乱晃指数 */
-export function computeMetrics(points) {
+/**
+ * 鼠标指标：总位移 / 活跃均速 / p95 速度 / 活跃桶占比 / 空闲空档 / 乱晃指数。
+ * v3：可选 wheelSamples [{t 秒, dy}]（触控板上划/下滑 1s 桶）——纯触控板
+ * 阅读（不动鼠标只滚动）时 active_ratio 以 wheel 桶补亮，避免被误判低活跃。
+ */
+export function computeMetrics(points, wheelSamples, wheelStats) {
   const n = points ? points.length : 0
+  const wheel = (wheelSamples || []).filter((w) => w && Number.isFinite(w.t))
+  if (!n && !wheel.length) {
+    return { distance_px: 0, avg_speed: 0, p95_speed: 0, active_ratio: 0, idle_gaps: [], jitter: 0, points: 0, wheel: { up: 0, down: 0, buckets: 0 } }
+  }
   if (!n) {
-    return { distance_px: 0, avg_speed: 0, p95_speed: 0, active_ratio: 0, idle_gaps: [], jitter: 0, points: 0 }
+    // 纯 wheel 会话：距离/速度类全 0，活跃度只看 wheel 桶
+    const t0 = wheel[0].t
+    const span = Math.max(0, wheel[wheel.length - 1].t - t0)
+    const totalBuckets = Math.max(1, Math.ceil((span + 1) / (ACTIVE_BUCKET_MS / 1000)))
+    const up = wheel.filter((w) => w.dy < 0).length
+    const down = wheel.filter((w) => w.dy > 0).length
+    return {
+      distance_px: 0, avg_speed: 0, p95_speed: 0,
+      active_ratio: Math.round(Math.min(1, wheel.length / totalBuckets) * 1000) / 1000,
+      idle_gaps: [], jitter: 0, points: 0,
+      wheel: wheelStatOrSamples(wheelStats, wheel),
+    }
   }
   let distance = 0 // 总位移
   let activeDist = 0 // 有移动段的位移
@@ -74,12 +93,18 @@ export function computeMetrics(points) {
     p95 = s[Math.min(s.length - 1, Math.floor(s.length * 0.95))]
   }
 
-  // active_ratio：轨迹时间跨度切 30s 桶，有鼠标点的桶占比
-  const span = Math.max(0, points[n - 1].t - points[0].t)
+  // active_ratio：联合时间跨度（鼠标点 × wheel 桶，ms）切 30s 桶，
+  // 有鼠标点【或 wheel 桶】占比——纯触控板时段既进分子也进分母
+  const t0 = Math.min(points[0].t, wheel.length ? wheel[0].t * 1000 : Infinity)
+  const t1 = Math.max(points[n - 1].t, wheel.length ? wheel[wheel.length - 1].t * 1000 : -Infinity)
+  const span = Math.max(0, t1 - t0)
   const totalBuckets = Math.max(1, Math.ceil((span + 1) / ACTIVE_BUCKET_MS))
   const activeBuckets = new Set()
   for (const p of points) {
-    activeBuckets.add(Math.floor((p.t - points[0].t) / ACTIVE_BUCKET_MS))
+    activeBuckets.add(Math.floor((p.t - t0) / ACTIVE_BUCKET_MS))
+  }
+  for (const w of wheel) {
+    activeBuckets.add(Math.floor((w.t * 1000 - t0) / ACTIVE_BUCKET_MS))
   }
   const activeRatio = Math.min(1, activeBuckets.size / totalBuckets)
 
@@ -124,6 +149,20 @@ export function computeMetrics(points) {
     idle_gaps: idleGaps,
     jitter: Math.round(jitter * 1000) / 1000,
     points: n,
+    // v3：触控板上划/下滑汇总（事件级计数优先，缺失时按桶推断）
+    wheel: wheelStatOrSamples(wheelStats, wheel),
+  }
+}
+
+/** wheel 汇总：有事件级计数（wheelStats）用它；否则按 1s 桶方向推断。 */
+function wheelStatOrSamples(stats, wheel) {
+  if (stats && (stats.up || stats.down || stats.dist)) {
+    return { up: stats.up, down: stats.down, buckets: wheel.length }
+  }
+  return {
+    up: wheel.filter((w) => w.dy < 0).length,
+    down: wheel.filter((w) => w.dy > 0).length,
+    buckets: wheel.length,
   }
 }
 
@@ -209,6 +248,13 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
   let activity = [] // {t 秒, type, w?} 内容互动时间线
   let curChapterLabel = ''
   let mouse = [] // {x,y,t}，t 相对会话开始 ms，不去抖不采样
+  // 触控板 wheel 轨迹（v3）：上划/下滑计数 + 时序采样（1s 桶去抖）。
+  // deltaY<0＝手指上划（看下面内容），>0＝手指下滑（回看上面内容）；
+  // Mac 触控板自然滚动方向与此一致。持续小幅 wheel 是「在读」的重要信号。
+  let wheelStats = { up: 0, down: 0, dist: 0 }
+  let wheelSamples = [] // {t, dy} 1s 桶聚合，供曲线与 active_ratio
+  let lastWheelBucket = -1
+  let lastWheelAt = 0
   const scrollSamples = [] // {t, percent} 快滚判定滑动窗口
   let lastEngageAt = -Infinity // 最近一次查词/预习互动（快滚抑制）
   let lastFastAt = -Infinity // 最近一次快滚触发（冷却）
@@ -247,6 +293,10 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     lookupMap = new Map(); speakMap = new Map(); selectedMap = new Map()
     activity = []
     mouse = []
+    wheelStats = { up: 0, down: 0, dist: 0 }
+    wheelSamples = []
+    lastWheelBucket = -1
+    lastWheelAt = 0
     scrollSamples.length = 0
     lastEngageAt = -Infinity; lastFastAt = -Infinity
   }
@@ -301,6 +351,29 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     checkFastScroll()
   }
 
+  // ---- 触控板 wheel（上划/下滑）轨迹 ----
+  function onWheel(e) {
+    if (!collecting) return
+    const dy = Number(e.deltaY) || 0
+    if (!dy) return
+    checkIdleSplit()
+    touchActive()
+    const now = Date.now()
+    if (now - lastWheelAt < 100) return // 100ms 去抖（触控板惯性事件极密）
+    lastWheelAt = now
+    if (dy < 0) wheelStats.up += 1
+    else wheelStats.down += 1
+    wheelStats.dist += Math.min(500, Math.abs(dy))
+    // 1s 桶聚合（带方向净量），供 active_ratio 与曲线
+    const bucket = Math.floor(relNow() / 1000)
+    if (bucket !== lastWheelBucket) {
+      lastWheelBucket = bucket
+      wheelSamples.push({ t: bucket, dy: 0 })
+      if (wheelSamples.length > 3000) wheelSamples.shift()
+    }
+    wheelSamples[wheelSamples.length - 1].dy += dy
+  }
+
   // ---- 主文档鼠标轨迹 ----
   function onRootMouseMove(e) {
     if (!collecting) return
@@ -337,6 +410,7 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     window.addEventListener('beforeunload', onBeforeUnload)
     if (viewerEl) viewerEl.addEventListener('scroll', onScroll, { passive: true })
     if (readerRoot) readerRoot.addEventListener('mousemove', onRootMouseMove, { passive: true })
+    if (readerRoot) readerRoot.addEventListener('wheel', onWheel, { passive: true })
     intervalId = setInterval(() => {
       if (alive && !stopped) {
         checkIdleSplit()
@@ -354,6 +428,7 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     }
     if (viewerEl) viewerEl.removeEventListener('scroll', onScroll)
     if (readerRoot) readerRoot.removeEventListener('mousemove', onRootMouseMove)
+    if (readerRoot) readerRoot.removeEventListener('wheel', onWheel)
     if (intervalId) {
       clearInterval(intervalId)
       intervalId = null
@@ -385,7 +460,7 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
       percent_start: st.percentStart == null ? 0 : Math.round(st.percentStart * 100) / 100,
       percent_end: st.percentEnd == null ? 0 : Math.round(st.percentEnd * 100) / 100,
       fast_scroll_flags: st.fastScrollFlags,
-      mouse_metrics: computeMetrics(mouse),
+      mouse_metrics: computeMetrics(mouse, wheelSamples, wheelStats),
       // 后端契约：polyline 为字符串（max_length 200k）；空轨迹给空串
       polyline: mouse.length ? JSON.stringify(compressMouse(mouse)) : '',
       // v2：内容监控 + 学习范围
@@ -425,6 +500,7 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     collecting = false
     detach()
     mouse.length = 0
+    wheelSamples.length = 0
     scrollSamples.length = 0
   }
 
@@ -452,6 +528,7 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     collecting = false
     detach()
     mouse.length = 0
+    wheelSamples.length = 0
     scrollSamples.length = 0
   }
 
@@ -544,6 +621,11 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
           const iframe = win && win.frameElement
           if (!iframe) return
           boundIframeDocs.add(doc)
+          doc.addEventListener('wheel', (e) => {
+            if (!collecting) return
+            // iframe wheel 先冒泡前的上下文：交给统一处理器（方向/去抖/采样）
+            onWheel(e)
+          }, { passive: true })
           doc.addEventListener('mousemove', (e) => {
             if (!collecting) return
             checkIdleSplit()

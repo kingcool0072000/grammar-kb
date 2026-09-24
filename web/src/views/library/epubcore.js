@@ -418,7 +418,9 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
         'margin-bottom': '0.9em !important',
         // 微信读书式窄正文列（段落限宽居中，不影响 body 自身布局测量）。
         // 宽度偏好（#/config：standard=620px / wide=80%）不进阅读器显式 UI
-        'max-width': `${t.libWidth === 'wide' ? '80%' : '620px'} !important`,
+        'max-width': `${
+          t.libWidth === 'wide' ? '80%' : t.libWidth === 'semiwide' ? '60%' : '620px'
+        } !important`,
         'margin-left': 'auto !important',
         'margin-right': 'auto !important',
       },
