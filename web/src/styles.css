@@ -2248,6 +2248,9 @@ li.open .topic-reveal-btn { display: none; }
   .ttsconf-page { padding: 12px 12px 50px; }
   .tts-hero { padding: 20px 18px; }
   .tts-vtag { display: none; }
+  .tts-voice { flex-wrap: wrap; max-width: 100%; }
+  .tts-vname { max-width: 55vw; }
+  .tts-vtest { margin-left: auto; }
 }
 
 
@@ -2274,3 +2277,10 @@ li.open .topic-reveal-btn { display: none; }
   border: 1px solid var(--line); border-radius: 8px; padding: 3px 10px; cursor: default;
 }
 .rc-wb-word sup { font-size: 10px; color: #b3541e; margin-left: 2px; font-weight: 700; }
+
+/* ---------- 设置中心 #/config 分节标题 ---------- */
+.cfg-section { font-size: 17px; margin: 26px 4px 4px; color: var(--ink); }
+.cfg-section:first-of-type { margin-top: 14px; }
+/* 泛读馆宽度段复用 lib-seg，补窄适配 */
+#cfg-libwidth .lib-seg, #cfg-libwidth { display: inline-flex; }
+@media (max-width: 640px) { #cfg-libwidth { width: 100%; } }

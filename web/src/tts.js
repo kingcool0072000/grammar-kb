@@ -133,7 +133,7 @@ export function speak(text) {
   }
 }
 
-/** 试听指定音色（ttsconf 页 🔊 与选中行）：按 URI 现查，失败沿降级链出声。 */
+/** 试听指定音色（设置中心 🔊 与选中行）：按 URI 现查，失败沿降级链出声。 */
 export function speakWithVoice(uri, rate) {
   try {
     _speakChain(
@@ -145,7 +145,7 @@ export function speakWithVoice(uri, rate) {
   }
 }
 
-/** 引擎自检（ttsconf 页加载时调用）：回报音色数与可疑状态。 */
+/** 引擎自检（设置中心加载时调用）：回报音色数与可疑状态。 */
 export function ttsDiagnostics() {
   if (!('speechSynthesis' in window)) {
     return { ok: false, reason: 'no-speechSynthesis' }

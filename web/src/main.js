@@ -17,8 +17,7 @@ import { mountGrading } from './views/grading.js'
 import { mountPrep } from './views/prep.js'
 import { mountAnalytics } from './views/analytics.js'
 import { mountTopics } from './views/topics.js'
-import { mountTtsConf } from './views/ttsconf.js'
-import { mountReadConf } from './views/readconf.js'
+import { mountConfig } from './views/config.js'
 import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
 
@@ -45,12 +44,10 @@ const VIEWS = [
   { key: 'library', label: '泛读馆' },
   // 子工具页（不在 Tab 显示，hash 直达）：fcePapers 师生共用
   { key: 'fcePapers', label: 'FCE真题', hiddenTab: true },
-  // TTS 发音设置：隐藏配置页 #/ttsconf（音色列表 + 默认音色），双角色不进 Tab
+  // 设置中心：隐藏配置页 #/config（发音 + 阅读排版 + 泛读馆宽度）。
   // 注意 hiddenTab 的语义是「教师不进 Tab、学生仍显示」（FCE真题即如此），
-  // 真隐藏须用 noTab。
-  { key: 'ttsconf', label: '发音设置', hiddenTab: true, noTab: true },
-  // 阅读练习排版（字号/栏宽）：隐藏配置页 #/readconf
-  { key: 'readconf', label: '阅读排版', hiddenTab: true, noTab: true },
+  // 真隐藏须用 noTab。旧 #/ttsconf #/readconf 由路由重定向进来。
+  { key: 'config', label: '设置中心', hiddenTab: true, noTab: true },
   { key: 'courses', hiddenTab: true, teacher: true },
   { key: 'vocab', hiddenTab: true, teacher: true },
   { key: 'taxonomy', hiddenTab: true, teacher: true },
@@ -80,12 +77,15 @@ function h(tag, cls, html) {
 
 function currentRoute(role) {
   const [v] = routeSegs()
-  const view = VIEWS.find((x) => x.key === v)
+  // 旧隐藏页（#/ttsconf #/readconf）已并入 #/config：在此归一，
+  // 否则 VIEWS 查不到会先被回退逻辑踢回首页、走不到重定向分支
+  const key = v === 'ttsconf' || v === 'readconf' ? 'config' : v
+  const view = VIEWS.find((x) => x.key === key)
   // 学生访问教师页 → 回背单词；教师访问学生页 → 回批改中心；未匹配同理
   if (!view || (view.teacher && role !== 'teacher') || (view.studentOnly && role === 'teacher')) {
     return role === 'teacher' ? 'grading' : 'recite'
   }
-  return v
+  return key
 }
 
 function pointsCacheKey(kpCount) {
@@ -273,12 +273,9 @@ async function bootstrap() {
     } else if (route === 'topics') {
       // 专题学习：#/topics 列表 / #/topics/{id} 手册详情（视图内部按 hash 分发）
       mounted = mountTopics(container, { role })
-    } else if (route === 'ttsconf') {
-      // TTS 发音设置（隐藏页 #/ttsconf）
-      mounted = mountTtsConf(container)
-    } else if (route === 'readconf') {
-      // 阅读练习排版（隐藏页 #/readconf）
-      mounted = mountReadConf(container)
+    } else if (route === 'config') {
+      // 设置中心（隐藏页 #/config；旧 #/ttsconf #/readconf 已并入）
+      mounted = mountConfig(container)
     } else if (route === 'taxonomy') {
       mounted = mountTaxonomy(container, { pointsById, openKp: ctx.openKp })
     } else if (route === 'fce') {

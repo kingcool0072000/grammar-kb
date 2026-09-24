@@ -184,20 +184,26 @@ export function createThemeDrawer({ isTeacher, getTheme, onChange, onClose }) {
       })
     })
   } else {
-    // 学生：配色与字体由教师统一配置，面板只留字号
-    // （抽屉头已叫「字号」，这里不再放同名分节标题）
+    // 学生：配色与字体由教师统一配置，面板只留两档字号（标准 23 / 大 28）
     d.body.innerHTML = `
       <div class="lib-theme-section">
-        <div class="lib-slider-row">
-          <input type="range" min="14" max="28" step="1" data-slider aria-label="字号" />
-          <output></output>
+        <div class="lib-seg" data-seg="fontSize">
+          <button type="button" data-val="23">标准</button>
+          <button type="button" data-val="28">大</button>
         </div>
       </div>
     `
+    d.body.querySelectorAll('.lib-seg[data-seg="fontSize"] button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        onChange({ fontSize: Number(btn.dataset.val) })
+        syncUI()
+      })
+    })
   }
 
   const slider = d.body.querySelector('[data-slider]')
   const output = d.body.querySelector('.lib-slider-row output')
+  if (slider)
   slider.addEventListener('input', () => {
     const v = Number(slider.value)
     onChange({ fontSize: v })
@@ -219,6 +225,13 @@ export function createThemeDrawer({ isTeacher, getTheme, onChange, onClose }) {
   /** 面板内部状态跟随最新主题（就地更新，不打断滑杆拖动） */
   function syncUI() {
     const t = getTheme() || {}
+    if (!isTeacher) {
+      const fs = Number(t.fontSize) >= 26 ? 28 : 23
+      d.body.querySelectorAll('.lib-seg[data-seg="fontSize"] button').forEach((btn) => {
+        btn.classList.toggle('active', Number(btn.dataset.val) === fs)
+      })
+      return
+    }
     if (isTeacher) {
       const preview = d.body.querySelector('.lib-theme-preview')
       preview.style.background = t.bg
@@ -237,7 +250,7 @@ export function createThemeDrawer({ isTeacher, getTheme, onChange, onClose }) {
         btn.classList.toggle('active', btn.dataset.val === t.fontFamily)
       })
     }
-    setSlider(Math.min(28, Math.max(14, Number(t.fontSize) || 19)))
+    if (isTeacher) setSlider(Math.min(28, Math.max(14, Number(t.fontSize) || 23)))
   }
 
   return {

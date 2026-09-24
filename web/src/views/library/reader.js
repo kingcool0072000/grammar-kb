@@ -17,7 +17,7 @@ const DEFAULT_THEME = {
   bg: '#FFFFFF',
   fg: '#1F2933',
   fontFamily: 'serif',
-  fontSize: 19,
+  fontSize: 23, // 标准 23 / 大 28 两档（学生面板）；存量 19 统一迁移到 23
   lineHeight: 1.9,
   autoPrep: true,
 }
@@ -27,6 +27,15 @@ function themeKey() {
   return `gkb-lib-theme-${(a && a.user) || 'anon'}`
 }
 
+/** 泛读馆排版偏好（#/config 维护）：宽度 standard/wide。字号已两档化进主题。 */
+export function getLibPref() {
+  try {
+    return JSON.parse(localStorage.getItem('gkb-lib-pref-v1')) || {}
+  } catch {
+    return {}
+  }
+}
+
 function loadTheme() {
   let saved = {}
   try {
@@ -34,8 +43,10 @@ function loadTheme() {
   } catch {
     saved = {}
   }
-  const t = { ...DEFAULT_THEME, ...saved }
-  t.fontSize = Math.min(28, Math.max(14, Math.round(Number(t.fontSize) || DEFAULT_THEME.fontSize)))
+  const t = { ...DEFAULT_THEME, ...saved, libWidth: getLibPref().libWidth || 'standard' }
+  t.fontSize = Math.round(Number(t.fontSize) || DEFAULT_THEME.fontSize)
+  // 两档制：非 23/28 的存量值归一（<26 → 23，≥26 → 28）
+  t.fontSize = t.fontSize >= 26 ? 28 : 23
   t.lineHeight = DEFAULT_THEME.lineHeight // 固定 1.9
   t.autoPrep = saved.autoPrep !== undefined ? !!saved.autoPrep : true
   if (THEME_PRESETS[t.preset]) {
@@ -202,6 +213,7 @@ export function mountLibraryReader(viewEl, ctx) {
       fg: t.fg,
       fontFamily: FONT_STACKS[t.fontFamily] || FONT_STACKS.serif,
       fontSize: t.fontSize,
+      libWidth: t.libWidth || 'standard',
       lineHeight: t.lineHeight,
     }
   }
@@ -227,7 +239,8 @@ export function mountLibraryReader(viewEl, ctx) {
 
   function patchTheme(patch) {
     theme = { ...theme, ...patch }
-    theme.fontSize = Math.min(28, Math.max(14, Math.round(Number(theme.fontSize) || 19)))
+    theme.fontSize = Math.round(Number(theme.fontSize) || 23)
+    theme.fontSize = theme.fontSize >= 26 ? 28 : 23
     saveTheme(theme)
     applyThemeNow()
     focusTracker.hooks.onThemeAdjust()
