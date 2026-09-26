@@ -175,14 +175,6 @@ export async function mountLibrarySettings(viewEl) {
             </div>
           </div>
         </div>
-        <div class="ls-row">
-          <div class="ls-label"><div class="name">词库解锁（背单词）</div><div class="hint">学生默认只有 L0；前一级别背熟后解锁下一级</div></div>
-          <div class="ls-ctrl">
-            <div class="ls-seg" id="ls-vunlock">
-              ${[0, 1, 2, 3, 4, 5].map((n) => `<button data-v="${n}">${n === 0 ? '仅L0' : '到L' + n}</button>`).join('')}
-            </div>
-          </div>
-        </div>
         <div class="ls-card-actions">
           <button class="lib-btn" id="ls-save-student">保存</button>
         </div>
@@ -230,12 +222,6 @@ export async function mountLibrarySettings(viewEl) {
     aiFallbackCb.checked = dict.aiFallback !== false
     setPreset(student.preset || 'paper')
     setSeg(fontSeg, student.fontFamily || 'serif')
-    const unlockSeg = root.querySelector('#ls-vunlock')
-    setSeg(unlockSeg, String(student.vocabUnlock ?? 0))
-    unlockSeg.addEventListener('click', (e) => {
-      const b = e.target.closest('button[data-v]')
-      if (b) setSeg(unlockSeg, b.dataset.v)
-    })
 
     // ---- 模型 select：当前值不在列表时也要能显示 ----
     function rebuildModelOptions(current) {
@@ -375,7 +361,6 @@ export async function mountLibrarySettings(viewEl) {
           student: {
             preset: presetGet(),
             fontFamily: segGet(fontSeg) || 'serif',
-            vocabUnlock: Number(unlockSeg ? unlockSeg.dataset.v : 0),
           },
         })
         toast('学生阅读主题已保存', 'success')

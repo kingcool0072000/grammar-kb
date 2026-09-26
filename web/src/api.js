@@ -202,6 +202,13 @@ export const api = {
   planWeeks: ({ user } = {}) => req('/plan/weeks', { searchParams: { user } }),
   planWeekPut: (weekStart, payload) =>
     reqJson(`/plan/weeks/${weekStart}`, 'PUT', payload),
+  // 词汇级别考试（成绩登记驱动解锁；≥80 解锁下一级）
+  vocabExams: ({ user } = {}) =>
+    req('/vocab-exams', { searchParams: { user } }),
+  vocabExamAdd: (rec) => reqJson('/vocab-exams', 'POST', rec),
+  vocabExamDel: (id) => reqJson(`/vocab-exams/${id}`, 'DELETE'),
+  // FCE 听力音频（文件到位即生效；available=key 列表）
+  fceAudioStatus: (testId) => req(`/fce-papers/${testId}/audio`),
   topicProgress: (topicId) => req(`/topics/${encodeURIComponent(topicId)}/progress`),
   topicPutProgress: (topicId, doneKeys, assignedUser = '') =>
     reqJson(`/topics/${encodeURIComponent(topicId)}/progress`, 'PUT', {

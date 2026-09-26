@@ -275,6 +275,20 @@ async function renderPractice(el, testId, sec, role) {
   const isChoice = qs.every((q) => ['mcq3', 'mcq4', 'matchSentence', 'matchPerson', 'matchOpinion'].includes(q.type))
   const hasPassage = section.passage && section.passage.trim()
 
+  // 听力部分：音频文件到位则给播放器，否则占位提示（文件按
+  // data/audio/fce/{test}/listening_p{n}.mp3 放置即生效）
+  const audioKey = `listening_p${section.part}`
+  let audioHtml = ''
+  if (section.paper === 'Listening') {
+    let avail = []
+    try {
+      avail = (await api.fceAudioStatus(testId)).available || []
+    } catch { avail = [] }
+    audioHtml = avail.includes(audioKey)
+      ? `<div class="fce-audio"><span class="fce-audio-label">🎧 听力音频</span><audio controls preload="none" src="/api/fce-papers/${testId}/audio/${audioKey}"></audio></div>`
+      : `<div class="fce-audio fce-audio-missing"><span>🎧 本部分听力音频暂未就绪（音频放置后自动出现播放器）</span></div>`
+  }
+
   el.innerHTML = `
     <div class="view-head">
       <button class="fce-back-btn" id="fce-back">← 返回大题列表</button>
@@ -293,6 +307,7 @@ async function renderPractice(el, testId, sec, role) {
         <button class="fce-font-btn" id="font-inc">A+</button>
       </div>
     </div>
+    ${audioHtml}
     ${section.instruction ? `<div class="fce-instruction">${escapeHtml(section.instruction)}</div>` : ''}
     ${hasPassage ? renderPassage(section.passage) : ''}
     <form id="fce-form" class="fce-form">

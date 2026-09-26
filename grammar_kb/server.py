@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import os
+import re as _re
 from dataclasses import asdict
 from typing import Any, Optional
 from pathlib import Path as _P
@@ -32,6 +33,13 @@ import fastapi
 def _ok(data: Any = None, message: str = "ok") -> dict:
     """统一成功响应包装。"""
     return {"code": 0, "message": message, "data": data}
+
+
+def _html_response(body: str):
+    """text/html 响应（考卷打印页等）。"""
+    from fastapi.responses import HTMLResponse
+
+    return HTMLResponse(body)
 
 
 try:
@@ -179,6 +187,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from .focus import FocusStore
     from .topics import TopicStore
     from .plan import PlanStore
+    from .vocab_exam import VocabExamStore, build_paper, render_paper_html
     from .analytics_ai import AnalyticsAI
 
     # exam 库路径在此先落定：ExamStore 内部会自解析默认路径，但
@@ -198,6 +207,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     topics = TopicStore(fce_db_path)
     # 计划表（教师周计划）：fce.db 同库存 tasks/notes，完成度实时聚合多库
     plan = PlanStore(fce_db_path, exam_db_path=exam_db_path)
+    # 词汇级别考试：成绩登记（fce.db）；L0 恒开，L{n} 考试 ≥80 解锁 L{n+1}
+    vocab_exam = VocabExamStore(fce_db_path)
     # 泛读馆（整本书英文泛读）：路径解析沿 fce_query 模式
     # （GRAMMAR_KB_LIBRARY_DB/GRAMMAR_KB_LIBRARY_DIR → data/）
     library = LibraryStore()
@@ -249,12 +260,14 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     _STUDENT_ALLOW = (
         ("GET", "/stats"),
         ("GET", "/vocabulary"),
-        ("GET", "/vocab-levels"),  # 分层词库（背单词 L0-L7）
+        ("GET", "/vocab-levels"),  # 分层词库（背单词 L0-L7；解锁由词汇考试驱动）
+        ("GET", "/vocab-exams"),  # 学生看自己的考试状态（已过级别/解锁到哪级）
         ("GET", "/dict/"),
         ("GET", "/exams"),
         ("POST", "/exams"),
         ("GET", "/homework"),
         ("GET", "/fce-papers"),
+        ("GET", "/fce-papers/"),  # 含 /{id}/audio（听力音频，师生可听）
         ("POST", "/fce-submissions"),
         ("GET", "/fce-submissions"),
         ("GET", "/reading/articles"),
@@ -466,17 +479,12 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         max_level 截断层数（如 5 = L0-L5）。
         """
         req_level = max(0, min(7, int(max_level)))
-        # 学生端受教师解锁约束：vocabUnlock=0 只能取 L0；教师不受限。
+        # 学生端解锁规则（2026-09-26 起，取代教师手动 vocabUnlock）：
+        # L0 恒开；L{n} 级考卷 ≥80 分（教师登记）自动解锁 L{n+1}。
         # counts 始终按 req_level 给全量（锁定层也要显示词数），items 才截断。
         max_level = req_level
         if request.state.role != "teacher":
-            try:
-                unlock = int(
-                    (library.get_settings().get("student") or {}).get("vocabUnlock") or 0
-                )
-            except Exception:  # noqa: BLE001 —— 设置读取失败按最保守处理
-                unlock = 0
-            max_level = min(req_level, max(0, min(5, unlock)))
+            max_level = min(req_level, vocab_exam.unlocked_level(_request_user(request)))
         import json as _json
 
         def _j(s, dft):
@@ -515,6 +523,64 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             x["word"],
         ))
         return _ok({"counts": counts_all, "unlocked": max_level, "items": items})
+
+    # ---- 词汇级别考试（线下考卷 + 成绩登记；考试驱动解锁） ----
+
+    @app.get("/vocab-exams")
+    def vocab_exams_list(request: "fastapi.Request", user: Optional[str] = None):
+        """词汇考试记录（师生可见：学生看自己的，教师看全部/指定 user）。"""
+        u = user if (request.state.role == "teacher" and user) else request.state.user
+        return _ok({
+            "exams": vocab_exam.list(u),
+            "passed_levels": sorted(vocab_exam.passed_levels(u)),
+            "unlocked_level": vocab_exam.unlocked_level(u),
+            "pass_score": 80,
+        })
+
+    @app.post("/vocab-exams")
+    def vocab_exam_add(payload: dict, request: "fastapi.Request"):
+        """登记一次词汇考试成绩（教师专属）。≥80 分自动解锁下一级。"""
+        _require_teacher(request)
+        try:
+            user = str(payload.get("user", "")).strip()
+            level = int(payload.get("level"))
+            score = int(payload.get("score"))
+            exam_date = str(payload.get("exam_date", "")).strip()
+            note = str(payload.get("note", "") or "")
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=422, detail="user/level/score/exam_date 须齐全")
+        if not user:
+            raise HTTPException(status_code=422, detail="user 须指定学生账号")
+        try:
+            rec = vocab_exam.record(user, level, score, exam_date, note)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        return _ok({
+            "exam": rec,
+            "unlocked_level": vocab_exam.unlocked_level(user),
+            "passed": score >= 80,
+        })
+
+    @app.delete("/vocab-exams/{exam_id}")
+    def vocab_exam_del(exam_id: int, request: "fastapi.Request"):
+        """删一条考试记录（教师专属，误登记用）。"""
+        _require_teacher(request)
+        with vocab_exam._connect() as conn:
+            cur = conn.execute("DELETE FROM vocab_exams WHERE id = ?", (exam_id,))
+        if not cur.rowcount:
+            raise HTTPException(status_code=404, detail=f"记录 id={exam_id} 不存在")
+        return _ok({"id": exam_id})
+
+    @app.get("/vocab-exams/paper", response_class=None)
+    def vocab_exam_paper(request: "fastapi.Request", level: int = 0, seed: Optional[int] = None):
+        """生成 L{level} 级考卷 HTML（教师打印用；学生 403）。"""
+        _require_teacher(request)
+        try:
+            paper = build_paper(max(0, min(5, int(level))), seed=seed)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        user = request.query_params.get("student", "")
+        return _html_response(render_paper_html(paper, student=user))
 
     # ---- FCE 真题（只读；独立 data/fce.db，由 fce_paper 模块入库） ----
 
@@ -623,6 +689,32 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         if not path.is_file():
             raise HTTPException(status_code=404, detail="该文章暂无范读音频")
         return FileResponse(path, media_type="audio/wav")
+
+    # ---- FCE 听力音频（文件到位即生效；占位目录 data/audio/fce/） ----
+    # 命名约定：data/audio/fce/{test_id}/{paper}_{part}.mp3（paper 简写，
+    # 如 listening_p1.mp3）；404=音频未就绪，前端显示占位提示。
+    fce_audio_dir = _P(os.environ.get("GRAMMAR_KB_FCE_AUDIO_DIR")
+                       or _P(__file__).resolve().parent.parent / "data" / "audio" / "fce")
+
+    @app.get("/fce-papers/{test_id}/audio/{key}")
+    def fce_audio_file(test_id: int, key: str):
+        """FCE 听力音频文件流（key 如 listening_p1；师生均可听）。"""
+        safe = _re.sub(r"[^a-z0-9_]", "", key.lower())
+        if not safe:
+            raise HTTPException(status_code=422, detail="非法音频 key")
+        path = fce_audio_dir / str(int(test_id)) / f"{safe}.mp3"
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="该部分听力音频暂未就绪")
+        return FileResponse(path, media_type="audio/mpeg")
+
+    @app.get("/fce-papers/{test_id}/audio")
+    def fce_audio_status(test_id: int):
+        """某 Test 已就绪的听力音频 key 列表（前端按 key 显隐播放器）。"""
+        d = fce_audio_dir / str(int(test_id))
+        if not d.is_dir():
+            return _ok({"available": []})
+        keys = sorted(p.stem for p in d.glob("*.mp3"))
+        return _ok({"available": keys})
 
     @app.post("/reading/articles")
     def reading_add_derived(rec: ReadingDerivedIn, request: "fastapi.Request"):

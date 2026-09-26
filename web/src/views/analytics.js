@@ -5,8 +5,10 @@ import { escapeHtml, renderMd } from '../render.js'
 //   周视图：最近 8 周各类作业量与成绩趋势 + 本周明细
 //   月视图：最近 6 个月成绩趋势 + 本月明细与统计
 //   AI 周报：手动触发，用泛读馆设置里配置的 GLM 分析上一自然周四类数据。
-export async function mountAnalytics(el) {
-  el.innerHTML = '<div class="view-head"><h1>学情分析</h1><p>加载中…</p></div>'
+export async function mountAnalytics(el, { bare = false } = {}) {
+  // bare：作为计划表子 Tab 内嵌时去掉自己的页头（父级已有）
+  el.innerHTML = bare ? '<p class="muted">加载中…</p>'
+    : '<div class="view-head"><h1>学情分析</h1><p>加载中…</p></div>'
   let recs, fceSubs, recite, exams
   try {
     ;[recs, fceSubs, recite, exams] = await Promise.all([
@@ -30,10 +32,11 @@ export async function mountAnalytics(el) {
       ? aggregate(recs, fceSubs, recite, exams, 8, 'week')
       : aggregate(recs, fceSubs, recite, exams, 6, 'month')
     el.innerHTML = `
+      ${bare ? '' : `
       <div class="view-head">
         <h1>学情分析</h1>
         <p>四类作业的周期汇总：哈一作业成绩 · FCE 练习 · 阅读朗读 · 背单词。</p>
-      </div>
+      </div>`}
       <div class="ana-tabs">
         <button class="reading-btn ${state.period === 'week' ? 'primary' : ''}" data-period="week">📅 每周总结</button>
         <button class="reading-btn ${state.period === 'month' ? 'primary' : ''}" data-period="month">🗓 月度总结</button>
@@ -63,7 +66,14 @@ export async function mountAnalytics(el) {
       ${summaryHtml(exams, agg)}
 
       <section class="gd-section">
-        <header class="gd-section-head"><h2>📈 成绩趋势</h2></header>
+        <header class="gd-section-head"><h2>📈 成绩趋势</h2>
+          <div class="ana-legend">
+            <span><i style="background:#8a6d3b"></i>哈一（百分制）</span>
+            <span><i style="background:#6b8f71"></i>FCE 正确率</span>
+            <span><i style="background:#5b7fa6"></i>朗读（10 分制）</span>
+            <span><i style="background:#a67c52"></i>单词正确率</span>
+          </div>
+        </header>
         <div class="ana-chart">
           ${agg.buckets.map((b) => {
             const bars = [
@@ -72,24 +82,19 @@ export async function mountAnalytics(el) {
               { label: '朗读', v: b.recAvg, max: 10, unit: '分', color: '#5b7fa6' },
               { label: '单词', v: b.reciteAvg, max: 100, unit: '%', color: '#a67c52' },
             ]
+            const hasAny = bars.some((x) => x.v != null)
             return `
-            <div class="ana-col" title="${b.label}">
+            <div class="ana-col ${hasAny ? '' : 'ana-col-nodata'}" title="${b.label}">
               <div class="ana-bars">
                 ${bars.map((x) => `
                   <div class="ana-bar-track">
-                    <i class="ana-bar" style="height:${x.v == null ? 0 : Math.max(4, Math.round((x.v / x.max) * 100))}%; background:${x.v == null ? 'transparent' : x.color}"
+                    <i class="ana-bar" style="height:${x.v == null ? 2 : Math.max(4, Math.round((x.v / x.max) * 100))}%; background:${x.v == null ? 'rgba(0,0,0,0.08)' : x.color}"
                        title="${x.label} ${x.v == null ? '无数据' : x.v + x.unit}"></i>
                   </div>`).join('')}
               </div>
               <span class="ana-col-label">${b.label}</span>
             </div>`
           }).join('')}
-          <div class="ana-legend">
-            <span><i style="background:#8a6d3b"></i>哈一（百分制）</span>
-            <span><i style="background:#6b8f71"></i>FCE 正确率</span>
-            <span><i style="background:#5b7fa6"></i>朗读（10 分制）</span>
-            <span><i style="background:#a67c52"></i>单词正确率</span>
-          </div>
         </div>
       </section>
 

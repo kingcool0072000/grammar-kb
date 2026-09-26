@@ -38,7 +38,7 @@ const app = document.getElementById('app')
 const VIEWS = [
   { key: 'grading', label: '批改中心', teacher: true },
   { key: 'prep', label: '备课中心', teacher: true },
-  { key: 'analytics', label: '学情分析', teacher: true },
+  // 学情分析并入计划表（#/plan?tab=analytics）；旧 hash 重定向
   { key: 'plan', label: '计划表', teacher: true },
   { key: 'recite', label: '背单词', studentOnly: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
@@ -79,9 +79,12 @@ function h(tag, cls, html) {
 
 function currentRoute(role) {
   const [v] = routeSegs()
-  // 旧隐藏页（#/ttsconf #/readconf）已并入 #/config：在此归一，
-  // 否则 VIEWS 查不到会先被回退逻辑踢回首页、走不到重定向分支
-  const key = v === 'ttsconf' || v === 'readconf' ? 'config' : v
+  // 旧隐藏页归一：#/ttsconf #/readconf → #/config；#/analytics → #/plan?tab=analytics
+  let key = v === 'ttsconf' || v === 'readconf' ? 'config' : v
+  if (key === 'analytics') {
+    location.replace('#/plan?tab=analytics')
+    key = 'plan'
+  }
   const view = VIEWS.find((x) => x.key === key)
   // 学生访问教师页 → 回背单词；教师访问学生页 → 回批改中心；未匹配同理
   if (!view || (view.teacher && role !== 'teacher') || (view.studentOnly && role === 'teacher')) {
@@ -265,7 +268,8 @@ async function bootstrap() {
     } else if (route === 'prep') {
       mounted = mountPrep(container, ctx)
     } else if (route === 'analytics') {
-      mounted = mountAnalytics(container)
+      // 学情分析并入计划表：子 Tab 渲染（bare 模式去页头）
+      mounted = mountAnalytics(container, { bare: true })
     } else if (route === 'plan') {
       mounted = mountPlan(container)
     } else if (route === 'courses') {

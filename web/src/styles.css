@@ -1611,6 +1611,7 @@ main { --fce-fs: 15px; }
   display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;
   padding: 16px 18px 10px; background: var(--bg-soft);
   border: 1px solid var(--line); border-radius: 14px;
+  justify-content: space-between; /* 8 列在面板宽内均分，消除右侧半幅空置 */
 }
 .ana-col { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 44px; }
 .ana-bars { display: flex; gap: 4px; align-items: flex-end; height: 110px; }
@@ -1622,9 +1623,11 @@ main { --fce-fs: 15px; }
 .ana-bar { display: block; width: 100%; border-radius: 4px 4px 0 0; min-height: 0; }
 .ana-col-label { font-size: 11.5px; color: var(--ink-faint); white-space: nowrap; }
 .ana-legend {
-  display: flex; flex-direction: column; gap: 4px; margin-left: auto;
+  display: flex; flex-wrap: wrap; gap: 4px 14px; margin-left: auto;
   font-size: 12px; color: var(--ink-soft);
 }
+/* 图例并入标题行（原在图表右侧悬浮，空数据期形成大块留白） */
+.gd-section-head .ana-legend { margin-left: auto; }
 .ana-legend span { display: flex; align-items: center; gap: 6px; }
 .ana-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 
@@ -2291,39 +2294,88 @@ li.open .topic-reveal-btn { display: none; }
 #cfg-libwidth .lib-seg, #cfg-libwidth { display: inline-flex; }
 @media (max-width: 640px) { #cfg-libwidth { width: 100%; } }
 
-/* ---- 计划表（教师周计划） ---- */
-.plan-review-row, .plan-task-row, .plan-act-row {
-  display: flex; gap: 12px; align-items: baseline;
-  padding: 5px 0; font-size: 14px; line-height: 1.55;
+/* ---- 计划表（教师周历 + 词汇考试 + 学情子Tab） ---- */
+.plan-subtabs { margin-bottom: 18px; }
+.plan-review-row { display: flex; gap: 12px; align-items: baseline; padding: 4px 0; font-size: 14px; }
+.plan-review-row > span { flex: 0 0 84px; color: var(--ink-soft); font-size: 13px; }
+
+/* 词汇考试面板 */
+.plan-vocab-exam { border: 1px solid var(--line, #e4e7ec); border-radius: 12px; padding: 12px 14px; margin-bottom: 18px; }
+.plan-vex-state { font-weight: 400; font-size: 12.5px; color: var(--ink-soft); margin: -4px 0 0; }
+.plan-vex-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-top: 10px; }
+.plan-vex-row label { font-size: 12.5px; color: var(--ink-soft); display: flex; flex-direction: column; gap: 4px; }
+.plan-vex-row input, .plan-vex-row select {
+  padding: 7px 10px; border: 1px solid var(--line, #e4e7ec); border-radius: 8px;
+  font-size: 14px; font-family: inherit; background: var(--bg, #fff); color: inherit;
 }
-.plan-review-row > span, .plan-task-row > span, .plan-act-row > span {
-  flex: 0 0 84px; color: var(--ink-soft, #667085); font-size: 13px;
-}
-.plan-task-row b { font-weight: 600; }
-.plan-notes-preview { font-weight: 500; white-space: pre-wrap; }
-.plan-week-card { position: relative; }
-.plan-week-card .fce-group-title { display: flex; align-items: center; gap: 10px; }
-.plan-week-card .fce-group-title .chip { margin-left: auto; min-height: 34px; }
-.plan-current { border: 1.5px solid var(--brand); border-radius: 12px; padding: 10px 12px; background: rgba(138, 109, 59, 0.05); }
-.plan-empty { opacity: 0.62; }
-.plan-collapsed { margin-bottom: 6px; }
-.plan-collapsed .fce-group-title { margin: 0; font-weight: 600; font-size: 14px; }
-.plan-no-task { margin: 2px 0; }
-.plan-act { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line, #e4e7ec); }
-.plan-act-title { font-size: 12px; font-weight: 700; color: var(--ink-faint); margin-bottom: 3px; letter-spacing: 0.04em; }
-.plan-act-row b { font-weight: 600; }
-.plan-act-row.muted b { color: var(--ink-soft, #667085); font-weight: 400; }
-.plan-notes { display: flex; gap: 12px; margin-top: 8px; font-size: 13.5px; }
-.plan-notes > span { flex: 0 0 84px; color: var(--ink-soft, #667085); }
+.plan-vex-history { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.plan-vex-item { font-size: 12.5px; padding: 4px 10px; border-radius: 999px; display: inline-flex; gap: 6px; align-items: center; }
+.plan-vex-item.ok { background: rgba(46, 125, 50, 0.1); color: #2e7d32; }
+.plan-vex-item.fail { background: rgba(180, 35, 24, 0.08); color: #b42318; }
+.plan-vex-item button { border: 0; background: none; cursor: pointer; color: inherit; font-size: 14px; padding: 0 2px; opacity: 0.6; }
+
+/* 本周大卡 */
+.plan-wk-current { border: 1.5px solid var(--brand); border-radius: 14px; padding: 16px 18px; margin: 14px 0 18px; background: rgba(138, 109, 59, 0.05); }
+.plan-wk-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.plan-wk-head h3 { margin: 0; font-size: 17px; }
+.plan-wk-head p { margin: 4px 0 0; font-size: 13px; }
+.plan-wk-act { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line, #e4e7ec); }
+.plan-act-row { display: flex; gap: 12px; align-items: baseline; padding: 4px 0; font-size: 14px; }
+.plan-act-row > span { flex: 0 0 84px; color: var(--ink-soft); font-size: 13px; }
+.plan-act-row.muted b { color: var(--ink-soft); font-weight: 400; }
+.plan-notes { display: flex; gap: 12px; margin-top: 10px; font-size: 13.5px; }
+.plan-notes > span { flex: 0 0 84px; color: var(--ink-soft); }
 .plan-notes > div { white-space: pre-wrap; line-height: 1.6; }
+
+/* 周历行（过去/未来周，紧凑） */
+.plan-wk-row { display: flex; align-items: center; gap: 12px; padding: 9px 4px; border-bottom: 1px solid var(--line, #ebe5d6); font-size: 13.5px; }
+.plan-wk-row .plan-wk-date { flex: 0 0 96px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.plan-wk-row.past .plan-wk-date { color: var(--ink-soft); }
+.plan-wk-row.past:has(.plan-wk-chips em) { opacity: 0.5; }
+.plan-wk-row.future { opacity: 0.88; }
+.plan-wk-row.thisweek { background: rgba(138, 109, 59, 0.07); border-radius: 8px; padding-left: 10px; }
+.plan-wk-chips { flex: 1; display: flex; flex-wrap: wrap; gap: 6px 10px; min-width: 0; }
+.plan-wk-chips i { font-style: normal; background: rgba(138, 109, 59, 0.09); border-radius: 6px; padding: 2px 8px; font-size: 12.5px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.plan-wk-row.past .plan-wk-chips i { background: rgba(0, 0, 0, 0.05); }
+.plan-wk-done { flex: 0 0 auto; color: #2e7d32; font-size: 12.5px; font-weight: 600; }
+.plan-wk-row .chip { margin-left: auto; min-height: 32px; }
+
+/* 编辑弹窗 */
 .plan-editor { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; }
 .plan-editor-mask { position: absolute; inset: 0; background: rgba(16, 24, 40, 0.45); }
 .plan-editor-body { position: relative; width: min(520px, calc(100vw - 32px)); max-height: 86vh; overflow: auto; padding: 18px 20px; }
 .plan-editor-body h3 { margin: 0 0 12px; }
-.plan-field { display: block; font-size: 13px; color: var(--ink-soft, #667085); margin-bottom: 12px; }
+.plan-field { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 12px; }
 .plan-field input, .plan-field textarea {
   display: block; width: 100%; margin-top: 5px; padding: 8px 10px;
   border: 1px solid var(--line, #e4e7ec); border-radius: 8px;
   font-size: 14px; font-family: inherit; background: var(--bg, #fff); color: inherit;
 }
 .plan-field textarea { resize: vertical; }
+
+/* 轻提示 */
+.plan-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 400;
+  background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 14px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); }
+
+@media (max-width: 640px) {
+  .plan-vex-row { align-items: stretch; flex-direction: column; }
+  .plan-vex-row .btn-primary, .plan-vex-row .chip { align-self: flex-start; }
+  .plan-wk-row { flex-wrap: wrap; row-gap: 6px; }
+  .plan-wk-row .plan-wk-date { flex-basis: 100%; }
+  .plan-act-row > span, .plan-notes > span, .plan-review-row > span { flex-basis: 64px; }
+}
+
+/* FCE 听力音频播放器/占位 */
+.fce-audio { display: flex; align-items: center; gap: 12px; margin: 12px 0;
+  background: rgba(138, 109, 59, 0.06); border: 1px solid rgba(138, 109, 59, 0.18);
+  border-radius: 10px; padding: 10px 14px; }
+.fce-audio audio { flex: 1; height: 40px; }
+.fce-audio-label { font-size: 13px; font-weight: 600; color: var(--brand-ink); flex: 0 0 auto; }
+.fce-audio-missing span { font-size: 13px; color: var(--ink-soft); }
+
+/* 上周回顾：空态值弱化（数据行为主视觉） */
+.plan-review-row.empty b { color: var(--ink-soft); font-weight: 400; }
+/* FCE 音频占位条更轻（临时态）：虚线边+更浅底+文字加深 */
+.fce-audio-missing { background: transparent; border: 1.5px dashed rgba(138, 109, 59, 0.3); }
+.fce-audio-missing span { color: var(--brand-ink); }
