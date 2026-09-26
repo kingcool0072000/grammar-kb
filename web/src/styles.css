@@ -27,17 +27,23 @@
 
 * { box-sizing: border-box; }
 
-html, body {
+/* 背景纸色：html 铺纯色兜底，body 叠渐变且随文档铺满（勿用 fixed：
+   fixed 渐变只按视口高度绘制，长页滚动后下半页会塌成白色/周期色块） */
+html { background-color: #f1ead9; }
+body {
   margin: 0;
   padding: 0;
-  background: linear-gradient(180deg, #f7f2e7 0%, #f1ead9 100%);
-  background-attachment: fixed;
+  background-color: #f1ead9;
+  background-image: linear-gradient(180deg, #f7f2e7 0%, #f1ead9 100%);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
+
+/* 按压反馈：主按钮与 chips 的物理按压态（触屏尤其需要） */
+.btn-primary:active, .chip:active { transform: scale(0.97); }
 
 a { color: var(--brand); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -2284,3 +2290,40 @@ li.open .topic-reveal-btn { display: none; }
 /* 泛读馆宽度段复用 lib-seg，补窄适配 */
 #cfg-libwidth .lib-seg, #cfg-libwidth { display: inline-flex; }
 @media (max-width: 640px) { #cfg-libwidth { width: 100%; } }
+
+/* ---- 计划表（教师周计划） ---- */
+.plan-review-row, .plan-task-row, .plan-act-row {
+  display: flex; gap: 12px; align-items: baseline;
+  padding: 5px 0; font-size: 14px; line-height: 1.55;
+}
+.plan-review-row > span, .plan-task-row > span, .plan-act-row > span {
+  flex: 0 0 84px; color: var(--ink-soft, #667085); font-size: 13px;
+}
+.plan-task-row b { font-weight: 600; }
+.plan-notes-preview { font-weight: 500; white-space: pre-wrap; }
+.plan-week-card { position: relative; }
+.plan-week-card .fce-group-title { display: flex; align-items: center; gap: 10px; }
+.plan-week-card .fce-group-title .chip { margin-left: auto; min-height: 34px; }
+.plan-current { border: 1.5px solid var(--brand); border-radius: 12px; padding: 10px 12px; background: rgba(138, 109, 59, 0.05); }
+.plan-empty { opacity: 0.62; }
+.plan-collapsed { margin-bottom: 6px; }
+.plan-collapsed .fce-group-title { margin: 0; font-weight: 600; font-size: 14px; }
+.plan-no-task { margin: 2px 0; }
+.plan-act { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line, #e4e7ec); }
+.plan-act-title { font-size: 12px; font-weight: 700; color: var(--ink-faint); margin-bottom: 3px; letter-spacing: 0.04em; }
+.plan-act-row b { font-weight: 600; }
+.plan-act-row.muted b { color: var(--ink-soft, #667085); font-weight: 400; }
+.plan-notes { display: flex; gap: 12px; margin-top: 8px; font-size: 13.5px; }
+.plan-notes > span { flex: 0 0 84px; color: var(--ink-soft, #667085); }
+.plan-notes > div { white-space: pre-wrap; line-height: 1.6; }
+.plan-editor { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; }
+.plan-editor-mask { position: absolute; inset: 0; background: rgba(16, 24, 40, 0.45); }
+.plan-editor-body { position: relative; width: min(520px, calc(100vw - 32px)); max-height: 86vh; overflow: auto; padding: 18px 20px; }
+.plan-editor-body h3 { margin: 0 0 12px; }
+.plan-field { display: block; font-size: 13px; color: var(--ink-soft, #667085); margin-bottom: 12px; }
+.plan-field input, .plan-field textarea {
+  display: block; width: 100%; margin-top: 5px; padding: 8px 10px;
+  border: 1px solid var(--line, #e4e7ec); border-radius: 8px;
+  font-size: 14px; font-family: inherit; background: var(--bg, #fff); color: inherit;
+}
+.plan-field textarea { resize: vertical; }

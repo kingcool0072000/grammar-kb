@@ -354,7 +354,7 @@ def build_parser() -> argparse.ArgumentParser:
     per = sub.add_parser("export-recordings", help="导出学生朗读录音为音频文件（附朗读选段文本）")
     per.add_argument("out", help="输出目录（自动创建）")
     per.add_argument("--user", default=None, help="只导出某学生的录音（默认全部）")
-    per.add_argument("--fce-db", default=None, help="fce.db 路径（默认 $GRAMMAR_KB_FCE_DB → iCloud → data/fce.db）")
+    per.add_argument("--fce-db", default=None, help="fce.db 路径（默认 $GRAMMAR_KB_FCE_DB → data/fce.db）")
     per.set_defaults(func=cmd_export_recordings)
 
     return p

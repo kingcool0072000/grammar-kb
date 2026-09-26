@@ -1,4 +1,4 @@
-"""专注力采集：泛读馆阅读器的学生会话行为数据（fce.db 同库，随 iCloud 同步）。
+"""专注力采集：泛读馆阅读器的学生会话行为数据（fce.db 同库）。
 
 设计意图：
 - 学生端阅读器（focus.js）静默上报一组会话累计值：活跃/离开时长、
@@ -7,8 +7,7 @@
   INSERT OR REPLACE 幂等覆盖；created_at 保留首次上报时间。
 - 综合评分（compute_score，0-100）在服务端按固定透明公式计算，
   明细 score_detail 随行落库返回，教师端可直接解释「为什么是这个分」。
-- 与 fce.db 同库：iCloud 把成绩库同步到教师设备（本库保持默认
-  journal 模式、单文件自包含，惯例见 exam_store.py 开头注释）。
+- 与 fce.db 同库（本库保持默认 journal 模式、单文件自包含）。
 - 数据量小，不设删除（历史即成长记录）。
 """
 from __future__ import annotations

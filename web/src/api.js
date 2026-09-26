@@ -146,6 +146,12 @@ export const api = {
   reciteSubmit: (rec) => reqJson('/recite/sessions', 'POST', rec),
   reciteSessions: ({ user, limit = 100 } = {}) =>
     req('/recite/sessions', { searchParams: { user, limit } }),
+  // 云端逐词进度（出题与看板数据源）+ 本地历史一次性合并上云 + 教师清空
+  reciteProgress: ({ user, includeWords = false } = {}) =>
+    req('/recite/progress', { searchParams: { user, include_words: includeWords } }),
+  reciteProgressSync: (progress) => reqJson('/recite/progress/sync', 'POST', { progress }),
+  reciteProgressClear: (user) =>
+    req(`/recite/progress`, { method: 'DELETE', searchParams: { user } }),
   // 泛读馆：书架 / 阅读器 / 预习 / 设置 / 查词（library.db）
   libraryBooks: () => req('/library/books'),
   libraryUpload: (file) => {
@@ -192,6 +198,10 @@ export const api = {
     req('/recite/wrongbook', { searchParams: { user, limit } }),
   // 专题学习（学生自学手册进度；谁登录记谁的行，跨设备同步）
   topicsProgress: () => req('/topics/progress'),
+  // 计划表（教师周计划：任务/实时完成度/上周回顾）
+  planWeeks: ({ user } = {}) => req('/plan/weeks', { searchParams: { user } }),
+  planWeekPut: (weekStart, payload) =>
+    reqJson(`/plan/weeks/${weekStart}`, 'PUT', payload),
   topicProgress: (topicId) => req(`/topics/${encodeURIComponent(topicId)}/progress`),
   topicPutProgress: (topicId, doneKeys, assignedUser = '') =>
     reqJson(`/topics/${encodeURIComponent(topicId)}/progress`, 'PUT', {

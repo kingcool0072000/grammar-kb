@@ -107,6 +107,7 @@ try:
         wrong_words: list = Field(default_factory=list)
         mode: str = Field(default="", max_length=20)
         scope: str = Field(default="", max_length=20)
+        details: Optional[list] = None  # 逐词对错明细 [{word, correct}]，落云端逐词进度
 
     class FocusSessionIn(BaseModel):
         """泛读馆阅读器专注力心跳上报（累计值，按 session_id 幂等覆盖）。"""
@@ -163,7 +164,7 @@ except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
 def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None,
               fce_db_path: Optional[str] = None):
     """构造 FastAPI 应用。``db_path`` 为 None 时走默认库（GRAMMAR_KB_DB 或 data/grammar.db）；
-    ``exam_db_path`` 为成绩库路径（默认 iCloud Drive 或 data/exam.db）。"""
+    ``exam_db_path`` 为成绩库路径（默认 data/exam.db）。"""
     from fastapi import FastAPI, HTTPException, Query as FQuery
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
@@ -177,6 +178,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from .recite import ReciteStore
     from .focus import FocusStore
     from .topics import TopicStore
+    from .plan import PlanStore
     from .analytics_ai import AnalyticsAI
 
     # exam 库路径在此先落定：ExamStore 内部会自解析默认路径，但
@@ -194,6 +196,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     recite = ReciteStore(fce_db_path)
     focus = FocusStore(fce_db_path)
     topics = TopicStore(fce_db_path)
+    # 计划表（教师周计划）：fce.db 同库存 tasks/notes，完成度实时聚合多库
+    plan = PlanStore(fce_db_path, exam_db_path=exam_db_path)
     # 泛读馆（整本书英文泛读）：路径解析沿 fce_query 模式
     # （GRAMMAR_KB_LIBRARY_DB/GRAMMAR_KB_LIBRARY_DIR → data/）
     library = LibraryStore()
@@ -260,6 +264,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("POST", "/recite/sessions"),
         ("GET", "/recite/sessions"),
         ("GET", "/recite/wrongbook"),  # 错词本（学生只看自己的）
+        ("GET", "/recite/progress"),  # 云端逐词进度（出题与看板数据源）
+        ("POST", "/recite/progress/sync"),  # 本地历史一次性上云合并
         ("POST", "/focus/sessions"),
         ("GET", "/focus/sessions"),  # /{id} 详情学生仍被端点内 _require_teacher 拦 403
         # 专题学习（学生自学手册进度；/topics/{id}/progress 学生只能写自己的行）
@@ -706,15 +712,49 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     @app.post("/recite/sessions")
     def recite_submit(rec: ReciteSessionIn, request: "fastapi.Request"):
-        """学生完成一组背单词练习后上报成绩（前端静默尽力上报）。"""
+        """学生完成一组背单词练习后上报成绩（前端静默尽力上报）。
+
+        details（逐词对错明细）随组落 recite_word_progress，云端进度唯一源。
+        """
         user = _request_user(request)
         try:
             return _ok(recite.submit(
                 user, rec.total, rec.wrong, rec.acc, rec.duration_sec,
-                rec.wrong_words, rec.mode, rec.scope,
+                rec.wrong_words, rec.mode, rec.scope, details=rec.details,
             ))
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
+
+    @app.get("/recite/progress")
+    def recite_progress(
+        request: "fastapi.Request", user: Optional[str] = None,
+        include_words: bool = False,
+    ):
+        """背单词云端逐词进度与分级汇总。学生只看自己的；教师可带 user。"""
+        u = user if (request.state.role == "teacher" and user) else request.state.user
+        return _ok(recite.progress(u, include_words=include_words))
+
+    @app.post("/recite/progress/sync")
+    def recite_progress_sync(payload: dict, request: "fastapi.Request"):
+        """本地历史进度一次性上云合并（{word: {right, wrong}}，max 语义幂等）。
+
+        返回合并后的云端全量逐词进度；前端用它覆盖 localStorage 后清除旧 key。
+        """
+        user = _request_user(request)
+        data = payload.get("progress") if isinstance(payload, dict) else None
+        if not isinstance(data, dict):
+            raise HTTPException(status_code=422, detail="payload.progress 须为 {word: {right, wrong}}")
+        if len(data) > 20000:
+            raise HTTPException(status_code=422, detail="词数超限")
+        return _ok(recite.merge_progress(user, data))
+
+    @app.delete("/recite/progress")
+    def recite_progress_clear(request: "fastapi.Request", user: Optional[str] = None):
+        """清空学生云端逐词进度（教师专属，测试/重置用）。"""
+        _require_teacher(request)
+        if not user:
+            raise HTTPException(status_code=422, detail="须指定 user")
+        return _ok({"user": user, "deleted": recite.clear_progress(user)})
 
     @app.get("/recite/wrongbook")
     def recite_wrongbook(request: "fastapi.Request", user: Optional[str] = None, limit: int = 500):
@@ -794,6 +834,36 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
 
+    # ---- 计划表（教师专属：周维度计划 + 实时完成度 + 上周回顾） ----
+
+    @app.get("/plan/weeks")
+    def plan_weeks(request: "fastapi.Request", user: str = "malin"):
+        """全部周计划 + 每周实时完成度 + 当前周的上周回顾。教师专属。"""
+        _require_teacher(request)
+        weeks = plan.list_weeks()
+        for w in weeks:
+            w["actuals"] = plan.week_actuals(w["week_start"], user=user)
+        from datetime import date as _date, timedelta as _td
+        cur_mon = (_date.today() - _td(days=_date.today().weekday())).isoformat()
+        return _ok({
+            "weeks": weeks,
+            "current_week": cur_mon,
+            "last_week_review": plan.last_week_review(cur_mon, user=user),
+        })
+
+    @app.put("/plan/weeks/{week_start}")
+    def plan_week_put(week_start: str, payload: dict, request: "fastapi.Request"):
+        """保存一周的 tasks/notes（教师专属，幂等覆盖）。"""
+        _require_teacher(request)
+        tasks = payload.get("tasks") if isinstance(payload, dict) else None
+        notes = payload.get("notes", "") if isinstance(payload, dict) else ""
+        if tasks is None or not isinstance(tasks, dict):
+            raise HTTPException(status_code=422, detail="payload.tasks 须为对象")
+        try:
+            return _ok(plan.put_week(week_start, tasks, str(notes or "")))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+
     # ---- 学情分析 · AI 周报（手动触发，分析上一自然周；教师专属） ----
 
     @app.get("/analytics/ai/reports")
@@ -839,7 +909,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         except (TypeError, ValueError):
             return default
 
-    # ---- 作业成绩（可写；独立 exam.db，默认放 iCloud Drive 跨设备同步） ----
+    # ---- 作业成绩（可写；独立 exam.db） ----
 
     @app.get("/exams")
     def exams_list():
@@ -1128,7 +1198,7 @@ def main() -> None:
     parser.add_argument(
         "--exam-db",
         default=None,
-        help="作业成绩库路径（默认 $GRAMMAR_KB_EXAM_DB，iCloud Drive 可用时用 iCloud，否则 data/exam.db）",
+        help="作业成绩库路径（默认 $GRAMMAR_KB_EXAM_DB，否则 data/exam.db）",
     )
     args = parser.parse_args()
     run_app(host=args.host, port=args.port, db_path=args.db, exam_db_path=args.exam_db)

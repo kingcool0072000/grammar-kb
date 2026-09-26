@@ -2,11 +2,13 @@ import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
 
 // 背单词：全屏沉浸卡片。三种题型——认词（英→中）、拼写（中→英）、
-// 动词变形（go 的过去式？），统一「翻面自评」作答；错词间隔重现直到答对；
-// 进度存 localStorage（基础/进阶两个词库各自独立）。
+// 动词变形（go 的过去式？），统一「翻面自评」作答；错词间隔重现直到答对。
 //
-// 基础词库来自 /vocabulary（哈一讲义词表）；进阶词库为静态
-// advanced-vocab.json（孩子侧只叫「进阶」，不提来源级别）。
+// 进度不再存 localStorage：逐词对错实时上报云端（recite_word_progress），
+// 看板/出题「未掌握词池」/历史记录全部走云端 API。首次进入时若检测到
+// 旧版本遗留的本地进度（gkb-recite-progress-v1），一次性合并上云后清除。
+//
+// 词库来自 /vocab-levels（L0 哈一课本语料词，L1-L5 分层词表，教师解锁）。
 
 const POS_CN = { v: '动词', n: '名词', adj: '形容词', adv: '副词', prep: '介词', conj: '连词', pron: '代词', num: '数词', proper: '专名' }
 const FORM_CN = {
@@ -86,46 +88,36 @@ function diffHtml(answer, input) {
   return out
 }
 
-// ---- 进度（localStorage）-------------------------------------------------- //
+// ---- 进度（云端 recite_word_progress；本地仅遗留数据一次性迁移）---------- //
 
-const LS_KEY = 'gkb-recite-progress-v1'
-const LS_SESSIONS = 'gkb-recite-sessions-v1' // 每组一次：{t, sec, total, wrong}
+const LS_KEY = 'gkb-recite-progress-v1' // 旧版遗留，迁移后清除
+const LS_SESSIONS = 'gkb-recite-sessions-v1' // 旧版遗留，迁移后清除（历史已上云）
 
-function loadProgress() {
+/**
+ * 旧本地进度一次性合并上云（max 语义幂等），成功后清掉遗留 key。
+ * 返回是否执行了迁移（用于提示）；失败静默（下次进来再试）。
+ */
+async function migrateLegacyProgress() {
+  let legacy = null
   try {
-    return JSON.parse(localStorage.getItem(LS_KEY)) || {}
+    legacy = JSON.parse(localStorage.getItem(LS_KEY))
   } catch {
-    return {}
+    legacy = null
   }
-}
-
-function loadSessions() {
-  try {
-    return JSON.parse(localStorage.getItem(LS_SESSIONS)) || []
-  } catch {
-    return []
+  if (!legacy || typeof legacy !== 'object' || !Object.keys(legacy).length) {
+    // 无逐词遗留也清掉旧 sessions key（数据早已在云端）
+    try {
+      localStorage.removeItem(LS_SESSIONS)
+    } catch { /* 忽略 */ }
+    return false
   }
-}
-
-function saveResult(word, type, correct) {
-  const p = loadProgress()
-  const item = p[word] || { right: 0, wrong: 0 }
-  item[correct ? 'right' : 'wrong'] += 1
-  p[word] = item
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify(p))
+    await api.reciteProgressSync(legacy)
+    localStorage.removeItem(LS_KEY)
+    localStorage.removeItem(LS_SESSIONS)
+    return true
   } catch {
-    /* 隐私模式等存不进就算了 */
-  }
-}
-
-function saveSession(sec, total, wrongCount) {
-  const list = loadSessions()
-  list.push({ t: Date.now(), sec, total, wrong: wrongCount })
-  try {
-    localStorage.setItem(LS_SESSIONS, JSON.stringify(list.slice(-100)))
-  } catch {
-    /* 存不进就算了 */
+    return false // 离线/接口异常：保留本地数据，下次再迁移
   }
 }
 
@@ -166,10 +158,26 @@ export async function mountRecite(el, { vocab, role }) {
   `
 
   const state = { scope: 'all', size: 20, mode: 'flip' }
-  // 词库加载完成前禁用开始钮：mount 的两次 await vocab-levels 期间点击
-  // 会因 pool 为空而静默无反应（e2e 时序假故障的根源）
+  // 词库/云端进度加载完成前禁用开始钮：pool 为空时点击会静默无反应
   const startBtn = el.querySelector('#rc-start')
   startBtn.disabled = true
+
+  // ---- 旧本地进度一次性迁移上云（malin 的 559 词次历史无缝衔接）----
+  const migrated = await migrateLegacyProgress()
+  if (migrated) console.info('[recite] 本地历史进度已合并上云')
+
+  // ---- 云端逐词进度（看板与出题「未掌握词池」的唯一数据源）----
+  let cloudProgress = { total_seen: 0, mastered: 0, levels: {}, words: [] }
+  try {
+    cloudProgress = await api.reciteProgress({ includeWords: true })
+  } catch {
+    // 接口不可用（离线）：进度看板为空态，仍可背词但不上进度
+  }
+
+  const wordProgress = new Map((cloudProgress.words || []).map((w) => [w.word, w]))
+  const masteredSet = new Set(
+    (cloudProgress.words || []).filter((w) => w.mastered).map((w) => w.word),
+  )
 
   // ---- 词库层级选择（/vocab-levels 按解锁截断：拿不到的层=锁定） ----
   const LEVEL_MAX = 5
@@ -202,19 +210,19 @@ export async function mountRecite(el, { vocab, role }) {
   }
   renderScopeChips()
 
-  // 看板 + 统计一起渲染（当前层单词表进度）
+  // 看板 + 统计一起渲染（云端口径：当前层词进度）
   function renderBoard() {
     const $dash = el.querySelector('#rc-dash')
     const $stats = el.querySelector('#rc-stats')
-    const p = loadProgress()
-    const words = Object.keys(p)
+    const scopeLevel = state.scope === 'all' ? 0 : Number(state.scope)
+    const lvWords = (cloudProgress.words || []).filter((w) => w.level === scopeLevel)
     const total = pool().length
-    const learned = words.length
-    const mastered = words.filter((w) => p[w].right > 0 && p[w].right >= p[w].wrong).length
-    const hardN = words.filter((w) => p[w].wrong > p[w].right).length
+    const learned = lvWords.length
+    const mastered = lvWords.filter((w) => w.mastered).length
+    const hardN = lvWords.filter((w) => w.wrong > w.right).length
     const pct = total ? Math.round((learned / total) * 100) : 0
-    const sessions = loadSessions()
-    const totalSec = sessions.reduce((s, x) => s + (x.sec || 0), 0)
+    const sessions = cloudSessions
+    const totalSec = sessions.reduce((s, x) => s + (x.duration_sec || 0), 0)
 
     $dash.innerHTML = `
       <div class="recite-dash-head">
@@ -225,29 +233,34 @@ export async function mountRecite(el, { vocab, role }) {
       <p class="muted">共 ${total} 词 · 已背 ${learned} 词 · 掌握 ${mastered} 词 · 易错 ${hardN} 词${sessions.length ? ` · 累计 ${sessions.length} 组 / 用时 ${fmtDuration(totalSec)}` : ''}</p>
     `
 
-    if (!words.length && !sessions.length) {
+    if (!learned && !sessions.length) {
       $stats.innerHTML = ''
       return
     }
-    const totalRight = words.reduce((s, w) => s + p[w].right, 0)
-    const totalWrong = words.reduce((s, w) => s + p[w].wrong, 0)
-    const hard = words
-      .filter((w) => p[w].wrong >= p[w].right)
-      .sort((a, b) => p[b].wrong - p[a].wrong)
+    const totalRight = lvWords.reduce((s, w) => s + w.right, 0)
+    const totalWrong = lvWords.reduce((s, w) => s + w.wrong, 0)
+    const hard = lvWords
+      .filter((w) => w.wrong >= w.right)
+      .sort((a, b) => b.wrong - a.wrong)
       .slice(0, 20)
     $stats.innerHTML = `
       <div class="card recite-stats-card">
-        <h3>已背 ${words.length} 词 · 累计答对 ${totalRight} 次 / 答错 ${totalWrong} 次</h3>
-        ${hard.length ? `<p class="muted">易错词：${hard.map((w) => `<span class="vocab-form">${escapeHtml(w)}</span>`).join(' ')}</p>` : ''}
-        ${canClear ? '<button class="chip" id="rc-clear">清除记录</button>' : ''}
+        <h3>已背 ${learned} 词 · 累计答对 ${totalRight} 次 / 答错 ${totalWrong} 次</h3>
+        ${hard.length ? `<p class="muted">易错词：${hard.map((w) => `<span class="vocab-form">${escapeHtml(w.word)}</span>`).join(' ')}</p>` : ''}
+        ${canClear ? '<button class="chip" id="rc-clear">清除云端进度</button>' : ''}
       </div>
     `
     const $clear = $stats.querySelector('#rc-clear')
     if ($clear)
-      $clear.addEventListener('click', () => {
-        localStorage.removeItem(LS_KEY)
-        localStorage.removeItem(LS_SESSIONS)
-        renderBoard()
+      $clear.addEventListener('click', async () => {
+        if (!confirm('确认清空云端逐词进度？（练习记录保留，仅重置掌握状态）')) return
+        try {
+          await api.reciteProgressClear(role === 'teacher' ? (cloudProgress.user || '') : '')
+        } catch { /* 失败静默 */ }
+        try {
+          cloudProgress = await api.reciteProgress({ includeWords: true })
+        } catch { /* 忽略 */ }
+        refreshFromCloud()
       })
   }
 
@@ -271,8 +284,31 @@ export async function mountRecite(el, { vocab, role }) {
     return byLevel(Number(state.scope))
   }
 
+  /** 出题池：当前层中「云端未掌握」的词（新词优先；已掌握的不再进组）。 */
+  function freshPool() {
+    return pool().filter((e) => !masteredSet.has(e.word.toLowerCase()))
+  }
 
-  // ---- 我的练习记录（云端上报的历史，与本地进度互补）----
+  // 完成一组后重拉云端进度并刷新看板（单词词状态已由上报更新）
+  const refreshFromCloud = async () => {
+    try {
+      cloudProgress = await api.reciteProgress({ includeWords: true })
+      wordProgress.clear()
+      ;(cloudProgress.words || []).forEach((w) => wordProgress.set(w.word, w))
+      masteredSet.clear()
+      ;(cloudProgress.words || []).filter((w) => w.mastered).forEach((w) => masteredSet.add(w.word))
+    } catch { /* 离线：保留旧快照 */ }
+    renderBoard()
+  }
+
+
+  // ---- 我的练习记录（云端；时长汇总也来自这里）----
+  let cloudSessions = []
+  try {
+    cloudSessions = await api.reciteSessions({ limit: 100 })
+  } catch {
+    cloudSessions = []
+  }
   const renderHistory = async () => {
     const $h = el.querySelector('#rc-history')
     if (!$h) return
@@ -369,7 +405,7 @@ export async function mountRecite(el, { vocab, role }) {
           mode: 'flip',
           scope: 'wrongbook',
           onFinish: () => {
-            renderBoard()
+            refreshFromCloud()
             setTimeout(renderWrongbook, 800)
           },
         })
@@ -390,15 +426,25 @@ export async function mountRecite(el, { vocab, role }) {
   })
 
   el.querySelector('#rc-start').addEventListener('click', () => {
-    const p = pool()
-    if (!p.length) return
+    // 出题池=当前层「云端未掌握」的词；全部掌握时提示去错题本/换层级
+    const p = freshPool()
+    if (!p.length) {
+      const $hint = el.querySelector('#rc-stats')
+      if ($hint)
+        $hint.innerHTML = `
+          <div class="card recite-stats-card">
+            <h3>当前词库已全部背完 🎉</h3>
+            <p class="muted">可以换更高一级词库，或到下方错题本巩固易错词。</p>
+          </div>`
+      return
+    }
     startSession(el, {
       pool: p,
       size: Math.min(state.size, p.length),
       mode: state.mode,
       scope: state.scope,
       onFinish: () => {
-        renderBoard()
+        refreshFromCloud()
         // 上报有网络延迟，稍等再拉历史
         setTimeout(renderHistory, 800)
       },
@@ -415,6 +461,7 @@ function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
   let queue = buildQuiz(pool, size)
   let done = 0
   const wrongEntries = []
+  const details = [] // 逐词对错明细（首答），随组上报云端逐词进度
   const totalFirst = queue.length
   let idx = 0
   let overlay = null
@@ -434,9 +481,8 @@ function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
     // 注意：wrongEntries 只记首答错；重现答对不影响它
     const uniqWrong = [...new Set(wrongEntries.map((e) => e.word))]
     const sec = Math.round((Date.now() - t0) / 1000)
-    saveSession(sec, total, uniqWrong.length)
-    // 成绩静默上报教师端（尽力而为：失败不影响本地流程）
-    uploadSession(total, uniqWrong, sec)
+    // 成绩 + 逐词明细一并静默上报云端（尽力而为：失败不影响本地流程）
+    uploadSession(total, uniqWrong, sec, details)
     overlay.remove()
     overlay = null
     mountResult(rootEl, {
@@ -452,7 +498,7 @@ function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
     if (onFinish) onFinish()
   }
 
-  function uploadSession(total, uniqWrong, sec) {
+  function uploadSession(total, uniqWrong, sec, wordDetails) {
     import('../api.js').then(({ api }) => {
       return api.reciteSubmit({
         total,
@@ -462,6 +508,7 @@ function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
         wrong_words: uniqWrong,
         mode,
         scope,
+        details: wordDetails,
       })
     }).catch(() => { /* 离线/未登录时静默丢弃 */ })
   }
@@ -488,7 +535,9 @@ function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
       total: totalFirst + (queue.length - totalFirst),
       mode,
       onAnswer(correct) {
-        saveResult(q.entry.word, q.type, correct)
+        // 首答逐词明细（重现答题不计）：云端累计 right/wrong
+        const w = q.entry.word
+        if (!details.some((d) => d.word === w)) details.push({ word: w, correct })
         done += 1
         if (!correct) {
           if (!wrongEntries.some((e) => e.word === q.entry.word)) wrongEntries.push(q.entry)
@@ -633,5 +682,5 @@ function mountResult(el, { total, uniqWrong, acc, duration, pool, size, mode, sc
 }
 
 function scopeCn(scope) {
-  return { all: '基础词表', advanced: '进阶词表', verb: '只动词', special: '特殊拼写' }[scope] || scope || '基础词表'
+  return { all: '基础词表', 0: '基础词表', advanced: '进阶词表', verb: '只动词', special: '特殊拼写', wrongbook: '错题本' }[scope] || (String(scope).match(/^\d+$/) ? 'L' + scope + ' 词库' : scope) || '基础词表'
 }

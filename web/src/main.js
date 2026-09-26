@@ -17,6 +17,7 @@ import { mountGrading } from './views/grading.js'
 import { mountPrep } from './views/prep.js'
 import { mountAnalytics } from './views/analytics.js'
 import { mountTopics } from './views/topics.js'
+import { mountPlan } from './views/plan.js'
 import { mountConfig } from './views/config.js'
 import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
@@ -38,6 +39,7 @@ const VIEWS = [
   { key: 'grading', label: '批改中心', teacher: true },
   { key: 'prep', label: '备课中心', teacher: true },
   { key: 'analytics', label: '学情分析', teacher: true },
+  { key: 'plan', label: '计划表', teacher: true },
   { key: 'recite', label: '背单词', studentOnly: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
   { key: 'topics', label: '专题学习', studentOnly: true },
@@ -264,6 +266,8 @@ async function bootstrap() {
       mounted = mountPrep(container, ctx)
     } else if (route === 'analytics') {
       mounted = mountAnalytics(container)
+    } else if (route === 'plan') {
+      mounted = mountPlan(container)
     } else if (route === 'courses') {
       mounted = mountCourses(container, { lectures: state.lectures, openLecture: ctx.openLecture })
     } else if (route === 'vocab') {

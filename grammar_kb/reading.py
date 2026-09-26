@@ -69,8 +69,7 @@ class ReadingStore:
     """reading_article / reading_recordings 读写（fce.db 同库）。"""
 
     def __init__(self, db_path: Optional[str] = None):
-        # 与 FcePaperStore 同库同路径解析（环境变量 → iCloud → data/），
-        # 录音随 iCloud 跨设备到达教师端
+        # 与 FcePaperStore 同库同路径解析（环境变量 → data/）
         self.db_path = db_path or _default_db_path()
         if Path(self.db_path).exists():
             with self._connect() as conn:

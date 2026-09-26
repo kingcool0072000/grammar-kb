@@ -3,12 +3,9 @@
 库文件路径解析顺序（:func:`default_exam_db_path`）：
 
 1. 环境变量 ``GRAMMAR_KB_EXAM_DB``
-2. iCloud Drive 可用时 ``~/Library/Mobile Documents/com~apple~CloudDocs/grammar-kb/exam.db``
-   —— 数据量小，放云端由 iCloud 在多台设备间同步
-3. ``<cwd>/data/exam.db``
+2. ``<cwd>/data/exam.db``
 
-注意：iCloud 对 SQLite 的 WAL 侧车文件同步不可靠，因此本库显式用
-默认 journal 模式（DELETE），保证单文件自包含。
+真实数据只认生产服务器上的库；本机 data/exam.db 仅作开发测试。
 """
 from __future__ import annotations
 
@@ -31,22 +28,15 @@ CREATE TABLE IF NOT EXISTS exam_records (
 
 
 def default_exam_db_path() -> str:
-    """成绩库默认路径：环境变量 → iCloud Drive → 项目 data/。"""
+    """成绩库默认路径：环境变量 → 项目 data/。"""
     env = os.environ.get("GRAMMAR_KB_EXAM_DB")
     if env:
         return env
-    icloud = os.path.expanduser(
-        "~/Library/Mobile Documents/com~apple~CloudDocs/grammar-kb/exam.db"
-    )
-    if os.path.isdir(os.path.dirname(icloud)) or os.path.isdir(
-        os.path.expanduser("~/Library/Mobile Documents/com~apple~CloudDocs")
-    ):
-        return icloud
     return os.path.join(os.getcwd(), "data", "exam.db")
 
 
 class ExamStore:
-    """作业成绩记录的增删改查。每次操作独立开连接，兼容 iCloud 整文件替换。"""
+    """作业成绩记录的增删改查。每次操作独立开短连接。"""
 
     def __init__(self, path: Optional[str] = None):
         self.path = path or default_exam_db_path()
@@ -64,8 +54,7 @@ class ExamStore:
         """事务 + 连接关闭双保证。
 
         sqlite3 连接的 ``with con`` 只管事务提交/回滚、不关连接；本库靠
-        「每次操作短连接」兼容 iCloud 整文件替换，连接必须显式 close，
-        否则句柄悬滞会与 iCloud 的文件替换互相干扰。
+        「每次操作短连接」保证句柄不悬滞，连接必须显式 close。
         """
         with closing(self._conn()) as con, con:
             yield con
