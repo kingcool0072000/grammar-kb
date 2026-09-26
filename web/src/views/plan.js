@@ -123,11 +123,11 @@ export async function mountPlan(el) {
     function reviewHtml(rv) {
       if (!rv) return ''
       const s = rv.summary || {}
+      // 改善项不在此重复展示——历史周的 notes 行内可见（避免同屏两份相同文字）
       const rows = [
         ['📚 课程', s.lecture_count ? `${s.lecture_count} 讲${s.avg_score != null ? ` · 均分 ${s.avg_score}` : ''}` + (s.low_scores?.length ? ` · 低分：${s.low_scores.map((x) => `第${x.lecture}讲${x.score}分`).join('、')}` : '') : '无作业记录', Boolean(s.lecture_count)],
         ['🔤 词汇', s.vocab_mastered ? `新掌握 ${s.vocab_mastered} 词` : '无新掌握词', Boolean(s.vocab_mastered)],
         ['🎧 FCE', s.fce_parts?.length ? s.fce_parts.join('、') : '无练习', Boolean(s.fce_parts?.length)],
-        ['📝 改善项', rv.notes || '无', Boolean(rv.notes)],
       ]
       return `<section class="fce-group plan-review">
         <div class="fce-group-title">👀 上周回顾（${weekLabel(rv.week_start)}）</div>
@@ -137,10 +137,15 @@ export async function mountPlan(el) {
 
     function renderWeeks() {
       const host = body.querySelector('#plan-weeks')
+      // 从最早已排计划的周开始显示（历史回填的周也要能看到）；无历史则回看 2 周
+      const seeded = [...byStart.keys()].sort()
+      const fallback = new Date(curWeek + 'T00:00:00')
+      fallback.setDate(fallback.getDate() - 14)
+      const earliest = seeded.length ? seeded[0] : iso(fallback)
       const starts = []
-      let d = new Date(curWeek + 'T00:00:00')
-      d.setDate(d.getDate() - 14) // 往前带两周做回顾
-      for (let i = 0; i < 20; i++) {
+      let d = new Date(earliest + 'T00:00:00')
+      const END = new Date('2027-01-31T23:59:59') // 冲刺线 2027-01-31：其后的周一不再渲染
+      while (d <= END) {
         starts.push(iso(d))
         d = new Date(d.getTime() + 7 * 86400000)
       }
@@ -158,26 +163,44 @@ export async function mountPlan(el) {
 
       // 周历条：本周=高亮大卡；过去/未来=紧凑一行（有计划才展开要点）
       const chips = []
-      if (t.lectures?.length) chips.push(`📚 ${t.lectures.join('/')}讲`)
-      if (t.vocab_goal != null) chips.push(`🔤 ${t.vocab_goal}`)
+      if (t.lectures?.length) chips.push(`📚 ${[...t.lectures].sort((x, y) => x - y).join('/')}讲`)
+      if (t.vocab_goal != null) chips.push(`🔤 累计${t.vocab_goal}词`)
       if (t.fce?.length) chips.push(`🎧 ${t.fce.join('+')}`)
       if (t.reading) for (const [k, v] of Object.entries(t.reading)) chips.push(`📖 ${k} ${v}%`)
 
       if (!isCurrent) {
+        // 历史周：notes（周总结）行内展示；✓ 覆盖有课程/词汇完成的周，
+        // 无数据的过去周也给「已结束」基底（plan-wk-row.past 降权）
         return `<section class="plan-wk-row ${past ? 'past' : 'future'} ${w.week_start <= today && today <= addDays(w.week_start, 6) ? 'thisweek' : ''}">
           <span class="plan-wk-date">${weekLabel(w.week_start)}</span>
           <span class="plan-wk-chips">${chips.length ? chips.map((c) => `<i>${escapeHtml(c)}</i>`).join('') : '<em class="muted">—</em>'}</span>
           ${a && past && (a.lectures?.length || a.vocab_mastered) ? `<span class="plan-wk-done">✓ ${a.lectures?.length ? a.lectures.length + '讲' : ''}${a.vocab_mastered ? ' ' + a.vocab_mastered + '词' : ''}</span>` : ''}
           <button class="chip" data-edit="${w.week_start}">编辑</button>
+          ${past && w.notes ? `<p class="plan-wk-note">${escapeHtml(w.notes)}</p>` : ''}
         </section>`
       }
 
-      // 本周大卡
+      // 本周大卡（chips 行同上文；阅读行书名不截断，目标/实况分别标注）
       const act = a ? [
         ['课程', a.lectures?.length ? a.lectures.map((x) => `第${x.lecture}讲 ${x.score}分${x.score < 70 ? ' ⚠️' : ''}`).join('、') : '未开始', Boolean(a.lectures?.length)],
         ['词汇', t.vocab_goal != null ? `本周新掌握 ${a.vocab_mastered || 0} 词 / 目标 +${Math.max(0, t.vocab_goal - (a.vocab_mastered || 0))}` : `新掌握 ${a.vocab_mastered || 0} 词`, Boolean(a.vocab_mastered)],
         ['FCE', a.fce_parts?.length ? a.fce_parts.join('、') : '未开始', Boolean(a.fce_parts?.length)],
-        ['阅读', a.reading?.length ? a.reading.map((r) => `${short(r.title, 10)} ${Math.round(r.percent)}%`).join('；') : '未开始', Boolean(a.reading?.length)],
+        ['阅读', a.reading?.length ? a.reading.map((r) => {
+          // 计划书名与实况书名模糊匹配：key 的英文词段（≥3 字母）须全部
+          // 出现在实况标题里；纯中文 key 匹配不上时不标目标（key 建议写
+          // 英文关键词，如 "Percy" / "Harry Potter" / "Wonder"）
+          const goal = t.reading
+            ? Object.entries(t.reading).find(([k]) => {
+                if (!r.title) return false
+                const segs = k.toLowerCase().match(/[a-z]{3,}/g)
+                if (!segs) return false
+                const target = r.title.toLowerCase()
+                return segs.every((s) => target.includes(s))
+              })
+            : null
+          const goalTxt = goal ? `（目标 ${goal[1]}%）` : ''
+          return `${r.title} 实况 ${Math.round(r.percent)}%${goalTxt}`
+        }).join('；') : '未开始', Boolean(a.reading?.length)],
       ] : []
       const daysLeft = Math.max(0, Math.round((new Date(addDays(w.week_start, 6) + 'T23:59:59') - new Date()) / 86400000))
       return `<section class="plan-wk-current">
@@ -268,10 +291,6 @@ function weekLabel(ws) {
   const [y, m, d] = ws.split('-').map(Number)
   const end = new Date(y, m - 1, d + 6)
   return `${m}.${d}–${end.getMonth() + 1}.${end.getDate()}`
-}
-
-function short(s, n) {
-  return s.length > n ? s.slice(0, n) + '…' : s
 }
 
 function toast(msg) {

@@ -2328,10 +2328,16 @@ li.open .topic-reveal-btn { display: none; }
 .plan-notes > div { white-space: pre-wrap; line-height: 1.6; }
 
 /* 周历行（过去/未来周，紧凑） */
-.plan-wk-row { display: flex; align-items: center; gap: 12px; padding: 9px 4px; border-bottom: 1px solid var(--line, #ebe5d6); font-size: 13.5px; }
+.plan-wk-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 9px 4px; border-bottom: 1px solid var(--line, #ebe5d6); font-size: 13.5px; }
 .plan-wk-row .plan-wk-date { flex: 0 0 96px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
 .plan-wk-row.past .plan-wk-date { color: var(--ink-soft); }
-.plan-wk-row.past:has(.plan-wk-chips em) { opacity: 0.5; }
+/* 历史周整体降一档（完成态让位给未来计划）；空周更弱 */
+.plan-wk-row.past:not(.thisweek) { opacity: 0.78; }
+.plan-wk-row.past .plan-wk-done { color: #4c7a50; }
+.plan-wk-row.past:has(.plan-wk-chips em) { opacity: 0.48; }
+/* 历史周总结：行内第二行弱化文字（与日期列对齐） */
+.plan-wk-note { flex-basis: 100%; margin: 2px 0 0 108px; font-size: 12.5px;
+  color: var(--ink-soft); line-height: 1.55; }
 .plan-wk-row.future { opacity: 0.88; }
 .plan-wk-row.thisweek { background: rgba(138, 109, 59, 0.07); border-radius: 8px; padding-left: 10px; }
 .plan-wk-chips { flex: 1; display: flex; flex-wrap: wrap; gap: 6px 10px; min-width: 0; }
