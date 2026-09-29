@@ -192,8 +192,8 @@ export const api = {
     req('/analytics/ai/reports', { searchParams: { limit } }),
   // 专注力（泛读馆阅读器行为采集；学生上报，教师批改中心查看）
   focusSubmit: (rec) => reqJson('/focus/sessions', 'POST', rec),
-  focusSessions: ({ user, limit = 50 } = {}) =>
-    req('/focus/sessions', { searchParams: { user, limit } }),
+  focusSessions: ({ user, limit = 50, offset = 0 } = {}) =>
+    req('/focus/sessions', { searchParams: { user, limit, offset } }),
   focusSession: (id) => req(`/focus/sessions/${id}`),
   // 分层词库（vocab_word 表；学生端受教师 vocabUnlock 解锁约束）+ 错词本
   vocabLevels: ({ maxLevel = 7 } = {}) =>
