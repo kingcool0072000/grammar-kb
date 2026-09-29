@@ -59,6 +59,9 @@ export async function mountPrep(el, ctx) {
             <button class="prep-card" data-go="vocabExam">
               <b>L${vex?.unlocked_level ?? 0}</b><span>词汇级别考试 · 已解锁到</span>
             </button>
+            <button class="prep-card" data-go="students">
+              <b>学生管理</b><span>增减学生 · 配置总目标</span>
+            </button>
           </div>
           <p class="reading-hint">点开语法课查看整讲内容；知识点体系按「语法大类 → 主题」两级组织，可定位到讲义原文。</p>
         </div>

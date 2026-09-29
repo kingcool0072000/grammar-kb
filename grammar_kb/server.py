@@ -1051,6 +1051,36 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         except ValueError:
             raise HTTPException(status_code=422, detail="week_start 须为 YYYY-MM-DD")
 
+    # ---- 学生管理（教师）：增删学生；目标配置走 /plan/goals ----
+
+    @app.get("/users")
+    def users_list(request: "fastapi.Request"):
+        """全部账号（教师专属；学生管理页数据源）。"""
+        _require_teacher(request)
+        return _ok({"users": users.list_users()})
+
+    @app.post("/users")
+    def users_add(rec: dict, request: "fastapi.Request"):
+        """新增学生（教师专属）。"""
+        _require_teacher(request)
+        user = str(rec.get("user") or "").strip() if isinstance(rec, dict) else ""
+        password = str(rec.get("password") or "") if isinstance(rec, dict) else ""
+        try:
+            users.add_user(user, password, "student")
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        return _ok({"user": user, "role": "student"})
+
+    @app.delete("/users/{name}")
+    def users_del(name: str, request: "fastapi.Request"):
+        """删除学生（教师专属；教师账号拒删）。"""
+        _require_teacher(request)
+        try:
+            users.delete_user(name)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        return _ok({"deleted": name})
+
     @app.get("/plan/goals")
     def plan_goals_get(request: "fastapi.Request", user: str = "malin"):
         """学生总目标（冲刺目标：讲次/FCE/词汇/泛读书）。教师专属。"""

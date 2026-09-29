@@ -65,6 +65,19 @@ export async function mountPlan(el) {
     let viewMonth = today.slice(0, 7)
     // 视图：week 周 | month 月 | overview 全览
     const view = { mode: 'week' }
+    let students = ['malin']
+    try {
+      const ur = await api.users()
+      const studs = (ur.users || []).filter((u) => u.role === 'student').map((u) => u.user)
+      if (studs.length) students = studs
+    } catch { /* 保持默认 */ }
+    if (!students.includes(state.student)) state.student = students[0]
+    // 学生管理页跳转携带的学生
+    const fromStore = sessionStorage.getItem('gkb-plan-student')
+    if (fromStore && students.includes(fromStore)) {
+      state.student = fromStore
+      sessionStorage.removeItem('gkb-plan-student')
+    }
     let goals = null
     try { goals = (await api.planGoals({ user: state.student })).goals } catch { goals = null }
 
@@ -78,15 +91,14 @@ export async function mountPlan(el) {
           <button class="chip ${view.mode === 'overview' ? 'primary' : ''}" data-vmode="overview">🗺 全览</button>
         </div>
         <label class="pw-student">学生
-          <select id="pw-user">
-            <option value="malin" ${state.student === 'malin' ? 'selected' : ''}>malin</option>
-            <option value="mxy" ${state.student === 'mxy' ? 'selected' : ''}>mxy</option>
-          </select>
+          <select id="pw-user"></select>
         </label>
       </div>
       <div id="plan-review">${reviewHtml(lastReview)}</div>
       <div id="plan-view"></div>
     `
+    body.querySelector('#pw-user').innerHTML = students.map((x) =>
+      `<option value="${escapeHtml(x)}" ${state.student === x ? 'selected' : ''}>${escapeHtml(x)}</option>`).join('')
     const viewHost = body.querySelector('#plan-view')
 
     body.querySelectorAll('[data-vmode]').forEach((b) =>

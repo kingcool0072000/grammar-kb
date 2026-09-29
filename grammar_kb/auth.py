@@ -74,6 +74,40 @@ class UserStore:
             pass  # 只读环境也能跑（每次进程内重建）
         return users
 
+    def list_users(self) -> list[dict]:
+        return [{"user": k, "role": v.get("role", "student")}
+                for k, v in self._load().items()]
+
+    def add_user(self, user: str, password: str, role: str = "student") -> None:
+        import re as _re
+        user = (user or "").strip()
+        if not _re.fullmatch(r"[A-Za-z0-9_-]{2,32}", user):
+            raise ValueError("用户名须为 2-32 位字母/数字/_/-")
+        if len(password or "") < 4:
+            raise ValueError("密码至少 4 位")
+        users = self._load()
+        if user in users:
+            raise ValueError("用户已存在")
+        salt = secrets.token_hex(8)
+        users[user] = {"salt": salt, "hash": _pbkdf2(password, salt),
+                       "role": role if role in ("student", "teacher") else "student"}
+        self._save(users)
+
+    def delete_user(self, user: str) -> None:
+        users = self._load()
+        if user not in users:
+            raise ValueError("用户不存在")
+        if users[user].get("role") == "teacher":
+            raise ValueError("教师账号不可删除")
+        del users[user]
+        self._save(users)
+
+    def _save(self, users: dict) -> None:
+        self._users = users
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(json.dumps(users, ensure_ascii=False, indent=2),
+                             encoding="utf-8")
+
     def verify(self, user: str, password: str) -> str | None:
         """校验成功返回角色，失败返回 None。"""
         rec = self._load().get(user)

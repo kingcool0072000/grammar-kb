@@ -2652,6 +2652,15 @@ li.open .topic-reveal-btn { display: none; }
   .po-row { flex-wrap: wrap; gap: 6px 10px; }
 }\n
 
+/* 通用卡片底（弹窗 body 挂 .card 但此前无定义 → 弹窗透明，这里补上） */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 34px rgba(16, 24, 40, 0.18);
+}
+.plan-editor-body { background: var(--card); }
+
 /* ===== 计划编辑器（结构化）+ 总目标条 ===== */
 .pg-bar {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -2710,4 +2719,26 @@ li.open .topic-reveal-btn { display: none; }
 @media (max-width: 860px) {
   .pe-lec-grid { grid-template-columns: repeat(3, 1fr); }
   .pe-body { max-width: 94vw; }
+}
+
+/* ===== 学生管理页 ===== */
+.st-add { padding: 14px 16px; margin-bottom: 16px; }
+.st-add h3 { font-size: 14.5px; font-weight: 800; color: var(--ink); margin: 0 0 10px; }
+.st-add-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.st-add-row label { font-size: 12.5px; color: var(--ink-soft); display: flex; align-items: center; gap: 6px; }
+.st-add-row input {
+  padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--bg-soft); font-size: 13px; width: 180px;
+}
+.st-list { display: flex; flex-direction: column; gap: 10px; max-width: 720px; }
+.st-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 16px; }
+.st-info { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.st-info b { font-size: 14.5px; color: var(--ink); }
+.st-goal { font-size: 12px; color: var(--ink-soft); }
+.st-ops { display: flex; gap: 6px; flex-wrap: wrap; }
+.st-del { color: #b42318; border-color: #b4231833; }
+.st-goal-dlg .plan-field { display: block; margin-bottom: 10px; }
+.st-goal-dlg .plan-field input, .st-goal-dlg .plan-field select {
+  width: 100%; margin-top: 4px; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--bg-soft); font-size: 13.5px;
 }
