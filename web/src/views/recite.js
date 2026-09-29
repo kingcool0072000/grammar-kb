@@ -376,13 +376,25 @@ export async function mountRecite(el, { vocab, role }) {
         // 最小可出题兜底：认词题至少有词本身
         example: {}, extra: {},
       }
+    // 错词中文释义优先级：后端聚合的 gloss/meanings（vocab_word 表，不受
+    // 解锁层截断影响）→ 本地词表 findEntry；都没有时点击再查 /dict 兜底。
+    const glossOf = (w) => {
+      const item = words.find((x) => x.word === w)
+      if (item && (item.gloss || (item.meanings || []).length)) {
+        return item.meanings?.length ? item.meanings : [item.gloss].filter(Boolean)
+      }
+      const e = findEntry(w)
+      const m = e.meanings || []
+      if (m.length) return m
+      return e.gloss ? [e.gloss] : []
+    }
     host.innerHTML = `
       <section class="fce-group">
-        <div class="fce-group-title">📕 错题本（${words.length} 词）</div>
+        <div class="fce-group-title">📕 错题本（${words.length} 词）· 点词看释义</div>
         <div class="rc-wb-words">
           ${words.slice(0, 60).map((w) => {
             const e = findEntry(w.word)
-            return `<span class="rc-wb-word" title="${e && e.gloss ? escapeHtml(e.gloss.slice(0, 40)) : ''}">${escapeHtml(w.word)}<sup>${w.wrong_count}</sup></span>`
+            return `<span class="rc-wb-word" data-word="${escapeHtml(w.word)}" title="${e && e.gloss ? escapeHtml(e.gloss.slice(0, 40)) : ''}">${escapeHtml(w.word)}<sup>${w.wrong_count}</sup></span>`
           }).join('')}
           ${words.length > 60 ? `<span class="reading-hint">…共 ${words.length} 词</span>` : ''}
         </div>
@@ -390,6 +402,33 @@ export async function mountRecite(el, { vocab, role }) {
           <button class="btn-primary" id="rc-wb-drill">只练错词（${Math.min(20, words.length)} 词）</button>
         </div>
       </section>`
+    // 点击错词：行内展开中文释义（无本地释义时查 /dict 兜底，再没有就明说）
+    host.querySelectorAll('.rc-wb-word').forEach((chip) => {
+      chip.addEventListener('click', async () => {
+        const w = chip.dataset.word
+        const show = (lines, note) => {
+          host.querySelectorAll('.rc-wb-detail').forEach((b) => b.remove())
+          const box = document.createElement('div')
+          box.className = 'rc-wb-detail'
+          box.innerHTML = `
+            <b>${escapeHtml(w)}</b>
+            ${lines.length ? `<p>${lines.map((l) => escapeHtml(String(l))).join('<br/>')}</p>` : ''}
+            ${note ? `<span class="muted">${escapeHtml(note)}</span>` : ''}`
+          chip.after(box)
+        }
+        let lines = glossOf(w)
+        if (lines.length) return show(lines)
+        show([], '查询释义…')
+        try {
+          const d = await api.dict(w)
+          const gl = (d && d.gloss_lines) || []
+          const got = gl.length ? gl.map((g) => [g.pos, g.text].filter(Boolean).join('. ')) : (d && d.gloss ? [d.gloss] : [])
+          show(got, got.length ? '' : '词典未收录该词')
+        } catch {
+          show([], '词典未收录该词')
+        }
+      })
+    })
     const drill = host.querySelector('#rc-wb-drill')
     if (drill)
       drill.addEventListener('click', () => {

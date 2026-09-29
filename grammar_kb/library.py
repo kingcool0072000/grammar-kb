@@ -336,6 +336,26 @@ class LibraryStore:
             for r in rows
         ]
 
+    def get_title(self, book_id: int) -> Optional[str]:
+        """按 id 取书名（书不存在返回 None）。"""
+        with contextlib.closing(self._connect()) as conn:
+            row = conn.execute(
+                "SELECT title FROM books WHERE id = ?", (int(book_id),)
+            ).fetchone()
+        return row["title"] if row else None
+
+    def titles_map(self, book_ids) -> dict[int, str]:
+        """批量 id → 书名（专注力会话补书名用；空集返回空 dict）。"""
+        ids = sorted({int(i) for i in book_ids if i is not None})
+        if not ids:
+            return {}
+        ph = ",".join("?" * len(ids))
+        with contextlib.closing(self._connect()) as conn:
+            rows = conn.execute(
+                f"SELECT id, title FROM books WHERE id IN ({ph})", ids
+            ).fetchall()
+        return {r["id"]: r["title"] for r in rows}
+
     def delete_book(self, book_id: int) -> Optional[int]:
         """事务删 5 表关联 + unlink epub/封面；书不存在返回 None。"""
         with contextlib.closing(self._connect()) as conn:

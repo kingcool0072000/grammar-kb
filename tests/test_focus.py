@@ -235,3 +235,68 @@ def test_list_has_module_range(focus_env):
     d = c.get(f"/focus/sessions/{tid}", headers=detail).json()["data"]
     assert d["lookup_words"] == [{"w": "word", "n": 1}]
     assert d["activity"] == [{"t": 1, "type": "lookup", "w": "word"}]
+
+
+def test_focus_list_offset_and_title_fill(focus_env):
+    """翻页：limit+offset 取第二页；book_title 空的行按 book_id 反查书名补全。"""
+    c = _client(focus_env)
+    s = _login(c, "malin")
+    t = _login(c, "teacher")
+    # 泛读馆塞一本书；会话故意不传 book_title（存量数据形态）
+    from grammar_kb.library import LibraryStore
+    lib = LibraryStore(str(focus_env / "library.db"), data_dir=str(focus_env / "files"))
+    book_id = lib.add_book("teacher", "percy.epub", "application/epub+zip",
+                           _epub_bytes("Percy Jackson", 2))["id"]
+    for i in range(12):
+        assert c.post("/focus/sessions", headers=s, json=_payload(
+            session_id=f"s{i}", book_id=book_id, book_title="", total_sec=60,
+        )).status_code == 200
+    # 第二页（id 倒序 → 最旧的一条）
+    page2 = c.get("/focus/sessions", headers=t,
+                  params={"limit": 10, "offset": 10}).json()["data"]
+    assert len(page2) == 2
+    # 书名补全：响应里 book_title 已按 library.books 反查补上
+    page1 = c.get("/focus/sessions", headers=t,
+                  params={"limit": 10, "offset": 0}).json()["data"]
+    assert len(page1) == 10
+    assert all(r["book_title"] == "Percy Jackson" for r in page1 + page2)
+    # 详情同样补全
+    d = c.get(f"/focus/sessions/{page2[0]['id']}", headers=t).json()["data"]
+    assert d["book_title"] == "Percy Jackson"
+
+
+def _epub_bytes(title: str, chapters: int = 2) -> bytes:
+    """内存拼一个最小合法 epub（mimetype + container +.opf + 章节.xhtml）。"""
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("mimetype", "application/epub+zip",
+                   compress_type=zipfile.ZIP_STORED)
+        z.writestr("META-INF/container.xml",
+                   '<?xml version="1.0"?><container version="1.0"'
+                   ' xmlns="urn:oasis:names:tc:opendocument:xmlns:container">'
+                   '<rootfiles><rootfile full-path="content.opf"'
+                   ' media-type="application/oebps-package+xml"/></rootfiles></container>')
+        items = "".join(
+            f'<item id="c{i}" href="c{i}.xhtml" media-type="application/xhtml+xml"/>'
+            for i in range(chapters))
+        refs = "".join(
+            f'<itemref idref="c{i}"/>' for i in range(chapters))
+        z.writestr("content.opf",
+                   '<?xml version="1.0" encoding="utf-8"?>'
+                   '<package xmlns="http://www.idpf.org/2007/opf" version="3.0"'
+                   ' unique-identifier="id"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/">'
+                   f'<dc:identifier id="id">urn:uuid:{title}</dc:identifier>'
+                   f'<dc:title>{title}</dc:title><dc:language>en</dc:language>'
+                   '</metadata><manifest>' + items +
+                   '</manifest><spine>' + refs + '</spine></package>')
+        for i in range(chapters):
+            z.writestr(
+                f"c{i}.xhtml",
+                '<?xml version="1.0" encoding="utf-8"?>'
+                '<html xmlns="http://www.w3.org/1999/xhtml"><head><title>'
+                f"Chapter {i + 1}</title></head><body><h1>Chapter {i + 1}</h1>"
+                "<p>" + "word " * 60 + "</p></body></html>")
+    return buf.getvalue()

@@ -2283,9 +2283,24 @@ li.open .topic-reveal-btn { display: none; }
 .rc-wb-words { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .rc-wb-word {
   font-size: 14px; color: var(--ink); background: var(--card);
-  border: 1px solid var(--line); border-radius: 8px; padding: 3px 10px; cursor: default;
+  border: 1px solid var(--line); border-radius: 8px; padding: 3px 10px;
+  cursor: pointer; transition: border-color .12s ease;
 }
+.rc-wb-word:hover { border-color: #b08d57; }
 .rc-wb-word sup { font-size: 10px; color: #b3541e; margin-left: 2px; font-weight: 700; }
+/* 点词展开的释义卡：占满整行（flex 容器内 flex-basis:100% 换行） */
+.rc-wb-detail {
+  flex-basis: 100%; padding: 8px 12px; border-left: 3px solid #b08d57;
+  background: var(--bg-soft); border-radius: 0 8px 8px 0; font-size: 14px;
+}
+.rc-wb-detail b { font-size: 15px; }
+.rc-wb-detail p { margin: 4px 0 2px; color: var(--ink); line-height: 1.6; }
+.rc-wb-detail .muted { font-size: 12px; }
+
+/* ---- 批改中心：专注力会话翻页 ---- */
+.gd-focus-pager { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.gd-focus-pager .gd-focus-page-no { font-size: 13px; color: var(--ink-soft); }
+.gd-focus-pager button[disabled] { opacity: .4; cursor: not-allowed; }
 
 /* ---------- 设置中心 #/config 分节标题 ---------- */
 .cfg-section { font-size: 17px; margin: 26px 4px 4px; color: var(--ink); }
@@ -2385,3 +2400,137 @@ li.open .topic-reveal-btn { display: none; }
 /* FCE 音频占位条更轻（临时态）：虚线边+更浅底+文字加深 */
 .fce-audio-missing { background: transparent; border: 1.5px dashed rgba(138, 109, 59, 0.3); }
 .fce-audio-missing span { color: var(--brand-ink); }
+
+/* ===== 外循环驾驶舱（双循环教学：诊断→周目标→展开→验收） ===== */
+.ld-deck {
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 18px 20px 16px; margin-bottom: 22px;
+}
+.ld-deck-head h2 { font-size: 17px; font-weight: 800; color: var(--ink); margin: 0 0 2px; }
+.ld-deck-head p { margin: 0 0 14px; }
+.ld-cols { display: grid; grid-template-columns: 1.25fr 1fr 1fr; gap: 18px; }
+.ld-col { min-width: 0; }
+.ld-col h3 {
+  font-size: 13.5px; font-weight: 800; color: var(--ink); margin: 0 0 10px;
+  display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+}
+.ld-col h3 i {
+  font-style: normal; font-weight: 500; font-size: 11.5px; color: var(--ink-faint);
+}
+.ld-diag-list { display: flex; flex-direction: column; gap: 6px; }
+.ld-diag-row {
+  display: flex; align-items: center; gap: 8px; padding: 7px 9px;
+  border: 1px solid var(--line); border-radius: 9px; background: var(--card);
+}
+.ld-diag-row.pinned { border-color: var(--brand); background: #f6efdd; }
+.ld-pin {
+  flex: none; width: 26px; height: 26px; border-radius: 7px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--card); color: var(--brand-ink);
+  font-size: 14px; line-height: 1; display: grid; place-items: center; padding: 0;
+}
+.ld-pin.on { background: var(--brand); border-color: var(--brand); }
+.ld-lec { flex: none; font-weight: 800; font-size: 13px; color: var(--ink); }
+.ld-diag-row .ld-title {
+  flex: 1; min-width: 0; font-size: 12.5px; color: var(--ink-soft);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ld-wrong {
+  flex: none; font-size: 12px; font-weight: 800; color: #b42318;
+  font-variant-numeric: tabular-nums;
+}
+.ld-meta { flex: none; font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.ld-review-item {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 7px 9px; border: 1px solid var(--line); border-radius: 9px; margin-bottom: 6px;
+}
+.ld-review-item.ok { border-color: #2e7d4f55; background: #eef7f1; }
+.ld-review-item.esc { border-color: #b4530955; background: #fdf3e3; }
+.ld-badge { flex: none; font-size: 11.5px; font-weight: 800; }
+.ld-review-item.ok .ld-badge { color: #2e7d4f; }
+.ld-review-item.esc .ld-badge { color: #b45309; }
+.ld-review-item.roll .ld-badge { color: var(--brand-ink); }
+.ld-review-item .ld-lec { font-size: 12.5px; }
+.ld-review-item .ld-detail { flex-basis: 100%; font-size: 11px; color: var(--ink-faint); }
+.ld-task {
+  display: flex; align-items: baseline; gap: 7px; padding: 6px 9px;
+  border-bottom: 1px dashed var(--line); font-size: 13px;
+}
+.ld-task:last-child { border-bottom: 0; }
+.ld-task b { font-weight: 700; color: var(--ink); }
+.ld-task i { font-style: normal; font-size: 11px; color: var(--ink-faint); }
+
+@media (max-width: 1080px) {
+  .ld-cols { grid-template-columns: 1fr; }
+  .ld-col { border-top: 1px solid var(--line); padding-top: 12px; }
+  .ld-col:first-child { border-top: 0; padding-top: 0; }
+}
+@media (max-width: 860px) {
+  /* 触控目标：钉入按钮放大到 40px 热区（行高余量补足 44px） */
+  .ld-pin { width: 40px; height: 40px; border-radius: 10px; font-size: 17px; }
+  .ld-diag-row { padding: 9px 10px; }
+}
+
+/* ===== 内循环：学生今日任务 / 周清单 ===== */
+.today-subtabs { margin-bottom: 16px; }
+.td-card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 16px 18px; margin-bottom: 18px; max-width: 720px;
+}
+.td-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.td-head h3 { font-size: 16.5px; font-weight: 800; color: var(--ink); margin: 0; }
+.td-progress { display: flex; align-items: center; gap: 8px; }
+.td-progress b { font-size: 13.5px; color: var(--brand-ink); font-variant-numeric: tabular-nums; }
+.td-bar { width: 110px; height: 8px; border-radius: 4px; background: var(--bg-soft); overflow: hidden; }
+.td-bar i { display: block; height: 100%; background: var(--brand); border-radius: 4px; transition: width .3s; }
+.td-list { display: flex; flex-direction: column; }
+.td-row {
+  display: flex; align-items: center; gap: 12px; padding: 11px 4px;
+  border-bottom: 1px dashed var(--line);
+}
+.td-row:last-child { border-bottom: 0; }
+.td-row.done .td-main b { color: var(--ink-faint); text-decoration: line-through; text-decoration-color: var(--ink-faint); }
+.td-check {
+  flex: none; width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+  border: 2px solid var(--line); background: var(--card); color: #fff;
+  font-size: 16px; font-weight: 800; line-height: 1; display: grid; place-items: center; padding: 0;
+}
+.td-check.on { background: #2e7d4f; border-color: #2e7d4f; }
+.td-check.auto { background: var(--bg-soft); border-color: var(--bg-soft); color: var(--brand-ink); cursor: default; }
+.td-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.td-main b { font-size: 14.5px; font-weight: 700; color: var(--ink); }
+.td-main i { font-style: normal; font-size: 11.5px; color: var(--ink-faint); }
+.td-auto-tag {
+  flex: none; font-size: 10.5px; font-weight: 700; color: var(--brand-ink);
+  border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; background: var(--bg-soft);
+}
+.td-empty { text-align: center; padding: 42px 20px; }
+.td-empty-emoji { font-size: 40px; margin-bottom: 8px; }
+.td-empty h3 { font-size: 17px; color: var(--ink); margin: 0 0 6px; }
+.td-empty p { margin: 0; color: var(--ink-soft); font-size: 13.5px; }
+.td-link { color: var(--brand-ink); font-weight: 600; }
+.td-goals { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.td-goals i {
+  font-style: normal; font-size: 12px; color: var(--brand-ink);
+  border: 1px solid var(--line); background: var(--bg-soft);
+  border-radius: 8px; padding: 4px 9px;
+}
+.td-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.td-day {
+  border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px 7px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px; background: var(--card);
+}
+.td-day b { font-size: 15px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+.td-day i { font-style: normal; font-size: 10.5px; color: var(--ink-faint); }
+.td-day em { font-style: normal; font-size: 11px; font-weight: 700; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.td-day.today { border-color: var(--brand); background: #f6efdd; }
+.td-day.today b { color: var(--brand-ink); }
+.td-day.fulfilled { border-color: #2e7d4f66; background: #eef7f1; }
+.td-day.fulfilled em { color: #2e7d4f; }
+.td-day.future { opacity: .55; }
+.td-week-sum { margin: 12px 0 0; font-size: 12.5px; color: var(--ink-soft); }
+.td-week-sum b { color: var(--brand-ink); }
+
+@media (max-width: 860px) {
+  .td-check { width: 44px; height: 44px; font-size: 19px; }
+  .td-week { grid-template-columns: repeat(4, 1fr); }
+}

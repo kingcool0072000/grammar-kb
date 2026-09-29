@@ -473,6 +473,8 @@ export function mountLibraryReader(viewEl, ctx) {
       if (cleaned) return
       chapters = (r && r.chapters) || []
       sortedChapters = [...chapters].sort((a, b) => a.spineIndex - b.spineIndex)
+      // 书名补报：专注力上报的 book_title 此前恒为空（批改中心标题成 #id）
+      if (r && r.bookTitle) focusTracker.setBookTitle(r.bookTitle)
       setTimeout(() => {
         if (!cleaned && renderer) renderer.injectChapterLinksNow()
       }, 300)

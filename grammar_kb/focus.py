@@ -367,15 +367,17 @@ class FocusStore:
             ).fetchone()
         return _out(saved, detail=True)
 
-    def list(self, user: Optional[str] = None, limit: int = 100) -> list[dict]:
-        """会话列表（最近优先；不含 polyline/mouse_metrics 明细，控制体积）。"""
+    def list(self, user: Optional[str] = None, limit: int = 100,
+             offset: int = 0) -> list[dict]:
+        """会话列表（最近优先；不含 polyline/mouse_metrics 明细，控制体积）。
+        limit+offset 供翻页（批改中心看全部记录）。"""
         sql = "SELECT * FROM focus_sessions"
         args: tuple = ()
         if user:
             sql += " WHERE user = ?"
             args = (user,)
-        sql += " ORDER BY id DESC LIMIT ?"
-        args += (int(limit),)
+        sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
+        args += (int(limit), max(0, int(offset)))
         with self._connect() as conn:
             return [_out(r) for r in conn.execute(sql, args).fetchall()]
 

@@ -43,10 +43,6 @@ export async function mountGrading(el) {
     ? Math.round(weekScores.reduce((a, s) => a + s.score, 0) / weekScores.length)
     : null
   const focusWeekMin = Math.round(focusWeek.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)
-  // 展示用：按开始时间倒序
-  const focusRecent = [...focus]
-    .filter((s) => s && s.id !== undefined)
-    .sort((a, b) => String(b.started_at || b.created_at || '').localeCompare(String(a.started_at || a.created_at || '')))
 
   el.innerHTML = `
     <div class="view-head">
@@ -130,13 +126,9 @@ export async function mountGrading(el) {
           <nav><span class="gd-focus-head-hint">点会话查看专注详情</span></nav>
         </header>
         <div class="gd-subgroup">
-          <h3>📖 阅读会话 · 最近</h3>
-          ${focusRecent.length
-            ? focusRecent.slice(0, 8).map((s) => focusRow(s)).join('')
-            : '<p class="reading-hint">暂无阅读专注数据——学生在泛读馆读书后自动生成</p>'}
-          ${focusRecent.length
-            ? `<p class="reading-hint">近 7 天 ${focusWeek.length} 次会话 · 平均 ${focusWeekAvg ?? '—'} 分 · 累计专注 ${focusWeekMin} 分钟</p>`
-            : ''}
+          <h3>📖 阅读会话 · 全部记录</h3>
+          ${focus.length ? `<p class="reading-hint">近 7 天 ${focusWeek.length} 次会话 · 平均 ${focusWeekAvg ?? '—'} 分 · 累计专注 ${focusWeekMin} 分钟</p>` : ''}
+          <div id="gd-focus-list"><p class="reading-hint">加载中…</p></div>
         </div>
       </section>
     </div>
@@ -146,10 +138,61 @@ export async function mountGrading(el) {
     b.addEventListener('click', () => go(b.dataset.go))
   })
 
-  // 专注会话行 → 详情弹窗
-  el.querySelectorAll('[data-focus-id]').forEach((row) => {
-    row.addEventListener('click', () => openFocusDetail(Number(row.dataset.focusId)))
-  })
+  // 专注力会话列表：后端 limit+offset 翻页（每页 10 条，可翻看全部记录）
+  const FOCUS_PAGE = 10
+  let focusPage = 0
+  async function renderFocusPage(page) {
+    const host = el.querySelector('#gd-focus-list')
+    if (!host) return
+    host.innerHTML = '<p class="reading-hint">加载中…</p>'
+    let items = []
+    try {
+      const got = await api.focusSessions({ limit: FOCUS_PAGE + 1, offset: page * FOCUS_PAGE })
+      items = Array.isArray(got) ? got : []
+    } catch {
+      items = []
+    }
+    focusPage = page
+    const pageItems = items.slice(0, FOCUS_PAGE)
+    const hasNext = items.length > FOCUS_PAGE
+    if (!pageItems.length) {
+      host.innerHTML = page === 0
+        ? '<p class="reading-hint">暂无阅读专注数据——学生在泛读馆读书后自动生成</p>'
+        : '<p class="reading-hint">没有更多记录了</p>'
+    } else {
+      host.innerHTML = pageItems.map((s) => focusRow(s)).join('')
+      host.querySelectorAll('[data-focus-id]').forEach((row) => {
+        row.addEventListener('click', () => openFocusDetail(Number(row.dataset.focusId)))
+      })
+    }
+    if (pageItems.length || page > 0) {
+      const pager = document.createElement('div')
+      pager.className = 'gd-focus-pager'
+      pager.innerHTML = `
+        <button class="reading-btn small" data-fp="prev" ${page === 0 ? 'disabled' : ''}>‹ 上一页</button>
+        <span class="gd-focus-page-no">第 ${page + 1} 页</span>
+        <button class="reading-btn small" data-fp="next" ${hasNext ? '' : 'disabled'}>下一页 ›</button>`
+      pager.querySelectorAll('[data-fp]').forEach((b) =>
+        b.addEventListener('click', () => {
+          const dir = b.dataset.fp === 'next' ? 1 : -1
+          const next = focusPage + dir
+          if (next < 0) return
+          renderFocusPage(next)
+        }),
+      )
+      host.appendChild(pager)
+    }
+  }
+  renderFocusPage(0)
+}
+
+// 专注会话标题：泛读 = 「泛读-书名-章节」（后端已按 book_id 补书名，章节用 range_label）
+function focusTitle(s) {
+  if (s.module === 'reading') return s.book_title || '精读'
+  const title = (s.book_title || '').trim() || (s.book_id != null ? `#${s.book_id}` : '')
+  const label = (s.range_label || '').trim()
+  if (title && label) return `泛读-${title}-${label}`
+  return title ? `泛读-${title}` : '泛读'
 }
 
 // 专注会话行（fce-his-row 风格，可点开详情）
@@ -165,10 +208,9 @@ function focusRow(s) {
     `<i class="gd-focus-chip">离开 ${s.away_count || 0} 次</i>`,
     ...(s.fast_scroll_flags ? [`<i class="gd-focus-chip">快滚 ${s.fast_scroll_flags}</i>`] : []),
   ].join('')
-  const rangeTip = s.range_label ? ` · ${escapeHtml(s.range_label)}` : ''
   return `
-    <div class="fce-his-row gd-focus-row" data-focus-id="${s.id}" title="点开专注详情${rangeTip}">
-      <span class="fce-his-what">${escapeHtml(s.book_title || `#${s.book_id}`)}</span>
+    <div class="fce-his-row gd-focus-row" data-focus-id="${s.id}" title="点开专注详情">
+      <span class="fce-his-what">${escapeHtml(focusTitle(s))}</span>
       <b class="fce-his-score ${scoreCls}">${score === null ? '—' : score}</b>
       <span class="fce-his-date">${fmtDur(s.total_sec || 0)} · ${fmtCnTime(s.started_at || s.created_at)}</span>
       <span class="gd-focus-chips">${chips}</span>
@@ -306,7 +348,7 @@ async function openFocusDetail(id) {
     <div class="gd-focus-detail-card">
       <div class="gd-focus-detail-head">
         <div class="gd-focus-detail-title">
-          <b>${escapeHtml(s.book_title || `#${s.book_id}`)}</b>
+          <b>${escapeHtml(focusTitle(s))}</b>
           <span>${escapeHtml(s.user || '')} · ${startCn}${endCn ? ` → ${endCn}` : ''}</span>
         </div>
         <button class="reading-btn small" data-close>关闭</button>

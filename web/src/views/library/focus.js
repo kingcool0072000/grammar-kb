@@ -213,6 +213,8 @@ export function compressMouse(points) {
  */
 export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '', enabled = true,
                                        module = 'library', initialRangeLabel = '', idleMs = IDLE_SPLIT_MS }) {
+  // 书名可后补（reader 打开后从 chapters 接口拿到，供上报 book_title）
+  let bookTitleVal = String(bookTitle || '')
   // 会话可变状态（超时不活跃拆分时整体重置）
   let startedAt = Date.now()
   let sessionId = makeSessionId()
@@ -443,7 +445,7 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     return {
       session_id: sessionId,
       book_id: bookId,
-      book_title: bookTitle || '',
+      book_title: bookTitleVal || '',
       started_at: isoSec(startedAt),
       ended_at: isoSec(ts),
       total_sec: Math.round(totalMs / 1000),
@@ -647,5 +649,9 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     destroy,
     disable,
     enable,
+    /** 书名后补（chapters 接口返回后调用；此后上报的 book_title 带书名） */
+    setBookTitle(t) {
+      bookTitleVal = String(t || '').slice(0, 200)
+    },
   }
 }

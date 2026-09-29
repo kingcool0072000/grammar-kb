@@ -18,6 +18,7 @@ import { mountPrep } from './views/prep.js'
 import { mountAnalytics } from './views/analytics.js'
 import { mountTopics } from './views/topics.js'
 import { mountPlan } from './views/plan.js'
+import { mountToday } from './views/today.js'
 import { mountConfig } from './views/config.js'
 import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
@@ -40,6 +41,8 @@ const VIEWS = [
   { key: 'prep', label: '备课中心', teacher: true },
   // 学情分析并入计划表（#/plan?tab=analytics）；旧 hash 重定向
   { key: 'plan', label: '计划表', teacher: true },
+  // 内循环首页：学生打开 app 第一眼是今日任务队列（双循环设计）
+  { key: 'today', label: '今日任务', studentOnly: true },
   { key: 'recite', label: '背单词', studentOnly: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
   { key: 'topics', label: '专题学习', studentOnly: true },
@@ -88,7 +91,7 @@ function currentRoute(role) {
   const view = VIEWS.find((x) => x.key === key)
   // 学生访问教师页 → 回背单词；教师访问学生页 → 回批改中心；未匹配同理
   if (!view || (view.teacher && role !== 'teacher') || (view.studentOnly && role === 'teacher')) {
-    return role === 'teacher' ? 'grading' : 'recite'
+    return role === 'teacher' ? 'grading' : 'today'
   }
   return key
 }
@@ -278,6 +281,9 @@ async function bootstrap() {
       mounted = mountVocabulary(container, { vocab: state.vocab, openWord: (e) => drawer.showWord(e) })
     } else if (route === 'recite') {
       mounted = mountRecite(container, { vocab: state.vocab, role })
+    } else if (route === 'today') {
+      // 内循环：学生今日任务/周清单（双循环的学生侧入口）
+      mounted = mountToday(container)
     } else if (route === 'topics') {
       // 专题学习：#/topics 列表 / #/topics/{id} 手册详情（视图内部按 hash 分发）
       mounted = mountTopics(container, { role })

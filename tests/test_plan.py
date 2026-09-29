@@ -1,7 +1,9 @@
 """计划表端点测试：周计划读写 / 实时完成度聚合 / 上周回顾 / 权限。"""
 from __future__ import annotations
 
+import io
 import sqlite3
+import zipfile
 from datetime import date, timedelta
 
 import pytest
@@ -20,6 +22,9 @@ PREV = (date.today() - timedelta(days=date.today().weekday() + 7)).isoformat()
 def plan_env(tmp_path, monkeypatch):
     monkeypatch.setenv("GRAMMAR_KB_USERS", str(tmp_path / "users.json"))
     monkeypatch.setenv("GRAMMAR_KB_AUTH_SECRET", str(tmp_path / "secret.key"))
+    # 阅读实况聚合会开 library.db（环境变量优先）——指向测试库防读生产数据
+    monkeypatch.setenv("GRAMMAR_KB_LIBRARY_DB", str(tmp_path / "library.db"))
+    monkeypatch.setenv("GRAMMAR_KB_LIBRARY_DIR", str(tmp_path / "files"))
     sqlite3.connect(tmp_path / "grammar.db").close()
     return tmp_path
 
@@ -99,3 +104,66 @@ def test_plan_actuals_aggregate(plan_env):
     rv = d["last_week_review"]
     assert rv["week_start"] == PREV
     assert rv["summary"]["vocab_mastered"] == 0
+
+
+def test_plan_reading_actuals_full_book(plan_env, monkeypatch):
+    """阅读实况：全书口径要素（总词数/落点章区间），供「第X章xx%~xx%」文案。"""
+    import zipfile, io
+
+    # 独立 library.db：一本书两章（各 100 词），malin 读到 30%
+    lib_path = plan_env / "library.db"
+    from grammar_kb.library import LibraryStore
+    lib = LibraryStore(str(lib_path), data_dir=str(plan_env / "files"))
+    book_id = lib.add_book("teacher", "wonder.epub", "application/epub+zip",
+                           _mini_epub_bytes("Wonder"))["id"]
+    lib.put_progress(book_id, "malin", "epubcfi(/6/2)", 1, 30.0, 900)
+    con = sqlite3.connect(lib_path)
+    con.execute(
+        "UPDATE reading_progress SET updated_at=? WHERE book_id=? AND user='malin'",
+        (date.today().isoformat() + " 12:00:00", book_id))
+    con.commit()
+    con.close()
+
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    c.put(f"/plan/weeks/{MON}", headers=ht, json={"tasks": {"reading": {"Wonder": 100}}})
+    d = c.get("/plan/weeks?user=malin", headers=ht).json()["data"]
+    w = next(x for x in d["weeks"] if x["week_start"] == MON)
+    rd = w["actuals"]["reading"]
+    assert len(rd) == 1
+    r = rd[0]
+    assert r["title"] == "Wonder" and r["percent"] == 30.0
+    assert r["reading_seconds"] == 900
+    assert r["total_words"] > 0 and r["chapters_count"] == 2
+    ch = r["current_chapter"]
+    assert ch and 0 <= ch["start_percent"] <= 30 <= ch["end_percent"]
+
+
+def _mini_epub_bytes(title: str) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("mimetype", "application/epub+zip", compress_type=zipfile.ZIP_STORED)
+        z.writestr("META-INF/container.xml",
+                   '<?xml version="1.0"?><container version="1.0"'
+                   ' xmlns="urn:oasis:names:tc:opendocument:xmlns:container">'
+                   '<rootfiles><rootfile full-path="content.opf"'
+                   ' media-type="application/oebps-package+xml"/></rootfiles></container>')
+        items = "".join(f'<item id="c{i}" href="c{i}.xhtml"'
+                        ' media-type="application/xhtml+xml"/>' for i in range(2))
+        refs = "".join(f'<itemref idref="c{i}"/>' for i in range(2))
+        z.writestr("content.opf",
+                   '<?xml version="1.0" encoding="utf-8"?>'
+                   '<package xmlns="http://www.idpf.org/2007/opf" version="3.0"'
+                   ' unique-identifier="id"><metadata'
+                   ' xmlns:dc="http://purl.org/dc/elements/1.1/">'
+                   f'<dc:identifier id="id">urn:uuid:{title}</dc:identifier>'
+                   f'<dc:title>{title}</dc:title><dc:language>en</dc:language>'
+                   '</metadata><manifest>' + items + '</manifest><spine>' + refs +
+                   '</spine></package>')
+        for i in range(2):
+            z.writestr(f"c{i}.xhtml",
+                       '<?xml version="1.0" encoding="utf-8"?>'
+                       '<html xmlns="http://www.w3.org/1999/xhtml"><head><title>'
+                       f"Chapter {i + 1}</title></head><body><h1>Chapter {i + 1}</h1>"
+                       "<p>" + "word " * 100 + "</p></body></html>")
+    return buf.getvalue()

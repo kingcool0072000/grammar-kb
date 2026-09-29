@@ -202,6 +202,16 @@ export const api = {
   planWeeks: ({ user } = {}) => req('/plan/weeks', { searchParams: { user } }),
   planWeekPut: (weekStart, payload) =>
     reqJson(`/plan/weeks/${weekStart}`, 'PUT', payload),
+  // 外循环（双循环教学）：诊断聚类 / 上周验收 / 日任务展开预览
+  planDiagnosis: ({ weeksBack } = {}) =>
+    req('/plan/diagnosis', { searchParams: weeksBack ? { weeks_back: weeksBack } : {} }),
+  planReview: () => req('/plan/review'),
+  planDailyPreview: () => req('/plan/daily-preview'),
+  // 内循环：学生今日任务 / 周清单 / 手动打卡
+  planToday: ({ day } = {}) =>
+    req('/plan/today', { searchParams: day ? { day } : {} }),
+  planWeekTodo: () => req('/plan/week-todo'),
+  planDayCheck: (payload) => reqJson('/plan/day-check', 'POST', payload),
   // 词汇级别考试（成绩登记驱动解锁；≥80 解锁下一级）
   vocabExams: ({ user } = {}) =>
     req('/vocab-exams', { searchParams: { user } }),

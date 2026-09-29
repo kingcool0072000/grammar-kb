@@ -101,3 +101,34 @@ def test_clear_progress_teacher_only(recite_env):
     assert r.status_code == 200 and r.json()["data"]["deleted"] == 1
     d = c.get("/recite/progress", headers=hs).json()["data"]
     assert d["total_seen"] == 0
+
+
+def test_wrongbook_with_gloss(recite_env):
+    """错词本：返回错次聚合 + vocab_word 表的中文释义（大小写不敏感匹配）。"""
+    import json
+
+    con = sqlite3.connect(recite_env / "grammar.db")
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS vocab_word (word TEXT PRIMARY KEY, level INTEGER NOT NULL,"
+        " pos TEXT DEFAULT '[]', gloss TEXT DEFAULT '', meanings TEXT DEFAULT '[]',"
+        " example TEXT DEFAULT '', extra TEXT DEFAULT '{}')"
+    )
+    con.execute(
+        "INSERT INTO vocab_word (word, level, gloss, meanings) VALUES (?,?,?,?)",
+        ("bad", 0, "坏的", json.dumps(["adj. 坏的", "n. 坏事"])),
+    )
+    con.commit()
+    con.close()
+
+    c = _client(recite_env)
+    h = _login(c, "malin", "123456")
+    c.post("/recite/sessions", headers=h, json={
+        "total": 1, "wrong": 1, "acc": 0, "duration_sec": 5,
+        "wrong_words": ["Bad"], "mode": "flip", "scope": "all",
+        "details": [{"word": "Bad", "correct": False}],
+    })
+    items = c.get("/recite/wrongbook", headers=h).json()["data"]
+    assert len(items) == 1 and items[0]["wrong_count"] == 1
+    # 上报词大小写不一致（Bad vs bad）也要能匹配到释义
+    assert items[0]["gloss"] == "坏的"
+    assert items[0]["meanings"] == ["adj. 坏的", "n. 坏事"]

@@ -279,6 +279,10 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("GET", "/recite/wrongbook"),  # 错词本（学生只看自己的）
         ("GET", "/recite/progress"),  # 云端逐词进度（出题与看板数据源）
         ("POST", "/recite/progress/sync"),  # 本地历史一次性上云合并
+        # 内循环（双循环教学）：学生今日任务/周清单/打卡（user 口径在端点内收窄）
+        ("GET", "/plan/today"),
+        ("GET", "/plan/week-todo"),
+        ("POST", "/plan/day-check"),
         ("POST", "/focus/sessions"),
         ("GET", "/focus/sessions"),  # /{id} 详情学生仍被端点内 _require_teacher 拦 403
         # 专题学习（学生自学手册进度；/topics/{id}/progress 学生只能写自己的行）
@@ -850,13 +854,46 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     @app.get("/recite/wrongbook")
     def recite_wrongbook(request: "fastapi.Request", user: Optional[str] = None, limit: int = 500):
-        """背单词错词本：聚合学生会话错词（错次/最近错时间）。学生只看自己的。"""
+        """背单词错词本：聚合学生会话错词（错次/最近错时间）+ vocab_word 中文释义。"""
         u = _request_user(request)
         if request.state.role != "teacher":
             u = _request_user(request)
         elif user:
             u = user
-        return _ok(recite.wrongbook(u, limit=limit))
+        items = recite.wrongbook(u, limit=limit)
+        # 批量补中文释义（vocab_word 同库于 grammar.db；大小写不敏感匹配）
+        import json as _json
+        import sqlite3 as _sqlite3
+
+        want = {str(x["word"]).lower() for x in items if x.get("word")}
+        gloss_map: dict = {}
+        ordered = sorted(want)
+        for i in range(0, len(ordered), 400):  # SQLite 变量上限 999，分块
+            chunk = ordered[i:i + 400]
+            ph = ",".join("?" * len(chunk))
+            try:
+                with kbq.db.conn as conn:
+                    rows = conn.execute(
+                        f"SELECT word, gloss, meanings FROM vocab_word"
+                        f" WHERE lower(word) IN ({ph})",
+                        chunk,
+                    ).fetchall()
+            except (_sqlite3.Error, AttributeError):
+                break
+            for r in rows:
+                try:
+                    meanings = _json.loads(r["meanings"] or "[]")
+                except (ValueError, TypeError):
+                    meanings = []
+                gloss_map[str(r["word"]).lower()] = {
+                    "gloss": r["gloss"] or "", "meanings": meanings,
+                }
+        for x in items:
+            g = gloss_map.get(str(x["word"]).lower())
+            if g:
+                x["gloss"] = g["gloss"]
+                x["meanings"] = g["meanings"]
+        return _ok(items)
 
     @app.get("/recite/sessions")
     def recite_list(
@@ -881,11 +918,15 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     @app.get("/focus/sessions")
     def focus_list(
         request: "fastapi.Request", user: Optional[str] = None, limit: int = 100,
+        offset: int = 0,
     ):
-        """专注力会话列表（不含轨迹/鼠标明细）。学生只看自己的；教师看全部。"""
+        """专注力会话列表（不含轨迹/鼠标明细）。学生只看自己的；教师看全部。
+        limit+offset 翻页（id 倒序）；book_title 为空的行按 book_id 反查书名补全。"""
         if request.state.role != "teacher":
             user = request.state.user
-        return _ok(focus.list(user=user, limit=limit))
+        items = focus.list(user=user, limit=limit, offset=offset)
+        _fill_focus_book_titles(items)
+        return _ok(items)
 
     @app.get("/focus/sessions/{row_id}")
     def focus_detail(row_id: int, request: "fastapi.Request"):
@@ -894,7 +935,23 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         data = focus.get(row_id)
         if data is None:
             raise HTTPException(status_code=404, detail=f"会话 id={row_id} 不存在")
+        _fill_focus_book_titles([data])
         return _ok(data)
+
+    def _fill_focus_book_titles(items: list) -> None:
+        """泛读会话存量行没存书名（前端曾传空）：按 book_id 批量反查补全。"""
+        ids = [x.get("book_id") for x in items
+               if x.get("book_id") is not None and not (x.get("book_title") or "").strip()]
+        if not ids:
+            return
+        try:
+            titles = library.titles_map(ids)
+        except Exception:
+            return
+        for x in items:
+            t = titles.get(x.get("book_id"))
+            if t and not (x.get("book_title") or "").strip():
+                x["book_title"] = t
 
     # ---- 专题学习（学生自学手册「我学完了」进度；进度行绑定学生本人） ----
 
@@ -955,6 +1012,69 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             return _ok(plan.put_week(week_start, tasks, str(notes or "")))
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
+
+    # ---- 外循环（双循环教学）：诊断聚类 / 周验收 / 日任务展开 ----
+
+    @app.get("/plan/diagnosis")
+    def plan_diagnosis(request: "fastapi.Request", weeks_back: int = 8):
+        """错题信号按讲次聚类（外循环①：诊断感知）。教师专属。"""
+        _require_teacher(request)
+        weeks_back = min(max(weeks_back, 1), 52)
+        return _ok({"items": plan.diagnosis(weeks_back=weeks_back)})
+
+    @app.get("/plan/review")
+    def plan_review(request: "fastapi.Request", user: str = "malin"):
+        """上周攻坚验收（外循环④：收敛/滚动/升级）。教师专属。"""
+        _require_teacher(request)
+        from datetime import date as _date, timedelta as _td
+        cur_mon = (_date.today() - _td(days=_date.today().weekday())).isoformat()
+        return _ok(plan.week_review(cur_mon, user=user))
+
+    @app.get("/plan/daily-preview")
+    def plan_daily_preview(request: "fastapi.Request"):
+        """本周任务 → 每日学生任务建议（外循环③：任务展开预览）。教师专属。"""
+        _require_teacher(request)
+        from datetime import date as _date, timedelta as _td
+        cur_mon = (_date.today() - _td(days=_date.today().weekday())).isoformat()
+        return _ok({"week_start": cur_mon, "tasks": plan.week_daily_tasks(cur_mon)})
+
+    # ---- 内循环（双循环教学）：学生今日任务 / 周清单 / 打卡 ----
+    # 学生读自己的；教师可指定 user 查看孩子执行情况（与 recite 同模式）。
+
+    @app.get("/plan/today")
+    def plan_today(request: "fastapi.Request", user: str = "malin",
+                   day: Optional[str] = None):
+        """学生今日任务清单（内循环核心：派生 + 自动检测 + 手动打卡）。"""
+        u = user if request.state.role == "teacher" else request.state.user
+        try:
+            return _ok(plan.today_tasks(user=u, day=day))
+        except ValueError:
+            raise HTTPException(status_code=422, detail="day 须为 YYYY-MM-DD")
+
+    @app.get("/plan/week-todo")
+    def plan_week_todo(request: "fastapi.Request", user: str = "malin"):
+        """学生周清单：本周目标 + 逐日完成矩阵。"""
+        u = user if request.state.role == "teacher" else request.state.user
+        return _ok(plan.week_todo(user=u))
+
+    @app.post("/plan/day-check")
+    def plan_day_check(request: "fastapi.Request", payload: dict):
+        """手动打卡/取消（学生本人；教师可代打卡）。"""
+        auth_user = request.state.user
+        is_teacher = request.state.role == "teacher"
+        user = (payload.get("user") or "").strip() if isinstance(payload, dict) else ""
+        day = str(payload.get("day") or "") if isinstance(payload, dict) else ""
+        task_key = str(payload.get("task_key") or "") if isinstance(payload, dict) else ""
+        on = bool(payload.get("on")) if isinstance(payload, dict) else False
+        if not is_teacher and user != auth_user:
+            raise HTTPException(status_code=403, detail="只能操作自己的任务")
+        if not user or not day or not task_key:
+            raise HTTPException(status_code=422, detail="user/day/task_key 必填")
+        try:
+            plan.put_day_check(user, day, task_key, on)
+            return _ok({"user": user, "day": day, "task_key": task_key, "on": on})
+        except ValueError:
+            raise HTTPException(status_code=422, detail="day 须为 YYYY-MM-DD")
 
     # ---- 学情分析 · AI 周报（手动触发，分析上一自然周；教师专属） ----
 
@@ -1116,7 +1236,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         chapters = library.list_chapters(book_id)
         if chapters is None:
             raise HTTPException(status_code=404, detail="书籍不存在")
-        return _ok({"chapters": chapters})
+        # bookTitle 供阅读器补专注力上报的书名（此前泛读记录标题是 #id）
+        return _ok({"chapters": chapters, "bookTitle": library.get_title(book_id) or ""})
 
     @app.delete("/library/books/{book_id}")
     def lib_book_delete(book_id: int, request: "fastapi.Request"):
