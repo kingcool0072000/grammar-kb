@@ -163,6 +163,10 @@ export const api = {
   libraryCoverBlob: (id) => reqBlob(`/library/books/${id}/cover`),
   libraryChapters: (bookId) => req(`/library/books/${bookId}/chapters`),
   libraryDeleteBook: (id) => reqJson(`/library/books/${id}`, 'DELETE'),
+  // 必读章配置（教师）：计划表阅读目标按配置算
+  libraryReadingConfig: (bookId) => req(`/library/books/${bookId}/reading-config`),
+  libraryReadingConfigPut: (bookId, chapters) =>
+    reqJson(`/library/books/${bookId}/reading-config`, 'PUT', { chapters }),
   librarySkipChapter: (bookId, idx, skip) =>
     reqJson(`/library/books/${bookId}/chapters/${idx}/skip`, 'PUT', { skip }),
   libraryOpenBook: (bookId) => reqJson(`/library/books/${bookId}/open`, 'POST'),
@@ -213,6 +217,9 @@ export const api = {
   planWeekTodo: () => req('/plan/week-todo'),
   planDayCheck: (payload) => reqJson('/plan/day-check', 'POST', payload),
   // 教师周历视图：周拆解 + 逐日任务矩阵
+  planMonthView: ({ month } = {}) =>
+    req('/plan/month-view', { searchParams: month ? { month } : {} }),
+  planOverview: () => req('/plan/overview'),
   planWeekView: ({ weekStart } = {}) =>
     req('/plan/week-view', { searchParams: weekStart ? { week_start: weekStart } : {} }),
   // 词汇级别考试（成绩登记驱动解锁；≥80 解锁下一级）

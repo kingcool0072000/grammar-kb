@@ -91,6 +91,11 @@ CREATE TABLE IF NOT EXISTS dict_cache (
   payload TEXT NOT NULL,
   fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS book_reading_config (
+  book_id    INTEGER PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+  chapters   TEXT NOT NULL DEFAULT '[]',  -- JSON: 必读章 idx 列表；空数组=未配置(全书口径)
+  updated_at TEXT
+);
 """
 
 
@@ -343,6 +348,39 @@ class LibraryStore:
                 "SELECT title FROM books WHERE id = ?", (int(book_id),)
             ).fetchone()
         return row["title"] if row else None
+
+    def get_reading_config(self, book_id: int) -> Optional[list[int]]:
+        """必读章 idx 列表；未配置返回 None（全书口径）。"""
+        with contextlib.closing(self._connect()) as conn:
+            row = conn.execute(
+                "SELECT chapters FROM book_reading_config WHERE book_id = ?",
+                (int(book_id),),
+            ).fetchone()
+        if not row:
+            return None
+        try:
+            v = json.loads(row["chapters"] or "[]")
+            return sorted({int(x) for x in v}) if v else None
+        except (ValueError, TypeError):
+            return None
+
+    def put_reading_config(self, book_id: int, chapters: list) -> None:
+        """保存必读章配置（chapters 传空列表/None = 清除配置回到全书口径）。"""
+        from datetime import datetime, timezone as _tz
+        idxs = sorted({int(x) for x in (chapters or [])})
+        with self._tx() as conn:
+            if idxs:
+                conn.execute(
+                    "INSERT OR REPLACE INTO book_reading_config"
+                    " (book_id, chapters, updated_at) VALUES (?,?,?)",
+                    (int(book_id), json.dumps(idxs),
+                     datetime.now(_tz.utc).isoformat(timespec="seconds")),
+                )
+            else:
+                conn.execute(
+                    "DELETE FROM book_reading_config WHERE book_id = ?",
+                    (int(book_id),),
+                )
 
     def titles_map(self, book_ids) -> dict[int, str]:
         """批量 id → 书名（专注力会话补书名用；空集返回空 dict）。"""

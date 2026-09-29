@@ -53,6 +53,8 @@ export async function mountLibraryManage(viewEl, { bookId } = {}) {
   let filter = 'todo' // todo | done | failed | skip | all
   let checked = new Set() // 勾选的章 idx
   let initialized = false // 首次数据到达后按「待生成」默认勾选
+  let rcChapters = null // 必读章配置（null=未配置/全书口径）
+  let rcDirty = false
   let job = null // 最近一次批量任务（轮询更新）
   let submitting = false
   let retrying = null // 正在重试的章 idx
@@ -67,6 +69,22 @@ export async function mountLibraryManage(viewEl, { bookId } = {}) {
         <p class="lm-sub" data-sub>加载中…</p>
       </div>
     </header>
+    <section class="lm-reading-cfg card" data-reading-cfg>
+      <div class="lm-rc-head">
+        <h3>📖 阅读目标配置</h3>
+        <p class="lm-rc-sub">配置必读章后，计划表/学生任务的阅读目标按配置算词数和目标章（未配置 = 全书）。</p>
+      </div>
+      <div class="lm-rc-row">
+        <label>必读章区间 <input data-rc-from type="number" min="1" placeholder="1" style="width:64px"/> – <input data-rc-to type="number" min="1" placeholder="36" style="width:64px"/></label>
+        <button class="lib-btn small sec" data-rc-first10>前 10 章</button>
+        <button class="lib-btn small sec" data-rc-first20>前 20 章</button>
+        <button class="lib-btn small sec" data-rc-all>全部章</button>
+        <span class="lm-rc-info" data-rc-info></span>
+        <span class="lm-flex"></span>
+        <button class="lib-btn" data-rc-save>保存配置</button>
+        <button class="lib-btn small sec" data-rc-clear>清除</button>
+      </div>
+    </section>
     <div data-progress></div>
     <div class="lm-toolbar">
       <div class="lm-chips" data-chips></div>
@@ -94,6 +112,86 @@ export async function mountLibraryManage(viewEl, { bookId } = {}) {
   const selInfoEl = root.querySelector('[data-sel-info]')
   const genSelBtn = root.querySelector('[data-gen-selected]')
   const genAllBtn = root.querySelector('[data-gen-all]')
+
+  // ---------- 必读章配置 ----------
+  const rcBox = root.querySelector('[data-reading-cfg]')
+  const rcFrom = root.querySelector('[data-rc-from]')
+  const rcTo = root.querySelector('[data-rc-to]')
+  const rcInfo = root.querySelector('[data-rc-info]')
+
+  function rcIdxList() {
+    const total = (chapters || []).length
+    const from = Math.max(1, Number(rcFrom.value) || 1)
+    const to = Math.min(total, Number(rcTo.value) || total)
+    if (from > to) return []
+    const out = []
+    for (let i = from; i <= to; i++) out.push(i - 1) // 配置存 0 基 idx
+    return out
+  }
+
+  function rcWords(list) {
+    return (list || []).reduce((a, i) => a + ((byIdx(i) || {}).wordCount || 0), 0)
+  }
+
+  function renderRc() {
+    if (!chapters) { rcInfo.textContent = ''; return }
+    const cur = rcDirty ? rcIdxList() : (rcChapters || null)
+    if (cur == null) {
+      const total = chapters.length
+      rcInfo.textContent = `未配置（全书 ${total} 章 · ${rcWords(chapters.map((_, i) => i))} 词）`
+    } else {
+      const shown = cur.length ? `第 ${cur[0] + 1}–${cur[cur.length - 1] + 1} 章` : '空'
+      rcInfo.textContent = `必读 ${cur.length} 章 · ${shown} · ${rcWords(cur)} 词`
+    }
+  }
+
+  async function loadRc() {
+    try {
+      const r = await api.libraryReadingConfig(bookId)
+      rcChapters = r.chapters // null=全书
+      rcDirty = false
+      if (rcChapters && rcChapters.length) {
+        rcFrom.value = rcChapters[0] + 1
+        rcTo.value = rcChapters[rcChapters.length - 1] + 1
+      }
+    } catch { rcChapters = null }
+    renderRc()
+  }
+
+  function bindRc() {
+    const markDirty = () => { rcDirty = true; renderRc() }
+    rcFrom.addEventListener('input', markDirty)
+    rcTo.addEventListener('input', markDirty)
+    root.querySelector('[data-rc-first10]').addEventListener('click', () => {
+      rcFrom.value = 1; rcTo.value = Math.min(10, (chapters || []).length); markDirty()
+    })
+    root.querySelector('[data-rc-first20]').addEventListener('click', () => {
+      rcFrom.value = 1; rcTo.value = Math.min(20, (chapters || []).length); markDirty()
+    })
+    root.querySelector('[data-rc-all]').addEventListener('click', () => {
+      rcFrom.value = 1; rcTo.value = (chapters || []).length; markDirty()
+    })
+    root.querySelector('[data-rc-save]').addEventListener('click', async () => {
+      const list = rcIdxList()
+      try {
+        await api.libraryReadingConfigPut(bookId, list)
+        rcChapters = list.length ? list : null
+        rcDirty = false
+        renderRc()
+        toast('阅读目标已保存' + (list.length ? `：必读 ${list.length} 章` : '（已清除，回到全书）'))
+      } catch (e) { alert('保存失败：' + e.message) }
+    })
+    root.querySelector('[data-rc-clear]').addEventListener('click', async () => {
+      try {
+        await api.libraryReadingConfigPut(bookId, [])
+        rcChapters = null; rcDirty = false
+        rcFrom.value = ''; rcTo.value = ''
+        renderRc()
+        toast('已清除配置，回到全书口径')
+      } catch (e) { alert('清除失败：' + e.message) }
+    })
+  }
+  bindRc()
 
   // ---------- 派生数据 ----------
   const byIdx = (idx) => (chapters || []).find((c) => c.idx === idx)
@@ -275,6 +373,7 @@ export async function mountLibraryManage(viewEl, { bookId } = {}) {
   }
 
   function renderAll() {
+    renderRc()
     renderSub()
     renderChips()
     renderList()
@@ -504,4 +603,5 @@ export async function mountLibraryManage(viewEl, { bookId } = {}) {
   }
 
   await load()
+  await loadRc()
 }

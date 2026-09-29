@@ -7,12 +7,13 @@ import { escapeHtml } from '../render.js'
 export async function mountPrep(el, ctx) {
   el.innerHTML = '<div class="view-head"><h1>备课中心</h1><p>加载中…</p></div>'
   const stats = await api.stats().catch(() => null)
-  let papers = null, bases = null, derived = null
+  let papers = null, bases = null, derived = null, vex = null
   try {
-    ;[papers, bases, derived] = await Promise.all([
+    ;[papers, bases, derived, vex] = await Promise.all([
       api.fcePapers(),
       api.readingArticles({ kind: 'base' }),
       api.readingArticles(),
+      api.vocabExams().catch(() => null),
     ])
   } catch { /* FCE 数据不可用时仍展示哈1板块 */ }
 
@@ -54,6 +55,9 @@ export async function mountPrep(el, ctx) {
             </button>
             <button class="prep-card" data-go="exams">
               <b>哈一作业</b><span>成绩录入与题库</span>
+            </button>
+            <button class="prep-card" data-go="vocabExam">
+              <b>L${vex?.unlocked_level ?? 0}</b><span>词汇级别考试 · 已解锁到</span>
             </button>
           </div>
           <p class="reading-hint">点开语法课查看整讲内容；知识点体系按「语法大类 → 主题」两级组织，可定位到讲义原文。</p>

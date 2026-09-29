@@ -19,6 +19,7 @@ import { mountAnalytics } from './views/analytics.js'
 import { mountTopics } from './views/topics.js'
 import { mountPlan } from './views/plan.js'
 import { mountToday } from './views/today.js'
+import { mountVocabExam } from './views/vocabExam.js'
 import { mountConfig } from './views/config.js'
 import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
@@ -58,6 +59,7 @@ const VIEWS = [
   { key: 'taxonomy', hiddenTab: true, teacher: true },
   { key: 'fce', hiddenTab: true, teacher: true },
   { key: 'exams', hiddenTab: true, teacher: true },
+  { key: 'vocabExam', hiddenTab: true, teacher: true },
   { key: 'readingAdmin', hiddenTab: true, teacher: true },
   // 泛读馆子页：阅读器 hash 带 /{bookId}；noTab = 双角色都不进 Tab，hash 直达
   { key: 'libraryReader', hiddenTab: true, noTab: true },
@@ -308,6 +310,9 @@ async function bootstrap() {
       mounted = mountLibraryManage(container, { bookId: Number(routeSegs()[1]) })
     } else if (route === 'librarySettings') {
       mounted = mountLibrarySettings(container)
+    } else if (route === 'vocabExam') {
+      // 词汇级别考试（备课中心子页：登记成绩 + 打印考卷）
+      mounted = mountVocabExam(container)
     } else if (route === 'exams') {
       mounted = mountExams(container, { lectures: state.lectures })
     }

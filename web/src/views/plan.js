@@ -7,7 +7,11 @@ import { escapeHtml } from '../render.js'
 // 词汇考试：登记成绩（≥80 解锁下一级）+ 打印考卷入口。
 export async function mountPlan(el) {
   const subTab = new URLSearchParams(location.hash.split('?')[1] || '').get('tab') || 'plan'
-  const state = { tab: subTab === 'analytics' ? 'analytics' : 'plan' }
+  const state = {
+    tab: subTab === 'analytics' ? 'analytics' : 'plan',
+    view: 'week',   // week | month | overview
+    student: 'malin',
+  }
 
   render()
 
@@ -43,10 +47,10 @@ export async function mountPlan(el) {
 
   async function mountCalendar(body) {
     body.innerHTML = '<p class="muted">加载中…</p>'
-    let data, exams, diag, review, daily
+    let data, diag, review, daily
     try {
-      ;[data, exams, diag, review, daily] = await Promise.all([
-        api.planWeeks(), api.vocabExams(), api.planDiagnosis(), api.planReview(),
+      ;[data, diag, review, daily] = await Promise.all([
+        api.planWeeks(), api.planDiagnosis(), api.planReview(),
         api.planDailyPreview().catch(() => null),
       ])
     } catch (e) {
@@ -56,76 +60,52 @@ export async function mountPlan(el) {
     const { weeks = [], current_week: curWeek, last_week_review: lastReview } = data
     const byStart = new Map(weeks.map((w) => [w.week_start, w]))
     const today = new Date().toISOString().slice(0, 10)
-    // 周历视图状态：默认本周，可前后翻
+    // 周历视图状态：默认本周，可前后翻；月历当前月
     let viewWeek = curWeek
-
-    // ---- 词汇考试面板 ----
-    const vex = exams || {}
-    const passed = vex.passed_levels || []
-    const unlocked = vex.unlocked_level ?? 0
+    let viewMonth = today.slice(0, 7)
+    // 视图：week 周 | month 月 | overview 全览
+    const view = { mode: 'week' }
 
     body.innerHTML = `
       ${loopDeckHtml()}
-      <section class="fce-group plan-vocab-exam">
-        <div class="fce-group-title">🎓 词汇级别考试</div>
-        <p class="plan-vex-state">已过：${passed.length ? passed.map((l) => 'L' + l).join('、') : '无'} · 当前解锁到 <b>L${unlocked}</b>（80 分解锁下一级）</p>
-        <div class="plan-vex-row">
-          <label>级别 <select id="pv-level">${[0, 1, 2, 3, 4].map((l) => `<option value="${l}" ${l === unlocked ? 'selected' : ''}>L${l} → L${l + 1}</option>`).join('')}</select></label>
-          <label>学生 <select id="pv-user"><option value="malin">malin</option><option value="mxy">mxy</option></select></label>
-          <label>日期 <input id="pv-date" type="date" value="${today}"/></label>
-          <label>得分 <input id="pv-score" type="number" min="0" max="100" placeholder="0-100" style="width:90px"/></label>
-          <button class="btn-primary" id="pv-record">登记成绩</button>
-          <button class="chip" id="pv-paper">🖨 打印考卷</button>
+      <div class="pw-viewbar">
+        <div class="pw-modes">
+          <button class="chip ${view.mode === 'week' ? 'primary' : ''}" data-vmode="week">📅 周历</button>
+          <button class="chip ${view.mode === 'month' ? 'primary' : ''}" data-vmode="month">🗓 月历</button>
+          <button class="chip ${view.mode === 'overview' ? 'primary' : ''}" data-vmode="overview">🗺 全览</button>
         </div>
-        <div id="pv-exam-list">${renderExamList(vex.exams || [])}</div>
-      </section>
+        <label class="pw-student">学生
+          <select id="pw-user">
+            <option value="malin" ${state.student === 'malin' ? 'selected' : ''}>malin</option>
+            <option value="mxy" ${state.student === 'mxy' ? 'selected' : ''}>mxy</option>
+          </select>
+        </label>
+      </div>
       <div id="plan-review">${reviewHtml(lastReview)}</div>
-      <div id="plan-weeks"></div>
+      <div id="plan-view"></div>
     `
+    const viewHost = body.querySelector('#plan-view')
 
-    bindLoopDeck()
-    bindVocabExam()
-    renderWeeks()
+    body.querySelectorAll('[data-vmode]').forEach((b) =>
+      b.addEventListener('click', () => {
+        view.mode = b.dataset.vmode
+        body.querySelectorAll('[data-vmode]').forEach((x) =>
+          x.classList.toggle('primary', x.dataset.vmode === view.mode))
+        renderView()
+      }))
+    body.querySelector('#pw-user').addEventListener('change', (e) => {
+      state.student = e.target.value
+      renderView()
+    })
 
-    function renderExamList(items) {
-      if (!items.length) return '<p class="muted" style="margin:6px 0 0">还没有考试记录。线下考完在这里登记，≥80 分自动解锁下一级词库。</p>'
-      return `<div class="plan-vex-history">${items.slice(0, 8).map((x) => `
-        <span class="plan-vex-item ${x.score >= 80 ? 'ok' : 'fail'}">L${x.level} · ${x.score} 分 · ${x.exam_date}<button data-del="${x.id}" title="删除">×</button></span>`).join('')}</div>`
+    function renderView() {
+      if (view.mode === 'month') renderMonth()
+      else if (view.mode === 'overview') renderOverview()
+      else renderWeeks()
     }
+    renderView()
 
-    function bindVocabExam() {
-      body.querySelector('#pv-record').addEventListener('click', async () => {
-        const user = body.querySelector('#pv-user').value
-        const level = Number(body.querySelector('#pv-level').value)
-        const score = Number(body.querySelector('#pv-score').value)
-        const exam_date = body.querySelector('#pv-date').value
-        if (!(score >= 0 && score <= 100) || !exam_date) return alert('得分与日期须填完整')
-        try {
-          const r = await api.vocabExamAdd({ user, level, score, exam_date })
-          const fresh = await api.vocabExams()
-          body.querySelector('#pv-exam-list').innerHTML = renderExamList(fresh.exams || [])
-          body.querySelector('.plan-vex-state').innerHTML =
-            `已过：${(fresh.passed_levels || []).map((l) => 'L' + l).join('、') || '无'} · 当前解锁到 <b>L${fresh.unlocked_level}</b>（80 分解锁下一级）`
-          toast(score >= 80 ? `🎉 ${score} 分通过！L${level + 1} 已解锁` : `${score} 分登记成功（差 ${80 - score} 分解锁）`)
-        } catch (e) { alert('登记失败：' + e.message) }
-      })
-      body.querySelector('#pv-paper').addEventListener('click', () => {
-        const level = body.querySelector('#pv-level').value
-        const user = body.querySelector('#pv-user').value
-        window.open(`/api/vocab-exams/paper?level=${level}&student=${encodeURIComponent(user)}`, '_blank')
-      })
-      body.querySelectorAll('[data-del]').forEach((b) =>
-        b.addEventListener('click', async (e) => {
-          e.stopPropagation()
-          if (!confirm('删除这条考试记录？')) return
-          try {
-            await api.vocabExamDel(b.dataset.del)
-            const fresh = await api.vocabExams()
-            body.querySelector('#pv-exam-list').innerHTML = renderExamList(fresh.exams || [])
-          } catch (err) { alert(err.message) }
-        }),
-      )
-    }
+
 
     // ---- 外循环驾驶舱：诊断 → 周目标 → 展开 → 验收 一屏串联 ----
     function currentFocus() {
@@ -244,7 +224,7 @@ export async function mountPlan(el) {
 
     // ---- 周历视图：← 本周 → 翻周，7 天格子逐日任务 + 周拆解条 ----
     async function renderWeeks() {
-      const host = body.querySelector('#plan-weeks')
+      const host = viewHost
       host.innerHTML = '<p class="muted">周历加载中…</p>'
       let wv
       try {
@@ -325,6 +305,93 @@ export async function mountPlan(el) {
 
 
 
+
+    // ---- 月历视图 ----
+    let monthData = null
+    async function renderMonth() {
+      viewHost.innerHTML = '<p class="muted">月历加载中…</p>'
+      try {
+        monthData = await api.planMonthView({ month: viewMonth })
+      } catch (e) {
+        viewHost.innerHTML = `<p style="color:#b42318">月历加载失败：${escapeHtml(e.message)}</p>`
+        return
+      }
+      const names = ['一', '二', '三', '四', '五', '六', '日']
+      const [y, m] = viewMonth.split('-').map(Number)
+      const prevM = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`
+      const nextM = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`
+      viewHost.innerHTML = `
+        <section class="pw-view">
+          <header class="pw-nav">
+            <button class="chip" data-mnav="prev">← 上月</button>
+            <div class="pw-title"><h3>${y} 年 ${m} 月</h3>
+              <p class="muted">${state.student} 的逐日任务完成情况</p></div>
+            <button class="chip" data-mnav="next">下月 →</button>
+          </header>
+          <div class="pm-grid">
+            ${names.map((n) => `<div class="pm-dow">周${n}</div>`).join('')}
+            ${(monthData.days || []).map((d) => {
+              const dd = Number(d.date.slice(8))
+              const isToday = d.date === today
+              const full = !d.future && d.total > 0 && d.done >= d.total
+              const pct = d.total ? Math.round((d.done / d.total) * 100) : 0
+              return `<div class="pm-day ${d.in_month ? '' : 'out'} ${d.future ? 'future' : ''} ${isToday ? 'today' : ''} ${full ? 'fulled' : ''}"
+                    title="${d.date} · ${d.total ? `${d.done}/${d.total}` : '无任务'}">
+                <b>${dd}</b>
+                ${d.future ? '' : d.total ? `<i style="height:${pct}%"></i><em>${d.done}/${d.total}</em>` : '<em>—</em>'}
+              </div>`
+            }).join('')}
+          </div>
+        </section>`
+      viewHost.querySelectorAll('[data-mnav]').forEach((b) =>
+        b.addEventListener('click', () => {
+          viewMonth = b.dataset.mnav === 'prev' ? prevM : nextM
+          renderMonth()
+        }))
+    }
+
+    // ---- 全览视图 ----
+    async function renderOverview() {
+      viewHost.innerHTML = '<p class="muted">全览加载中…</p>'
+      let ov
+      try {
+        ov = await api.planOverview()
+      } catch (e) {
+        viewHost.innerHTML = `<p style="color:#b42318">全览加载失败：${escapeHtml(e.message)}</p>`
+        return
+      }
+      viewHost.innerHTML = `
+        <section class="pw-view">
+          <header class="pw-nav">
+            <div class="pw-title"><h3>冲刺全览 · 至 2027-01-31</h3>
+              <p class="muted">${state.student} · 每周计划与完成汇总（点周行进周历）</p></div>
+          </header>
+          <div class="po-list">
+            ${(ov.weeks || []).map((w) => {
+              const chips = []
+              if (w.focus_kps?.length) chips.push(`🎯 ${w.focus_kps.map((l) => l + '讲').join('/')}`)
+              if (w.lectures?.length) chips.push(`📚 ${[...w.lectures].sort((a, b) => a - b).join('/')}讲`)
+              if (w.vocab_goal != null) chips.push(`🔤 ${w.vocab_goal}词`)
+              const rKeys = Object.keys(w.reading || {})
+              if (rKeys.length) chips.push(`📖 ${rKeys.map((k) => `${k}${w.reading[k]}%`).join('、')}`)
+              const pct = w.total ? Math.round((w.done / w.total) * 100) : null
+              return `<div class="po-row ${w.past ? 'past' : ''} ${w.is_current ? 'cur' : ''} ${w.has_plan ? '' : 'noplan'}" data-ws="${w.week_start}">
+                <span class="po-date">${weekLabel(w.week_start)}</span>
+                <span class="po-chips">${chips.length ? chips.map((c) => `<i>${escapeHtml(c)}</i>`).join('') : '<em class="muted">未排计划</em>'}</span>
+                <span class="po-done">${w.total ? `<b>${pct}%</b>（${w.done}/${w.total}）` : ''}</span>
+              </div>`
+            }).join('')}
+          </div>
+        </section>`
+      viewHost.querySelectorAll('[data-ws]').forEach((r) =>
+        r.addEventListener('click', () => {
+          viewWeek = r.dataset.ws
+          view.mode = 'week'
+          body.querySelectorAll('[data-vmode]').forEach((x) =>
+            x.classList.toggle('primary', x.dataset.vmode === 'week'))
+          renderWeeks()
+        }))
+    }
 
     function openEditor(ws) {
       const w = byStart.get(ws) || { week_start: ws, tasks: {}, notes: '' }

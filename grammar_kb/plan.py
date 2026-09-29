@@ -489,7 +489,12 @@ class PlanStore:
         return None
 
     def _book_reading_state(self, book_id: int, goal_pct: float, user: str) -> Optional[dict]:
-        """某书的精确阅读状态：当前章/目标章/词数。缺数据返回 None。"""
+        """某书的精确阅读状态：当前章/目标章/词数。缺数据返回 None。
+
+        目标口径：泛读馆配置了必读章（book_reading_config）时按配置算——
+        目标词数=必读章词数和、目标章=必读章最后一章、达成=读到最后一必读章末；
+        未配置则按全书百分比（goal_pct）线性映射。
+        """
         conn = self._lib_connect()
         if conn is None:
             return None
@@ -503,22 +508,61 @@ class PlanStore:
                     "SELECT idx, title, word_count FROM chapters"
                     " WHERE book_id = ? ORDER BY idx", (book_id,),
                 ).fetchall()
+                cfg_row = None
+                has_cfg_table = conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table'"
+                    " AND name='book_reading_config'").fetchone()
+                if has_cfg_table:
+                    cfg_row = conn.execute(
+                        "SELECT chapters FROM book_reading_config WHERE book_id = ?",
+                        (book_id,),
+                    ).fetchone()
         except sqlite3.Error:
             return None
         if not chs:
             return None
-        pct = (prog["percent"] or 0.0) if prog else 0.0
-        total = sum(c["word_count"] or 0 for c in chs)
+        ch_list = [dict(c) for c in chs]
+        total = sum(c["word_count"] or 0 for c in ch_list)
         if total <= 0:
             return None
-        cur = _chapter_at_words([dict(c) for c in chs], pct, total)
-        goal = _chapter_at_words([dict(c) for c in chs], float(goal_pct), total)
+        pct = (prog["percent"] or 0.0) if prog else 0.0
+
+        # 必读章配置 → 目标口径
+        cfg: Optional[list[int]] = None
+        if cfg_row:
+            try:
+                v = json.loads(cfg_row["chapters"] or "[]")
+                cfg = sorted({int(x) for x in v}) if v else None
+            except (ValueError, TypeError):
+                cfg = None
+        by_idx = {c["idx"]: c for c in ch_list}
+        if cfg and all(i in by_idx for i in cfg):
+            goal_words = sum(by_idx[i]["word_count"] or 0 for i in cfg)
+            goal_ch = max(cfg)
+            # 必读章末尾的全书累计百分比（达成线）
+            seen = 0
+            goal_pct_eff = 100.0
+            for c in ch_list:
+                seen += c["word_count"] or 0
+                if c["idx"] == goal_ch:
+                    goal_pct_eff = round(seen / total * 100, 1)
+                    break
+            cfg_count = len(cfg)
+        else:
+            goal_pct_eff = float(goal_pct)
+            goal_words = round(total * goal_pct_eff / 100)
+            goal = _chapter_at_words(ch_list, goal_pct_eff, total)
+            goal_ch = goal["idx"] if goal else None
+            cfg_count = None
+
+        cur = _chapter_at_words(ch_list, pct, total)
         words_read = round(total * pct / 100)
-        goal_words = round(total * float(goal_pct) / 100)
         return {
             "percent": round(pct, 1),
+            "goal_percent": round(goal_pct_eff, 1),
+            "configured_chapters": cfg_count,
             "current_chapter": cur["idx"] if cur else None,
-            "goal_chapter": goal["idx"] if goal else None,
+            "goal_chapter": goal_ch,
             "words_read": words_read,
             "goal_words": goal_words,
             "remaining_words": max(0, goal_words - words_read),
@@ -534,14 +578,16 @@ class PlanStore:
         if row:
             st = self._book_reading_state(row["id"], goal_pct, user)
             if st:
-                reached = st["percent"] >= float(goal_pct) - 0.05
+                cfg_txt = (f"必读 {st['configured_chapters']} 章"
+                           if st.get("configured_chapters") else f"目标 {goal_pct}%")
+                reached = st["percent"] >= (st.get("goal_percent") or float(goal_pct)) - 0.05
                 if reached:
                     return {
                         "type": "reading", "book": book_key,
                         "key": f"reading:{book_key}",
                         "text": f"泛读《{short}》目标已达成 🎉",
-                        "detail": f"已读 {st['percent']}%（第{st['current_chapter']}章起）"
-                                  f" · 目标 {goal_pct}%",
+                        "detail": f"已读 {st['percent']}% · {cfg_txt}"
+                                  f"（{fmt_w(st['goal_words'])} 词）",
                     }
                 per_day = max(1, round(st["remaining_words"] / max(1, days_left)))
                 return {
@@ -549,7 +595,7 @@ class PlanStore:
                     "key": f"reading:{book_key}",
                     "text": f"泛读《{short}》读到第{st['current_chapter']}章"
                             if st["current_chapter"] else f"泛读《{short}》开始读",
-                    "detail": (f"目标第{st['goal_chapter']}章（{goal_pct}%）"
+                    "detail": (f"目标第{st['goal_chapter']}章 · {cfg_txt}"
                                f" · 已读 {fmt_w(st['words_read'])}/{fmt_w(st['goal_words'])} 词"
                                f" · 今日 +{fmt_w(per_day)} 词"),
                 }
@@ -577,8 +623,9 @@ class PlanStore:
             t2 = dict(t)
             t2["key"] = key
             if t.get("type") == "reading":
-                # 完成判定：进度已达目标%，或当天有该书的阅读会话（按书名模糊匹配）
-                reached = t.get("detail", "").startswith("已读") and "目标已达成" in t.get("text", "")
+                # 完成判定：任务文案已是达成态（goal_percent 口径在后端算好），
+                # 或当天有该书的阅读会话（按书名模糊匹配）
+                reached = "目标已达成" in t.get("text", "")
                 matched = any(
                     all(w in (title or "").lower() for w in self._key_words(t.get("book") or ""))
                     for title in read_titles
@@ -644,6 +691,10 @@ class PlanStore:
             st = self._book_reading_state(row["id"], pct, user) if row else None
             reading_items.append({
                 "book": book_key, "goal_pct": pct,
+                "percent": st["percent"] if st else None,
+                "goal_percent": st["goal_percent"] if st else None,
+                "goal_words": st["goal_words"] if st else None,
+                "configured_chapters": st["configured_chapters"] if st else None,
                 "remaining_words": st["remaining_words"] if st else None,
                 "goal_chapter": st["goal_chapter"] if st else None,
                 "current_chapter": st["current_chapter"] if st else None,
@@ -688,6 +739,71 @@ class PlanStore:
             "week_start": week_start, "tasks": t, "notes": w.get("notes") or "",
             "breakdown": breakdown, "days": days, "current_week": in_week,
         }
+
+    def month_view(self, month: str, user: str = "malin") -> dict:
+        """月历：某月每天 {date, in_month, future, done, total}，周一为每周之首。"""
+        y, m = month.split("-")[:2]
+        first = date(int(y), int(m), 1)
+        nxt_month = (date(int(y) + 1, 1, 1) if int(m) == 12
+                     else date(int(y), int(m) + 1, 1))
+        today_iso = date.today().isoformat()
+        grid_start = monday_of(first)
+        days = []
+        d = grid_start
+        while d < nxt_month:
+            iso_ = d.isoformat()
+            cell = {"date": iso_, "in_month": d.month == first.month,
+                    "future": iso_ > today_iso}
+            if iso_ > today_iso:
+                td = self.week_daily_tasks(
+                    monday_of(d).isoformat(), for_date=iso_, user=user)
+                cell.update({"done": 0, "total": len(td)})
+            else:
+                td = self.today_tasks(user=user, day=iso_)
+                cell.update({"done": td["done"], "total": td["total"]})
+            days.append(cell)
+            d += timedelta(days=1)
+        return {"month": first.isoformat()[:7], "days": days}
+
+    def overview(self, user: str = "malin") -> dict:
+        """全览：最早已排计划周（无则回看 2 周）到冲刺线 2027-01-31 的逐周汇总。"""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT week_start FROM plan_weeks ORDER BY week_start"
+            ).fetchall()
+        seeded = [r["week_start"] for r in rows if r["week_start"] <= "2027-01-25"]
+        today_iso = date.today().isoformat()
+        cur = monday_of(date.today()).isoformat()
+        earliest = (seeded[0] if seeded
+                    else (date.fromisoformat(cur) - timedelta(days=14)).isoformat())
+        weeks = []
+        ws = earliest
+        while ws <= "2027-01-25":
+            w = self._get_week(ws)
+            t = w.get("tasks") or {}
+            has_plan = bool(t.get("focus_kps") or t.get("lectures")
+                            or t.get("vocab_goal") or t.get("fce") or t.get("reading"))
+            done = total = 0
+            if ws <= cur:  # 已开始的周才聚合完成度（未来周无 actuals）
+                for i in range(7):
+                    d = (date.fromisoformat(ws) + timedelta(days=i)).isoformat()
+                    if d > today_iso:
+                        continue
+                    td = self.today_tasks(user=user, day=d)
+                    done += td["done"]
+                    total += td["total"]
+            weeks.append({
+                "week_start": ws, "has_plan": has_plan,
+                "is_current": ws == cur, "past": ws < cur,
+                "focus_kps": t.get("focus_kps") or [],
+                "lectures": t.get("lectures") or [],
+                "vocab_goal": t.get("vocab_goal"),
+                "reading": t.get("reading") or {},
+                "notes": w.get("notes") or "",
+                "done": done, "total": total,
+            })
+            ws = (date.fromisoformat(ws) + timedelta(days=7)).isoformat()
+        return {"weeks": weeks, "current_week": cur}
 
     def put_day_check(self, user: str, day: str, task_key: str, on: bool) -> None:
         date.fromisoformat(day)  # 非法日期抛 ValueError → 422

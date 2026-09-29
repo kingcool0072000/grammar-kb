@@ -1051,6 +1051,25 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         except ValueError:
             raise HTTPException(status_code=422, detail="week_start 须为 YYYY-MM-DD")
 
+    @app.get("/plan/month-view")
+    def plan_month_view(request: "fastapi.Request", month: str = "",
+                        user: str = "malin"):
+        """教师月历：某月逐日任务完成格子（周一为每周之首）。"""
+        _require_teacher(request)
+        from datetime import date as _date
+        if not month:
+            month = _date.today().isoformat()[:7]
+        try:
+            return _ok(plan.month_view(month, user=user))
+        except (ValueError, IndexError):
+            raise HTTPException(status_code=422, detail="month 须为 YYYY-MM")
+
+    @app.get("/plan/overview")
+    def plan_overview(request: "fastapi.Request", user: str = "malin"):
+        """教师全览：最早已排计划周到冲刺线的逐周汇总。"""
+        _require_teacher(request)
+        return _ok(plan.overview(user=user))
+
     # ---- 内循环（双循环教学）：学生今日任务 / 周清单 / 打卡 ----
     # 学生读自己的；教师可指定 user 查看孩子执行情况（与 recite 同模式）。
 
@@ -1304,6 +1323,30 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         """设置视图：教师完整版；学生只有 student + hasKey（绝不泄漏 apiKey/model/prompt）。"""
         is_teacher = getattr(request.state, "role", "teacher") == "teacher"
         return _ok(library.settings_view(is_teacher))
+
+    # ---- 必读章配置（教师）：计划表阅读目标按配置算词数/目标章 ----
+
+    @app.get("/library/books/{book_id}/reading-config")
+    def lib_reading_config(book_id: int, request: "fastapi.Request"):
+        """必读章 idx 列表（未配置返回 null = 全书口径）。师生可读。"""
+        if library.get_title(book_id) is None:
+            raise HTTPException(status_code=404, detail="书籍不存在")
+        return _ok({"book_id": book_id, "chapters": library.get_reading_config(book_id)})
+
+    @app.put("/library/books/{book_id}/reading-config")
+    def lib_reading_config_put(book_id: int, rec: dict,
+                               request: "fastapi.Request"):
+        """保存必读章配置（教师；chapters 空数组=清除回全书口径）。"""
+        _require_teacher_lib(request)
+        if library.get_title(book_id) is None:
+            raise HTTPException(status_code=404, detail="书籍不存在")
+        chs = rec.get("chapters") if isinstance(rec, dict) else None
+        if not isinstance(chs, list) or not all(
+                isinstance(x, int) or (isinstance(x, str) and x.isdigit()) for x in chs):
+            raise HTTPException(status_code=422, detail="chapters 须为整数数组")
+        library.put_reading_config(book_id, [int(x) for x in chs])
+        return _ok({"book_id": book_id,
+                    "chapters": library.get_reading_config(book_id)})
 
     @app.put("/library/settings")
     def lib_settings_put(rec: dict, request: "fastapi.Request"):
