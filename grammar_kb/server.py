@@ -1051,6 +1051,28 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         except ValueError:
             raise HTTPException(status_code=422, detail="week_start 须为 YYYY-MM-DD")
 
+    @app.get("/plan/goals")
+    def plan_goals_get(request: "fastapi.Request", user: str = "malin"):
+        """学生总目标（冲刺目标：讲次/FCE/词汇/泛读书）。教师专属。"""
+        _require_teacher(request)
+        return _ok({"user": user, "goals": plan.get_goals(user)})
+
+    @app.put("/plan/goals")
+    def plan_goals_put(request: "fastapi.Request", payload: dict):
+        """保存学生总目标（教师；goals 为自由 JSON，前端结构化生成）。"""
+        _require_teacher(request)
+        user = (payload.get("user") or "").strip() if isinstance(payload, dict) else ""
+        goals = payload.get("goals") if isinstance(payload, dict) else None
+        if not user or not isinstance(goals, dict):
+            raise HTTPException(status_code=422, detail="user/goals 必填且 goals 须为对象")
+        return _ok({"user": user, "goals": plan.put_goals(user, goals)})
+
+    @app.get("/plan/editor-data")
+    def plan_editor_data(request: "fastapi.Request", user: str = "malin"):
+        """周计划编辑器结构化选项源：讲次/FCE Part/书目(含必读章配置)/词汇现况。教师专属。"""
+        _require_teacher(request)
+        return _ok(plan.editor_data(user=user))
+
     @app.get("/plan/month-view")
     def plan_month_view(request: "fastapi.Request", month: str = "",
                         user: str = "malin"):

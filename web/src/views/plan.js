@@ -65,8 +65,11 @@ export async function mountPlan(el) {
     let viewMonth = today.slice(0, 7)
     // 视图：week 周 | month 月 | overview 全览
     const view = { mode: 'week' }
+    let goals = null
+    try { goals = (await api.planGoals({ user: state.student })).goals } catch { goals = null }
 
     body.innerHTML = `
+      ${goalsBarHtml(goals)}
       ${loopDeckHtml()}
       <div class="pw-viewbar">
         <div class="pw-modes">
@@ -106,6 +109,88 @@ export async function mountPlan(el) {
     renderView()
 
 
+
+    // ---- 总目标（分学生冲刺目标，结构化配置） ----
+    function goalsBarHtml(g) {
+      const parts = []
+      if (g?.deadline) parts.push(`⏰ ${g.deadline}`)
+      if (g?.vocab_target) parts.push(`🔤 词汇 ${g.vocab_target} 词`)
+      if (g?.lecture_target) parts.push(`📚 讲次到第 ${g.lecture_target} 讲`)
+      if (g?.fce_target) parts.push(`🎧 FCE ${g.fce_target} Test`)
+      if (g?.reading?.length) parts.push(`📖 ${g.reading.length} 本`)
+      const txt = parts.length ? parts.join(' · ') : '未配置总目标（点右侧配置）'
+      return `<div class="pg-bar">
+        <div class="pg-bar-main">
+          <b>🎯 ${state.student} 总目标</b>
+          <span>${escapeHtml(txt)}</span>
+        </div>
+        <button class="chip" id="pg-edit">⚙️ 配置总目标</button>
+      </div>`
+    }
+
+    function openGoalsDialog() {
+      const g = goals || {}
+      const dlg = document.createElement('div')
+      dlg.className = 'plan-editor'
+      dlg.innerHTML = `
+        <div class="plan-editor-mask"></div>
+        <div class="plan-editor-body card pe-body">
+          <h3>配置 ${state.student} 的总目标</h3>
+          <label class="plan-field">冲刺截止日期
+            <input id="pg-deadline" type="date" value="${g.deadline || '2027-01-31'}"/>
+          </label>
+          <label class="plan-field">词汇总目标（累计掌握词数）
+            <input id="pg-vocab" type="number" min="0" value="${g.vocab_target ?? ''}" placeholder="2000"/>
+          </label>
+          <label class="plan-field">讲次总目标（哈1 课程推进到）
+            <select id="pg-lecture">
+              <option value="">— 选择 —</option>
+              ${(editorDataCache?.lectures || []).map((l) =>
+                `<option value="${l.number}" ${g.lecture_target === l.number ? 'selected' : ''}>第 ${l.number} 讲 · ${escapeHtml(l.title)}</option>`).join('')}
+            </select>
+          </label>
+          <label class="plan-field">FCE 总目标（完成 Test 套数）
+            <input id="pg-fce" type="number" min="0" max="8" value="${g.fce_target ?? ''}" placeholder="8"/>
+          </label>
+          <div class="chip-row">
+            <button class="btn-primary" id="pg-save">保存</button>
+            <button class="chip" id="pg-cancel">取消</button>
+          </div>
+        </div>`
+      document.body.appendChild(dlg)
+      const close = () => dlg.remove()
+      dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
+      dlg.querySelector('#pg-cancel').addEventListener('click', close)
+      dlg.querySelector('#pg-save').addEventListener('click', async () => {
+        const ng = {}
+        const dl = dlg.querySelector('#pg-deadline').value
+        if (dl) ng.deadline = dl
+        const vb = Number(dlg.querySelector('#pg-vocab').value)
+        if (vb > 0) ng.vocab_target = vb
+        const lc = Number(dlg.querySelector('#pg-lecture').value)
+        if (lc > 0) ng.lecture_target = lc
+        const fc = Number(dlg.querySelector('#pg-fce').value)
+        if (fc > 0) ng.fce_target = fc
+        if (g?.reading) ng.reading = g.reading // 泛读总目标沿用已存（周计划里逐周配）
+        try {
+          await api.planGoalsPut(state.student, ng)
+          goals = ng
+          close()
+          const bar = body.querySelector('.pg-bar')
+          if (bar) bar.outerHTML = goalsBarHtml(goals)
+          bindGoalsBar()
+        } catch (e) { alert('保存失败：' + e.message) }
+      })
+    }
+
+    function bindGoalsBar() {
+      const btn = body.querySelector('#pg-edit')
+      if (btn) btn.addEventListener('click', async () => {
+        await getEditorData() // 讲次下拉数据
+        openGoalsDialog()
+      })
+    }
+    bindGoalsBar()
 
     // ---- 外循环驾驶舱：诊断 → 周目标 → 展开 → 验收 一屏串联 ----
     function currentFocus() {
@@ -393,32 +478,123 @@ export async function mountPlan(el) {
         }))
     }
 
-    function openEditor(ws) {
+    // ---- 周编辑器：结构化选项全部来自备课内容（讲次/FCE Part/书目/词汇） ----
+    let editorDataCache = null
+    async function getEditorData() {
+      if (!editorDataCache) {
+        try { editorDataCache = await api.planEditorData({ user: state.student }) }
+        catch { editorDataCache = { lectures: [], fce_parts: [], books: [], vocab_mastered: 0 } }
+      }
+      return editorDataCache
+    }
+
+    function normalizeReadingKey(key, books) {
+      // 旧数据可能是书名关键词；归一为 book id 字符串（匹配不到原样保留）
+      if (/^\d+$/.test(String(key))) return String(key)
+      const segs = String(key).toLowerCase().match(/[a-z]{3,}/g) || []
+      if (segs.length) {
+        const hit = books.find((b) => segs.every((w) => b.title.toLowerCase().includes(w)))
+        if (hit) return String(hit.id)
+      }
+      return String(key)
+    }
+
+    async function openEditor(ws) {
       const w = byStart.get(ws) || { week_start: ws, tasks: {}, notes: '' }
       const t = w.tasks || {}
+      const ed = await getEditorData()
+      const books = ed.books || []
+      const lectures = ed.lectures || []
+      const lecTitle = (n) => {
+        const l = lectures.find((x) => x.number === n)
+        return l ? l.title : ''
+      }
+
+      const focusSel = new Set(t.focus_kps || [])
+      const lecSel = new Set(t.lectures || [])
+      const fceSel = new Set(t.fce || [])
+      // reading: {bookId: pct}
+      const readSel = new Map()
+      for (const [k, v] of Object.entries(t.reading || {})) {
+        readSel.set(normalizeReadingKey(k, books), Number(v))
+      }
+      let speakOn = Boolean(t.speak), speakN = t.speak || 2
+
+      const lecChips = (selSet, attr) => lectures.map((l) => `
+        <button type="button" class="pe-lec ${selSet.has(l.number) ? 'on' : ''}" data-${attr}="${l.number}" title="${escapeHtml(l.category || '')}">
+          <b>${l.number}</b>${escapeHtml(l.title)}
+        </button>`).join('')
+
+      const fceGroups = [1, 2, 3, 4].map((tid) => {
+        const parts = (ed.fce_parts || []).filter((x) => x.test_id === tid)
+        if (!parts.length) return ''
+        return `<div class="pe-fce-group">
+          <b>${parts[0].test_title}</b>
+          <div class="pe-fce-parts">
+            ${parts.map((x) => `<button type="button" class="pe-part ${fceSel.has(x.label) ? 'on' : ''}" data-fce="${escapeHtml(x.label)}">${escapeHtml(x.label.replace(parts[0].test_title + ' · ', ''))}<i>${x.questions}</i></button>`).join('')}
+          </div>
+        </div>`
+      }).join('')
+
+      const bookRows = () => [...readSel.entries()].map(([id, pct]) => {
+        const b = books.find((x) => String(x.id) === String(id))
+        const cfgTxt = b?.configured_chapters?.length
+          ? `必读 ${b.configured_chapters.length} 章 · ${fmtK(b.goal_words)} 词`
+          : (b ? `全书 ${b.chapters} 章 · ${fmtK(b.total_words)} 词` : '')
+        return `<div class="pe-book-row" data-bk="${id}">
+          <span class="pe-book-title">${escapeHtml(b ? b.title.slice(0, 34) : id)}${cfgTxt ? `<i>${cfgTxt}</i>` : ''}</span>
+          <label>目标 <input type="number" min="1" max="100" value="${pct}" data-bk-pct="${id}" style="width:56px"/>%</label>
+          <button type="button" class="chip" data-bk-del="${id}">✕</button>
+        </div>`
+      }).join('')
+
       const dlg = document.createElement('div')
       dlg.className = 'plan-editor'
       dlg.innerHTML = `
         <div class="plan-editor-mask"></div>
-        <div class="plan-editor-body card">
-          <h3>编辑 ${weekLabel(ws)} 周计划</h3>
-          <label class="plan-field">攻坚讲次（外循环周目标，逗号分隔，≤5 个）
-            <input id="pe-focus" value="${(t.focus_kps || []).join(',')}" placeholder="26, 28"/>
-          </label>
-          <label class="plan-field">本周计划讲次（逗号分隔，如 29, 30）
-            <input id="pe-lectures" value="${(t.lectures || []).join(',')}" placeholder="29, 30"/>
-          </label>
-          <label class="plan-field">词汇目标（累计掌握词数）
-            <input id="pe-vocab" type="number" min="0" value="${t.vocab_goal ?? ''}" placeholder="380"/>
-          </label>
-          <label class="plan-field">FCE 任务（分号分隔）
-            <input id="pe-fce" value="${escapeHtml((t.fce || []).join('；'))}" placeholder="Test1 RUE"/>
-          </label>
-          <label class="plan-field">阅读目标（书名:百分比，分号分隔）
-            <input id="pe-reading" value="${escapeHtml(Object.entries(t.reading || {}).map(([k, v]) => `${k}:${v}`).join('；'))}" placeholder="哈利波特1:60"/>
-          </label>
+        <div class="plan-editor-body card pe-body">
+          <h3>编辑 ${weekLabel(ws)} 周计划 <i>· ${state.student}</i></h3>
+          <div class="pe-sec">
+            <h4>🎯 攻坚讲次 <i>≤5 个，来自诊断信号优先</i></h4>
+            <div class="pe-lec-grid" id="pe-focus-grid">${lecChips(focusSel, 'fl')}</div>
+          </div>
+          <div class="pe-sec">
+            <h4>📚 本周讲次任务</h4>
+            <div class="pe-lec-grid" id="pe-lec-grid">${lecChips(lecSel, 'lc')}</div>
+          </div>
+          <div class="pe-sec">
+            <h4>🔤 词汇目标 <i>当前已掌握 ${ed.vocab_mastered || 0} 词</i></h4>
+            <div class="pe-vocab-row">
+              <input id="pe-vocab" type="number" min="0" value="${t.vocab_goal ?? ''}" placeholder="累计目标词数"/>
+              <button type="button" class="chip" data-vadd="20">+20</button>
+              <button type="button" class="chip" data-vadd="50">+50</button>
+              <button type="button" class="chip" data-vadd="100">+100</button>
+            </div>
+          </div>
+          <div class="pe-sec">
+            <h4>🎧 FCE 做题 <i>勾选本周要做的 Part</i></h4>
+            ${fceGroups || '<p class="muted">FCE 题库不可用</p>'}
+          </div>
+          <div class="pe-sec">
+            <h4>📖 泛读目标 <i>目标按泛读馆必读章配置算词数</i></h4>
+            <div id="pe-books">${bookRows()}</div>
+            <div class="pe-add-book">
+              <select id="pe-book-sel">
+                <option value="">＋ 从书架添加书目…</option>
+                ${books.filter((b) => !readSel.has(String(b.id))).map((b) =>
+                  `<option value="${b.id}">${escapeHtml(b.title.slice(0, 40))}${b.configured_chapters?.length ? `（必读 ${b.configured_chapters.length} 章/${fmtK(b.goal_words)} 词）` : `（${b.chapters} 章/${fmtK(b.total_words)} 词）`}</option>`).join('')}
+              </select>
+              <label>目标 <input id="pe-book-pct" type="number" min="1" max="100" value="100" style="width:56px"/>%</label>
+            </div>
+          </div>
+          <div class="pe-sec">
+            <h4>🎤 朗读（阅读训练）</h4>
+            <label class="pe-speak"><input type="checkbox" id="pe-speak-on" ${speakOn ? 'checked' : ''}/> 本周安排朗读，每周
+              <input id="pe-speak-n" type="number" min="1" max="7" value="${speakN}" style="width:48px"/> 篇（录音自动进批改）
+            </label>
+          </div>
           <label class="plan-field">本周重点 / 改善项
-            <textarea id="pe-notes" rows="4">${escapeHtml(w.notes || '')}</textarea>
+            <textarea id="pe-notes" rows="3">${escapeHtml(w.notes || '')}</textarea>
           </label>
           <div class="chip-row">
             <button class="btn-primary" id="pe-save">保存</button>
@@ -427,24 +603,60 @@ export async function mountPlan(el) {
         </div>`
       document.body.appendChild(dlg)
       const close = () => dlg.remove()
+
+      // 交互绑定
+      const bindToggle = (root, attr, set) => {
+        root.querySelectorAll(`[data-${attr}]`).forEach((b) =>
+          b.addEventListener('click', () => {
+            const n = Number(b.dataset[attr])
+            if (set.has(n)) { set.delete(n); b.classList.remove('on') }
+            else { set.add(n); b.classList.add('on') }
+          }))
+      }
+      bindToggle(dlg.querySelector('#pe-focus-grid'), 'fl', focusSel)
+      bindToggle(dlg.querySelector('#pe-lec-grid'), 'lc', lecSel)
+      dlg.querySelectorAll('[data-fce]').forEach((b) =>
+        b.addEventListener('click', () => {
+          const k = b.dataset.fce
+          if (fceSel.has(k)) { fceSel.delete(k); b.classList.remove('on') }
+          else { fceSel.add(k); b.classList.add('on') }
+        }))
+      dlg.querySelectorAll('[data-vadd]').forEach((b) =>
+        b.addEventListener('click', () => {
+          const inp = dlg.querySelector('#pe-vocab')
+          inp.value = (Number(inp.value) || ed.vocab_mastered || 0) + Number(b.dataset.vadd)
+        }))
+      const rerenderBooks = () => {
+        dlg.querySelector('#pe-books').innerHTML = bookRows()
+        dlg.querySelectorAll('[data-bk-del]').forEach((b) =>
+          b.addEventListener('click', () => { readSel.delete(b.dataset.bkDel); rerenderBooks() }))
+        dlg.querySelectorAll('[data-bk-pct]').forEach((i) =>
+          i.addEventListener('change', () => readSel.set(i.dataset.bkPct, Number(i.value) || 100)))
+        // 下拉里去掉已选书
+        const sel = dlg.querySelector('#pe-book-sel')
+        sel.value = ''
+        ;[...sel.options].forEach((o) => { if (o.value) o.disabled = readSel.has(o.value) })
+      }
+      rerenderBooks()
+      dlg.querySelector('#pe-book-sel').addEventListener('change', (e) => {
+        if (!e.target.value) return
+        readSel.set(e.target.value, Number(dlg.querySelector('#pe-book-pct').value) || 100)
+        rerenderBooks()
+      })
+
       dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
       dlg.querySelector('#pe-cancel').addEventListener('click', close)
       dlg.querySelector('#pe-save').addEventListener('click', async () => {
         const tasks = {}
-        const focus = (dlg.querySelector('#pe-focus').value.match(/\d+/g) || []).map(Number)
-        if (focus.length) tasks.focus_kps = [...new Set(focus)].slice(0, 5)
-        const lec = (dlg.querySelector('#pe-lectures').value.match(/\d+/g) || []).map(Number)
+        const focus = [...focusSel].slice(0, 5)
+        if (focus.length) tasks.focus_kps = focus
+        const lec = [...lecSel]
         if (lec.length) tasks.lectures = lec
         const vocab = Number(dlg.querySelector('#pe-vocab').value)
         if (vocab > 0) tasks.vocab_goal = vocab
-        const fce = dlg.querySelector('#pe-fce').value.split(/[；;]/).map((s) => s.trim()).filter(Boolean)
-        if (fce.length) tasks.fce = fce
-        const reading = {}
-        for (const pair of dlg.querySelector('#pe-reading').value.split(/[；;]/)) {
-          const m = pair.match(/^(.+?)[:：]\s*(\d+)\s*%?$/)
-          if (m) reading[m[1].trim()] = Number(m[2])
-        }
-        if (Object.keys(reading).length) tasks.reading = reading
+        if (fceSel.size) tasks.fce = [...fceSel]
+        if (readSel.size) tasks.reading = Object.fromEntries(readSel)
+        if (dlg.querySelector('#pe-speak-on').checked) tasks.speak = Number(dlg.querySelector('#pe-speak-n').value) || 2
         const notes = dlg.querySelector('#pe-notes').value.trim()
         try {
           await api.planWeekPut(ws, { tasks, notes })
@@ -452,9 +664,15 @@ export async function mountPlan(el) {
           const fresh = await api.planWeeks()
           byStart.clear()
           fresh.weeks.forEach((x) => byStart.set(x.week_start, x))
-          renderWeeks()
+          editorDataCache = null // 词汇现况等刷新
+          renderView()
         } catch (e) { alert('保存失败：' + e.message) }
       })
+    }
+
+    function fmtK(n) {
+      const v = Number(n) || 0
+      return v >= 1000 ? (v / 1000).toFixed(1) + 'k' : String(v)
     }
   }
 }

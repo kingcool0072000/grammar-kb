@@ -35,6 +35,11 @@ CREATE TABLE IF NOT EXISTS plan_day_checks (
     checked_at TEXT,
     PRIMARY KEY (user, date, task_key)
 );
+CREATE TABLE IF NOT EXISTS plan_goals (
+    user       TEXT PRIMARY KEY,
+    goals      TEXT NOT NULL DEFAULT '{}',  -- 总目标 JSON（见 _goals_default）
+    updated_at TEXT
+);
 """
 
 # tasks JSON 结构（全部字段可缺省）：
@@ -439,6 +444,11 @@ class PlanStore:
                 "type": "fce", "text": f"FCE {t['fce'][0]} 起步",
                 "detail": f"共 {len(t['fce'])} 项，建议隔天一项",
             })
+        if t.get("speak"):
+            tasks.append({
+                "type": "speak", "text": "朗读 1 篇（阅读训练）",
+                "detail": f"每周 {t['speak']} 篇，录音自动进批改中心",
+            })
         for book_key, pct in (t.get("reading") or {}).items():
             tasks.append(self._reading_task(book_key, pct, user, days_left))
         return tasks
@@ -468,6 +478,16 @@ class PlanStore:
         conn = self._lib_connect()
         if conn is None:
             return None
+        if (book_key or "").strip().isdigit():
+            try:
+                with contextlib.closing(conn):
+                    row = conn.execute(
+                        "SELECT id, title FROM books WHERE id = ?",
+                        (int(book_key),),
+                    ).fetchone()
+                return row
+            except sqlite3.Error:
+                return None
         words = self._key_words(book_key)
         if not words:
             return None
@@ -573,8 +593,8 @@ class PlanStore:
     def _reading_task(self, book_key: str, goal_pct: float, user: str,
                       days_left: int) -> dict:
         """泛读任务行：精确到章 + 词数（匹配不到书则回退百分比口径）。"""
-        short = book_key[:14]
         row = self._match_book(book_key, user)
+        short = (row["title"][:14] if row else str(book_key)[:14])
         if row:
             st = self._book_reading_state(row["id"], goal_pct, user)
             if st:
@@ -740,6 +760,130 @@ class PlanStore:
             "breakdown": breakdown, "days": days, "current_week": in_week,
         }
 
+    # ---- 总目标 + 编辑器数据源（与备课内容完整挂钩） ----
+
+    def get_goals(self, user: str) -> dict:
+        """学生总目标（冲刺目标）。无记录返回默认骨架。"""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT goals FROM plan_goals WHERE user = ?", (user,)
+            ).fetchone()
+        if row:
+            try:
+                return json.loads(row["goals"] or "{}")
+            except (ValueError, TypeError):
+                pass
+        return {}
+
+    def put_goals(self, user: str, goals: dict) -> dict:
+        now = datetime.now(_tz.utc).isoformat(timespec="seconds")
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO plan_goals (user, goals, updated_at)"
+                " VALUES (?,?,?)",
+                (user, json.dumps(goals or {}, ensure_ascii=False), now),
+            )
+        return goals
+
+    def editor_data(self, user: str = "malin") -> dict:
+        """周计划编辑器的结构化选项源（全部来自真实备课内容）：
+        lectures（48 讲）、fce_parts（Test×Paper×Part）、books（含必读章
+        配置与词数、该生当前进度）、vocab（当前掌握词数）。
+        """
+        # 讲次（grammar.db）
+        lectures = []
+        gp = self.grammar_db_path or str(
+            Path(__file__).resolve().parent.parent / "data" / "grammar.db")
+        if Path(gp).exists():
+            try:
+                with sqlite3.connect(f"file:{gp}?mode=ro", uri=True) as conn:
+                    conn.row_factory = sqlite3.Row
+                    rows = conn.execute(
+                        "SELECT number, title, category FROM lecture ORDER BY number"
+                    ).fetchall()
+                lectures = [dict(r) for r in rows]
+            except sqlite3.Error:
+                pass
+        # FCE Part（fce.db 同库）
+        fce_parts = []
+        try:
+            with self._connect() as conn:
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute(
+                    "SELECT t.id AS test_id, t.title AS test_title,"
+                    " s.paper, s.part, COUNT(q.id) AS questions"
+                    " FROM fce_section s"
+                    " JOIN fce_test t ON t.id = s.test_id"
+                    " LEFT JOIN fce_question q ON q.section_id = s.id"
+                    " GROUP BY s.id ORDER BY t.id, s.paper, s.part"
+                ).fetchall()
+                for r in rows:
+                    fce_parts.append({
+                        "test_id": r["test_id"], "test_title": r["test_title"],
+                        "paper": r["paper"], "part": r["part"],
+                        "questions": r["questions"] or 0,
+                        "label": f"{r['test_title']} · {_paper_short(r['paper'])} P{r['part']}",
+                    })
+        except sqlite3.Error:
+            pass
+        # 泛读馆书目（library.db：词数 + 必读章配置 + 该生进度）
+        books = []
+        conn = self._lib_connect()
+        if conn is not None:
+            try:
+                with contextlib.closing(conn):
+                    brows = conn.execute(
+                        "SELECT id, title, chapter_count FROM books ORDER BY id"
+                    ).fetchall()
+                    for b in brows:
+                        chs = conn.execute(
+                            "SELECT idx, word_count FROM chapters WHERE book_id = ?"
+                            " ORDER BY idx", (b["id"],),
+                        ).fetchall()
+                        total_words = sum(c["word_count"] or 0 for c in chs)
+                        cfg_row = conn.execute(
+                            "SELECT chapters FROM book_reading_config WHERE book_id = ?",
+                            (b["id"],),
+                        ).fetchone()
+                        cfg = None
+                        if cfg_row:
+                            try:
+                                v = json.loads(cfg_row["chapters"] or "[]")
+                                cfg = sorted({int(x) for x in v}) if v else None
+                            except (ValueError, TypeError):
+                                cfg = None
+                        goal_words = total_words
+                        if cfg:
+                            wc = {c["idx"]: c["word_count"] or 0 for c in chs}
+                            goal_words = sum(wc.get(i, 0) for i in cfg)
+                        prog = conn.execute(
+                            "SELECT percent FROM reading_progress"
+                            " WHERE book_id = ? AND user = ?", (b["id"], user),
+                        ).fetchone()
+                        books.append({
+                            "id": b["id"], "title": b["title"],
+                            "chapters": b["chapter_count"] or len(chs),
+                            "total_words": total_words,
+                            "configured_chapters": cfg,
+                            "goal_words": goal_words,
+                            "percent": round(prog["percent"] or 0.0, 1) if prog else 0.0,
+                        })
+            except sqlite3.Error:
+                pass
+        # 词汇现况
+        mastered = 0
+        try:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT COUNT(*) n FROM recite_word_progress"
+                    " WHERE user = ? AND mastered_at IS NOT NULL", (user,),
+                ).fetchone()
+                mastered = row["n"]
+        except sqlite3.Error:
+            pass
+        return {"lectures": lectures, "fce_parts": fce_parts, "books": books,
+                "vocab_mastered": mastered}
+
     def month_view(self, month: str, user: str = "malin") -> dict:
         """月历：某月每天 {date, in_month, future, done, total}，周一为每周之首。"""
         y, m = month.split("-")[:2]
@@ -885,6 +1029,14 @@ class PlanStore:
                     ).fetchone()
                     if row and row["n"]:
                         out["fce"] = True
+                if "reading_recordings" in tabs:
+                    row = conn.execute(
+                        "SELECT COUNT(*) n FROM reading_recordings"
+                        " WHERE user = ? AND (created_at >= ? AND created_at < ?)",
+                        (user, day, nxt),
+                    ).fetchone()
+                    if row and row["n"]:
+                        out["speak"] = True
                 if "focus_sessions" in tabs:
                     rows = conn.execute(
                         "SELECT DISTINCT book_title FROM focus_sessions"

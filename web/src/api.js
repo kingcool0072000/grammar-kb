@@ -216,6 +216,11 @@ export const api = {
     req('/plan/today', { searchParams: day ? { day } : {} }),
   planWeekTodo: () => req('/plan/week-todo'),
   planDayCheck: (payload) => reqJson('/plan/day-check', 'POST', payload),
+  // 总目标（分学生冲刺目标）+ 周编辑器结构化选项源
+  planGoals: ({ user } = {}) => req('/plan/goals', { searchParams: { user } }),
+  planGoalsPut: (user, goals) => reqJson('/plan/goals', 'PUT', { user, goals }),
+  planEditorData: ({ user } = {}) =>
+    req('/plan/editor-data', { searchParams: { user } }),
   // 教师周历视图：周拆解 + 逐日任务矩阵
   planMonthView: ({ month } = {}) =>
     req('/plan/month-view', { searchParams: month ? { month } : {} }),
