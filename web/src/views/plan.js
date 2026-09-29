@@ -46,7 +46,8 @@ export async function mountPlan(el) {
     let data, exams, diag, review, daily
     try {
       ;[data, exams, diag, review, daily] = await Promise.all([
-        api.planWeeks(), api.vocabExams(), api.planDiagnosis(), api.planReview(), api.planDailyPreview(),
+        api.planWeeks(), api.vocabExams(), api.planDiagnosis(), api.planReview(),
+        api.planDailyPreview().catch(() => null),
       ])
     } catch (e) {
       body.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
@@ -55,6 +56,8 @@ export async function mountPlan(el) {
     const { weeks = [], current_week: curWeek, last_week_review: lastReview } = data
     const byStart = new Map(weeks.map((w) => [w.week_start, w]))
     const today = new Date().toISOString().slice(0, 10)
+    // 周历视图状态：默认本周，可前后翻
+    let viewWeek = curWeek
 
     // ---- 词汇考试面板 ----
     const vex = exams || {}
@@ -239,111 +242,89 @@ export async function mountPlan(el) {
       </section>`
     }
 
-    function renderWeeks() {
+    // ---- 周历视图：← 本周 → 翻周，7 天格子逐日任务 + 周拆解条 ----
+    async function renderWeeks() {
       const host = body.querySelector('#plan-weeks')
-      // 从最早已排计划的周开始显示（历史回填的周也要能看到）；无历史则回看 2 周
-      const seeded = [...byStart.keys()].sort()
-      const fallback = new Date(curWeek + 'T00:00:00')
-      fallback.setDate(fallback.getDate() - 14)
-      const earliest = seeded.length ? seeded[0] : iso(fallback)
-      const starts = []
-      let d = new Date(earliest + 'T00:00:00')
-      const END = new Date('2027-01-31T23:59:59') // 冲刺线 2027-01-31：其后的周一不再渲染
-      while (d <= END) {
-        starts.push(iso(d))
-        d = new Date(d.getTime() + 7 * 86400000)
+      host.innerHTML = '<p class="muted">周历加载中…</p>'
+      let wv
+      try {
+        wv = await api.planWeekView({ weekStart: viewWeek })
+      } catch (e) {
+        host.innerHTML = `<p style="color:#b42318">周历加载失败：${escapeHtml(e.message)}</p>`
+        return
       }
-      host.innerHTML = starts.map((ws) => weekCard(byStart.get(ws) || { week_start: ws, tasks: {}, notes: '', actuals: null }, ws === curWeek)).join('')
+      const t = wv.tasks || {}
+      const bd = wv.breakdown || {}
+      const isCur = wv.week_start === curWeek
+      const seeded = [...byStart.keys()].sort()
+      const earliest = seeded.length ? seeded[0] : iso(new Date(new Date(curWeek + 'T00:00:00').getTime() - 14 * 86400000))
+
+      // 周拆解条（自动拆解：阅读篇数/泛读词数/题型类数）
+      const drillTxt = bd.drill_types?.length
+        ? `${bd.drill_types.join(' + ')}（约 ${bd.drill_count} 题）`
+        : '无'
+      const parts = []
+      parts.push(`📖 阅读篇数 <b>${bd.reading_books ?? 0}</b> 本`)
+      if (bd.reading_words_total) parts.push(`🔤 泛读词数 <b>${bd.reading_words_total}</b> 词（日均 ${bd.reading_words_per_day}）`)
+      if (bd.lecture_count) parts.push(`📚 讲次 <b>${bd.lecture_count}</b> 讲`)
+      if (bd.fce_count) parts.push(`🎧 FCE <b>${bd.fce_count}</b> 项`)
+      parts.push(`✏️ 题型 <b>${drillTxt}</b>`)
+
+      const dayNames = ['一', '二', '三', '四', '五', '六', '日']
+      host.innerHTML = `
+        <section class="pw-view">
+          <header class="pw-nav">
+            <button class="chip" data-wk="prev" ${viewWeek <= earliest ? 'disabled' : ''}>← 上一周</button>
+            <div class="pw-title">
+              <h3>${isCur ? '本周' : '周'} · ${weekLabel(wv.week_start)}${wv.current_week ? '' : '（已结束）'}</h3>
+              <p class="muted">${parts.map((x) => `<span>${x}</span>`).join(' · ')}</p>
+            </div>
+            <button class="chip" data-wk="next" ${wv.week_start >= '2027-01-25' ? 'disabled' : ''}>下一周 →</button>
+            <button class="chip" data-edit="${wv.week_start}">✏️ 编辑本周</button>
+            ${isCur ? '' : '<button class="chip" data-wk="cur">回到本周</button>'}
+          </header>
+          <div class="pw-grid">
+            ${(wv.days || []).map((d, i) => dayCell(d, i, dayNames)).join('')}
+          </div>
+          ${wv.notes ? `<div class="plan-notes"><span>📝 重点</span><div>${escapeHtml(wv.notes).replace(/\n/g, '<br/>')}</div></div>` : ''}
+        </section>`
+      host.querySelectorAll('[data-wk]').forEach((b) =>
+        b.addEventListener('click', () => {
+          const k = b.dataset.wk
+          if (k === 'cur') viewWeek = curWeek
+          else if (k === 'prev') viewWeek = addDays(viewWeek, -7)
+          else viewWeek = addDays(viewWeek, 7)
+          renderWeeks()
+        }))
       host.querySelectorAll('[data-edit]').forEach((b) =>
         b.addEventListener('click', () => openEditor(b.dataset.edit)))
     }
 
+    function dayCell(d, i, dayNames) {
+      const dd = Number(d.date.slice(8))
+      const isToday = d.date === today
+      const icon = { micro_drill: '✏️', wrong_words: '🔤', lecture: '📚', fce: '🎧', reading: '📖' }
+      const rows = (d.tasks || []).map((x) => `
+        <div class="pw-task ${x.done ? 'done' : ''}">
+          <i>${icon[x.type] || '•'}</i>
+          <span title="${escapeHtml(x.text)}">${escapeHtml(x.text)}</span>
+          <em>${x.done ? '✓' : ''}</em>
+        </div>`).join('')
+      const full = !d.future && d.total > 0 && d.done >= d.total
+      return `<div class="pw-day ${isToday ? 'today' : ''} ${d.future ? 'future' : ''} ${full ? 'fulled' : ''}">
+        <div class="pw-day-head">
+          <b>周${dayNames[i]}</b><span>${dd} 日</span>
+          <em>${d.future ? '待来' : (d.total ? `${d.done}/${d.total}` : '—')}</em>
+        </div>
+        <div class="pw-tasks">${rows || (d.future ? '' : '<i class="pw-none">无任务</i>')}</div>
+      </div>`
+    }
+
     // 阅读实况文案：全书口径——读到第几章（该章占全书的百分比区间）、
     // 已读/总词数、累计阅读时长。区间和词数由后端按各章 word_count 算出。
-    function readingActualText(r, readingPlan) {
-      const goal = readingPlan
-        ? Object.entries(readingPlan).find(([k]) => {
-            if (!r.title) return false
-            const segs = k.toLowerCase().match(/[a-z]{3,}/g)
-            if (!segs) return false
-            const target = r.title.toLowerCase()
-            return segs.every((s) => target.includes(s))
-          })
-        : null
-      const goalTxt = goal ? `（目标 ${goal[1]}%）` : ''
-      const ch = r.current_chapter
-      const pct = Math.round(r.percent || 0)
-      const chTxt = ch
-        ? `第${ch.idx}章 ${Math.round(ch.start_percent)}%~${Math.round(ch.end_percent)}%`
-        : `${pct}%`
-      const wordsTxt = r.total_words
-        ? `已读 ${fmtWords((r.total_words * (r.percent || 0)) / 100)}/${fmtWords(r.total_words)} 词`
-        : ''
-      const durTxt = `累计阅读 ${fmtHours(r.reading_seconds || 0)}`
-      const shortTitle = r.title && r.title.length > 42 ? r.title.slice(0, 40) + '…' : (r.title || '未命名书')
-      const parts = [`${shortTitle}（全书 ${pct}%）· 本次阅读 ${chTxt}`]
-      if (wordsTxt) parts.push(wordsTxt)
-      parts.push(durTxt + goalTxt)
-      return parts.join('，')
-    }
 
-    function fmtWords(n) {
-      const v = Math.round(Number(n) || 0)
-      return v >= 10000 ? `${(v / 10000).toFixed(1)}万` : String(v)
-    }
 
-    function fmtHours(sec) {
-      const m = Math.round((Number(sec) || 0) / 60)
-      if (m < 60) return `${m} 分钟`
-      return `${Math.floor(m / 60)} 小时${m % 60 ? m % 60 + ' 分' : ''}`
-    }
 
-    function weekCard(w, isCurrent) {
-      const t = w.tasks || {}
-      const a = w.actuals
-      const past = w.week_start < curWeek
-      const isThisWeek = w.week_start <= today && today <= addDays(w.week_start, 6)
-      const hasPlan = Boolean(t.lectures?.length || t.vocab_goal != null || t.fce?.length || (t.reading && Object.keys(t.reading).length))
-
-      // 周历条：本周=高亮大卡；过去/未来=紧凑一行（有计划才展开要点）
-      const chips = []
-      if (t.lectures?.length) chips.push(`📚 ${[...t.lectures].sort((x, y) => x - y).join('/')}讲`)
-      if (t.vocab_goal != null) chips.push(`🔤 累计${t.vocab_goal}词`)
-      if (t.fce?.length) chips.push(`🎧 ${t.fce.join('+')}`)
-      if (t.reading) for (const [k, v] of Object.entries(t.reading)) chips.push(`📖 ${k} ${v}%`)
-
-      if (!isCurrent) {
-        // 历史周：notes（周总结）行内展示；✓ 覆盖有课程/词汇完成的周，
-        // 无数据的过去周也给「已结束」基底（plan-wk-row.past 降权）
-        return `<section class="plan-wk-row ${past ? 'past' : 'future'} ${w.week_start <= today && today <= addDays(w.week_start, 6) ? 'thisweek' : ''}">
-          <span class="plan-wk-date">${weekLabel(w.week_start)}</span>
-          <span class="plan-wk-chips">${chips.length ? chips.map((c) => `<i>${escapeHtml(c)}</i>`).join('') : '<em class="muted">—</em>'}</span>
-          ${a && past && (a.lectures?.length || a.vocab_mastered) ? `<span class="plan-wk-done">✓ ${a.lectures?.length ? a.lectures.length + '讲' : ''}${a.vocab_mastered ? ' ' + a.vocab_mastered + '词' : ''}</span>` : ''}
-          <button class="chip" data-edit="${w.week_start}">编辑</button>
-          ${past && w.notes ? `<p class="plan-wk-note">${escapeHtml(w.notes)}</p>` : ''}
-        </section>`
-      }
-
-      // 本周大卡（chips 行同上文；阅读行书名不截断，目标/实况分别标注）
-      const act = a ? [
-        ['课程', a.lectures?.length ? a.lectures.map((x) => `第${x.lecture}讲 ${x.score}分${x.score < 70 ? ' ⚠️' : ''}`).join('、') : '未开始', Boolean(a.lectures?.length)],
-        ['词汇', t.vocab_goal != null ? `本周新掌握 ${a.vocab_mastered || 0} 词 / 目标 +${Math.max(0, t.vocab_goal - (a.vocab_mastered || 0))}` : `新掌握 ${a.vocab_mastered || 0} 词`, Boolean(a.vocab_mastered)],
-        ['FCE', a.fce_parts?.length ? a.fce_parts.join('、') : '未开始', Boolean(a.fce_parts?.length)],
-        ['阅读', a.reading?.length ? a.reading.map((r) => readingActualText(r, t.reading)).join('；') : '未开始', Boolean(a.reading?.length)],
-      ] : []
-      const daysLeft = Math.max(0, Math.round((new Date(addDays(w.week_start, 6) + 'T23:59:59') - new Date()) / 86400000))
-      return `<section class="plan-wk-current">
-        <div class="plan-wk-head">
-          <div>
-            <h3>本周 · ${weekLabel(w.week_start)}</h3>
-            <p class="muted">${chips.length ? chips.join(' · ') : '本周未排计划'} · 剩余 ${daysLeft} 天</p>
-          </div>
-          <button class="chip" data-edit="${w.week_start}">编辑本周</button>
-        </div>
-        ${act.length ? `<div class="plan-wk-act">${act.map(([k, v, done]) => `<div class="plan-act-row ${done ? '' : 'muted'}"><span>${k}</span><b>${escapeHtml(v)}</b></div>`).join('')}</div>` : ''}
-        ${w.notes ? `<div class="plan-notes"><span>📝 重点</span><div>${escapeHtml(w.notes).replace(/\n/g, '<br/>')}</div></div>` : ''}
-      </section>`
-    }
 
     function openEditor(ws) {
       const w = byStart.get(ws) || { week_start: ws, tasks: {}, notes: '' }

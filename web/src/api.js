@@ -212,6 +212,9 @@ export const api = {
     req('/plan/today', { searchParams: day ? { day } : {} }),
   planWeekTodo: () => req('/plan/week-todo'),
   planDayCheck: (payload) => reqJson('/plan/day-check', 'POST', payload),
+  // 教师周历视图：周拆解 + 逐日任务矩阵
+  planWeekView: ({ weekStart } = {}) =>
+    req('/plan/week-view', { searchParams: weekStart ? { week_start: weekStart } : {} }),
   // 词汇级别考试（成绩登记驱动解锁；≥80 解锁下一级）
   vocabExams: ({ user } = {}) =>
     req('/vocab-exams', { searchParams: { user } }),

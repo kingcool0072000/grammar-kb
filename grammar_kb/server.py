@@ -1038,6 +1038,19 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         cur_mon = (_date.today() - _td(days=_date.today().weekday())).isoformat()
         return _ok({"week_start": cur_mon, "tasks": plan.week_daily_tasks(cur_mon)})
 
+    @app.get("/plan/week-view")
+    def plan_week_view(request: "fastapi.Request", week_start: str = "",
+                       user: str = "malin"):
+        """教师周视图：周拆解（阅读篇数/泛读词数/题型类数）+ 逐日任务矩阵。"""
+        _require_teacher(request)
+        from datetime import date as _date, timedelta as _td
+        if not week_start:
+            week_start = (_date.today() - _td(days=_date.today().weekday())).isoformat()
+        try:
+            return _ok(plan.week_view(week_start, user=user))
+        except ValueError:
+            raise HTTPException(status_code=422, detail="week_start 须为 YYYY-MM-DD")
+
     # ---- 内循环（双循环教学）：学生今日任务 / 周清单 / 打卡 ----
     # 学生读自己的；教师可指定 user 查看孩子执行情况（与 recite 同模式）。
 

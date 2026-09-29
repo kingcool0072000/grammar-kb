@@ -42,7 +42,7 @@ const VIEWS = [
   // 学情分析并入计划表（#/plan?tab=analytics）；旧 hash 重定向
   { key: 'plan', label: '计划表', teacher: true },
   // 内循环首页：学生打开 app 第一眼是今日任务队列（双循环设计）
-  { key: 'today', label: '今日任务', studentOnly: true },
+  { key: 'today', label: '我的任务', studentOnly: true },
   { key: 'recite', label: '背单词', studentOnly: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
   { key: 'topics', label: '专题学习', studentOnly: true },

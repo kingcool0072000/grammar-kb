@@ -12,6 +12,7 @@
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import sqlite3
 from datetime import date, datetime, timedelta, timezone as _tz
@@ -385,7 +386,8 @@ class PlanStore:
             ).fetchone()
         return _week_out(row) if row else {"tasks": {}, "notes": ""}
 
-    def week_daily_tasks(self, week_start: str, for_date: Optional[str] = None) -> list[dict]:
+    def week_daily_tasks(self, week_start: str, for_date: Optional[str] = None,
+                         user: str = "malin") -> list[dict]:
         """周目标 → 日任务模板展开预览（外循环第③步）。
 
         纯派生不落库（内循环真正执行时才记录）：按周任务推导每天的学生
@@ -437,12 +439,124 @@ class PlanStore:
                 "type": "fce", "text": f"FCE {t['fce'][0]} 起步",
                 "detail": f"共 {len(t['fce'])} 项，建议隔天一项",
             })
-        for book, pct in (t.get("reading") or {}).items():
-            tasks.append({
-                "type": "reading", "text": f"泛读《{book[:12]}》目标 {pct}%",
-                "detail": "每天 ≥15 分钟",
-            })
+        for book_key, pct in (t.get("reading") or {}).items():
+            tasks.append(self._reading_task(book_key, pct, user, days_left))
         return tasks
+
+    def _lib_connect(self) -> Optional[sqlite3.Connection]:
+        """library.db 只读连接（无库返回 None）。"""
+        path = self.library_db_path or str(
+            Path(__file__).resolve().parent.parent / "data" / "library.db"
+        )
+        if not Path(path).exists():
+            return None
+        try:
+            conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+            conn.row_factory = sqlite3.Row
+            return conn
+        except sqlite3.Error:
+            return None
+
+    @staticmethod
+    def _key_words(book_key: str) -> list[str]:
+        """书名关键词（小写、去符号、去数字后缀），供模糊匹配。"""
+        import re as _re
+        return [w for w in _re.findall(r"[a-z]{3,}", (book_key or "").lower())]
+
+    def _match_book(self, book_key: str, user: str) -> Optional[sqlite3.Row]:
+        """计划里的书名 → 实际书行。先在该学生读过的书里找，再全库找。"""
+        conn = self._lib_connect()
+        if conn is None:
+            return None
+        words = self._key_words(book_key)
+        if not words:
+            return None
+        try:
+            with contextlib.closing(conn):
+                # 学生读过的书优先（UNION ALL + 去重保序：读过的排前面）
+                rows = conn.execute(
+                    "SELECT b.id, b.title,"
+                    " (b.id IN (SELECT book_id FROM reading_progress WHERE user = ?)) AS read_first"
+                    " FROM books b ORDER BY read_first DESC",
+                    (user,),
+                ).fetchall()
+                for row in rows:
+                    title = (row["title"] or "").lower()
+                    if all(w in title for w in words):
+                        return row
+        except sqlite3.Error:
+            return None
+        return None
+
+    def _book_reading_state(self, book_id: int, goal_pct: float, user: str) -> Optional[dict]:
+        """某书的精确阅读状态：当前章/目标章/词数。缺数据返回 None。"""
+        conn = self._lib_connect()
+        if conn is None:
+            return None
+        try:
+            with contextlib.closing(conn):
+                prog = conn.execute(
+                    "SELECT percent, reading_seconds FROM reading_progress"
+                    " WHERE book_id = ? AND user = ?", (book_id, user),
+                ).fetchone()
+                chs = conn.execute(
+                    "SELECT idx, title, word_count FROM chapters"
+                    " WHERE book_id = ? ORDER BY idx", (book_id,),
+                ).fetchall()
+        except sqlite3.Error:
+            return None
+        if not chs:
+            return None
+        pct = (prog["percent"] or 0.0) if prog else 0.0
+        total = sum(c["word_count"] or 0 for c in chs)
+        if total <= 0:
+            return None
+        cur = _chapter_at_words([dict(c) for c in chs], pct, total)
+        goal = _chapter_at_words([dict(c) for c in chs], float(goal_pct), total)
+        words_read = round(total * pct / 100)
+        goal_words = round(total * float(goal_pct) / 100)
+        return {
+            "percent": round(pct, 1),
+            "current_chapter": cur["idx"] if cur else None,
+            "goal_chapter": goal["idx"] if goal else None,
+            "words_read": words_read,
+            "goal_words": goal_words,
+            "remaining_words": max(0, goal_words - words_read),
+            "total_words": total,
+            "reading_seconds": (prog["reading_seconds"] or 0) if prog else 0,
+        }
+
+    def _reading_task(self, book_key: str, goal_pct: float, user: str,
+                      days_left: int) -> dict:
+        """泛读任务行：精确到章 + 词数（匹配不到书则回退百分比口径）。"""
+        short = book_key[:14]
+        row = self._match_book(book_key, user)
+        if row:
+            st = self._book_reading_state(row["id"], goal_pct, user)
+            if st:
+                reached = st["percent"] >= float(goal_pct) - 0.05
+                if reached:
+                    return {
+                        "type": "reading", "book": book_key,
+                        "key": f"reading:{book_key}",
+                        "text": f"泛读《{short}》目标已达成 🎉",
+                        "detail": f"已读 {st['percent']}%（第{st['current_chapter']}章起）"
+                                  f" · 目标 {goal_pct}%",
+                    }
+                per_day = max(1, round(st["remaining_words"] / max(1, days_left)))
+                return {
+                    "type": "reading", "book": book_key,
+                    "key": f"reading:{book_key}",
+                    "text": f"泛读《{short}》读到第{st['current_chapter']}章"
+                            if st["current_chapter"] else f"泛读《{short}》开始读",
+                    "detail": (f"目标第{st['goal_chapter']}章（{goal_pct}%）"
+                               f" · 已读 {fmt_w(st['words_read'])}/{fmt_w(st['goal_words'])} 词"
+                               f" · 今日 +{fmt_w(per_day)} 词"),
+                }
+        return {
+            "type": "reading", "book": book_key, "key": f"reading:{book_key}",
+            "text": f"泛读《{short}》目标 {goal_pct}%", "detail": "每天 ≥15 分钟",
+        }
 
     # ---- 内循环：学生今日任务 / 周清单（自动检测 + 手动打卡） ----
 
@@ -450,22 +564,29 @@ class PlanStore:
         """学生某日的任务清单（内循环核心）。
 
         任务由本周 plan_weeks.tasks 派生（与教师驾驶舱「每日任务展开」
-        同一规则），完成态双路：自动检测（当天对应活动表有记录）或
-        手动打卡（plan_day_checks）。today 键与 week_daily_tasks 一致。
+        同一规则）。完成态只认自动检测——学生做了（做题/背词/阅读）即亮，
+        不提供手动打卡（plan_day_checks 保留给教师端干预，不进 done）。
         """
         d = day or date.today().isoformat()
         ws = monday_of(date.fromisoformat(d)).isoformat()
-        derived = self.week_daily_tasks(ws, for_date=d)
-        checks = self._day_checks(user, d)
-        auto = self._auto_done(user, d)
+        derived = self.week_daily_tasks(ws, for_date=d, user=user)
+        auto, read_titles = self._auto_done(user, d)
         out = []
         for t in derived:
             key = _task_key(t)
             t2 = dict(t)
             t2["key"] = key
-            t2["auto_done"] = auto.get(key, False)
-            t2["manual_done"] = key in checks
-            t2["done"] = t2["auto_done"] or t2["manual_done"]
+            if t.get("type") == "reading":
+                # 完成判定：进度已达目标%，或当天有该书的阅读会话（按书名模糊匹配）
+                reached = t.get("detail", "").startswith("已读") and "目标已达成" in t.get("text", "")
+                matched = any(
+                    all(w in (title or "").lower() for w in self._key_words(t.get("book") or ""))
+                    for title in read_titles
+                ) if self._key_words(t.get("book") or "") else False
+                t2["auto_done"] = reached or matched
+            else:
+                t2["auto_done"] = auto.get(key, False)
+            t2["done"] = t2["auto_done"]
             out.append(t2)
         done_n = sum(1 for x in out if x["done"])
         return {"date": d, "week_start": ws, "tasks": out,
@@ -500,6 +621,74 @@ class PlanStore:
             "days": days,
         }
 
+    def week_view(self, week_start: str, user: str = "malin") -> dict:
+        """教师周视图：周拆解汇总 + 周一至周日逐日任务（含完成态）。
+
+        周拆解（用户要的「自动拆解」）从 tasks 推导：
+        - 阅读篇数（reading 目标书数）
+        - 泛读总词数（各书目标% 对应词数 − 已读词数，按剩余摊到天）
+        - 题型类数（微练习讲数 + FCE 项数 + 讲次测验，去重类目）
+        历史周逐日按当天口径回看（today_tasks(day=…)）。
+        """
+        w = self._get_week(week_start)
+        t = w.get("tasks") or {}
+        today_iso = date.today().isoformat()
+        in_week = week_start <= today_iso <= add_days(week_start, 6)
+        days_left = max(1, (date.fromisoformat(add_days(week_start, 6))
+                            - date.fromisoformat(today_iso)).days + 1) if in_week else 7
+
+        # ---- 周拆解 ----
+        reading_items = []
+        for book_key, pct in (t.get("reading") or {}).items():
+            row = self._match_book(book_key, user)
+            st = self._book_reading_state(row["id"], pct, user) if row else None
+            reading_items.append({
+                "book": book_key, "goal_pct": pct,
+                "remaining_words": st["remaining_words"] if st else None,
+                "goal_chapter": st["goal_chapter"] if st else None,
+                "current_chapter": st["current_chapter"] if st else None,
+            })
+        rem_total = sum(x["remaining_words"] or 0 for x in reading_items)
+        drill_types = set()
+        if t.get("focus_kps"):
+            drill_types.add("微练习")
+        if t.get("lectures"):
+            drill_types.add("讲次测验")
+        if t.get("fce"):
+            drill_types.add("FCE 真题")
+        breakdown = {
+            "reading_books": len(reading_items),
+            "reading_items": reading_items,
+            "reading_words_total": rem_total,
+            "reading_words_per_day": round(rem_total / days_left) if rem_total else 0,
+            "drill_types": sorted(drill_types),
+            "drill_count": len(t.get("focus_kps") or []) * 5 * days_left
+                           if t.get("focus_kps") else 0,
+            "lecture_count": len(t.get("lectures") or []),
+            "fce_count": len(t.get("fce") or []),
+        }
+
+        # ---- 逐日矩阵 ----
+        days = []
+        for i in range(7):
+            d = (date.fromisoformat(week_start) + timedelta(days=i)).isoformat()
+            if d > today_iso:
+                days.append({"date": d, "future": True, "done": 0, "total": 0,
+                             "tasks": []})
+                continue
+            td = self.today_tasks(user=user, day=d)
+            days.append({
+                "date": d, "future": False,
+                "done": td["done"], "total": td["total"],
+                "tasks": [{"key": x["key"], "text": x["text"],
+                           "detail": x.get("detail"), "type": x["type"],
+                           "done": x["done"]} for x in td["tasks"]],
+            })
+        return {
+            "week_start": week_start, "tasks": t, "notes": w.get("notes") or "",
+            "breakdown": breakdown, "days": days, "current_week": in_week,
+        }
+
     def put_day_check(self, user: str, day: str, task_key: str, on: bool) -> None:
         date.fromisoformat(day)  # 非法日期抛 ValueError → 422
         now = datetime.now(_tz.utc).isoformat(timespec="seconds")
@@ -528,9 +717,14 @@ class PlanStore:
         except sqlite3.Error:
             return set()
 
-    def _auto_done(self, user: str, day: str) -> dict[str, bool]:
-        """当天活动信号 → task_key 自动完成。各表缺表/缺库均容错返回空。"""
+    def _auto_done(self, user: str, day: str) -> tuple[dict[str, bool], list[str]]:
+        """当天活动信号 → (task_key 完成表, 当日阅读书名列表)。
+
+        各表缺表/缺库均容错返回空。阅读书名列表供 today_tasks 按书模糊
+        匹配（focus_sessions.book_title）。
+        """
         out: dict[str, bool] = {}
+        read_titles: list[str] = []
         nxt = (date.fromisoformat(day) + timedelta(days=1)).isoformat()
         exam_path = self._exam_db()
         if exam_path and Path(exam_path).exists():
@@ -543,6 +737,8 @@ class PlanStore:
                 for r in rows:
                     out[f"micro:{r[0]}"] = True
                     out[f"lecture:{r[0]}"] = True
+                if rows:
+                    out["lecture"] = True
             except sqlite3.Error:
                 pass
         try:
@@ -575,17 +771,18 @@ class PlanStore:
                         out["fce"] = True
                 if "focus_sessions" in tabs:
                     rows = conn.execute(
-                        "SELECT book_title FROM focus_sessions"
-                        " WHERE user = ? AND (created_at >= ? AND created_at < ?)",
+                        "SELECT DISTINCT book_title FROM focus_sessions"
+                        " WHERE user = ? AND (created_at >= ? AND created_at < ?)"
+                        " AND book_title IS NOT NULL",
                         (user, day, nxt),
                     ).fetchall()
+                    read_titles = [r["book_title"] for r in rows]
                     for r in rows:
-                        if r["book_title"]:
-                            out[f"reading:{r['book_title'][:12]}"] = True
+                        out[f"reading:{(r['book_title'] or '')[:14]}"] = True
                         out.setdefault("reading", True)
         except sqlite3.Error:
             pass
-        return out
+        return out, read_titles
 
 
 def _paper_short(paper: str) -> str:
@@ -600,14 +797,18 @@ def add_days(iso_str: str, n: int) -> str:
 
 def _task_key(t: dict) -> str:
     """派生任务 → 稳定键（打卡表 task_key 口径）。"""
+    if t.get("key"):
+        return str(t["key"])
     ty = t.get("type")
     if ty == "micro_drill":
         return f"micro:{t['lecture']}"
-    if ty == "lecture":
-        # week_daily_tasks 的 lecture 任务是摊派汇总（可能每天讲数不同），
-        # 键固定为 lecture，自动检测按当天任意讲次命中
-        return "lecture"
-    return str(ty)
+    return "lecture" if ty == "lecture" else str(ty)
+
+
+def fmt_w(n: int) -> str:
+    """词数千分位简写：1234 → 1.2k。"""
+    v = int(n or 0)
+    return f"{v/1000:.1f}k" if v >= 1000 else str(v)
 
 
 def _chapter_at_words(chs: list[dict], percent: float, total_words: int) -> Optional[dict]:
