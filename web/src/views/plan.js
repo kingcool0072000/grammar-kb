@@ -6,7 +6,9 @@ import { escapeHtml } from '../render.js'
 // 计划数据由 scripts/seed_plan_weeks.py 自动排程预填，教师可编辑微调。
 // 词汇考试：登记成绩（≥80 解锁下一级）+ 打印考卷入口。
 export async function mountPlan(el) {
+  const subTab = new URLSearchParams(location.hash.split('?')[1] || '').get('tab') || 'board'
   const state = {
+    tab: subTab === 'students' ? 'students' : 'board',
     view: 'week',   // week | month | overview
     student: 'malin',
   }
@@ -15,14 +17,24 @@ export async function mountPlan(el) {
 
   function render() {
     el.innerHTML = `
-      <div class="view-head">
-        <h1>计划表</h1>
-        <p>四目标冲刺（2027-01-31）：哈1完课 · FCE 8 Test · L0-L5 词汇 · 泛读 3 本。计划已自动排好，可微调。</p>
+      <div class="ana-tabs plan-subtabs">
+        <button class="reading-btn ${state.tab === 'board' ? 'primary' : ''}" data-ptab="board">📋 计划看板</button>
+        <button class="reading-btn ${state.tab === 'students' ? 'primary' : ''}" data-ptab="students">🎒 学生管理</button>
       </div>
       <div id="plan-body"></div>
     `
+    el.querySelectorAll('[data-ptab]').forEach((b) =>
+      b.addEventListener('click', () => { state.tab = b.dataset.ptab; render() }))
     const body = el.querySelector('#plan-body')
-    mountCalendar(body)
+    if (state.tab === 'students') {
+      import('./students.js').then(({ mountStudents }) => {
+        const host = document.createElement('div')
+        body.replaceChildren(host)
+        mountStudents(host, { bare: true })
+      })
+    } else {
+      mountCalendar(body)
+    }
   }
 
   async function mountCalendar(body) {
@@ -62,7 +74,6 @@ export async function mountPlan(el) {
     try { goals = (await api.planGoals({ user: state.student })).goals } catch { goals = null }
 
     body.innerHTML = `
-      ${goalsBarHtml(goals)}
       ${loopDeckHtml()}
       <div class="pw-viewbar">
         <div class="pw-modes">
@@ -102,87 +113,6 @@ export async function mountPlan(el) {
 
 
 
-    // ---- 总目标（分学生冲刺目标，结构化配置） ----
-    function goalsBarHtml(g) {
-      const parts = []
-      if (g?.deadline) parts.push(`⏰ ${g.deadline}`)
-      if (g?.vocab_target) parts.push(`🔤 词汇 ${g.vocab_target} 词`)
-      if (g?.lecture_target) parts.push(`📚 讲次到第 ${g.lecture_target} 讲`)
-      if (g?.fce_target) parts.push(`🎧 FCE ${g.fce_target} Test`)
-      if (g?.reading?.length) parts.push(`📖 ${g.reading.length} 本`)
-      const txt = parts.length ? parts.join(' · ') : '未配置总目标（点右侧配置）'
-      return `<div class="pg-bar">
-        <div class="pg-bar-main">
-          <b>🎯 ${state.student} 总目标</b>
-          <span>${escapeHtml(txt)}</span>
-        </div>
-        <button class="chip" id="pg-edit">⚙️ 配置总目标</button>
-      </div>`
-    }
-
-    function openGoalsDialog() {
-      const g = goals || {}
-      const dlg = document.createElement('div')
-      dlg.className = 'plan-editor'
-      dlg.innerHTML = `
-        <div class="plan-editor-mask"></div>
-        <div class="plan-editor-body card pe-body">
-          <h3>配置 ${state.student} 的总目标</h3>
-          <label class="plan-field">冲刺截止日期
-            <input id="pg-deadline" type="date" value="${g.deadline || '2027-01-31'}"/>
-          </label>
-          <label class="plan-field">词汇总目标（累计掌握词数）
-            <input id="pg-vocab" type="number" min="0" value="${g.vocab_target ?? ''}" placeholder="2000"/>
-          </label>
-          <label class="plan-field">讲次总目标（哈1 课程推进到）
-            <select id="pg-lecture">
-              <option value="">— 选择 —</option>
-              ${(editorDataCache?.lectures || []).map((l) =>
-                `<option value="${l.number}" ${g.lecture_target === l.number ? 'selected' : ''}>第 ${l.number} 讲 · ${escapeHtml(l.title)}</option>`).join('')}
-            </select>
-          </label>
-          <label class="plan-field">FCE 总目标（完成 Test 套数）
-            <input id="pg-fce" type="number" min="0" max="8" value="${g.fce_target ?? ''}" placeholder="8"/>
-          </label>
-          <div class="chip-row">
-            <button class="btn-primary" id="pg-save">保存</button>
-            <button class="chip" id="pg-cancel">取消</button>
-          </div>
-        </div>`
-      document.body.appendChild(dlg)
-      const close = () => dlg.remove()
-      dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
-      dlg.querySelector('#pg-cancel').addEventListener('click', close)
-      dlg.querySelector('#pg-save').addEventListener('click', async () => {
-        const ng = {}
-        const dl = dlg.querySelector('#pg-deadline').value
-        if (dl) ng.deadline = dl
-        const vb = Number(dlg.querySelector('#pg-vocab').value)
-        if (vb > 0) ng.vocab_target = vb
-        const lc = Number(dlg.querySelector('#pg-lecture').value)
-        if (lc > 0) ng.lecture_target = lc
-        const fc = Number(dlg.querySelector('#pg-fce').value)
-        if (fc > 0) ng.fce_target = fc
-        if (g?.reading) ng.reading = g.reading // 泛读总目标沿用已存（周计划里逐周配）
-        try {
-          await api.planGoalsPut(state.student, ng)
-          goals = ng
-          close()
-          const bar = body.querySelector('.pg-bar')
-          if (bar) bar.outerHTML = goalsBarHtml(goals)
-          bindGoalsBar()
-        } catch (e) { alert('保存失败：' + e.message) }
-      })
-    }
-
-    function bindGoalsBar() {
-      const btn = body.querySelector('#pg-edit')
-      if (btn) btn.addEventListener('click', async () => {
-        await getEditorData() // 讲次下拉数据
-        openGoalsDialog()
-      })
-    }
-    bindGoalsBar()
 
     // ---- 外循环驾驶舱：诊断 → 周目标 → 展开 → 验收 一屏串联 ----
     function currentFocus() {

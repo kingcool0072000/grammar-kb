@@ -24,17 +24,19 @@ export async function mountStudents(el, { bare = false } = {}) {
     }
     try {
       editorData = await api.planEditorData({ user: users[0]?.user || 'malin' })
-    } catch { editorData = { lectures: [] } }
+    } catch { editorData = { lectures: [], goal_assets: {} } }
     render()
   }
 
   function goalsText(g) {
     const parts = []
+    if (g?.lectures?.length) parts.push(`📚 ${g.lectures.length} 讲`)
+    if (g?.vocab_target) parts.push(`🔤 +${g.vocab_target} 词`)
+    if (g?.fce_parts?.length) parts.push(`🎧 ${g.fce_parts.length} Part`)
+    if (g?.articles?.length) parts.push(`📖 ${g.articles.length} 篇`)
+    if (g?.reading?.length) parts.push(`📚 ${g.reading.length} 书`)
+    if (g?.vocab_papers?.length) parts.push(`📝 ${g.vocab_papers.length} 卷`)
     if (g?.deadline) parts.push(`⏰ ${g.deadline}`)
-    if (g?.vocab_target) parts.push(`🔤 ${g.vocab_target} 词`)
-    if (g?.lecture_target) parts.push(`📚 到第 ${g.lecture_target} 讲`)
-    if (g?.fce_target) parts.push(`🎧 FCE ${g.fce_target} Test`)
-    if (g?.reading?.length) parts.push(`📖 ${g.reading.length} 本`)
     return parts.length ? parts.join(' · ') : '未配置'
   }
 
@@ -107,63 +109,129 @@ export async function mountStudents(el, { bare = false } = {}) {
   }
 
   function openGoalDialog(user) {
+    const ga = editorData?.goal_assets || {}
+    const lecOpts = ga.lectures || []
+    const vocabLv = ga.vocab_levels || []
+    const fceParts = ga.fce_parts || []
+    const arts = (ga.articles || []).filter((a) => a.kind === 'derived')
+    const books = ga.books || []
+    const papers = ga.vocab_papers || []
     const dlg = document.createElement('div')
     dlg.className = 'plan-editor'
     dlg.innerHTML = `
       <div class="plan-editor-mask"></div>
-      <div class="plan-editor-body card pe-body">
-        <h3>配置 ${escapeHtml(user)} 的总目标</h3>
-        <div class="st-goal-dlg"><p class="muted">加载中…</p></div>
-      </div>`
-    document.body.appendChild(dlg)
-    const close = () => dlg.remove()
-    dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
+      <div class="plan-editor-body card pe-body st-goal-body">
+        <h3>🎯 ${escapeHtml(user)} 的总目标</h3>
+        <p class="muted" style="margin:0 0 12px;font-size:12px">所有选项来自备课中心已有资产。</p>
 
-    ;(async () => {
-      let g = {}
-      try { g = (await api.planGoals({ user })).goals || {} } catch { /* 空 */ }
-      const host = dlg.querySelector('.st-goal-dlg')
-      host.innerHTML = `
+        <div class="pe-sec"><h4>📚 哈一课程 + 考卷 <i>选择要完成的讲次（标「卷」= 有考卷）</i></h4>
+          <div class="pe-lec-grid" id="sg-lec">${lecOpts.map((l) => `
+            <button type="button" class="pe-lec" data-sg-lec="${l.number}" title="${l.has_paper ? l.questions + ' 题考卷' : '无考卷'}">
+              <b>${l.number}</b>${escapeHtml(l.title)}${l.has_paper ? '<i>卷</i>' : ''}
+            </button>`).join('')}</div>
+        </div>
+
+        <div class="pe-sec"><h4>🔤 单词级别 + 完成数量</h4>
+          <div class="sg-vocab-row">
+            ${vocabLv.map((v) => `
+              <label class="sg-vocab-lv"><input type="checkbox" data-sg-vlv="${v.level}"/> L${v.level}
+                <i>${v.words} 词</i></label>`).join('')}
+            <label class="sg-vocab-n">目标新掌握 <input id="sg-vocab-n" type="number" min="0" placeholder="如 500"/> 词</label>
+          </div>
+        </div>
+
+        <div class="pe-sec"><h4>🎧 FCE 题目（Part 维度）</h4>
+          ${[1, 2, 3, 4].map((tid) => {
+            const ps = fceParts.filter((x) => x.test_id === tid)
+            if (!ps.length) return ''
+            return `<div class="pe-fce-group"><b>${ps[0].test_title}</b>
+              <div class="pe-fce-parts">${ps.map((x) => `
+                <button type="button" class="pe-part" data-sg-fce="${escapeHtml(x.label)}">${escapeHtml(x.label.replace(ps[0].test_title + ' · ', ''))}<i>${x.questions}</i></button>`).join('')}</div>
+            </div>`
+          }).join('') || '<p class="muted">FCE 题库不可用</p>'}
+        </div>
+
+        <div class="pe-sec"><h4>📖 精读文章</h4>
+          <div class="pe-fce-parts" style="max-height:120px;overflow-y:auto">${arts.map((a) => `
+            <button type="button" class="pe-part" data-sg-art="${a.id}">${escapeHtml(a.title.slice(0, 20))}<i>${a.words}</i></button>`).join('') || '<p class="muted">暂无派生文章</p>'}</div>
+        </div>
+
+        <div class="pe-sec"><h4>📚 泛读书-章节目标 <i>按必读章配置口径显示词数</i></h4>
+          ${books.map((b) => `
+            <div class="sg-book-row">
+              <label class="sg-book-main"><input type="checkbox" data-sg-bk="${b.id}"/>
+                <b>${escapeHtml(b.title.slice(0, 30))}</b>
+                <i>${b.configured_chapters?.length ? `必读 ${b.configured_chapters.length} 章 · ${b.goal_words} 词` : `全书 ${b.chapters} 章 · ${b.total_words} 词`}</i>
+                <em>已读 ${b.percent}%</em>
+              </label>
+            </div>`).join('') || '<p class="muted">书架暂无书目</p>'}
+        </div>
+
+        <div class="pe-sec"><h4>📝 单词考试试卷 <i>关联已生成的试卷资产</i></h4>
+          <div class="pe-fce-parts">${papers.map((x) => `
+            <button type="button" class="pe-part" data-sg-paper="${escapeHtml(x.paper_id)}">L${x.level} · ${x.paper_id.slice(-8)}<i>${(x.created_at || '').slice(5, 10)}</i></button>`).join('') || '<p class="muted">尚未生成试卷（备课中心-背单词）</p>'}</div>
+        </div>
+
         <label class="plan-field">冲刺截止日期
-          <input id="sg-deadline" type="date" value="${g.deadline || '2027-01-31'}"/>
-        </label>
-        <label class="plan-field">词汇总目标（累计掌握词数）
-          <input id="sg-vocab" type="number" min="0" value="${g.vocab_target ?? ''}" placeholder="2000"/>
-        </label>
-        <label class="plan-field">讲次总目标（哈1 课程推进到）
-          <select id="sg-lecture">
-            <option value="">— 选择 —</option>
-            ${(editorData?.lectures || []).map((l) =>
-              `<option value="${l.number}" ${g.lecture_target === l.number ? 'selected' : ''}>第 ${l.number} 讲 · ${escapeHtml(l.title)}</option>`).join('')}
-          </select>
-        </label>
-        <label class="plan-field">FCE 总目标（完成 Test 套数）
-          <input id="sg-fce" type="number" min="0" max="8" value="${g.fce_target ?? ''}" placeholder="8"/>
+          <input id="sg-deadline" type="date" value="2027-01-31"/>
         </label>
         <div class="chip-row">
           <button class="btn-primary" id="sg-save">保存</button>
           <button class="chip" id="sg-cancel">取消</button>
-        </div>`
-      dlg.querySelector('#sg-cancel').addEventListener('click', close)
-      dlg.querySelector('#sg-save').addEventListener('click', async () => {
-        const ng = {}
-        const dl = host.querySelector('#sg-deadline').value
-        if (dl) ng.deadline = dl
-        const vb = Number(host.querySelector('#sg-vocab').value)
-        if (vb > 0) ng.vocab_target = vb
-        const lc = Number(host.querySelector('#sg-lecture').value)
-        if (lc > 0) ng.lecture_target = lc
-        const fc = Number(host.querySelector('#sg-fce').value)
-        if (fc > 0) ng.fce_target = fc
-        if (g?.reading) ng.reading = g.reading
-        try {
-          await api.planGoalsPut(user, ng)
-          toast(`✅ ${user} 的总目标已保存`)
-          close()
-          loadAllGoals()
-        } catch (e) { alert('保存失败：' + e.message) }
-      })
-    })()
+        </div>
+      </div>`
+    document.body.appendChild(dlg)
+    const close = () => dlg.remove()
+    dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
+    dlg.querySelector('#sg-cancel').addEventListener('click', close)
+
+    const sel = {
+      lectures: new Set(), vocab_levels: new Set(), fce_parts: new Set(),
+      articles: new Set(), books: new Set(), vocab_papers: new Set(),
+    }
+    // attr 用连字符（选择器 [data-xx]），dataset 键自动驼峰
+    const bindToggle = (attr, set) => dlg.querySelectorAll(`[data-${attr}]`).forEach((b) =>
+      b.addEventListener('click', (e) => {
+        e.preventDefault()
+        const key = attr.replace(/-(.)/g, (_, c) => c.toUpperCase())
+        const v = b.dataset[key]
+        if (set.has(v)) { set.delete(v); b.classList.remove('on') }
+        else { set.add(v); b.classList.add('on') }
+      }))
+    bindToggle('sg-lec', sel.lectures)
+    bindToggle('sg-fce', sel.fce_parts)
+    bindToggle('sg-art', sel.articles)
+    bindToggle('sg-paper', sel.vocab_papers)
+    dlg.querySelectorAll('[data-sg-vlv]').forEach((c) =>
+      c.addEventListener('change', () => {
+        const v = Number(c.dataset.sgVlv)
+        if (c.checked) sel.vocab_levels.add(v); else sel.vocab_levels.delete(v)
+      }))
+    dlg.querySelectorAll('[data-sg-bk]').forEach((c) =>
+      c.addEventListener('change', () => {
+        const v = c.dataset.sgBk
+        if (c.checked) sel.books.add(v); else sel.books.delete(v)
+      }))
+
+    dlg.querySelector('#sg-save').addEventListener('click', async () => {
+      const ng = {}
+      if (sel.lectures.size) ng.lectures = [...sel.lectures].map(Number)
+      if (sel.vocab_levels.size) ng.vocab_levels = [...sel.vocab_levels].map(Number)
+      const vn = Number(dlg.querySelector('#sg-vocab-n').value)
+      if (vn > 0) ng.vocab_target = vn
+      if (sel.fce_parts.size) ng.fce_parts = [...sel.fce_parts]
+      if (sel.articles.size) ng.articles = [...sel.articles].map(Number)
+      if (sel.books.size) ng.reading = [...sel.books].map(Number)
+      if (sel.vocab_papers.size) ng.vocab_papers = [...sel.vocab_papers]
+      const dl = dlg.querySelector('#sg-deadline').value
+      if (dl) ng.deadline = dl
+      try {
+        await api.planGoalsPut(user, ng)
+        toast(`✅ ${user} 总目标已保存`)
+        close()
+        loadAllGoals()
+      } catch (e) { alert('保存失败：' + e.message) }
+    })
   }
 
   function toast(msg) {

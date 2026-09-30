@@ -1,35 +1,12 @@
 import { api } from '../api.js'
-import { mountStudents } from './students.js'
 import { escapeHtml } from '../render.js'
 
 // 教师版 · 备课中心：教学内容管理按两大板块组织——
 //   哈1 语法（初中语法课 / 知识点体系 / 词汇表 / 作业题库）
 //   FCE 听说读写（真题库与阅读派生文 / FCE 知识库）
 export async function mountPrep(el, ctx) {
-  // 备课中心双子标签：内容管理（教学内容与题库）/ 学生管理（账号+总目标）
-  let sub = 'content'
-  el.innerHTML = `
-    <div class="ana-tabs prep-subtabs">
-      <button class="reading-btn primary" data-sub="content">📚 内容管理</button>
-      <button class="reading-btn" data-sub="students">🎒 学生管理</button>
-    </div>
-    <div id="prep-body"></div>
-  `
-  const bodyEl = el.querySelector('#prep-body')
-  const render = () => {
-    el.querySelectorAll('[data-sub]').forEach((b) =>
-      b.classList.toggle('primary', b.dataset.sub === sub))
-    if (sub === 'students') {
-      const host = document.createElement('div')
-      bodyEl.replaceChildren(host)
-      mountStudents(host, { bare: true })
-    } else {
-      mountContent(bodyEl)
-    }
-  }
-  el.querySelectorAll('[data-sub]').forEach((b) =>
-    b.addEventListener('click', () => { sub = b.dataset.sub; render() }))
-  render()
+  // 备课中心：纯内容管理（学生管理已迁至计划表双子 Tab）
+  await mountContent(el)
 }
 
 async function mountContent(el) {

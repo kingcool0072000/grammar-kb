@@ -914,8 +914,81 @@ class PlanStore:
                 mastered = row["n"]
         except sqlite3.Error:
             pass
+        # ---- 目标管理选项源（六类，全部关联备课资产） ----
+        goal_assets = self.goal_assets(lectures, fce_parts, books, articles,
+                                       user=user)
         return {"lectures": lectures, "fce_parts": fce_parts, "books": books,
-                "articles": articles, "vocab_mastered": mastered}
+                "articles": articles, "vocab_mastered": mastered,
+                "goal_assets": goal_assets}
+
+    def goal_assets(self, lectures: list, fce_parts: list, books: list,
+                    articles: list, user: str = "malin") -> dict:
+        """目标配置的选项源：
+        4.1 哈一课程（带考卷存在标记）4.2 单词级别+词数 4.3 FCE Part
+        4.4 精读文章 4.5 泛读书-章节（必读章配置+增量词数）4.6 单词考试试卷资产。
+        """
+        # 4.1 讲次 → 考卷（homework_question 里有题即有卷）
+        hw: dict[int, int] = {}
+        gp = self.grammar_db_path or str(
+            Path(__file__).resolve().parent.parent / "data" / "grammar.db")
+        if Path(gp).exists():
+            try:
+                with sqlite3.connect(f"file:{gp}?mode=ro", uri=True) as conn:
+                    for r in conn.execute(
+                        "SELECT lecture_number, COUNT(*) FROM homework_question"
+                        " GROUP BY lecture_number"):
+                        hw[r[0]] = r[1]
+            except sqlite3.Error:
+                pass
+        lecture_opts = [{
+            "number": l["number"], "title": l["title"],
+            "category": l.get("category"),
+            "has_paper": hw.get(l["number"], 0) > 0,
+            "questions": hw.get(l["number"], 0),
+        } for l in lectures]
+
+        # 4.2 单词级别 + 词数（词表在 grammar.db）
+        vocab_levels = []
+        vocab_counts: dict[int, int] = {}
+        if Path(gp).exists():
+            try:
+                with sqlite3.connect(f"file:{gp}?mode=ro", uri=True) as conn:
+                    for r in conn.execute(
+                        "SELECT level, COUNT(*) FROM vocab_word WHERE level <= 5"
+                        " GROUP BY level"):
+                        vocab_counts[r[0]] = r[1]
+            except sqlite3.Error:
+                pass
+        for lv in range(6):
+            vocab_levels.append({"level": lv,
+                                 "words": vocab_counts.get(lv, 0)})
+
+        # 4.6 单词试卷资产（vocab_paper_history，fce.db）
+        vocab_papers = []
+        try:
+            with self._connect() as conn:
+                tabs = {r[0] for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'")}
+                if "vocab_paper_history" in tabs:
+                    for r in conn.execute(
+                        "SELECT paper_id, level, created_at FROM vocab_paper_history"
+                        " ORDER BY id DESC LIMIT 50"):
+                        vocab_papers.append({
+                            "paper_id": r["paper_id"], "level": r["level"],
+                            "created_at": r["created_at"]})
+        except sqlite3.Error:
+            pass
+
+        return {
+            "lectures": lecture_opts,
+            "vocab_levels": vocab_levels,
+            "fce_parts": fce_parts,
+            "articles": [{"id": a["id"], "title": a["title"],
+                          "words": a["words"], "kind": a["kind"]}
+                         for a in articles],
+            "books": books,   # 含 chapters/total_words/goal_words（必读章口径）
+            "vocab_papers": vocab_papers,
+        }
 
     def month_view(self, month: str, user: str = "malin") -> dict:
         """月历：某月每天 {date, in_month, future, done, total}，周一为每周之首。"""

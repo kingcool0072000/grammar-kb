@@ -2879,3 +2879,18 @@ li.open .topic-reveal-btn { display: none; }
 .rl-pv h3 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px; flex-wrap: wrap; }
 .rl-pv h3 i { font-style: normal; font-size: 11.5px; color: var(--ink-faint); }
 .rl-pv-text p { font-size: 14.5px; line-height: 1.8; color: var(--ink); font-family: Georgia, serif; margin: 0 0 10px; }
+
+/* ===== 目标配置弹窗（六类资产选项） ===== */
+.st-goal-body { width: min(640px, calc(100vw - 32px)); }
+.sg-vocab-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.sg-vocab-lv { display: inline-flex; align-items: baseline; gap: 3px; font-size: 13px; color: var(--ink); }
+.sg-vocab-lv input { margin: 0; }
+.sg-vocab-lv i { font-style: normal; font-size: 10.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.sg-vocab-n { margin-left: auto; font-size: 12.5px; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 4px; }
+.sg-vocab-n input { width: 80px; padding: 4px 7px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg-soft); }
+.sg-book-row { padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.sg-book-main { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 13px; cursor: pointer; }
+.sg-book-main input { margin: 0; }
+.sg-book-main b { color: var(--ink); font-size: 13px; }
+.sg-book-main i { font-style: normal; font-size: 11.5px; color: var(--brand-ink); font-variant-numeric: tabular-nums; }
+.sg-book-main em { font-style: normal; font-size: 11px; color: var(--ink-faint); }
