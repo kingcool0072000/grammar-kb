@@ -1255,13 +1255,19 @@ class PlanStore:
                             or t.get("vocab_goal") or t.get("fce") or t.get("reading"))
             done = total = 0
             if ws <= cur:  # 已开始的周才聚合完成度（未来周无 actuals）
+                historical_week = ws < cur
                 for i in range(7):
                     d = (date.fromisoformat(ws) + timedelta(days=i)).isoformat()
                     if d > today_iso:
                         continue
-                    td = self.today_tasks(user=user, day=d)
-                    done += td["done"]
-                    total += td["total"]
+                    if historical_week:
+                        hist = self.history_day(user, d) or []
+                        done += len(hist)
+                        total += len(hist)
+                    else:
+                        td = self.today_tasks(user=user, day=d)
+                        done += td["done"]
+                        total += td["total"]
             weeks.append({
                 "week_start": ws, "has_plan": has_plan,
                 "is_current": ws == cur, "past": ws < cur,
