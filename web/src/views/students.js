@@ -3,12 +3,12 @@ import { escapeHtml } from '../render.js'
 
 // 教师版 · 学生管理：增删学生账号 + 给每个学生配置学习总目标。
 // 目标结构复用 /plan/goals（词汇/讲次/FCE/截止日），讲次下拉来自备课内容。
-export async function mountStudents(el) {
+export async function mountStudents(el, { bare = false } = {}) {
   el.innerHTML = `
-    <div class="view-head">
+    ${bare ? '' : `<div class="view-head">
       <h1>学生管理</h1>
       <p>增减学生账号，给每个学生配置冲刺总目标。</p>
-    </div>
+    </div>`}
     <div id="st-body"><p class="muted">加载中…</p></div>
   `
   const body = el.querySelector('#st-body')

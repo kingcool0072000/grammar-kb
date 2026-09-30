@@ -236,16 +236,57 @@ class LibraryStore:
             "updatedAt": prog["updated_at"] if prog else None,
         }
 
-    def list_books(self, user: str) -> dict:
-        """书架 + 当前用户阅读统计。books 按 id DESC；stats 基于当前用户进度。"""
+    def list_books(self, user: str, role: str = "student") -> dict:
+        """书架 + 当前用户阅读统计。books 按 id DESC；stats 基于当前用户进度。
+
+        书籍解锁：student_json.bookUnlock = {学生: [book_id...]}（教师配置）。
+        学生配置了列表 → 仅可见列表内书目；未配置/空 → 全部可见（向后兼容）。
+        正在读/读完的书始终可见（不因解锁配置收回进度）。
+        """
+        gate = None
+        if role != "teacher":
+            st = self.get_settings()["student"]
+            gate = (st.get("bookUnlock") or {}).get(user)
+            if gate is not None:
+                gate = {int(x) for x in gate if str(x).isdigit()}
         with contextlib.closing(self._connect()) as conn:
             rows = conn.execute("SELECT * FROM books ORDER BY id DESC").fetchall()
-            books = [self._book_view(r, user, conn) for r in rows]
+            books = []
+            for r in rows:
+                b = self._book_view(r, user, conn)
+                in_progress = b["percent"] is not None and b["percent"] > 0
+                if gate is not None and r["id"] not in gate and not in_progress:
+                    continue
+                books.append(b)
         reading = sum(1 for b in books if b["percent"] is not None and 0 < b["percent"] < 100)
         finished = sum(1 for b in books if b["percent"] is not None and b["percent"] >= 100)
         total_seconds = sum(b["readingSeconds"] or 0 for b in books)
         return {"books": books, "stats": {"reading": reading, "finished": finished,
                                           "totalSeconds": total_seconds}}
+
+    def get_book_unlock(self) -> dict:
+        """书籍解锁配置全量（教师视图）：{学生: [book_id...]}。"""
+        return dict(self.get_settings()["student"].get("bookUnlock") or {})
+
+    def put_book_unlock(self, mapping: dict) -> dict:
+        """保存书籍解锁配置（整体覆盖；空对象=回到全部可见）。"""
+        clean = {}
+        for k, v in (mapping or {}).items():
+            if isinstance(v, list):
+                ids = sorted({int(x) for x in v if str(x).isdigit()})
+                if ids:
+                    clean[str(k)[:32]] = ids
+        with self._tx() as conn:
+            row = conn.execute(
+                "SELECT student_json FROM library_settings WHERE id = 1"
+            ).fetchone()
+            st = json.loads(row["student_json"] or "{}")
+            st["bookUnlock"] = clean
+            conn.execute(
+                "UPDATE library_settings SET student_json = ? WHERE id = 1",
+                (json.dumps(st, ensure_ascii=False),),
+            )
+        return clean
 
     def add_book(self, user: str, filename: str, content_type: str, data: bytes) -> dict:
         """上传入库：内存解析 → 事务落库 → 文件落盘。校验失败抛 LibraryError。"""

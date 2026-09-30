@@ -179,8 +179,62 @@ export async function mountLibrarySettings(viewEl) {
           <button class="lib-btn" id="ls-save-student">保存</button>
         </div>
       </section>
+
+      <!-- ======== 卡4 书籍解锁（学生可见性门控） ======== -->
+      <section class="ls-card">
+        <h3>书籍解锁</h3>
+        <p class="ls-desc">给每个学生勾选可见的书（教师手动解锁；未配置 = 全部可见）。正在读的书不会被收回。</p>
+        <div id="ls-books-unlock"><p class="ls-desc">加载中…</p></div>
+        <div class="ls-card-actions">
+          <button class="lib-btn" id="ls-save-unlock">保存解锁配置</button>
+        </div>
+      </section>
     `
     bindCards()
+    loadBookUnlock()
+  }
+
+  async function loadBookUnlock() {
+    const host = viewEl.querySelector('#ls-books-unlock')
+    if (!host) return
+    try {
+      const [unlockRes, booksRes, usersRes] = await Promise.all([
+        api.libraryBookUnlock(),
+        api.libraryBooks(),
+        api.users(),
+      ])
+      const unlock = unlockRes || {}
+      const students = (usersRes.users || []).filter((u) => u.role === 'student')
+      const books = (booksRes.books || []).filter((b) => b.id != null)
+      if (!books.length) { host.innerHTML = '<p class="ls-desc">书架还没有书。</p>'; return }
+      const configured = students.some((st) => (unlock[st.user] || []).length)
+      host.innerHTML = `
+        <p class="ls-desc">${configured ? '' : '（当前未配置，学生可见全部书目）'}</p>
+        <div class="ls-unlock-matrix">
+          <div class="ls-unlock-head">
+            <span></span>
+            ${books.map((b) => `<span title="${escapeHtml(b.title)}">${escapeHtml(b.title.slice(0, 14))}</span>`).join('')}
+          </div>
+          ${students.map((st) => `
+            <div class="ls-unlock-row" data-stu="${escapeHtml(st.user)}">
+              <span class="ls-unlock-name">🎒 ${escapeHtml(st.user)}</span>
+              ${books.map((b) => `<label class="ls-unlock-cell"><input type="checkbox" data-ck="${b.id}" ${((unlock[st.user] || []).includes(b.id)) ? 'checked' : ''}/></label>`).join('')}
+            </div>`).join('')}
+        </div>`
+      viewEl.querySelector('#ls-save-unlock').addEventListener('click', async () => {
+        const mapping = {}
+        host.querySelectorAll('.ls-unlock-row').forEach((row) => {
+          const ids = [...row.querySelectorAll('input:checked')].map((i) => Number(i.dataset.ck))
+          if (ids.length) mapping[row.dataset.stu] = ids
+        })
+        try {
+          await api.libraryBookUnlockPut(mapping)
+          toast('书籍解锁已保存')
+        } catch (e) { toast('保存失败：' + e.message, 'error') }
+      })
+    } catch (e) {
+      host.innerHTML = `<p class="ls-desc">加载失败：${escapeHtml(e.message)}</p>`
+    }
   }
 
   function showErrorCard(err) {

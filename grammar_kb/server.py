@@ -1284,8 +1284,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     @app.get("/library/books")
     def lib_books_list(request: "fastapi.Request"):
-        """书架 + 当前用户阅读统计。"""
-        return _ok(library.list_books(_request_user(request)))
+        """书架 + 当前用户阅读统计（学生受 bookUnlock 配置过滤）。"""
+        return _ok(library.list_books(_request_user(request),
+                                      role=getattr(request.state, "role", "student")))
 
     @app.post("/library/books")
     async def lib_books_upload(request: "fastapi.Request", file: "fastapi.UploadFile"):
@@ -1375,6 +1376,23 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         """设置视图：教师完整版；学生只有 student + hasKey（绝不泄漏 apiKey/model/prompt）。"""
         is_teacher = getattr(request.state, "role", "teacher") == "teacher"
         return _ok(library.settings_view(is_teacher))
+
+    # ---- 书籍解锁（教师手动配置；学生书架可见性门控） ----
+
+    @app.get("/library/book-unlock")
+    def lib_book_unlock_get(request: "fastapi.Request"):
+        """书籍解锁配置：{学生: [book_id...]}；空=全部可见。教师专属。"""
+        _require_teacher_lib(request)
+        return _ok(library.get_book_unlock())
+
+    @app.put("/library/book-unlock")
+    def lib_book_unlock_put(rec: dict, request: "fastapi.Request"):
+        """保存书籍解锁配置（整体覆盖）。教师专属。"""
+        _require_teacher_lib(request)
+        body = rec.get("unlock") if isinstance(rec, dict) else None
+        if not isinstance(body, dict):
+            raise HTTPException(status_code=422, detail="unlock 须为对象 {学生: [书id]}")
+        return _ok(library.put_book_unlock(body))
 
     # ---- 必读章配置（教师）：计划表阅读目标按配置算词数/目标章 ----
 

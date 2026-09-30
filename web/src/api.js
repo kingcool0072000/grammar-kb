@@ -165,6 +165,9 @@ export const api = {
   libraryDeleteBook: (id) => reqJson(`/library/books/${id}`, 'DELETE'),
   // 必读章配置（教师）：计划表阅读目标按配置算
   libraryReadingConfig: (bookId) => req(`/library/books/${bookId}/reading-config`),
+  libraryBookUnlock: () => req('/library/book-unlock'),
+  libraryBookUnlockPut: (unlock) =>
+    reqJson('/library/book-unlock', 'PUT', { unlock }),
   libraryReadingConfigPut: (bookId, chapters) =>
     reqJson(`/library/books/${bookId}/reading-config`, 'PUT', { chapters }),
   librarySkipChapter: (bookId, idx, skip) =>

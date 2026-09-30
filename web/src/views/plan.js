@@ -531,6 +531,11 @@ export async function mountPlan(el) {
         readSel.set(normalizeReadingKey(k, books), Number(v))
       }
       let speakOn = Boolean(t.speak), speakN = t.speak || 2
+      const artSel = new Set(t.articles || [])
+      const artChips = () => (ed.articles || []).map((a) => `
+        <button type="button" class="pe-part ${artSel.has(a.id) ? 'on' : ''}" data-art="${a.id}" title="${escapeHtml(a.title)} ${a.words} 词">
+          ${a.kind === 'base' ? '📄' : '✍️'} ${escapeHtml(a.title.slice(0, 18))}<i>${a.words}</i>
+        </button>`).join('')
 
       const lecChips = (selSet, attr) => lectures.map((l) => `
         <button type="button" class="pe-lec ${selSet.has(l.number) ? 'on' : ''}" data-${attr}="${l.number}" title="${escapeHtml(l.category || '')}">
@@ -600,6 +605,10 @@ export async function mountPlan(el) {
             </div>
           </div>
           <div class="pe-sec">
+            <h4>📄 本周精读课文 <i>阅读训练文章，做完自动勾</i></h4>
+            <div class="pe-fce-parts" id="pe-articles">${artChips()}</div>
+          </div>
+          <div class="pe-sec">
             <h4>🎤 朗读（阅读训练）</h4>
             <label class="pe-speak"><input type="checkbox" id="pe-speak-on" ${speakOn ? 'checked' : ''}/> 本周安排朗读，每周
               <input id="pe-speak-n" type="number" min="1" max="7" value="${speakN}" style="width:48px"/> 篇（录音自动进批改）
@@ -627,6 +636,12 @@ export async function mountPlan(el) {
       }
       bindToggle(dlg.querySelector('#pe-focus-grid'), 'fl', focusSel)
       bindToggle(dlg.querySelector('#pe-lec-grid'), 'lc', lecSel)
+      dlg.querySelectorAll('[data-art]').forEach((b) =>
+        b.addEventListener('click', () => {
+          const id = Number(b.dataset.art)
+          if (artSel.has(id)) { artSel.delete(id); b.classList.remove('on') }
+          else { artSel.add(id); b.classList.add('on') }
+        }))
       dlg.querySelectorAll('[data-fce]').forEach((b) =>
         b.addEventListener('click', () => {
           const k = b.dataset.fce
@@ -668,6 +683,7 @@ export async function mountPlan(el) {
         if (vocab > 0) tasks.vocab_goal = vocab
         if (fceSel.size) tasks.fce = [...fceSel]
         if (readSel.size) tasks.reading = Object.fromEntries(readSel)
+        if (artSel.size) tasks.articles = [...artSel]
         if (dlg.querySelector('#pe-speak-on').checked) tasks.speak = Number(dlg.querySelector('#pe-speak-n').value) || 2
         const notes = dlg.querySelector('#pe-notes').value.trim()
         try {

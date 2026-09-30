@@ -449,9 +449,28 @@ class PlanStore:
                 "type": "speak", "text": "朗读 1 篇（阅读训练）",
                 "detail": f"每周 {t['speak']} 篇，录音自动进批改中心",
             })
+        for aid in (t.get("articles") or []):
+            title = self._article_title(aid)
+            if title:
+                tasks.append({
+                    "type": "article", "article_id": aid,
+                    "key": f"article:{aid}",
+                    "text": f"精读《{title[:16]}》",
+                    "detail": "阅读训练里读全文 + 提交朗读录音",
+                })
         for book_key, pct in (t.get("reading") or {}).items():
             tasks.append(self._reading_task(book_key, pct, user, days_left))
         return tasks
+
+    def _article_title(self, article_id: int) -> Optional[str]:
+        try:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT title FROM reading_article WHERE id = ?", (int(article_id),),
+                ).fetchone()
+                return row["title"] if row else None
+        except sqlite3.Error:
+            return None
 
     def _lib_connect(self) -> Optional[sqlite3.Connection]:
         """library.db 只读连接（无库返回 None）。"""
@@ -870,6 +889,20 @@ class PlanStore:
                         })
             except sqlite3.Error:
                 pass
+        # 精读文章（阅读训练：base 原文段落 + derived 派生文；课文级绑定）
+        articles = []
+        try:
+            with self._connect() as conn:
+                conn.row_factory = sqlite3.Row
+                arows = conn.execute(
+                    "SELECT id, kind, base_key, title, words FROM reading_article"
+                    " ORDER BY kind, id"
+                ).fetchall()
+                articles = [{"id": r["id"], "kind": r["kind"],
+                             "title": (r["title"] or "")[:40],
+                             "words": r["words"] or 0} for r in arows]
+        except sqlite3.Error:
+            pass
         # 词汇现况
         mastered = 0
         try:
@@ -882,7 +915,7 @@ class PlanStore:
         except sqlite3.Error:
             pass
         return {"lectures": lectures, "fce_parts": fce_parts, "books": books,
-                "vocab_mastered": mastered}
+                "articles": articles, "vocab_mastered": mastered}
 
     def month_view(self, month: str, user: str = "malin") -> dict:
         """月历：某月每天 {date, in_month, future, done, total}，周一为每周之首。"""
@@ -1030,13 +1063,16 @@ class PlanStore:
                     if row and row["n"]:
                         out["fce"] = True
                 if "reading_recordings" in tabs:
-                    row = conn.execute(
-                        "SELECT COUNT(*) n FROM reading_recordings"
+                    rows = conn.execute(
+                        "SELECT article_id FROM reading_recordings"
                         " WHERE user = ? AND (created_at >= ? AND created_at < ?)",
                         (user, day, nxt),
-                    ).fetchone()
-                    if row and row["n"]:
+                    ).fetchall()
+                    if rows:
                         out["speak"] = True
+                        for r in rows:
+                            if r["article_id"]:
+                                out[f"article:{r['article_id']}"] = True
                 if "focus_sessions" in tabs:
                     rows = conn.execute(
                         "SELECT DISTINCT book_title FROM focus_sessions"
