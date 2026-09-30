@@ -245,11 +245,11 @@ export const api = {
   planEditorData: ({ user } = {}) =>
     req('/plan/editor-data', { searchParams: { user } }),
   // 教师周历视图：周拆解 + 逐日任务矩阵
-  planMonthView: ({ month } = {}) =>
-    req('/plan/month-view', { searchParams: month ? { month } : {} }),
-  planOverview: () => req('/plan/overview'),
-  planWeekView: ({ weekStart } = {}) =>
-    req('/plan/week-view', { searchParams: weekStart ? { week_start: weekStart } : {} }),
+  planMonthView: ({ month, user } = {}) =>
+    req('/plan/month-view', { searchParams: { ...(month ? { month } : {}), ...(user ? { user } : {}) } }),
+  planOverview: ({ user } = {}) => req('/plan/overview', { searchParams: user ? { user } : {} }),
+  planWeekView: ({ weekStart, user } = {}) =>
+    req('/plan/week-view', { searchParams: { ...(weekStart ? { week_start: weekStart } : {}), ...(user ? { user } : {}) } }),
   // 词汇级别考试（成绩登记驱动解锁；≥80 解锁下一级）
   vocabPaperGenerate: (level, save = true) =>
     reqJson('/vocab-papers/generate', 'POST', { level, save }),

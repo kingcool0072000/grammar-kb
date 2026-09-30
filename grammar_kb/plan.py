@@ -23,10 +23,12 @@ from .fce_query import _default_db_path
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plan_weeks (
-    week_start TEXT PRIMARY KEY,   -- 周一日期 YYYY-MM-DD
+    user       TEXT NOT NULL DEFAULT 'malin',  -- 周计划归属学生
+    week_start TEXT NOT NULL,      -- 周一日期 YYYY-MM-DD
     tasks      TEXT NOT NULL DEFAULT '{}',  -- 结构化任务 JSON
     notes      TEXT DEFAULT '',    -- 改善项/备注（自由文本）
-    updated_at TEXT
+    updated_at TEXT,
+    PRIMARY KEY (user, week_start)
 );
 CREATE TABLE IF NOT EXISTS plan_day_checks (
     user       TEXT NOT NULL,
@@ -88,6 +90,33 @@ class PlanStore:
         if Path(self.db_path).exists():
             with self._connect() as conn:
                 conn.executescript(SCHEMA)
+                self._migrate_plan_weeks(conn)
+
+    @staticmethod
+    def _migrate_plan_weeks(conn):
+        """旧 plan_weeks（week_start 单主键）→ 新表（user+week_start 复合主键）。
+
+        存量周计划全部归 malin（历史上只有 malin 在用）。幂等：新表跳过。
+        SQLite 改主键必须重建表。
+        """
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(plan_weeks)")]
+        if not cols or "user" in cols:
+            return
+        conn.executescript("""
+            ALTER TABLE plan_weeks RENAME TO plan_weeks_old;
+            CREATE TABLE plan_weeks (
+                user       TEXT NOT NULL DEFAULT 'malin',
+                week_start TEXT NOT NULL,
+                tasks      TEXT NOT NULL DEFAULT '{}',
+                notes      TEXT DEFAULT '',
+                updated_at TEXT,
+                PRIMARY KEY (user, week_start)
+            );
+            INSERT INTO plan_weeks (user, week_start, tasks, notes, updated_at)
+                SELECT 'malin', week_start, tasks, notes, updated_at
+                FROM plan_weeks_old;
+            DROP TABLE plan_weeks_old;
+        """)
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
@@ -97,29 +126,32 @@ class PlanStore:
 
     # ---- plan_weeks 读写 ----
 
-    def list_weeks(self) -> list[dict]:
+    def list_weeks(self, user: str = "malin") -> list[dict]:
         with self._connect() as conn:
             rows = conn.execute(
-                "SELECT * FROM plan_weeks ORDER BY week_start"
+                "SELECT * FROM plan_weeks WHERE user = ? ORDER BY week_start",
+                (user,),
             ).fetchall()
         return [_week_out(r) for r in rows]
 
-    def put_week(self, week_start: str, tasks: dict, notes: str) -> dict:
+    def put_week(self, week_start: str, tasks: dict, notes: str,
+                 user: str = "malin") -> dict:
         date.fromisoformat(week_start)  # 非法日期抛 ValueError → 422
         if week_start != monday_of(date.fromisoformat(week_start)).isoformat():
             raise ValueError("week_start 须为周一日期")
         now = datetime.now(_tz.utc).isoformat(timespec="seconds")
         with self._connect() as conn:
             conn.execute(
-                "INSERT INTO plan_weeks (week_start, tasks, notes, updated_at)"
-                " VALUES (?,?,?,?)"
-                " ON CONFLICT(week_start) DO UPDATE SET"
+                "INSERT INTO plan_weeks (user, week_start, tasks, notes, updated_at)"
+                " VALUES (?,?,?,?,?)"
+                " ON CONFLICT(user, week_start) DO UPDATE SET"
                 " tasks=excluded.tasks, notes=excluded.notes, updated_at=excluded.updated_at",
-                (week_start, json.dumps(tasks or {}, ensure_ascii=False),
+                (user, week_start, json.dumps(tasks or {}, ensure_ascii=False),
                  (notes or "")[:4000], now),
             )
             row = conn.execute(
-                "SELECT * FROM plan_weeks WHERE week_start = ?", (week_start,)
+                "SELECT * FROM plan_weeks WHERE user = ? AND week_start = ?",
+                (user, week_start),
             ).fetchone()
         return _week_out(row)
 
@@ -277,13 +309,14 @@ class PlanStore:
                 "vocab_mastered": self._vocab_actuals(lo, hi, user),
                 "fce_parts": self._fce_actuals(lo, hi, user),
             },
-            "notes": self.get_week_notes(prev),
+            "notes": self.get_week_notes(prev, user=user),
         }
 
-    def get_week_notes(self, week_start: str) -> str:
+    def get_week_notes(self, week_start: str, user: str = "malin") -> str:
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT notes FROM plan_weeks WHERE week_start = ?", (week_start,)
+                "SELECT notes FROM plan_weeks WHERE user = ? AND week_start = ?",
+                (user, week_start),
             ).fetchone()
         return row["notes"] if row else ""
 
@@ -387,7 +420,7 @@ class PlanStore:
         for lec in focus:
             n, ws = 0, prev
             while True:
-                w = self._get_week(ws)
+                w = self._get_week(ws, user=user)
                 if lec in ((w.get("tasks") or {}).get("focus_kps") or []):
                     n += 1
                     ws = (date.fromisoformat(ws) - timedelta(days=7)).isoformat()
@@ -413,10 +446,11 @@ class PlanStore:
             it["title"] = t["title"] if t else ""
         return {"week_start": prev, "items": items}
 
-    def _get_week(self, week_start: str) -> dict:
+    def _get_week(self, week_start: str, user: str = "malin") -> dict:
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT * FROM plan_weeks WHERE week_start = ?", (week_start,)
+                "SELECT * FROM plan_weeks WHERE user = ? AND week_start = ?",
+                (user, week_start),
             ).fetchone()
         return _week_out(row) if row else {"tasks": {}, "notes": ""}
 
@@ -429,7 +463,7 @@ class PlanStore:
         教师在编辑器里看一眼即可，学生端落地是下一步。
         for_date：周清单回看历史日时的「当天」口径（默认今天）。
         """
-        w = self._get_week(week_start)
+        w = self._get_week(week_start, user=user)
         t = w.get("tasks") or {}
         focus = t.get("focus_kps") or []
         lectures = t.get("lectures") or []
@@ -739,7 +773,7 @@ class PlanStore:
         """学生周清单：本周目标 + 周一至周日逐日任务完成矩阵。"""
         today_iso = date.today().isoformat()
         ws = monday_of(date.today()).isoformat()
-        w = self._get_week(ws)
+        w = self._get_week(ws, user=user)
         t = w.get("tasks") or {}
         days = []
         for i in range(7):
@@ -773,7 +807,7 @@ class PlanStore:
         - 题型类数（微练习讲数 + FCE 项数 + 讲次测验，去重类目）
         历史周逐日按当天口径回看（today_tasks(day=…)）。
         """
-        w = self._get_week(week_start)
+        w = self._get_week(week_start, user=user)
         t = w.get("tasks") or {}
         today_iso = date.today().isoformat()
         in_week = week_start <= today_iso <= add_days(week_start, 6)
@@ -1239,7 +1273,8 @@ class PlanStore:
         """全览：最早已排计划周（无则回看 2 周）到冲刺线 2027-01-31 的逐周汇总。"""
         with self._connect() as conn:
             rows = conn.execute(
-                "SELECT week_start FROM plan_weeks ORDER BY week_start"
+                "SELECT week_start FROM plan_weeks WHERE user = ?"
+                " ORDER BY week_start", (user,),
             ).fetchall()
         seeded = [r["week_start"] for r in rows if r["week_start"] <= "2027-01-25"]
         today_iso = date.today().isoformat()
@@ -1249,7 +1284,7 @@ class PlanStore:
         weeks = []
         ws = earliest
         while ws <= "2027-01-25":
-            w = self._get_week(ws)
+            w = self._get_week(ws, user=user)
             t = w.get("tasks") or {}
             has_plan = bool(t.get("focus_kps") or t.get("lectures")
                             or t.get("vocab_goal") or t.get("fce") or t.get("reading"))

@@ -41,7 +41,7 @@ export async function mountPlan(el) {
     body.innerHTML = '<p class="muted">加载中…</p>'
     let data
     try {
-      data = await api.planWeeks()
+      data = await api.planWeeks({ user: state.student })
     } catch (e) {
       body.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
       return
@@ -180,7 +180,7 @@ export async function mountPlan(el) {
       host.innerHTML = '<p class="muted">周历加载中…</p>'
       let wv
       try {
-        wv = await api.planWeekView({ weekStart: viewWeek })
+        wv = await api.planWeekView({ weekStart: viewWeek, user: state.student })
       } catch (e) {
         host.innerHTML = `<p style="color:#b42318">周历加载失败：${escapeHtml(e.message)}</p>`
         return
@@ -262,7 +262,7 @@ export async function mountPlan(el) {
     async function renderMonth() {
       viewHost.innerHTML = '<p class="muted">月历加载中…</p>'
       try {
-        monthData = await api.planMonthView({ month: viewMonth })
+        monthData = await api.planMonthView({ month: viewMonth, user: state.student })
       } catch (e) {
         viewHost.innerHTML = `<p style="color:#b42318">月历加载失败：${escapeHtml(e.message)}</p>`
         return
@@ -306,7 +306,7 @@ export async function mountPlan(el) {
       viewHost.innerHTML = '<p class="muted">全览加载中…</p>'
       let ov
       try {
-        ov = await api.planOverview()
+        ov = await api.planOverview({ user: state.student })
       } catch (e) {
         viewHost.innerHTML = `<p style="color:#b42318">全览加载失败：${escapeHtml(e.message)}</p>`
         return
@@ -632,9 +632,9 @@ export async function mountPlan(el) {
         if (dlg.querySelector('#pe-speak-on').checked) tasks.speak = Number(dlg.querySelector('#pe-speak-n').value) || 2
         const notes = w.notes || ''  // 重点区已移除，保留存量
         try {
-          await api.planWeekPut(ws, { tasks, notes })
+          await api.planWeekPut(ws, { tasks, notes, user: state.student })
           close()
-          const fresh = await api.planWeeks()
+          const fresh = await api.planWeeks({ user: state.student })
           byStart.clear()
           fresh.weeks.forEach((x) => byStart.set(x.week_start, x))
           editorDataCache = null // 词汇现况等刷新

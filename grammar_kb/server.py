@@ -1070,7 +1070,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     def plan_weeks(request: "fastapi.Request", user: str = "malin"):
         """全部周计划 + 每周实时完成度 + 当前周的上周回顾。教师专属。"""
         _require_teacher(request)
-        weeks = plan.list_weeks()
+        weeks = plan.list_weeks(user=user)
         for w in weeks:
             w["actuals"] = plan.week_actuals(w["week_start"], user=user)
         from datetime import date as _date, timedelta as _td
@@ -1083,14 +1083,16 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     @app.put("/plan/weeks/{week_start}")
     def plan_week_put(week_start: str, payload: dict, request: "fastapi.Request"):
-        """保存一周的 tasks/notes（教师专属，幂等覆盖）。"""
+        """保存一周的 tasks/notes（教师专属，幂等覆盖；user 归属学生）。"""
         _require_teacher(request)
         tasks = payload.get("tasks") if isinstance(payload, dict) else None
         notes = payload.get("notes", "") if isinstance(payload, dict) else ""
+        user = (payload.get("user") if isinstance(payload, dict) else None) or "malin"
         if tasks is None or not isinstance(tasks, dict):
             raise HTTPException(status_code=422, detail="payload.tasks 须为对象")
         try:
-            return _ok(plan.put_week(week_start, tasks, str(notes or "")))
+            return _ok(plan.put_week(week_start, tasks, str(notes or ""),
+                                     user=str(user)[:32]))
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
 
