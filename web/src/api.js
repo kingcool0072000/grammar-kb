@@ -251,6 +251,10 @@ export const api = {
   // 词汇级别考试（成绩登记驱动解锁；≥80 解锁下一级）
   vocabPaperGenerate: (level, save = true) =>
     reqJson('/vocab-papers/generate', 'POST', { level, save }),
+  vocabPaperDelete: (paperId) =>
+    reqJson(`/vocab-papers/${encodeURIComponent(paperId)}`, 'DELETE'),
+  vocabPaperPreview: (paperId) =>
+    req(`/vocab-papers/${encodeURIComponent(paperId)}/preview`),
   vocabPaperHistory: (level) =>
     req('/vocab-papers/history', { searchParams: level != null ? { level } : {} }),
   vocabUnlockGet: () => req('/vocab-exams/unlock'),

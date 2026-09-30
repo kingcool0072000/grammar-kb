@@ -20,8 +20,26 @@ from typing import Optional
 from .vocab_exam import _grammar_db_path, VocabExamStore
 
 
+def _pos_list(pos: str) -> list[str]:
+    try:
+        v = json.loads(pos or "[]")
+        return v if isinstance(v, list) else []
+    except (ValueError, TypeError):
+        return []
+
+
+def _skip_for_en2zh(pos: str) -> bool:
+    """英译中规避：凡 pos 含 prep（介词）或 proper（人名/地名）即跳过。
+
+    介词义主导的词（含 like/after/per/beneath 这类多性词）单独给英文
+    让考生写中文，答案发散、考察意义弱——从严全滤，宁缺毋滥。
+    """
+    tags = set(_pos_list(pos))
+    return bool(tags & {"prep", "proper"})
+
+
 def _load_words_rich(level: int) -> list[dict]:
-    """本级词条：word/pos/gloss。"""
+    """本级词条：word/pos/gloss（pos 解析为列表）。"""
     path = _grammar_db_path()
     if not path or not Path(path).exists():
         return []
@@ -31,6 +49,7 @@ def _load_words_rich(level: int) -> list[dict]:
             "SELECT word, pos, gloss FROM vocab_word WHERE level = ?",
             (int(level),)).fetchall()
     return [{"word": r["word"], "pos": (r["pos"] or "").strip(),
+             "pos_list": _pos_list(r["pos"]),
              "gloss": (r["gloss"] or "").strip()} for r in rows]
 
 
@@ -157,7 +176,12 @@ def generate_paper(level: int, save: bool = True) -> dict:
     spell_pool = [w for w in long_sorted if len(w["word"]) >= 4][:10]
     spell_words = {w["word"] for w in spell_pool}
     rest = [w for w in picked if w["word"] not in spell_words]
-    zh2en, en2zh = rest[:20], rest[20:40]
+    # 英译中规避介词/人名：可译词优先；不够时用剩余词补（保证 20 题）
+    translatable = [w for w in rest if not _skip_for_en2zh(w["pos"])]
+    others = [w for w in rest if _skip_for_en2zh(w["pos"])]
+    en2zh = (translatable + others)[:20]
+    en2zh_ids = {w["word"] for w in en2zh}
+    zh2en = [w for w in rest if w["word"] not in en2zh_ids][:20]
     spell = []
     for w in spell_pool:
         blanked, answer = _spell_blank(w["word"], rng)
@@ -191,6 +215,58 @@ def generate_paper(level: int, save: bool = True) -> dict:
                  json.dumps(all_words, ensure_ascii=False),
                  paper["created_at"]),
             )
+    return paper
+
+
+def delete_paper(paper_id: str) -> bool:
+    """删除一份已生成的试卷资产。"""
+    store = VocabExamStore()
+    with store._connect() as conn:
+        conn.execute(_HISTORY_TABLE_SQL)
+        cur = conn.execute(
+            "DELETE FROM vocab_paper_history WHERE paper_id = ?",
+            (str(paper_id)[:64],))
+        return cur.rowcount > 0
+
+
+def get_paper(paper_id: str) -> Optional[dict]:
+    """取一份历史卷（含渲染 HTML，供预览）。"""
+    store = VocabExamStore()
+    with store._connect() as conn:
+        conn.execute(_HISTORY_TABLE_SQL)
+        row = conn.execute(
+            "SELECT paper_id, level, words, created_at FROM vocab_paper_history"
+            " WHERE paper_id = ?", (str(paper_id)[:64],),
+        ).fetchone()
+    if not row:
+        return None
+    try:
+        ws = json.loads(row["words"] or "[]")
+    except (ValueError, TypeError):
+        ws = []
+    # 从词库回填词条渲染试卷（历史卷可完整重建）
+    words_rich = {w["word"]: w for w in _load_words_rich(row["level"])}
+    zh2en, en2zh, spell = [], [], []
+    spell_map = {}
+    for w in ws:
+        rich = words_rich.get(w) or {}
+        zh2en.append({"word": w, "gloss": rich.get("gloss", "")})
+    # 历史卷只存词序：前 20 中译英，次 20 英译中，末 10 拼写（生成时的段序）
+    zh2en, en2zh, spell_ws = ws[:20] and [
+        {"word": w, "gloss": (words_rich.get(w) or {}).get("gloss", "")}
+        for w in ws[:20]], [
+        {"word": w, "gloss": (words_rich.get(w) or {}).get("gloss", "")}
+        for w in ws[20:40]], ws[40:50]
+    rng = random.Random(paper_id)
+    for w in spell_ws:
+        blanked, answer = _spell_blank(w, rng)
+        spell.append({"word": w, "gloss": (words_rich.get(w) or {}).get("gloss", ""),
+                      "blanked": blanked, "spell_answer": answer})
+    paper = {
+        "paper_id": row["paper_id"], "level": row["level"],
+        "created_at": row["created_at"], "overlap_with_history": 0,
+        "zh2en": zh2en, "en2zh": en2zh, "spell": spell, "words": ws,
+    }
     return paper
 
 

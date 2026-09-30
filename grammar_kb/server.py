@@ -559,6 +559,30 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         return _ok({"paper": paper,
                     "html": render_new_paper_html(paper)})
 
+    @app.delete("/vocab-papers/{paper_id}")
+    def vocab_paper_delete(paper_id: str, request: "fastapi.Request"):
+        """删除一份试卷资产。教师专属。"""
+        _require_teacher(request)
+        from .vocab_paper import delete_paper
+        if not delete_paper(paper_id):
+            raise HTTPException(status_code=404, detail="试卷不存在")
+        return _ok({"deleted": paper_id})
+
+    @app.get("/vocab-papers/{paper_id}/preview")
+    def vocab_paper_preview(paper_id: str, request: "fastapi.Request"):
+        """预览一份历史卷（完整 HTML）。教师专属。"""
+        _require_teacher(request)
+        from .vocab_paper import get_paper, render_new_paper_html
+        paper = get_paper(paper_id)
+        if not paper:
+            raise HTTPException(status_code=404, detail="试卷不存在")
+        return _ok({"paper": {
+            "paper_id": paper["paper_id"], "level": paper["level"],
+            "zh2en": len(paper["zh2en"]), "en2zh": len(paper["en2zh"]),
+            "spell": len(paper["spell"]), "words": len(paper["words"]),
+            "created_at": paper["created_at"]},
+            "html": render_new_paper_html(paper)})
+
     @app.get("/vocab-papers/history")
     def vocab_paper_history(request: "fastapi.Request", level: int = -1,
                             limit: int = 30):

@@ -172,6 +172,7 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
             </details>
             <div class="vl-paper-ops">
               <button class="btn-primary" id="vl-print">🖨 打印试卷（含答案页）</button>
+              <button class="chip" id="vl-preview">👁 预览试卷</button>
             </div>
           </div>`
         // 打印：新窗口写 HTML
@@ -180,6 +181,12 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
           w.document.write(r.html)
           w.document.close()
           setTimeout(() => w.print(), 400)
+        })
+        // 预览：新标签页只看不打印
+        out.querySelector('#vl-preview').addEventListener('click', () => {
+          const w = window.open('', '_blank')
+          w.document.write(r.html)
+          w.document.close()
         })
         if (save) loadHistory()
       } catch (e) {
@@ -197,8 +204,31 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
         host.innerHTML = items.length ? `
           <div class="vl-hist">
             <b>📚 已生成 ${items.length} 卷（考试资产）</b>
-            ${items.slice(0, 5).map((x) => `<span class="vl-hist-item">${escapeHtml(x.paper_id)} · ${x.count} 词 · ${x.created_at.slice(0, 10)}</span>`).join('')}
+            ${items.slice(0, 8).map((x) => `
+              <span class="vl-hist-item">
+                ${escapeHtml(x.paper_id)} · ${x.count} 词 · ${x.created_at.slice(0, 10)}
+                <button class="chip vl-hist-op" data-hprev="${escapeHtml(x.paper_id)}">👁</button>
+                <button class="chip vl-hist-op del" data-hdel="${escapeHtml(x.paper_id)}">🗑</button>
+              </span>`).join('')}
           </div>` : '<p class="muted">尚无生成记录。</p>'
+        host.querySelectorAll('[data-hprev]').forEach((b) =>
+          b.addEventListener('click', async () => {
+            try {
+              const r = await api.vocabPaperPreview(b.dataset.hprev)
+              const w = window.open('', '_blank')
+              w.document.write(r.html)
+              w.document.close()
+            } catch (e) { alert('预览失败：' + e.message) }
+          }))
+        host.querySelectorAll('[data-hdel]').forEach((b) =>
+          b.addEventListener('click', async () => {
+            if (!confirm(`删除试卷 ${b.dataset.hdel}？`)) return
+            try {
+              await api.vocabPaperDelete(b.dataset.hdel)
+              toast('已删除')
+              loadHistory()
+            } catch (e) { alert(e.message) }
+          }))
       } catch { host.innerHTML = '' }
     }
     loadHistory()
