@@ -118,7 +118,9 @@ export async function mountPlan(el) {
       }))
     body.querySelector('#pw-user').addEventListener('change', (e) => {
       state.student = e.target.value
-      renderView()
+      // 学生切换 = 换目标/进度/编辑器数据源：整个看板重载
+      // （goals·goalProg·编辑器数据都是按学生拉的，仅 renderView 不够）
+      mountCalendar(body)
     })
 
     function renderView() {
