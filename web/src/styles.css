@@ -2545,6 +2545,8 @@ li.open .topic-reveal-btn { display: none; }
 .pw-student select { padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); font-size: 13px; }
 .pm-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
 .pm-dow { font-size: 11px; font-weight: 800; color: var(--ink-faint); text-align: center; padding: 3px 0; }
+/* 月历（week-view 同源）：日卡复用 pw-day，月度密度列距收紧 */
+.pm-month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
 .pm-day {
   position: relative; min-height: 64px; border: 1px solid var(--line); border-radius: 9px;
   background: var(--card); padding: 5px 7px; overflow: hidden;

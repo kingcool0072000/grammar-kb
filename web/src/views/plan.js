@@ -46,7 +46,7 @@ export async function mountPlan(el) {
       body.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
       return
     }
-    const { weeks = [], current_week: curWeek, last_week_review: lastReview } = data
+    const { weeks = [], current_week: curWeek } = data
     const byStart = new Map(weeks.map((w) => [w.week_start, w]))
     const today = new Date().toISOString().slice(0, 10)
     // 周历视图状态：默认本周，可前后翻；月历当前月
@@ -87,7 +87,6 @@ export async function mountPlan(el) {
         </div>
       </div>
       ${progressCardHtml(goalProg)}
-      <div id="plan-review">${reviewHtml(lastReview)}</div>
       <div id="plan-view"></div>
     `
     body.querySelector('#pw-cfg-goal').addEventListener('click', () => {
@@ -159,22 +158,7 @@ export async function mountPlan(el) {
       </div>`
     }
 
-    function reviewHtml(rv) {
-      if (!rv) return ''
-      const s = rv.summary || {}
-      // 改善项不在此重复展示——历史周的 notes 行内可见（避免同屏两份相同文字）
-      const rows = [
-        ['📚 课程', s.lecture_count ? `${s.lecture_count} 讲${s.avg_score != null ? ` · 均分 ${s.avg_score}` : ''}` + (s.low_scores?.length ? ` · 低分：${s.low_scores.map((x) => `第${x.lecture}讲${x.score}分`).join('、')}` : '') : '无作业记录', Boolean(s.lecture_count)],
-        ['🔤 词汇', s.vocab_mastered ? `新掌握 ${s.vocab_mastered} 词` : '无新掌握词', Boolean(s.vocab_mastered)],
-        ['🎧 FCE', s.fce_parts?.length ? s.fce_parts.join('、') : '无练习', Boolean(s.fce_parts?.length)],
-      ]
-      return `<section class="fce-group plan-review">
-        <div class="fce-group-title">👀 上周回顾（${weekLabel(rv.week_start)}）</div>
-        ${rows.map(([k, v, has]) => `<div class="plan-review-row ${has ? '' : 'empty'}"><span>${k}</span><b>${escapeHtml(String(v))}</b></div>`).join('')}
-      </section>`
-    }
-
-    // ---- 周历视图：← 本周 → 翻周，7 天格子逐日任务 + 周拆解条 ----
+    // ---- 周历视图：← 本周 → 翻周，7 天格子逐日任务 + 周目标区 ----
     async function renderWeeks() {
       const host = viewHost
       host.innerHTML = '<p class="muted">周历加载中…</p>'
@@ -191,17 +175,6 @@ export async function mountPlan(el) {
       const seeded = [...byStart.keys()].sort()
       const earliest = seeded.length ? seeded[0] : iso(new Date(new Date(curWeek + 'T00:00:00').getTime() - 14 * 86400000))
 
-      // 周拆解条（自动拆解：阅读篇数/泛读词数/题型类数）
-      const drillTxt = bd.drill_types?.length
-        ? `${bd.drill_types.join(' + ')}（约 ${bd.drill_count} 题）`
-        : '无'
-      const parts = []
-      parts.push(`📖 阅读篇数 <b>${bd.reading_books ?? 0}</b> 本`)
-      if (bd.reading_words_total) parts.push(`🔤 泛读词数 <b>${bd.reading_words_total}</b> 词（日均 ${bd.reading_words_per_day}）`)
-      if (bd.lecture_count) parts.push(`📚 讲次 <b>${bd.lecture_count}</b> 讲`)
-      if (bd.fce_count) parts.push(`🎧 FCE <b>${bd.fce_count}</b> 项`)
-      parts.push(`✏️ 题型 <b>${drillTxt}</b>`)
-
       const dayNames = ['一', '二', '三', '四', '五', '六', '日']
       // 书名解析需要编辑器数据（缓存）；失败不阻塞周历
       const ed = await getEditorData()
@@ -211,7 +184,6 @@ export async function mountPlan(el) {
             <button class="chip" data-wk="prev" ${viewWeek <= earliest ? 'disabled' : ''}>← 上一周</button>
             <div class="pw-title">
               <h3>${isCur ? '本周' : '周'} · ${weekLabel(wv.week_start)}${wv.current_week ? '' : '（已结束）'}</h3>
-              <p class="muted">${parts.map((x) => `<span>${x}</span>`).join(' · ')}</p>
             </div>
             <button class="chip" data-wk="next" ${wv.week_start >= '2027-01-25' ? 'disabled' : ''}>下一周 →</button>
             <button class="chip" data-edit="${wv.week_start}">✏️ 编辑本周</button>
@@ -272,24 +244,29 @@ export async function mountPlan(el) {
       </div>`
     }
 
-    // 周目标独立区：结构化展示本周排了什么（与编辑器的目标/补充双区对应）
-    function weekGoalsHtml(t, bd, ed) {
+    // 周目标 chips（周历「本周目标」区与全览行共用，口径一致）
+    function weekGoalChips(t, ed) {
       const chips = []
       if (t.focus_kps?.length) chips.push(`🎯 攻坚 ${t.focus_kps.map((l) => '第' + l + '讲').join('、')}`)
       if (t.lectures?.length) chips.push(`📚 讲次 ${[...t.lectures].sort((a, b) => a - b).join('/')}讲`)
       if (t.vocab_goal != null) chips.push(`🔤 词汇 累计${t.vocab_goal}词`)
       if (t.fce?.length) chips.push(`🎧 FCE ${t.fce.join('+')}`)
       const books = ed?.books || []
-      for (const it of bd?.reading_items || []) {
-        const k = String(it.book)
+      for (const [k, pct] of Object.entries(t.reading || {})) {
         const b = /^\d+$/.test(k)
           ? books.find((x) => String(x.id) === k)
           : books.find((x) => x.title.toLowerCase().includes(k.toLowerCase()))
-        chips.push(`📖 泛读 ${(b ? b.title : k).slice(0, 14)} → ${it.goal_pct}%`)
+        chips.push(`📖 泛读 ${(b ? b.title : k).slice(0, 14)} → ${pct}%`)
       }
       if (t.articles?.length) chips.push(`📄 精读 ${t.articles.length} 篇`)
       if (t.vocab_papers?.length) chips.push(`📝 试卷 ${t.vocab_papers.length} 卷`)
       if (t.speak) chips.push(`🎤 朗读 ${t.speak} 篇`)
+      return chips
+    }
+
+    // 周目标独立区：结构化展示本周排了什么（与编辑器的目标/补充双区对应）
+    function weekGoalsHtml(t, bd, ed) {
+      const chips = weekGoalChips(t, ed)
       return `<section class="pw-goals">
         <div class="pw-goals-title">🎯 本周目标</div>
         <div class="pw-goals-chips">${chips.length
@@ -304,42 +281,53 @@ export async function mountPlan(el) {
 
 
 
-    // ---- 月历视图 ----
+    // ---- 月历视图：数据源与周历同口径（week-view），卡片渲染复用 dayCell ----
     let monthData = null
     async function renderMonth() {
       viewHost.innerHTML = '<p class="muted">月历加载中…</p>'
+      const [y, m] = viewMonth.split('-').map(Number)
+      const prevM = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`
+      const nextM = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`
+      // 该月覆盖的周（首周周一 ~ 末周周日），逐周拉 week-view 合并日数据
+      const firstDay = new Date(y, m - 1, 1)
+      const lastDay = new Date(y, m, 0)
+      const mon = (d) => iso(new Date(d.getTime() - (d.getDay() + 6) % 7 * 86400000))
+      const weeks = []
+      for (let ws = mon(firstDay); ws <= iso(lastDay); ws = addDays(ws, 7)) weeks.push(ws)
+      let dayMap = new Map()
       try {
-        monthData = await api.planMonthView({ month: viewMonth, user: state.student })
+        const wvs = await Promise.all(weeks.map((ws) =>
+          api.planWeekView({ weekStart: ws, user: state.student }).catch(() => null)))
+        for (const wv of wvs) {
+          if (!wv) continue
+          for (const d of wv.days || []) dayMap.set(d.date, d)
+        }
       } catch (e) {
         viewHost.innerHTML = `<p style="color:#b42318">月历加载失败：${escapeHtml(e.message)}</p>`
         return
       }
+      monthData = { days: [...dayMap.values()].sort((a, b) => a.date < b.date ? -1 : 1) }
+      // 月网格：首行前置空位对齐周几，只显示该月日期
+      const lead = (new Date(y, m - 1, 1).getDay() + 6) % 7
+      const dim = lastDay.getDate()
+      const cells = []
+      for (let i = 0; i < lead; i++) cells.push('<div class="pm-day out"></div>')
       const names = ['一', '二', '三', '四', '五', '六', '日']
-      const [y, m] = viewMonth.split('-').map(Number)
-      const prevM = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`
-      const nextM = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`
+      for (let i = 1; i <= dim; i++) {
+        const dd = String(i).padStart(2, '0')
+        const date = `${viewMonth}-${dd}`
+        const d = dayMap.get(date) || { date, future: date > today, done: 0, total: 0, tasks: [], acts: {} }
+        cells.push(dayCell(d, (lead + i - 1) % 7, names))
+      }
       viewHost.innerHTML = `
         <section class="pw-view">
           <header class="pw-nav">
             <button class="chip" data-mnav="prev">← 上月</button>
             <div class="pw-title"><h3>${y} 年 ${m} 月</h3>
-              <p class="muted">${state.student} 的逐日任务完成情况</p></div>
+              <p class="muted">${state.student} · 与周历同口径的逐日完成与实录</p></div>
             <button class="chip" data-mnav="next">下月 →</button>
           </header>
-          <div class="pm-grid">
-            ${names.map((n) => `<div class="pm-dow">周${n}</div>`).join('')}
-            ${(monthData.days || []).map((d) => {
-              const dd = Number(d.date.slice(8))
-              const isToday = d.date === today
-              const full = !d.future && d.total > 0 && d.done >= d.total
-              const pct = d.total ? Math.round((d.done / d.total) * 100) : 0
-              return `<div class="pm-day ${d.in_month ? '' : 'out'} ${d.future ? 'future' : ''} ${isToday ? 'today' : ''} ${full ? 'fulled' : ''}"
-                    title="${d.date} · ${d.total ? `${d.done}/${d.total}` : '无任务'}">
-                <b>${dd}</b>
-                ${d.future ? '' : d.total ? `<i style="height:${pct}%"></i><em>${d.done}/${d.total}</em>` : '<em>—</em>'}
-              </div>`
-            }).join('')}
-          </div>
+          <div class="pw-grid pm-month-grid">${cells.join('')}</div>
         </section>`
       viewHost.querySelectorAll('[data-mnav]').forEach((b) =>
         b.addEventListener('click', () => {
@@ -348,7 +336,7 @@ export async function mountPlan(el) {
         }))
     }
 
-    // ---- 全览视图 ----
+    // ---- 全览视图：每周一行，chips 与周历「本周目标」区同源同口径 ----
     async function renderOverview() {
       viewHost.innerHTML = '<p class="muted">全览加载中…</p>'
       let ov
@@ -358,6 +346,7 @@ export async function mountPlan(el) {
         viewHost.innerHTML = `<p style="color:#b42318">全览加载失败：${escapeHtml(e.message)}</p>`
         return
       }
+      const ed = await getEditorData()
       viewHost.innerHTML = `
         <section class="pw-view">
           <header class="pw-nav">
@@ -366,12 +355,7 @@ export async function mountPlan(el) {
           </header>
           <div class="po-list">
             ${(ov.weeks || []).map((w) => {
-              const chips = []
-              if (w.focus_kps?.length) chips.push(`🎯 ${w.focus_kps.map((l) => l + '讲').join('/')}`)
-              if (w.lectures?.length) chips.push(`📚 ${[...w.lectures].sort((a, b) => a - b).join('/')}讲`)
-              if (w.vocab_goal != null) chips.push(`🔤 ${w.vocab_goal}词`)
-              const rKeys = Object.keys(w.reading || {})
-              if (rKeys.length) chips.push(`📖 ${rKeys.map((k) => `${k}${w.reading[k]}%`).join('、')}`)
+              const chips = weekGoalChips(w, ed)
               const pct = w.total ? Math.round((w.done / w.total) * 100) : null
               return `<div class="po-row ${w.past ? 'past' : ''} ${w.is_current ? 'cur' : ''} ${w.has_plan ? '' : 'noplan'}" data-ws="${w.week_start}">
                 <span class="po-date">${weekLabel(w.week_start)}</span>
