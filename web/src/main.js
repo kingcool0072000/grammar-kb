@@ -35,20 +35,22 @@ document.addEventListener('contextmenu', (e) => {
 const app = document.getElementById('app')
 
 // teacher: true 仅教师可见；studentOnly: true 仅学生可见
-// 教师版三大板块：批改中心（首页）/ 备课中心 / 学情分析；
+// 教师版三大 Tab：备课中心 / 计划表 / 批改中心（默认落地备课中心）；
 // 子工具页（courses/vocab/taxonomy/fce/exams/readingAdmin）不进 Tab，
 // 由备课/批改中心跳转进入。
 const VIEWS = [
-  { key: 'grading', label: '批改中心', teacher: true },
+  // 教师版三 Tab：备课中心 / 计划表 / 批改中心（泛读馆入口收进备课中心）
   { key: 'prep', label: '备课中心', teacher: true },
   // 学情分析并入计划表（#/plan?tab=analytics）；旧 hash 重定向
   { key: 'plan', label: '计划表', teacher: true },
+  { key: 'grading', label: '批改中心', teacher: true },
   // 内循环首页：学生打开 app 第一眼是今日任务队列（双循环设计）
   { key: 'today', label: '我的任务', studentOnly: true },
   { key: 'recite', label: '背单词', studentOnly: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
   { key: 'topics', label: '专题学习', studentOnly: true },
-  { key: 'library', label: '泛读馆' },
+  // hiddenTab 语义：教师不进 Tab、学生仍显示（学生读书主入口）
+  { key: 'library', label: '泛读馆', hiddenTab: true },
   // 子工具页（不在 Tab 显示，hash 直达）：fcePapers 师生共用
   { key: 'fcePapers', label: 'FCE真题', hiddenTab: true },
   // 设置中心：隐藏配置页 #/config（发音 + 阅读排版 + 泛读馆宽度）。
@@ -95,7 +97,7 @@ function currentRoute(role) {
   const view = VIEWS.find((x) => x.key === key)
   // 学生访问教师页 → 回背单词；教师访问学生页 → 回批改中心；未匹配同理
   if (!view || (view.teacher && role !== 'teacher') || (view.studentOnly && role === 'teacher')) {
-    return role === 'teacher' ? 'grading' : 'today'
+    return role === 'teacher' ? 'prep' : 'today'
   }
   return key
 }
@@ -184,7 +186,7 @@ async function bootstrap() {
       const [stats, lectures] = await Promise.all([api.stats(), api.lectures()])
       state.stats = stats
       state.lectures = lectures
-      renderStats(stats)
+      /* 统计 pill 已按需求移除（48讲/359知识点/526标志词）；stats 仅作探活 */
     } catch (e) {
       boot.querySelector('#boot-msg').innerHTML =
         `<span style="color:#b42318">无法连接数据后端（${e.message}）。请确认 grammar-kb 服务在 127.0.0.1:8000 运行。</span>`
@@ -353,18 +355,8 @@ function restartApp() {
   location.reload()
 }
 
-function renderStats(stats) {
-  const pills = document.querySelector('#stats-pills')
-  if (!stats || !pills) return
-  // 前插而非覆写：pills 里还有带「退出」按钮的账号 pill，不能冲掉
-  pills.insertAdjacentHTML(
-    'afterbegin',
-    `
-    <span class="pill"><b>${stats.lectures}</b> 讲</span>
-    <span class="pill"><b>${stats.knowledge_points}</b> 知识点</span>
-    <span class="pill"><b>${stats.markers}</b> 标志词</span>
-  `,
-  )
+function renderStats() {
+  /* 已移除：统计 pill（48 讲/359 知识点/526 标志词）不再展示 */
 }
 
 // 反向索引：keyFn(point) -> 该知识点命中的若干键；返回 Map<key, point[]>
