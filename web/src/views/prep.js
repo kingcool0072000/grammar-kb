@@ -9,10 +9,6 @@ export async function mountPrep(el, ctx) {
   // 备课中心双子标签：内容管理（教学内容与题库）/ 学生管理（账号+总目标）
   let sub = 'content'
   el.innerHTML = `
-    <div class="view-head">
-      <h1>备课中心</h1>
-      <p>教学内容与题库管理：哈1 语法 + FCE 听说读写 + 泛读馆。</p>
-    </div>
     <div class="ana-tabs prep-subtabs">
       <button class="reading-btn primary" data-sub="content">📚 内容管理</button>
       <button class="reading-btn" data-sub="students">🎒 学生管理</button>
@@ -61,11 +57,6 @@ async function mountContent(el) {
   const baseCount = bases?.length || 0
 
   el.innerHTML = `
-    <div class="view-head">
-      <h1>备课中心</h1>
-      <p>教学内容与题库管理：哈1 语法 + FCE 听说读写。</p>
-    </div>
-
     <div class="gd-board">
       <!-- ================= 哈1 语法 ================= -->
       <section class="gd-section">
@@ -108,20 +99,33 @@ async function mountContent(el) {
         </div>
       </section>
 
+      <!-- ================= 精读（独立板块：派生阅读文章列表） ================= -->
+      <section class="gd-section">
+        <header class="gd-section-head">
+          <h2>📖 精读</h2>
+        </header>
+        <div class="gd-subgroup">
+          <h3>✍️ 派生阅读文章</h3>
+          <div class="prep-cards">
+            <button class="prep-card" data-go="readingAdmin">
+              <b>${derivedCount}</b><span>派生阅读文章 · 管理与列表</span>
+            </button>
+            <button class="prep-card" data-go="readingAdmin">
+              <b>${baseCount}</b><span>FCE 原文段落（派生源）</span>
+            </button>
+          </div>
+          <p class="reading-hint">精读文章按 Test/Part 从 FCE 原文段落派生（新增/编辑/删除）；学生的历史录音提交与评分统一在批改中心查看。</p>
+        </div>
+      </section>
+
       <!-- ================= FCE 听说读写 ================= -->
       <section class="gd-section">
         <header class="gd-section-head">
           <h2>🎧 FCE 听说读写</h2>
         </header>
         <div class="gd-subgroup">
-          <h3>🧬 阅读内容</h3>
+          <h3>🧬 真题与知识</h3>
           <div class="prep-cards">
-            <button class="prep-card" data-go="readingAdmin">
-              <b>${baseCount}</b><span>FCE 原文段落</span>
-            </button>
-            <button class="prep-card" data-go="readingAdmin">
-              <b>${derivedCount}</b><span>派生阅读文章</span>
-            </button>
             <button class="prep-card" data-go="fcePapers">
               <b>${fceTotal}</b><span>FCE 真题（4 Test）</span>
             </button>
@@ -129,7 +133,7 @@ async function mountContent(el) {
               <b>FCE 知识库</b><span>19 天语法专题</span>
             </button>
           </div>
-          <p class="reading-hint">阅读内容：按 Test/Part 管理原文段落与派生文章（新增/编辑/删除）；真题库查看四套试卷与练习明细。</p>
+          <p class="reading-hint">真题库查看四套试卷与练习明细；FCE 知识库为语法专题手册。</p>
         </div>
       </section>
 

@@ -39,6 +39,18 @@ export async function mountGrading(el) {
   }
 
   async function mountBoard(el) {
+    const openRecordingReview = async () => {
+      el.innerHTML = '<p class="muted">加载录音批改…</p>'
+      try {
+        const recs = await api.readingRecordings({ limit: 200 })
+        const { renderReadingReview } = await import('./readingReview.js')
+        await renderReadingReview(el, recs, {
+          onBack: () => { state.tab = 'board'; render() },
+        })
+      } catch (e) {
+        el.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
+      }
+    }
     el.innerHTML = '<p class="muted">加载中…</p>'
   let recs, fceSubs, recite, exams, focus
   try {
@@ -167,8 +179,16 @@ export async function mountGrading(el) {
   `
 
   el.querySelectorAll('[data-go]').forEach((b) => {
-    b.addEventListener('click', () => go(b.dataset.go))
+    b.addEventListener('click', () => {
+      if (b.dataset.go === 'recording') { openRecordingReview(); return }
+      go(b.dataset.go)
+    })
   })
+  // readingAdmin 跳转联动：自动展开批改视图
+  if (sessionStorage.getItem('gkb-open-review') === '1') {
+    sessionStorage.removeItem('gkb-open-review')
+    openRecordingReview()
+  }
 
   // 专注力会话列表：后端 limit+offset 翻页（每页 10 条，可翻看全部记录）
   const FOCUS_PAGE = 10
