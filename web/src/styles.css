@@ -2742,3 +2742,44 @@ li.open .topic-reveal-btn { display: none; }
   width: 100%; margin-top: 4px; padding: 8px 10px; border-radius: 8px;
   border: 1px solid var(--line); background: var(--bg-soft); font-size: 13.5px;
 }
+
+/* ===== 作业卷管理 ===== */
+.pa-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; margin-bottom: 14px; }
+.pa-head-main { display: flex; align-items: baseline; gap: 10px; }
+.pa-head-main b { font-size: 14px; color: var(--ink); }
+.pa-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px; }
+.pa-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  padding: 10px 12px; cursor: pointer; text-align: left;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+}
+.pa-card:hover { border-color: var(--brand); }
+.pa-card.has-data { border-color: #2e7d4f44; }
+.pa-card b { font-size: 13.5px; color: var(--ink); }
+.pa-card span { font-size: 11.5px; color: var(--ink-soft); }
+.pa-card i { font-style: normal; font-size: 10.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.pa-detail { padding: 14px 16px; }
+.pa-detail-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.pa-detail-head h3 { font-size: 14.5px; color: var(--ink); margin: 0; }
+.pa-qlist { display: flex; flex-direction: column; }
+.pa-q { display: flex; gap: 10px; padding: 8px 4px; border-bottom: 1px dashed var(--line); }
+.pa-q:last-child { border-bottom: 0; }
+.pa-qnum { flex: none; width: 26px; font-weight: 800; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.pa-qmain { flex: 1; min-width: 0; }
+.pa-qmain p { margin: 0 0 4px; font-size: 12.5px; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pa-qmeta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pa-st { font-size: 11px; font-weight: 700; }
+.pa-st.ok { color: #2e7d4f; }
+.pa-st.no { color: #b42318; }
+.pa-st.mix { color: #b45309; }
+.pa-st.na { color: var(--ink-faint); }
+.pa-hist i { font-style: normal; font-size: 12px; margin-right: 2px; font-weight: 800; }
+.pa-hist i.ok { color: #2e7d4f; }
+.pa-hist i.no { color: #b42318; }
+.pa-ans { font-size: 11px; color: var(--ink-soft); }
+.pa-ans em { font-style: normal; color: var(--ink-faint); }
+
+@media (max-width: 860px) {
+  .pa-grid { grid-template-columns: repeat(3, 1fr); }
+}

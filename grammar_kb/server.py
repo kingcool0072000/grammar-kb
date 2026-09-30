@@ -207,6 +207,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     topics = TopicStore(fce_db_path)
     # 计划表（教师周计划）：fce.db 同库存 tasks/notes，完成度实时聚合多库
     plan = PlanStore(fce_db_path, exam_db_path=exam_db_path)
+    # 作业卷管理（grammar.db：题库 answer 列 + 历次逐题对错）
+    from .homework_admin import HomeworkAdmin
+    homework_admin = HomeworkAdmin()
     # 词汇级别考试：成绩登记（fce.db）；L0 恒开，L{n} 考试 ≥80 解锁 L{n+1}
     vocab_exam = VocabExamStore(fce_db_path)
     # 泛读馆（整本书英文泛读）：路径解析沿 fce_query 模式
@@ -1050,6 +1053,35 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             return _ok(plan.week_view(week_start, user=user))
         except ValueError:
             raise HTTPException(status_code=422, detail="week_start 须为 YYYY-MM-DD")
+
+    # ---- 作业卷管理（教师）：题目 + 答案（爱问云已批改测验的逐题对错） ----
+
+    @app.get("/homework-admin/papers")
+    def hw_papers(request: "fastapi.Request"):
+        """全部作业卷总览：讲次 × 题数 × 已同步历次覆盖。教师专属。"""
+        _require_teacher(request)
+        return _ok({"papers": homework_admin.papers()})
+
+    @app.get("/homework-admin/paper/{lecture}")
+    def hw_paper_detail(lecture: int, request: "fastapi.Request"):
+        """单讲次作业卷：题目 + 答案 + 历次逐题对错。教师专属。"""
+        _require_teacher(request)
+        return _ok(homework_admin.paper_detail(lecture))
+
+    @app.post("/homework-admin/sync-aicloud")
+    async def hw_sync_aicloud(request: "fastapi.Request"):
+        """从爱问云拉取已出分测验的逐题对错（未批改跳过）。教师专属。"""
+        _require_teacher(request)
+        import os as _os
+        phone = _os.environ.get("GRAMMAR_KB_AICLOUD_PHONE") or "18610087156"
+        password = _os.environ.get("AICLOUD_PASSWORD") or "rbxw123456"
+        try:
+            import anyio
+            rep = await anyio.to_thread.run_sync(
+                lambda: homework_admin.sync_aicloud(phone, password))
+            return _ok(rep)
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"爱问云同步失败: {e}")
 
     # ---- 学生管理（教师）：增删学生；目标配置走 /plan/goals ----
 

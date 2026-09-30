@@ -21,6 +21,7 @@ import { mountPlan } from './views/plan.js'
 import { mountToday } from './views/today.js'
 import { mountVocabExam } from './views/vocabExam.js'
 import { mountStudents } from './views/students.js'
+import { mountPaperAdmin } from './views/paperAdmin.js'
 import { mountConfig } from './views/config.js'
 import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
@@ -64,6 +65,7 @@ const VIEWS = [
   { key: 'exams', hiddenTab: true, teacher: true },
   { key: 'vocabExam', hiddenTab: true, teacher: true },
   { key: 'students', hiddenTab: true, teacher: true },
+  { key: 'paperAdmin', hiddenTab: true, teacher: true },
   { key: 'readingAdmin', hiddenTab: true, teacher: true },
   // 泛读馆子页：阅读器 hash 带 /{bookId}；noTab = 双角色都不进 Tab，hash 直达
   { key: 'libraryReader', hiddenTab: true, noTab: true },
@@ -314,6 +316,9 @@ async function bootstrap() {
       mounted = mountLibraryManage(container, { bookId: Number(routeSegs()[1]) })
     } else if (route === 'librarySettings') {
       mounted = mountLibrarySettings(container)
+    } else if (route === 'paperAdmin') {
+      // 作业卷管理：题目 + 答案（爱问云已批改测验逐题对错）
+      mounted = mountPaperAdmin(container)
     } else if (route === 'students') {
       // 学生管理：增删账号 + 配置总目标
       mounted = mountStudents(container)

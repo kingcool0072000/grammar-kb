@@ -72,7 +72,7 @@ async function mountContent(el) {
             <button class="reading-btn small primary" data-go="courses">📖 语法课</button>
             <button class="reading-btn small" data-go="taxonomy">🌳 知识点体系</button>
             <button class="reading-btn small" data-go="vocab">🔤 词汇表</button>
-            <button class="reading-btn small" data-go="exams">📋 作业题库</button>
+            <button class="reading-btn small" data-go="paperAdmin">📋 作业卷管理</button>
           </nav>
         </header>
         <div class="gd-subgroup">
@@ -87,14 +87,11 @@ async function mountContent(el) {
             <button class="prep-card" data-go="vocab">
               <b>词汇表</b><span>释义 · 词形 · 出处</span>
             </button>
-            <button class="prep-card" data-go="exams">
-              <b>哈一作业</b><span>成绩录入与题库</span>
+            <button class="prep-card" data-go="paperAdmin">
+              <b>作业卷管理</b><span>题目 · 答案同步</span>
             </button>
             <button class="prep-card" data-go="vocabExam">
               <b>L${vex?.unlocked_level ?? 0}</b><span>词汇级别考试 · 已解锁到</span>
-            </button>
-            <button class="prep-card" data-go="students">
-              <b>学生管理</b><span>增减学生 · 配置总目标</span>
             </button>
           </div>
           <p class="reading-hint">点开语法课查看整讲内容；知识点体系按「语法大类 → 主题」两级组织，可定位到讲义原文。</p>
