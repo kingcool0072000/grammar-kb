@@ -795,8 +795,7 @@ class PlanStore:
                 })
         acts_out = {
             "extra_speaks": extra_speaks,
-            "reading_min": acts.get("reading_min", 0),
-            "reading_words": acts.get("reading_words", 0),
+            "readings": acts.get("readings", []),
             "vocab_n": acts.get("vocab_n", 0),
             "vocab_min": acts.get("vocab_min", 0),
         }
@@ -1385,49 +1384,90 @@ class PlanStore:
         except sqlite3.Error:
             return set()
 
-    def _reading_gained_words(self, rows: list, gained_pct: float) -> int:
-        """泛读会话的全书百分比推进差 → 估算词数。
+    def _reading_day_detail(self, rows: list) -> list[dict]:
+        """泛读会话 → 逐书精确实录（章区间 + 词数 + 分钟）。
 
-        percent_start/end 为 0-100 口径百分数；各书总词数从
-        library.chapters 汇总，按各会话推进差分摊。缺库/缺章节数据
-        返回 0（前端只显示分钟，不显示拍脑袋的词数）。
+        词数口径（按用户公式）：每本书取当日 span——
+          结束位置所在章的结束位置 − 起始位置所在章的起始位置，
+          逐章累计词数（边界章按重叠比例），剔除非必读章
+          （book_reading_config.chapters 为空=全书口径）。
+        percent 为 0-100 全书口径（epubjs locations/像素百分比），
+          词位置 = percent/100 × 全书总词数。
+        返回 [{book, from, to, min, words}]（from/to 为计入的章 idx；
+          缺章节数据的书 from/to=None、words=0，只报分钟）。
         """
         conn = self._lib_connect()
-        total_by_book: dict[int, int] = {}
+        lib: dict[int, dict] = {}
         if conn is not None:
             try:
                 with contextlib.closing(conn):
                     ids = {r["book_id"] for r in rows if r["book_id"] is not None}
                     if ids:
                         ph = ",".join("?" * len(ids))
-                        for bid, w in conn.execute(
-                            f"SELECT book_id, COALESCE(SUM(word_count),0)"
-                            f" FROM chapters WHERE book_id IN ({ph}) GROUP BY book_id",
-                            list(ids),
-                        ):
-                            if w:
-                                total_by_book[bid] = w
+                        for bid in ids:
+                            chs = conn.execute(
+                                "SELECT idx, word_count FROM chapters"
+                                " WHERE book_id = ? ORDER BY idx", (bid,),
+                            ).fetchall()
+                            if chs:
+                                req = conn.execute(
+                                    "SELECT chapters FROM book_reading_config"
+                                    " WHERE book_id = ?", (bid,),
+                                ).fetchone()
+                                try:
+                                    req_set = set(json.loads(req[0])) if req and req[0] else None
+                                except (ValueError, TypeError):
+                                    req_set = None
+                                lib[bid] = {
+                                    "chs": [(c[0], c[1] or 0) for c in chs],
+                                    "required": req_set,
+                                }
+                        # 书名（书已删时缺行，前端用会话里的 book_title 兜底）
+                        for bid in ids:
+                            r = conn.execute(
+                                "SELECT title FROM books WHERE id = ?", (bid,),
+                            ).fetchone()
+                            if r:
+                                lib[bid]["title"] = r[0]
             except sqlite3.Error:
                 pass
-        if not total_by_book:
-            return 0
-        words = 0
-        # 同书多会话推进差可能重叠（如 5→81 与 6→95 重复计 76 个点）：
-        # 按书取「当日最远到达 − 当日最早起点」去重后再换算词数。
-        span_by_book: dict[int, tuple[float, float]] = {}
+
+        by_book: dict[int, list] = {}
         for r in rows:
-            if r["book_id"] is None:
-                continue
-            s, e = r["percent_start"] or 0, r["percent_end"] or 0
-            if e <= s:
-                continue
-            cur = span_by_book.get(r["book_id"])
-            span_by_book[r["book_id"]] = (min(s, cur[0]), max(e, cur[1])) if cur else (s, e)
-        for bid, (s, e) in span_by_book.items():
-            tw = total_by_book.get(bid)
-            if tw:
-                words += int(round((e - s) / 100 * tw))
-        return words
+            if r["book_id"] is not None:
+                by_book.setdefault(r["book_id"], []).append(r)
+
+        out = []
+        for bid, srows in by_book.items():
+            entry = {
+                "book": (lib.get(bid, {}).get("title")
+                         or (srows[0]["book_title"] or "") or f"#{bid}"),
+                "from": None, "to": None,
+                "min": round(sum(r["active_sec"] or 0 for r in srows) / 60),
+                "words": 0,
+            }
+            info = lib.get(bid)
+            s = min((r["percent_start"] or 0) for r in srows)
+            e = max((r["percent_end"] or 0) for r in srows)
+            if info and e > s:
+                total = sum(w for _, w in info["chs"])
+                if total > 0:
+                    s_pos, e_pos = s / 100 * total, e / 100 * total
+                    cum = 0
+                    counted: list[int] = []
+                    for idx, wc in info["chs"]:
+                        c0, c1 = cum, cum + wc
+                        cum = c1
+                        if info["required"] is not None and idx not in info["required"]:
+                            continue  # 非必读章剔除
+                        ov = min(e_pos, c1) - max(s_pos, c0)
+                        if ov > 0:
+                            entry["words"] += int(round(ov))
+                            counted.append(idx)
+                    if counted:
+                        entry["from"], entry["to"] = min(counted), max(counted)
+            out.append(entry)
+        return out
 
     def _auto_done(self, user: str, day: str) -> tuple[dict[str, bool], list[str]]:
         """当天活动信号 → (task_key 完成表, 当日阅读书名列表)。
@@ -1437,8 +1477,8 @@ class PlanStore:
         """
         out: dict[str, bool] = {}
         read_titles: list[str] = []
-        self._day_acts = {"speak_articles": [], "reading_min": 0,
-                          "reading_words": 0, "vocab_n": 0, "vocab_min": 0}
+        self._day_acts = {"speak_articles": [], "readings": [],
+                          "vocab_n": 0, "vocab_min": 0}
         nxt = (date.fromisoformat(day) + timedelta(days=1)).isoformat()
         exam_path = self._exam_db()
         if exam_path and Path(exam_path).exists():
@@ -1512,17 +1552,10 @@ class PlanStore:
                     for r in rows:
                         out[f"reading:{(r['book_title'] or '')[:14]}"] = True
                         out.setdefault("reading", True)
-                    # 泛读（library 模块）实录：分钟 + 词数（按全书百分比推进差 × 总词数）
+                    # 泛读（library 模块）实录：逐书章区间+词数+分钟（见 _reading_day_detail）
                     lib_rows = [r for r in rows if r["module"] == "library"]
                     if lib_rows:
-                        self._day_acts["reading_min"] = round(
-                            sum(r["active_sec"] or 0 for r in lib_rows) / 60)
-                        gained = sum(
-                            max(0.0, (r["percent_end"] or 0) - (r["percent_start"] or 0))
-                            for r in lib_rows)
-                        if gained > 0:
-                            self._day_acts["reading_words"] = self._reading_gained_words(
-                                lib_rows, gained)
+                        self._day_acts["readings"] = self._reading_day_detail(lib_rows)
         except sqlite3.Error:
             pass
         return out, read_titles

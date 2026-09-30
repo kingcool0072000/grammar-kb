@@ -254,7 +254,10 @@ export async function mountPlan(el) {
           <em>✓</em>
         </div>`).join('')
       const statRows = []
-      if (acts.reading_min) statRows.push(`📖 泛读 ${acts.reading_min} 分钟${acts.reading_words ? `（${acts.reading_words} 词）` : ''}`)
+      for (const r of acts.readings || []) {
+        const ch = r.from != null ? ` 第${r.from}${r.to !== r.from ? `–${r.to}` : ''}章` : ''
+        statRows.push(`📖 泛读 ${String(r.book).slice(0, 14)}${ch} ${r.min} 分钟${r.words ? `（${r.words} 词）` : ''}`)
+      }
       if (acts.vocab_n) statRows.push(`🔤 背单词 ${acts.vocab_n} 个${acts.vocab_min ? `（${acts.vocab_min} 分钟）` : ''}`)
       const statHtml = statRows.length
         ? `<div class="pw-acts">${statRows.map((s) => `<span>${escapeHtml(s)}</span>`).join('')}</div>` : ''
