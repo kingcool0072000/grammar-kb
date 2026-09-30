@@ -39,17 +39,20 @@ export async function mountPrep(el, ctx) {
 async function mountContent(el) {
   el.innerHTML = '<p class="muted">加载中…</p>'
   const stats = await api.stats().catch(() => null)
-  let papers = null, bases = null, derived = null, vex = null, lib = null
+  let papers = null, bases = null, derived = null, vex = null, lib = null, vlevels = null
   try {
-    ;[papers, bases, derived, vex, lib] = await Promise.all([
+    ;[papers, bases, derived, vex, lib, vlevels] = await Promise.all([
       api.fcePapers(),
       api.readingArticles({ kind: 'base' }),
       api.readingArticles(),
       api.vocabExams().catch(() => null),
       api.libraryBooks().catch(() => null),
+      api.vocabLevels({ maxLevel: 5 }).catch(() => null),
     ])
   } catch { /* FCE 数据不可用时仍展示哈1板块 */ }
   const libCount = lib?.books?.length ?? 0
+  const vocabCounts = vlevels?.counts || {}
+  const vocabUnlocked = vex?.unlocked_level ?? vlevels?.unlocked ?? 0
 
   const lecCount = stats ? stats.lectures : '—'
   const kpCount = stats ? stats.knowledge_points : '—'
@@ -78,17 +81,37 @@ async function mountContent(el) {
             <button class="prep-card" data-go="taxonomy">
               <b>${kpCount}</b><span>知识点（体系树）</span>
             </button>
-            <button class="prep-card" data-go="vocab">
-              <b>词汇表</b><span>释义 · 词形 · 出处</span>
-            </button>
             <button class="prep-card" data-go="paperAdmin">
-              <b>作业卷管理</b><span>题目 · 答案同步</span>
-            </button>
-            <button class="prep-card" data-go="vocabExam">
-              <b>L${vex?.unlocked_level ?? 0}</b><span>词汇级别考试 · 已解锁到</span>
+              <b>作业卷管理</b><span>题目 · 答案</span>
             </button>
           </div>
           <p class="reading-hint">点开语法课查看整讲内容；知识点体系按「语法大类 → 主题」两级组织，可定位到讲义原文。</p>
+        </div>
+      </section>
+
+      <!-- ================= 背单词（独立板块：分级词库 + 解锁配置） ================= -->
+      <section class="gd-section">
+        <header class="gd-section-head">
+          <h2>🔤 背单词</h2>
+        </header>
+        <div class="gd-subgroup">
+          <h3>📚 分级词库 L0-L5</h3>
+          <div class="prep-cards">
+            ${[0, 1, 2, 3, 4, 5].map((lv) => {
+              const n = vocabCounts[String(lv)] ?? 0
+              const open = lv <= vocabUnlocked
+              return `<button class="prep-card vocab-lv ${open ? '' : 'locked'}" data-vlv="${lv}" ${open ? '' : 'disabled'}>
+                <b>${open ? `${n}` : '🔒'}</b><span>${open ? `L${lv} · ${lv === 0 ? '课本高频词' : '级别词库'}${lv === vocabUnlocked && lv < 5 ? ' · 当前解锁到' : ''}` : `L${lv} · 考试解锁`}</span>
+              </button>`
+            }).join('')}
+            <button class="prep-card" data-go="vocabExam">
+              <b>L${vocabUnlocked}</b><span>词汇级别考试 · 解锁配置</span>
+            </button>
+            <button class="prep-card" data-go="vocab">
+              <b>词汇表</b><span>释义 · 词形 · 出处</span>
+            </button>
+          </div>
+          <p class="reading-hint">L0 恒开；L${vocabUnlocked} → L${vocabUnlocked + 1} 需在词汇级别考试中 ≥80 分自动解锁（登记成绩即生效），点击「词汇级别考试」配置。</p>
         </div>
       </section>
 
@@ -143,4 +166,6 @@ async function mountContent(el) {
       location.hash = `#/${b.dataset.go}`
     })
   })
+  el.querySelectorAll('[data-vlv]').forEach((b) =>
+    b.addEventListener('click', () => { location.hash = '/vocabExam' }))
 }

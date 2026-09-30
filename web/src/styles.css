@@ -2792,3 +2792,7 @@ li.open .topic-reveal-btn { display: none; }
 @media (max-width: 860px) {
   .pa-grid { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* 背单词板块：锁定级别卡 */
+.prep-card.vocab-lv.locked { opacity: .55; cursor: not-allowed; }
+.prep-card.vocab-lv b { font-variant-numeric: tabular-nums; }
