@@ -40,6 +40,13 @@ CREATE TABLE IF NOT EXISTS plan_goals (
     goals      TEXT NOT NULL DEFAULT '{}',  -- 总目标 JSON（见 _goals_default）
     updated_at TEXT
 );
+CREATE TABLE IF NOT EXISTS plan_history_days (
+    user       TEXT NOT NULL,
+    date       TEXT NOT NULL,
+    tasks      TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT,
+    PRIMARY KEY (user, date)
+);
 """
 
 # tasks JSON 结构（全部字段可缺省）：
@@ -115,6 +122,28 @@ class PlanStore:
                 "SELECT * FROM plan_weeks WHERE week_start = ?", (week_start,)
             ).fetchone()
         return _week_out(row)
+
+    def put_history_day(self, user: str, day: str, tasks: list[dict]) -> None:
+        """历史回填的逐日计划快照（任务即真实完成，完成度 100%）。"""
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO plan_history_days"
+                " (user, date, tasks, created_at) VALUES (?,?,?,?)",
+                (user, day, json.dumps(tasks or [], ensure_ascii=False),
+                 datetime.now(_tz.utc).isoformat(timespec="seconds")),
+            )
+
+    def history_day(self, user: str, day: str) -> Optional[list[dict]]:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT tasks FROM plan_history_days WHERE user=? AND date=?",
+                (user, day)).fetchone()
+        if not row:
+            return None
+        try:
+            return json.loads(row["tasks"] or "[]")
+        except (ValueError, TypeError):
+            return []
 
     # ---- 周完成度实时聚合 ----
 
@@ -672,7 +701,17 @@ class PlanStore:
         """
         d = day or date.today().isoformat()
         ws = monday_of(date.fromisoformat(d)).isoformat()
-        derived = self.week_daily_tasks(ws, for_date=d, user=user)
+        historical = self.history_day(user, d)
+        derived = historical if historical is not None else self.week_daily_tasks(ws, for_date=d, user=user)
+        if historical is not None:
+            # 回填快照里的任务即完成，不再依赖当前活动表
+            out = []
+            for t in derived:
+                t2 = dict(t); t2["key"] = _task_key(t2)
+                t2["auto_done"] = True; t2["done"] = True
+                out.append(t2)
+            return {"date": d, "week_start": ws, "tasks": out,
+                    "done": len(out), "total": len(out)}
         auto, read_titles = self._auto_done(user, d)
         out = []
         for t in derived:

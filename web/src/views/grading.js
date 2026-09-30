@@ -50,7 +50,13 @@ export async function mountGrading(el) {
       try {
         const recs = await api.readingRecordings({ limit: 200 })
         await renderReadingReview(host, recs, {
-          onBack: () => { state.tab = 'board'; render() },
+          onBack: () => {
+            state.tab = 'board'
+            // 清除旧的批改视图节点后重建看板；返回值让 readingReview
+            // 知道回调已接管，不走同 hash 的路由兜底。
+            render()
+            return true
+          },
         })
       } catch (e) {
         host.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`

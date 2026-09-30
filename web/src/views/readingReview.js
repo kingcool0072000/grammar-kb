@@ -206,8 +206,15 @@ async function renderReview(el, recs, onBack) {
   })
   if (!list.length) box.innerHTML = '<p class="reading-hint">暂无录音提交</p>'
   el.querySelector('#rd-back').addEventListener('click', () => {
-    if (onBack) onBack()
-    else location.hash = '/grading'
+    // 上层看板提供回调；回调返回 false/异常时用带 query 的 hash 强制刷新上层，
+    // 避免当前 hash 已是 #/grading 时 location.hash 赋同值不触发路由。
+    try {
+      if (onBack) {
+        const result = onBack()
+        if (result !== false) return
+      }
+    } catch { /* 回退到路由 */ }
+    location.hash = '/grading?tab=board&from=review'
   })
 }
 
