@@ -165,7 +165,6 @@ export async function mountGrading(el) {
           ${focus.length ? `<p class="reading-hint">近 7 天 ${focusWeek.length} 次 · 平均 ${focusWeekAvg ?? '—'} 分 · 累计 ${focusWeekMin} 分钟</p>` : ''}
           <div id="gd-focus-list"><p class="reading-hint">加载中…</p></div>
         </div>
-        <button class="gcard-more" data-all="focus">查看全部专注会话 →</button>
       </section>
     </div>
   `
@@ -174,13 +173,8 @@ export async function mountGrading(el) {
   const showAll = {
     recording: async () => openRecordingReview(),
     essay: () => go('essay'),
-    'haya-exam': () => go('exams'),
+    'haya-exam': () => go('haya-exam'),
     recite: () => go('recite'),
-    focus: () => {
-      const host = el.querySelector('#gd-focus-list')
-      // 专注力已有分页流，全部=当前列表翻页；此处跳学情分析看趋势
-      go('fce-subs')
-    },
   }
   el.querySelectorAll('[data-all]').forEach((b) =>
     b.addEventListener('click', () => {
@@ -198,8 +192,8 @@ export async function mountGrading(el) {
     openRecordingReview()
   }
 
-  // 专注力会话列表：后端 limit+offset 翻页（每页 10 条，可翻看全部记录）
-  const FOCUS_PAGE = 10
+  // 专注力会话列表：后端 limit+offset 翻页（每页 5 条，可翻看全部记录）
+  const FOCUS_PAGE = 5
   let focusPage = 0
   async function renderFocusPage(page) {
     const host = el.querySelector('#gd-focus-list')
@@ -734,6 +728,9 @@ export function go(target) {
     location.hash = '#/fcePapers'
   } else if (target === 'haya-exam') {
     location.hash = '#/exams'
+  } else if (target === 'recite') {
+    // 背单词全量趋势在学情分析板块；改 query 触发 hashchange 重挂子 Tab
+    location.hash = '#/grading?tab=analytics'
   }
 }
 

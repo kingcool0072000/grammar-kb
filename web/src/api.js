@@ -220,11 +220,7 @@ export const api = {
     req('/plan/diagnosis', { searchParams: weeksBack ? { weeks_back: weeksBack } : {} }),
   planReview: () => req('/plan/review'),
   planDailyPreview: () => req('/plan/daily-preview'),
-  // 内循环：学生今日任务 / 周清单 / 手动打卡
-  planToday: ({ day } = {}) =>
-    req('/plan/today', { searchParams: day ? { day } : {} }),
-  planWeekTodo: () => req('/plan/week-todo'),
-  planDayCheck: (payload) => reqJson('/plan/day-check', 'POST', payload),
+
   // 作业卷管理（教师）：题目+答案（历次逐题对错）+ 爱问云同步
   hwPapers: () => req('/homework-admin/papers'),
   hwPaper: (lecture) => req(`/homework-admin/paper/${lecture}`),

@@ -16,10 +16,9 @@ import { mountLibraryManage } from './views/library/manage.js'
 import { mountLibrarySettings } from './views/library/settings.js'
 import { mountGrading } from './views/grading.js'
 import { mountPrep } from './views/prep.js'
-import { mountAnalytics } from './views/analytics.js'
+// 学情分析由批改中心动态 import('./analytics.js')，此处不静态引入（减首包）
 import { mountTopics } from './views/topics.js'
 import { mountPlan } from './views/plan.js'
-import { mountToday } from './views/today.js'
 import { mountVocabExam } from './views/vocabExam.js'
 import { mountStudents } from './views/students.js'
 import { mountPaperAdmin } from './views/paperAdmin.js'
@@ -47,8 +46,6 @@ const VIEWS = [
   // 学情分析并入计划表（#/plan?tab=analytics）；旧 hash 重定向
   { key: 'plan', label: '计划表', teacher: true },
   { key: 'grading', label: '批改中心', teacher: true },
-  // 内循环首页：学生打开 app 第一眼是今日任务队列（双循环设计）
-  { key: 'today', label: '我的任务', studentOnly: true },
   { key: 'recite', label: '背单词', studentOnly: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
   { key: 'topics', label: '专题学习', studentOnly: true },
@@ -95,7 +92,12 @@ function h(tag, cls, html) {
 function currentRoute(role) {
   const [v] = routeSegs()
   // 旧隐藏页归一：#/ttsconf #/readconf → #/config；#/analytics → #/plan?tab=analytics
+  // #/today（我的任务页已删）→ #/recite
   let key = v === 'ttsconf' || v === 'readconf' ? 'config' : v
+  if (key === 'today') {
+    location.replace('#/recite')
+    key = 'recite'
+  }
   if (key === 'vocabExam') {
     location.replace('#/vocabLevel/0')
     key = 'vocabLevel'
@@ -112,7 +114,7 @@ function currentRoute(role) {
   const view = VIEWS.find((x) => x.key === key)
   // 学生访问教师页 → 回背单词；教师访问学生页 → 回批改中心；未匹配同理
   if (!view || (view.teacher && role !== 'teacher') || (view.studentOnly && role === 'teacher')) {
-    return role === 'teacher' ? 'prep' : 'today'
+    return role === 'teacher' ? 'prep' : 'recite'
   }
   return key
 }
@@ -299,9 +301,6 @@ async function bootstrap() {
       mounted = mountVocabulary(container, { vocab: state.vocab, openWord: (e) => drawer.showWord(e) })
     } else if (route === 'recite') {
       mounted = mountRecite(container, { vocab: state.vocab, role })
-    } else if (route === 'today') {
-      // 内循环：学生今日任务/周清单（双循环的学生侧入口）
-      mounted = mountToday(container)
     } else if (route === 'topics') {
       // 专题学习：#/topics 列表 / #/topics/{id} 手册详情（视图内部按 hash 分发）
       mounted = mountTopics(container, { role })

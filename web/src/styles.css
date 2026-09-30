@@ -2470,73 +2470,6 @@ li.open .topic-reveal-btn { display: none; }
   .ld-diag-row { padding: 9px 10px; }
 }
 
-/* ===== 内循环：学生今日任务 / 周清单 ===== */
-.today-subtabs { margin-bottom: 16px; }
-.td-card {
-  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-  padding: 16px 18px; margin-bottom: 18px; max-width: 720px;
-}
-.td-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.td-head h3 { font-size: 16.5px; font-weight: 800; color: var(--ink); margin: 0; }
-.td-progress { display: flex; align-items: center; gap: 8px; }
-.td-progress b { font-size: 13.5px; color: var(--brand-ink); font-variant-numeric: tabular-nums; }
-.td-bar { width: 110px; height: 8px; border-radius: 4px; background: var(--bg-soft); overflow: hidden; }
-.td-bar i { display: block; height: 100%; background: var(--brand); border-radius: 4px; transition: width .3s; }
-.td-list { display: flex; flex-direction: column; }
-.td-row {
-  display: flex; align-items: center; gap: 12px; padding: 11px 4px;
-  border-bottom: 1px dashed var(--line);
-}
-.td-row:last-child { border-bottom: 0; }
-.td-row.done .td-main b { color: var(--ink-faint); text-decoration: line-through; text-decoration-color: var(--ink-faint); }
-.td-check {
-  flex: none; width: 34px; height: 34px; border-radius: 50%;
-  border: 2px solid var(--line); background: var(--card); color: #fff;
-  font-size: 16px; font-weight: 800; line-height: 1; display: grid; place-items: center; padding: 0;
-}
-.td-check.on { background: #2e7d4f; border-color: #2e7d4f; }
-.td-hint {
-  margin: 0 0 8px; font-size: 11.5px; color: var(--ink-faint);
-}
-.td-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.td-main b { font-size: 14.5px; font-weight: 700; color: var(--ink); }
-.td-main i { font-style: normal; font-size: 11.5px; color: var(--ink-faint); }
-.td-auto-tag {
-  flex: none; font-size: 10.5px; font-weight: 700; color: var(--brand-ink);
-  border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; background: var(--bg-soft);
-}
-.td-empty { text-align: center; padding: 42px 20px; }
-.td-empty-emoji { font-size: 40px; margin-bottom: 8px; }
-.td-empty h3 { font-size: 17px; color: var(--ink); margin: 0 0 6px; }
-.td-empty p { margin: 0; color: var(--ink-soft); font-size: 13.5px; }
-.td-link { color: var(--brand-ink); font-weight: 600; }
-.td-goals { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.td-goals i {
-  font-style: normal; font-size: 12px; color: var(--brand-ink);
-  border: 1px solid var(--line); background: var(--bg-soft);
-  border-radius: 8px; padding: 4px 9px;
-}
-.td-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-.td-day {
-  border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px 7px;
-  display: flex; flex-direction: column; align-items: center; gap: 3px; background: var(--card);
-}
-.td-day b { font-size: 15px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
-.td-day i { font-style: normal; font-size: 10.5px; color: var(--ink-faint); }
-.td-day em { font-style: normal; font-size: 11px; font-weight: 700; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-.td-day.today { border-color: var(--brand); background: #f6efdd; }
-.td-day.today b { color: var(--brand-ink); }
-.td-day.fulfilled { border-color: #2e7d4f66; background: #eef7f1; }
-.td-day.fulfilled em { color: #2e7d4f; }
-.td-day.future { opacity: .55; }
-.td-week-sum { margin: 12px 0 0; font-size: 12.5px; color: var(--ink-soft); }
-.td-week-sum b { color: var(--brand-ink); }
-
-@media (max-width: 860px) {
-  .td-check { width: 44px; height: 44px; font-size: 19px; }
-  .td-week { grid-template-columns: repeat(4, 1fr); }
-}
-
 /* ===== 教师周历视图（pw-）：← 周 → 翻周 + 7 天格子 + 周拆解条 ===== */
 .pw-view {
   background: var(--card); border: 1px solid var(--line); border-radius: 14px;
@@ -2582,6 +2515,16 @@ li.open .topic-reveal-btn { display: none; }
 .pw-task.done span { text-decoration: line-through; }
 .pw-task em { font-style: normal; color: #2e7d4f; font-weight: 800; flex: none; }
 .pw-none { font-style: normal; font-size: 10.5px; color: var(--ink-faint); }
+.pw-goals {
+  border: 1px solid var(--line); border-radius: 12px; background: var(--card);
+  padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+}
+.pw-goals-title { font-size: 13.5px; font-weight: 800; color: var(--brand-ink); flex: none; }
+.pw-goals-chips { display: flex; flex-wrap: wrap; gap: 5px 6px; }
+.pw-goals-chips i {
+  font-style: normal; font-size: 11.5px; color: var(--brand-ink);
+  border: 1px solid var(--line); border-radius: 7px; padding: 2px 8px; background: var(--bg-soft);
+}
 
 @media (max-width: 1080px) {
   .pw-grid { grid-template-columns: repeat(4, 1fr); }

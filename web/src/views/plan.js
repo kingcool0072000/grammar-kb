@@ -203,6 +203,8 @@ export async function mountPlan(el) {
       parts.push(`✏️ 题型 <b>${drillTxt}</b>`)
 
       const dayNames = ['一', '二', '三', '四', '五', '六', '日']
+      // 书名解析需要编辑器数据（缓存）；失败不阻塞周历
+      const ed = await getEditorData()
       host.innerHTML = `
         <section class="pw-view">
           <header class="pw-nav">
@@ -215,6 +217,7 @@ export async function mountPlan(el) {
             <button class="chip" data-edit="${wv.week_start}">✏️ 编辑本周</button>
             ${isCur ? '' : '<button class="chip" data-wk="cur">回到本周</button>'}
           </header>
+          ${weekGoalsHtml(t, bd, ed)}
           <div class="pw-grid">
             ${(wv.days || []).map((d, i) => dayCell(d, i, dayNames)).join('')}
           </div>
@@ -235,20 +238,47 @@ export async function mountPlan(el) {
       const dd = Number(d.date.slice(8))
       const isToday = d.date === today
       const icon = { micro_drill: '✏️', wrong_words: '🔤', lecture: '📚', fce: '🎧', reading: '📖' }
-      const rows = (d.tasks || []).map((x) => `
-        <div class="pw-task ${x.done ? 'done' : ''}">
+      // 单日卡片只显示当天完成的工作；未完成的计划不在卡上列出
+      const rows = (d.tasks || []).filter((x) => x.done).map((x) => `
+        <div class="pw-task done">
           <i>${icon[x.type] || '•'}</i>
           <span title="${escapeHtml(x.text)}">${escapeHtml(x.text)}</span>
-          <em>${x.done ? '✓' : ''}</em>
+          <em>✓</em>
         </div>`).join('')
       const full = !d.future && d.total > 0 && d.done >= d.total
       return `<div class="pw-day ${isToday ? 'today' : ''} ${d.future ? 'future' : ''} ${full ? 'fulled' : ''}">
         <div class="pw-day-head">
           <b>周${dayNames[i]}</b><span>${dd} 日</span>
-          <em>${d.future ? '待来' : (d.total ? `${d.done}/${d.total}` : '—')}</em>
+          <em>${d.future ? '待来' : (d.done ? `${d.done} ✓` : '—')}</em>
         </div>
-        <div class="pw-tasks">${rows || (d.future ? '' : '<i class="pw-none">无任务</i>')}</div>
+        <div class="pw-tasks">${rows || (d.future ? '' : '<i class="pw-none">无完成</i>')}</div>
       </div>`
+    }
+
+    // 周目标独立区：结构化展示本周排了什么（与编辑器的目标/补充双区对应）
+    function weekGoalsHtml(t, bd, ed) {
+      const chips = []
+      if (t.focus_kps?.length) chips.push(`🎯 攻坚 ${t.focus_kps.map((l) => '第' + l + '讲').join('、')}`)
+      if (t.lectures?.length) chips.push(`📚 讲次 ${[...t.lectures].sort((a, b) => a - b).join('/')}讲`)
+      if (t.vocab_goal != null) chips.push(`🔤 词汇 累计${t.vocab_goal}词`)
+      if (t.fce?.length) chips.push(`🎧 FCE ${t.fce.join('+')}`)
+      const books = ed?.books || []
+      for (const it of bd?.reading_items || []) {
+        const k = String(it.book)
+        const b = /^\d+$/.test(k)
+          ? books.find((x) => String(x.id) === k)
+          : books.find((x) => x.title.toLowerCase().includes(k.toLowerCase()))
+        chips.push(`📖 泛读 ${(b ? b.title : k).slice(0, 14)} → ${it.goal_pct}%`)
+      }
+      if (t.articles?.length) chips.push(`📄 精读 ${t.articles.length} 篇`)
+      if (t.vocab_papers?.length) chips.push(`📝 试卷 ${t.vocab_papers.length} 卷`)
+      if (t.speak) chips.push(`🎤 朗读 ${t.speak} 篇`)
+      return `<section class="pw-goals">
+        <div class="pw-goals-title">🎯 本周目标</div>
+        <div class="pw-goals-chips">${chips.length
+          ? chips.map((c) => `<i>${escapeHtml(c)}</i>`).join('')
+          : '<em class="muted">本周未排计划</em>'}</div>
+      </section>`
     }
 
     // 阅读实况文案：全书口径——读到第几章（该章占全书的百分比区间）、
