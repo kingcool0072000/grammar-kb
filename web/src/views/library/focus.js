@@ -410,7 +410,12 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
   function attach() {
     document.addEventListener('visibilitychange', onVisibilityChange)
     window.addEventListener('beforeunload', onBeforeUnload)
-    if (viewerEl) viewerEl.addEventListener('scroll', onScroll, { passive: true })
+    // 滚动监听委托：epubjs scrolled 模式的真实滚动元素是 viewerEl 内的
+    // .epub-container（渲染后动态创建），直接挂 viewerEl 永远收不到 scroll
+    // （历史会话 scroll_count 全零的根因）。capture 委托对动态子元素也生效。
+    if (viewerEl) {
+      viewerEl.addEventListener('scroll', onScroll, { passive: true, capture: true })
+    }
     if (readerRoot) readerRoot.addEventListener('mousemove', onRootMouseMove, { passive: true })
     if (readerRoot) readerRoot.addEventListener('wheel', onWheel, { passive: true })
     intervalId = setInterval(() => {
@@ -428,7 +433,7 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     if (typeof window !== 'undefined') {
       window.removeEventListener('beforeunload', onBeforeUnload)
     }
-    if (viewerEl) viewerEl.removeEventListener('scroll', onScroll)
+    if (viewerEl) viewerEl.removeEventListener('scroll', onScroll, { capture: true })
     if (readerRoot) readerRoot.removeEventListener('mousemove', onRootMouseMove)
     if (readerRoot) readerRoot.removeEventListener('wheel', onWheel)
     if (intervalId) {

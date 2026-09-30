@@ -1384,6 +1384,22 @@ class PlanStore:
         except sqlite3.Error:
             return set()
 
+    @staticmethod
+    def _reading_session_valid(r) -> bool:
+        """泛读会话有效性：剔除非真实阅读的信号（快速翻章/误触/闪进闪出）。
+
+        判定（任一满足即有效）：
+        - 停留 ≥60 秒（真读了）
+        - 有交互：查词/播放/滚动/章导且停留 ≥10 秒
+        （章切换后停留 <5 秒的翻章浏览——时长极短且无任何交互——无效。）
+        """
+        dur = r["active_sec"] or 0
+        if dur >= 60:
+            return True
+        inter = ((r["lookups"] or 0) + (r["plays"] or 0)
+                 + (r["scroll_count"] or 0) + (r["chapter_navs"] or 0))
+        return dur >= 10 and inter > 0
+
     def _reading_day_detail(self, rows: list) -> list[dict]:
         """泛读会话 → 逐书精确实录（章区间 + 词数 + 分钟）。
 
@@ -1434,8 +1450,10 @@ class PlanStore:
 
         by_book: dict[int, list] = {}
         for r in rows:
-            if r["book_id"] is not None:
+            if r["book_id"] is not None and self._reading_session_valid(r):
                 by_book.setdefault(r["book_id"], []).append(r)
+        # 无效会话也计入分钟口径的「在场时长」提示？不——无效即无效，
+        # 分钟与词数都只认有效会话（否则出现 0 分钟 N 词的矛盾展示）。
 
         out = []
         for bid, srows in by_book.items():
@@ -1542,7 +1560,8 @@ class PlanStore:
                 if "focus_sessions" in tabs:
                     rows = conn.execute(
                         "SELECT module, book_title, book_id, active_sec,"
-                        " percent_start, percent_end"
+                        " percent_start, percent_end, lookups, plays,"
+                        " scroll_count, chapter_navs"
                         " FROM focus_sessions"
                         " WHERE user = ? AND (created_at >= ? AND created_at < ?)"
                         " AND book_title IS NOT NULL",
