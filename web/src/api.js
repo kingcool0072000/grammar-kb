@@ -222,6 +222,8 @@ export const api = {
   // 作业卷管理（教师）：题目+答案（历次逐题对错）+ 爱问云同步
   hwPapers: () => req('/homework-admin/papers'),
   hwPaper: (lecture) => req(`/homework-admin/paper/${lecture}`),
+  hwAnswerPut: (lecture, qnum, answer) =>
+    reqJson('/homework-admin/answer', 'PUT', { lecture, qnum, answer }),
   hwSyncAicloud: () => reqJson('/homework-admin/sync-aicloud', 'POST', {}),
 
   // 学生管理（教师）

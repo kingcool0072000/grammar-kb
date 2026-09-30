@@ -54,62 +54,43 @@ class HomeworkAdmin:
         conn.row_factory = sqlite3.Row
         return conn
 
-    # ---- 总览：讲次 × 题数 × 同步覆盖 ----
+    # ---- 总览：讲次 × 题数 × 答案覆盖（纯题库；作答记录在批改中心） ----
     def papers(self) -> list[dict]:
         with self._connect() as conn:
-            q = conn.execute(
-                "SELECT lecture_number, COUNT(*) n FROM homework_question"
-                " GROUP BY lecture_number").fetchall()
-            r = conn.execute(
-                "SELECT lecture_number, COUNT(DISTINCT exam_date) attempts,"
-                " SUM(correct) ok, COUNT(*) total"
-                " FROM homework_q_result GROUP BY lecture_number").fetchall()
-        cov = {x["lecture_number"]: x for x in r}
-        out = []
-        for row in q:
-            lec = row["lecture_number"]
-            c = cov.get(lec)
-            out.append({
-                "lecture": lec, "questions": row["n"],
-                "attempts": c["attempts"] if c else 0,
-                "answered": c["total"] if c else 0,
-                "ok": c["ok"] if c else 0,
-            })
+            rows = conn.execute(
+                "SELECT lecture_number, COUNT(*) n,"
+                " SUM(CASE WHEN answer IS NOT NULL AND answer != '' THEN 1 ELSE 0 END) ans"
+                " FROM homework_question GROUP BY lecture_number").fetchall()
+        out = [{"lecture": r["lecture_number"], "questions": r["n"],
+                "answered": r["ans"] or 0} for r in rows]
         out.sort(key=lambda x: x["lecture"])
         return out
 
-    # ---- 单讲次：题目 + 历次对错 ----
+    # ---- 单讲次：题目 + 答案（无作答记录） ----
     def paper_detail(self, lecture: int) -> dict:
         with self._connect() as conn:
             qs = conn.execute(
-                "SELECT id, qnum, section, stem, options_json, answer"
+                "SELECT qnum, section, stem, options_json, answer"
                 " FROM homework_question WHERE lecture_number = ?"
                 " ORDER BY qnum", (int(lecture),),
             ).fetchall()
-            rs = conn.execute(
-                "SELECT qnum, exam_date, correct FROM homework_q_result"
-                " WHERE lecture_number = ? ORDER BY exam_date, qnum",
-                (int(lecture),),
-            ).fetchall()
-        history: dict[int, list] = {}
-        for r in rs:
-            history.setdefault(r["qnum"], []).append(
-                {"date": r["exam_date"], "correct": r["correct"]})
-        questions = []
-        for q in qs:
-            h = history.get(q["qnum"]) or []
-            n_ok = sum(1 for x in h if x["correct"])
-            status = ("steady" if h and n_ok == len(h)
-                      else "never" if h and n_ok == 0
-                      else "mixed" if h else "new")
-            questions.append({
-                "qnum": q["qnum"], "section": q["section"],
-                "stem": q["stem"] or "",
-                "options_json": q["options_json"] or "[]",
-                "answer": q["answer"],
-                "history": h, "status": status,
-            })
+        questions = [{
+            "qnum": q["qnum"], "section": q["section"],
+            "stem": q["stem"] or "",
+            "options_json": q["options_json"] or "[]",
+            "answer": q["answer"],
+        } for q in qs]
         return {"lecture": int(lecture), "questions": questions}
+
+    def put_answer(self, lecture: int, qnum: int, answer: str) -> bool:
+        """单题答案编辑（教师人工补录）。"""
+        with self._connect() as conn:
+            cur = conn.execute(
+                "UPDATE homework_question SET answer = ?"
+                " WHERE lecture_number = ? AND qnum = ?",
+                (str(answer or "")[:200], int(lecture), int(qnum)),
+            )
+            return cur.rowcount > 0
 
     # ---- 爱问云同步（只取已出分测验的逐题对错） ----
     def sync_aicloud(self, phone: str, password: str,
