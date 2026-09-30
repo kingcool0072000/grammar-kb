@@ -40,15 +40,18 @@ export async function mountGrading(el) {
 
   async function mountBoard(el) {
     const openRecordingReview = async () => {
-      el.innerHTML = '<p class="muted">加载录音批改…</p>'
+      // 渲染进卡片网格容器（保留外层页头/子Tab），返回时重挂看板
+      const host = document.createElement('div')
+      el.replaceChildren(host)
+      host.innerHTML = '<p class="muted">加载录音批改…</p>'
       try {
         const recs = await api.readingRecordings({ limit: 200 })
         const { renderReadingReview } = await import('./readingReview.js')
-        await renderReadingReview(el, recs, {
+        await renderReadingReview(host, recs, {
           onBack: () => { state.tab = 'board'; render() },
         })
       } catch (e) {
-        el.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
+        host.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
       }
     }
     el.innerHTML = '<p class="muted">加载中…</p>'
@@ -126,10 +129,6 @@ export async function mountGrading(el) {
   ]
 
   el.innerHTML = `
-    <div class="view-head">
-      <h1>批改中心</h1>
-      <p>学生作业的待批与动态汇总。${totalPend ? `<b class="gd-pend-badge">${totalPend} 项待批</b>` : '当前没有待批项 ✅'}</p>
-    </div>
     <div class="gcard-grid">
       ${cards.map((c) => `
         <section class="gcard ${c.pending ? 'has-pend' : ''}" data-card="${c.key}">
@@ -178,7 +177,6 @@ export async function mountGrading(el) {
     if (e.target.closest('[data-rec-del],[data-rec-edit],audio,a')) return
     openRecordingReview()
   })
-  renderFocusPage(0)
   // readingAdmin 跳转联动：自动展开批改视图
   if (sessionStorage.getItem('gkb-open-review') === '1') {
     sessionStorage.removeItem('gkb-open-review')
@@ -230,6 +228,7 @@ export async function mountGrading(el) {
       host.appendChild(pager)
     }
   }
+  renderFocusPage(0)
 }
 
 // 专注会话标题：泛读 = 「泛读-书名-章节」（后端已按 book_id 补书名，章节用 range_label）

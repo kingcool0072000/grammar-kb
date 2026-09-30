@@ -354,9 +354,20 @@ async function bootstrap() {
         // 必须插在 container 内：视图自身 re-render（innerHTML 覆写）时返回条随之
         // 消失，与改造前行为一致；若插在 viewEl 上会跨页残留
         if (!container.querySelector('.gd-tool-back')) {
-          const back = h('button', 'fce-back-btn gd-tool-back', '← 返回备课中心')
+          // 页面可声明自己的上层（BACK_BASE 映射）；缺省回备课中心
+          const BACK_BASE = {
+            readingAdmin: ['/grading', '← 返回批改中心'],
+            readingList: ['/prep', '← 返回备课中心'],
+            students: ['/plan', '← 返回计划表'],
+            vocabLevel: ['/prep', '← 返回备课中心'],
+            paperAdmin: ['/prep', '← 返回备课中心'],
+            vocabExam: ['/vocabLevel/0', '← 返回背单词'],
+            exams: ['/grading', '← 返回批改中心'],
+          }
+          const [hash, label] = BACK_BASE[route] || ['/prep', '← 返回备课中心']
+          const back = h('button', 'fce-back-btn gd-tool-back', label)
           back.addEventListener('click', () => {
-            location.hash = '/prep'
+            location.hash = hash
           })
           container.prepend(back)
         }

@@ -218,7 +218,6 @@ export async function mountPlan(el) {
           <div class="pw-grid">
             ${(wv.days || []).map((d, i) => dayCell(d, i, dayNames)).join('')}
           </div>
-          ${wv.notes ? `<div class="plan-notes"><span>📝 重点</span><div>${escapeHtml(wv.notes).replace(/\n/g, '<br/>')}</div></div>` : ''}
         </section>`
       host.querySelectorAll('[data-wk]').forEach((b) =>
         b.addEventListener('click', () => {
@@ -381,7 +380,8 @@ export async function mountPlan(el) {
       // 目标池与补充池：goal 选中的进「从总目标选」（已完成过滤）；
       // 其余全部进「额外补充」（旧课复习/考试材料，不限完成态）
       const doneLec = new Set(done.lectures || [])
-      const goalLecs = (goals.lectures || []).filter((n) => !doneLec.has(n))
+      const goalLecs = lectures.filter(
+        (l) => (goals.lectures || []).includes(l.number) && !doneLec.has(l.number))
       const extraLecs = lectures.filter((l) => !(goals.lectures || []).includes(l.number))
       const doneFce = new Set(done.fce_parts || [])
       const goalFce = (goals.fce_parts || []).filter((x) => !doneFce.has(x))
@@ -545,9 +545,6 @@ export async function mountPlan(el) {
               <input id="pe-speak-n" type="number" min="1" max="7" value="${speakN}" style="width:48px"/> 篇（录音自动进批改）
             </label>
           </div>
-          <label class="plan-field">本周重点 / 改善项
-            <textarea id="pe-notes" rows="3">${escapeHtml(w.notes || '')}</textarea>
-          </label>
           <div class="chip-row">
             <button class="btn-primary" id="pe-save">保存</button>
             <button class="chip" id="pe-cancel">取消</button>
@@ -633,7 +630,7 @@ export async function mountPlan(el) {
         if (artSel.size) tasks.articles = [...artSel]
         if (paperSel.size) tasks.vocab_papers = [...paperSel]
         if (dlg.querySelector('#pe-speak-on').checked) tasks.speak = Number(dlg.querySelector('#pe-speak-n').value) || 2
-        const notes = dlg.querySelector('#pe-notes').value.trim()
+        const notes = w.notes || ''  // 重点区已移除，保留存量
         try {
           await api.planWeekPut(ws, { tasks, notes })
           close()

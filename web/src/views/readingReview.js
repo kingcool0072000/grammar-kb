@@ -199,5 +199,8 @@ async function renderReview(el, recs, onBack) {
     })
   })
   if (!list.length) box.innerHTML = '<p class="reading-hint">暂无录音提交</p>'
-  el.querySelector('#rd-back').addEventListener('click', () => mountReadingAdmin(el))
+  el.querySelector('#rd-back').addEventListener('click', () => {
+    if (onBack) onBack()
+    else location.hash = '/grading'
+  })
 }
