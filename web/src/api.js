@@ -238,6 +238,8 @@ export const api = {
   userDel: (name) => reqJson(`/users/${encodeURIComponent(name)}`, 'DELETE'),
 
   // 总目标（分学生冲刺目标）+ 周编辑器结构化选项源
+  planGoalProgress: ({ user } = {}) =>
+    req('/plan/goal-progress', { searchParams: { user } }),
   planGoals: ({ user } = {}) => req('/plan/goals', { searchParams: { user } }),
   planGoalsPut: (user, goals) => reqJson('/plan/goals', 'PUT', { user, goals }),
   planEditorData: ({ user } = {}) =>

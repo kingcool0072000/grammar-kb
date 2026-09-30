@@ -1203,6 +1203,12 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             raise HTTPException(status_code=422, detail=str(e))
         return _ok({"deleted": name})
 
+    @app.get("/plan/goal-progress")
+    def plan_goal_progress(request: "fastapi.Request", user: str = "malin"):
+        """总目标进度（六维度 + 总%）。教师专属。"""
+        _require_teacher(request)
+        return _ok(plan.goal_progress(user=user))
+
     @app.get("/plan/goals")
     def plan_goals_get(request: "fastapi.Request", user: str = "malin"):
         """学生总目标（冲刺目标：讲次/FCE/词汇/泛读书）。教师专属。"""

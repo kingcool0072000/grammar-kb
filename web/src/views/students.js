@@ -101,6 +101,12 @@ export async function mountStudents(el, { bare = false } = {}) {
       }))
     body.querySelectorAll('[data-cfg]').forEach((b) =>
       b.addEventListener('click', () => openGoalDialog(b.dataset.cfg)))
+    // 计划看板「配置目标」跳转联动：自动打开该生弹窗
+    const openMark = sessionStorage.getItem('gkb-open-goal')
+    if (openMark && users.some((u) => u.user === openMark)) {
+      sessionStorage.removeItem('gkb-open-goal')
+      setTimeout(() => openGoalDialog(openMark), 300)
+    }
     body.querySelectorAll('[data-go-plan]').forEach((b) =>
       b.addEventListener('click', () => {
         sessionStorage.setItem('gkb-plan-student', b.dataset.goPlan)

@@ -73,21 +73,38 @@ export async function mountPlan(el) {
     let goals = null
     try { goals = (await api.planGoals({ user: state.student })).goals } catch { goals = null }
 
+    let goalProg = null
+    try { goalProg = await api.planGoalProgress({ user: state.student }) } catch { goalProg = null }
+
     body.innerHTML = `
-      ${loopDeckHtml()}
-      <div class="pw-viewbar">
+      <div class="pw-stubar">
+        <label class="pw-student">学生
+          <select id="pw-user"></select>
+        </label>
+        <button class="chip" id="pw-cfg-goal">🎯 配置 ${escapeHtml(state.student)} 的总目标</button>
+        <span class="pw-flex"></span>
         <div class="pw-modes">
           <button class="chip ${view.mode === 'week' ? 'primary' : ''}" data-vmode="week">📅 周历</button>
           <button class="chip ${view.mode === 'month' ? 'primary' : ''}" data-vmode="month">🗓 月历</button>
           <button class="chip ${view.mode === 'overview' ? 'primary' : ''}" data-vmode="overview">🗺 全览</button>
         </div>
-        <label class="pw-student">学生
-          <select id="pw-user"></select>
-        </label>
       </div>
+      ${progressCardHtml(goalProg)}
+      ${loopDeckHtml()}
       <div id="plan-review">${reviewHtml(lastReview)}</div>
       <div id="plan-view"></div>
     `
+    body.querySelector('#pw-cfg-goal').addEventListener('click', () => {
+      sessionStorage.setItem('gkb-open-goal', state.student)
+      const t = el.querySelector('[data-ptab="students"]')
+      if (t) t.click()
+    })
+    const goCfg = body.querySelector('#gp-go-cfg')
+    if (goCfg) goCfg.addEventListener('click', () => {
+      sessionStorage.setItem('gkb-open-goal', state.student)
+      const t = el.querySelector('[data-ptab="students"]')
+      if (t) t.click()
+    })
     body.querySelector('#pw-user').innerHTML = students.map((x) =>
       `<option value="${escapeHtml(x)}" ${state.student === x ? 'selected' : ''}>${escapeHtml(x)}</option>`).join('')
     const viewHost = body.querySelector('#plan-view')
@@ -113,6 +130,36 @@ export async function mountPlan(el) {
 
 
 
+
+    // 总目标进度卡：总% + 六维度进度条
+    function progressCardHtml(gp) {
+      if (!gp || gp.percent == null) {
+        return `<div class="gp-card gp-empty">
+          <span>🎯 ${escapeHtml(state.student)} 的总目标未配置</span>
+          <button class="chip" id="gp-go-cfg">去配置</button>
+        </div>`
+      }
+      const bars = gp.dims.map((d) => {
+        const pct = d.total ? Math.min(100, Math.round(d.done / d.total * 100)) : 0
+        return `<div class="gp-dim">
+          <span class="gp-dim-name">${d.icon} ${escapeHtml(d.name)}${d.extra ? `<i>${escapeHtml(d.extra)}</i>` : ''}</span>
+          <div class="gp-dim-bar"><i style="width:${pct}%"></i></div>
+          <b class="gp-dim-n">${d.done}/${d.total}</b>
+        </div>`
+      }).join('')
+      return `<div class="gp-card">
+        <div class="gp-head">
+          <div class="gp-ring" style="--p:${gp.percent}">
+            <b>${gp.percent}%</b><span>总进度</span>
+          </div>
+          <div class="gp-meta">
+            <b>🎯 ${escapeHtml(state.student)} 的总目标</b>
+            <span class="muted">${gp.done_items}/${gp.total_items} 项完成${gp.deadline ? ` · 截止 ${gp.deadline}` : ''}</span>
+          </div>
+        </div>
+        <div class="gp-dims">${bars}</div>
+      </div>`
+    }
 
     // ---- 外循环驾驶舱：诊断 → 周目标 → 展开 → 验收 一屏串联 ----
     function currentFocus() {

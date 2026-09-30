@@ -943,6 +943,99 @@ class PlanStore:
                 "articles": articles, "vocab_mastered": mastered,
                 "goal_assets": goal_assets, "goals": goals, "done": done}
 
+    def goal_progress(self, user: str = "malin") -> dict:
+        """总目标进度：六维度 done/goal 覆盖 + 总百分比。
+
+        维度完成口径（与 _completion_status 一致）：讲次=考过；FCE Part=提交过；
+        精读=有录音；泛读=进度≥98% 视为完成（进行中按词数折算贡献）；
+        试卷=其级别考试 ≥80；词汇=已掌握词数/vocab_target。
+        """
+        g = self.get_goals(user)
+        done = self._completion_status(user)
+        dims = []
+
+        def dim(icon, name, ok, total, extra=""):
+            dims.append({"icon": icon, "name": name,
+                         "done": ok, "total": total, "extra": extra})
+
+        gl = g.get("lectures") or []
+        if gl:
+            d = len(set(gl) & set(done["lectures"]))
+            dim("📚", "哈一讲次", d, len(gl))
+
+        if g.get("vocab_target"):
+            mastered = 0
+            try:
+                with self._connect() as conn:
+                    row = conn.execute(
+                        "SELECT COUNT(*) n FROM recite_word_progress"
+                        " WHERE user = ? AND mastered_at IS NOT NULL",
+                        (user,)).fetchone()
+                    mastered = row["n"] if row else 0
+            except sqlite3.Error:
+                pass
+            dim("🔤", f"词汇 +{g['vocab_target']}",
+                min(mastered, g["vocab_target"]), g["vocab_target"],
+                extra=f"已掌握 {mastered}")
+        elif g.get("vocab_levels"):
+            passed = len((set(g["vocab_levels"]) & set(done["vocab_levels"])))
+            dim("🔤", "词汇级别", passed, len(g["vocab_levels"]))
+
+        gf = g.get("fce_parts") or []
+        if gf:
+            d = len(set(gf) & set(done["fce_parts"]))
+            dim("🎧", "FCE Part", d, len(gf))
+
+        ga_ = g.get("articles") or []
+        if ga_:
+            d = len(set(ga_) & set(done["articles"]))
+            dim("📄", "精读文章", d, len(ga_))
+
+        gr = g.get("reading") or []
+        if gr:
+            # 书：读完=done；进行中按进度折算（0.6 本=60%）
+            done_books = set(done["books"] or [])
+            score = 0.0
+            conn = self._lib_connect()
+            if conn is not None:
+                try:
+                    with contextlib.closing(conn):
+                        ph = ",".join("?" * len(gr))
+                        rows = conn.execute(
+                            f"SELECT book_id, percent FROM reading_progress"
+                            f" WHERE user = ? AND book_id IN ({ph})",
+                            [user] + list(gr)).fetchall()
+                    pct = {r["book_id"]: (r["percent"] or 0) for r in rows}
+                except sqlite3.Error:
+                    pct = {}
+            else:
+                pct = {}
+            for bid in gr:
+                if bid in done_books:
+                    score += 1
+                else:
+                    score += min(1.0, (pct.get(bid) or 0) / 98)
+            dim("📖", "泛读书目", round(score), len(gr),
+                extra="按阅读进度折算")
+
+        gp = g.get("vocab_papers") or []
+        if gp:
+            done_papers = 0
+            passed_levels = set(done["vocab_levels"] or [])
+            for pid in gp:
+                lv = self._paper_level(pid)
+                if lv is not None and lv in passed_levels:
+                    done_papers += 1
+            dim("📝", "单词试卷", done_papers, len(gp),
+                extra="按对应级别考试通过计")
+
+        total_items = sum(d["total"] for d in dims)
+        done_items = sum(min(d["done"], d["total"]) for d in dims)
+        pct = round(done_items / total_items * 100) if total_items else None
+        return {"user": user, "dims": dims, "percent": pct,
+                "done_items": done_items, "total_items": total_items,
+                "deadline": g.get("deadline")}
+
     def _completion_status(self, user: str) -> dict:
         """各类资产的「已完成」判定（供周编辑器过滤目标池）。
 
