@@ -2766,8 +2766,8 @@ li.open .topic-reveal-btn { display: none; }
 .pa-q:last-child { border-bottom: 0; }
 .pa-qnum { flex: none; width: 26px; font-weight: 800; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
 .pa-qmain { flex: 1; min-width: 0; }
-.pa-qmain p { margin: 0 0 4px; font-size: 12.5px; color: var(--ink);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pa-qmain p { margin: 0 0 4px; font-size: 12.5px; color: var(--ink); }
+.pa-qmain p.pa-stem { font-size: 13px; line-height: 1.55; }
 .pa-qmeta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .pa-st { font-size: 11px; font-weight: 700; }
 .pa-st.ok { color: #2e7d4f; }
@@ -2779,6 +2779,10 @@ li.open .topic-reveal-btn { display: none; }
 .pa-hist i.no { color: #b42318; }
 .pa-ans { font-size: 11px; color: var(--ink-soft); }
 .pa-ans em { font-style: normal; color: var(--ink-faint); }
+/* 完整原题：选项行 */
+.pa-opts { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0 2px; }
+.pa-opts span { font-size: 12px; color: var(--ink-soft); display: inline-flex; gap: 4px; }
+.pa-opts i { font-style: normal; font-weight: 800; color: var(--brand-ink); }
 
 @media (max-width: 860px) {
   .pa-grid { grid-template-columns: repeat(3, 1fr); }

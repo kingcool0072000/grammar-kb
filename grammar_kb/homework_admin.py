@@ -104,7 +104,8 @@ class HomeworkAdmin:
                       else "mixed" if h else "new")
             questions.append({
                 "qnum": q["qnum"], "section": q["section"],
-                "stem": (q["stem"] or "")[:80],
+                "stem": q["stem"] or "",
+                "options_json": q["options_json"] or "[]",
                 "answer": q["answer"],
                 "history": h, "status": status,
             })

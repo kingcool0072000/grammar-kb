@@ -96,14 +96,17 @@ export async function mountPaperAdmin(el) {
             const [label, cls] = stMeta[q.status] || stMeta.new
             const hist = (q.history || [])
               .map((h) => `<i class="${h.correct ? 'ok' : 'no'}" title="${h.date}">${h.correct ? '✓' : '✗'}</i>`).join('')
-            return `<div class="pa-q ${cls}">
+            let opts = []
+            try { opts = JSON.parse(q.options_json || '[]') } catch { opts = [] }
+            return `<div class="pa-q ${cls}" data-q="${q.qnum}">
               <span class="pa-qnum">${q.qnum}</span>
               <div class="pa-qmain">
-                <p title="${escapeHtml(q.stem)}">${escapeHtml(q.stem)}</p>
+                <p class="pa-stem">${escapeHtml(q.stem)}</p>
+                ${opts.length ? `<div class="pa-opts">${opts.map((o, i) => `<span><i>${'ABCD'[i] || '·'}</i>${escapeHtml(String(o))}</span>`).join('')}</div>` : ''}
                 <div class="pa-qmeta">
                   <span class="pa-st ${cls}">${label}</span>
                   <span class="pa-hist">${hist}</span>
-                  <span class="pa-ans">答案：${q.answer ? escapeHtml(q.answer) : '<em>待人工补（爱问云只有对错标记）</em>'}</span>
+                  <span class="pa-ans">答案：${q.answer ? escapeHtml(q.answer) : '<em>历次对错即掌握度；答案文本待人工补</em>'}</span>
                 </div>
               </div>
             </div>`
