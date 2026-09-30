@@ -259,12 +259,13 @@ export async function mountPlan(el) {
       const statHtml = statRows.length
         ? `<div class="pw-acts">${statRows.map((s) => `<span>${escapeHtml(s)}</span>`).join('')}</div>` : ''
       const full = !d.future && d.total > 0 && d.done >= d.total
+      const hasLive = Boolean(rows || extraRows || statRows.length)
       return `<div class="pw-day ${isToday ? 'today' : ''} ${d.future ? 'future' : ''} ${full ? 'fulled' : ''}">
         <div class="pw-day-head">
           <b>周${dayNames[i]}</b><span>${dd} 日</span>
           <em>${d.future ? '待来' : (d.done ? `${d.done} ✓` : '—')}</em>
         </div>
-        <div class="pw-tasks">${rows + extraRows || (d.future ? '' : '<i class="pw-none">无完成</i>')}${statHtml}</div>
+        <div class="pw-tasks">${hasLive ? rows + extraRows + statHtml : (d.future ? '' : '<i class="pw-none">无完成</i>')}</div>
       </div>`
     }
 

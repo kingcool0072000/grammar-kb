@@ -737,16 +737,20 @@ class PlanStore:
         ws = monday_of(date.fromisoformat(d)).isoformat()
         historical = self.history_day(user, d)
         derived = historical if historical is not None else self.week_daily_tasks(ws, for_date=d, user=user)
+        planned_articles = {t.get("article_id") for t in (derived or [])
+                            if t.get("article_id") is not None}
         if historical is not None:
-            # 回填快照里的任务即完成，不再依赖当前活动表
+            # 回填快照里的任务即完成，不再依赖当前活动表；
+            # 量化实录（泛读/背单词/计划外朗读）仍从活动表按日算
             out = []
             for t in derived:
                 t2 = dict(t); t2["key"] = _task_key(t2)
                 t2["auto_done"] = True; t2["done"] = True
                 out.append(t2)
+            _, _, acts_out = self._signals_and_acts(user, d, planned_articles)
             return {"date": d, "week_start": ws, "tasks": out,
-                    "done": len(out), "total": len(out)}
-        auto, read_titles = self._auto_done(user, d)
+                    "done": len(out), "total": len(out), "acts": acts_out}
+        auto, read_titles, acts_out = self._signals_and_acts(user, d, planned_articles)
         out = []
         for t in derived:
             key = _task_key(t)
@@ -766,12 +770,20 @@ class PlanStore:
             t2["done"] = t2["auto_done"]
             out.append(t2)
         done_n = sum(1 for x in out if x["done"])
-        # ---- 当日实录（教师周历单日卡补充显示）----
-        # 计划内任务已按信号打勾；这里补两类信息：
-        # 1) 计划外的朗读提交（计划没排该篇，但学生做了——原逻辑直接不可见）
-        # 2) 量化实录：泛读分钟+词数 / 背单词个数+分钟（无论是否在计划内）
+        # ---- 当日实录（教师周历单日卡补充显示，构建逻辑见 _signals_and_acts）----
+        return {"date": d, "week_start": ws, "tasks": out,
+                "done": done_n, "total": len(out), "acts": acts_out}
+
+    def _signals_and_acts(self, user: str, day: str,
+                          planned_articles: set) -> tuple[dict, list, dict]:
+        """当天活动信号 + 量化实录（历史日快照路径同样调用）。
+
+        计划内任务已按信号打勾；实录补两类信息：
+        1) 计划外的朗读提交（计划没排该篇，但学生做了——原逻辑直接不可见）
+        2) 量化实录：泛读分钟+词数 / 背单词个数+分钟（无论是否在计划内）
+        """
+        auto, read_titles = self._auto_done(user, day)
         acts = getattr(self, "_day_acts", None) or {}
-        planned_articles = {t.get("article_id") for t in derived}
         extra_speaks = []
         for aid in acts.get("speak_articles", []):
             if aid not in planned_articles:
@@ -788,8 +800,7 @@ class PlanStore:
             "vocab_n": acts.get("vocab_n", 0),
             "vocab_min": acts.get("vocab_min", 0),
         }
-        return {"date": d, "week_start": ws, "tasks": out,
-                "done": done_n, "total": len(out), "acts": acts_out}
+        return auto, read_titles, acts_out
 
     def week_todo(self, user: str = "malin") -> dict:
         """学生周清单：本周目标 + 周一至周日逐日任务完成矩阵。"""
@@ -882,7 +893,13 @@ class PlanStore:
                              "tasks": []})
                 continue
             if is_historical:
+                # 历史日优先显示逐日快照（真实活动=计划完成100%）；
+                # 量化实录（泛读/背单词/计划外朗读）从活动表按日补上，
+                # 无快照日也会带出实录（有活动就有量）。
                 hist = self.history_day(user, d) or []
+                planned_arts = {x.get("article_id") for x in hist
+                                if x.get("article_id") is not None}
+                _, _, acts = self._signals_and_acts(user, d, planned_arts)
                 days.append({
                     "date": d, "future": False,
                     "done": len(hist), "total": len(hist),
@@ -891,6 +908,7 @@ class PlanStore:
                                "detail": x.get("detail"),
                                "type": x.get("type", "history"),
                                "done": True} for x in hist],
+                    "acts": acts,
                 })
                 continue
             td = self.today_tasks(user=user, day=d)
@@ -1382,25 +1400,33 @@ class PlanStore:
                     ids = {r["book_id"] for r in rows if r["book_id"] is not None}
                     if ids:
                         ph = ",".join("?" * len(ids))
-                        for r in conn.execute(
-                            f"SELECT book_id, COALESCE(SUM(word_count),0) w"
+                        for bid, w in conn.execute(
+                            f"SELECT book_id, COALESCE(SUM(word_count),0)"
                             f" FROM chapters WHERE book_id IN ({ph}) GROUP BY book_id",
                             list(ids),
                         ):
-                            if r["w"]:
-                                total_by_book[r["book_id"]] = r["w"]
+                            if w:
+                                total_by_book[bid] = w
             except sqlite3.Error:
                 pass
         if not total_by_book:
             return 0
         words = 0
+        # 同书多会话推进差可能重叠（如 5→81 与 6→95 重复计 76 个点）：
+        # 按书取「当日最远到达 − 当日最早起点」去重后再换算词数。
+        span_by_book: dict[int, tuple[float, float]] = {}
         for r in rows:
-            delta = max(0.0, ((r["percent_end"] or 0) - (r["percent_start"] or 0)) / 100)
-            if delta <= 0 or r["book_id"] is None:
+            if r["book_id"] is None:
                 continue
-            tw = total_by_book.get(r["book_id"])
+            s, e = r["percent_start"] or 0, r["percent_end"] or 0
+            if e <= s:
+                continue
+            cur = span_by_book.get(r["book_id"])
+            span_by_book[r["book_id"]] = (min(s, cur[0]), max(e, cur[1])) if cur else (s, e)
+        for bid, (s, e) in span_by_book.items():
+            tw = total_by_book.get(bid)
             if tw:
-                words += int(round(delta * tw))
+                words += int(round((e - s) / 100 * tw))
         return words
 
     def _auto_done(self, user: str, day: str) -> tuple[dict[str, bool], list[str]]:
