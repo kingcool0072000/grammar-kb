@@ -2849,3 +2849,33 @@ li.open .topic-reveal-btn { display: none; }
 @media (max-width: 860px) {
   .vl-words { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ===== 批改中心：作业类型独立卡片 ===== */
+.gcard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.gcard {
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
+}
+.gcard.has-pend { border-color: #b4530966; }
+.gcard-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gcard-head h2 { font-size: 15px; font-weight: 800; color: var(--ink); margin: 0; }
+.gcard-pend {
+  font-size: 11.5px; color: #b45309; background: #fdf3e3;
+  border: 1px solid #b4530933; border-radius: 8px; padding: 2px 8px;
+}
+.gcard-n { font-size: 12px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.gcard-list { flex: 1; min-height: 60px; display: flex; flex-direction: column; gap: 2px; }
+.gcard-more {
+  align-self: flex-start; font-size: 12.5px; color: var(--brand-ink);
+  background: none; border: none; cursor: pointer; padding: 4px 0 0;
+}
+.gcard-more:hover { text-decoration: underline; }
+[data-card="recording"] .gcard-list { cursor: pointer; }
+
+@media (max-width: 1080px) {
+  .gcard-grid { grid-template-columns: 1fr; }
+}
+.rl-pv { width: min(680px, calc(100vw - 32px)); max-height: 82vh; overflow-y: auto; }
+.rl-pv h3 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px; flex-wrap: wrap; }
+.rl-pv h3 i { font-style: normal; font-size: 11.5px; color: var(--ink-faint); }
+.rl-pv-text p { font-size: 14.5px; line-height: 1.8; color: var(--ink); font-family: Georgia, serif; margin: 0 0 10px; }

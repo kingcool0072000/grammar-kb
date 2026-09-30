@@ -42,7 +42,7 @@ export async function mountReadingList(el) {
                 <span class="reading-card-meta">
                   <span class="tag" style="--cat-color:#8a6d3b">${d.words} 词</span>
                   ${d.source ? `<span class="reading-card-src">${escapeHtml(d.source)}</span>` : ''}
-                  <button class="reading-btn small" data-edit="${d.id}">编辑</button>
+                  <button class="reading-btn small" data-pv="${d.id}">👁 预览</button>
                   <button class="reading-btn small danger" data-del="${d.id}">删除</button>
                 </span>
               </div>`).join('')}
@@ -61,11 +61,26 @@ export async function mountReadingList(el) {
         </div>
       </div>`
     el.querySelector('#rl-add').addEventListener('click', () => openEditor())
-    el.querySelectorAll('[data-edit]').forEach((b) =>
+    el.querySelectorAll('[data-pv]').forEach((b) =>
       b.addEventListener('click', async () => {
-        const d = derived.find((x) => x.id === Number(b.dataset.edit))
+        const d = derived.find((x) => x.id === Number(b.dataset.pv))
         if (!d) return
-        openEditor(d)
+        let full = d
+        try { full = await api.readingArticle(d.id) } catch { /* 用列表数据 */ }
+        const dlg = document.createElement('div')
+        dlg.className = 'plan-editor'
+        dlg.innerHTML = `
+          <div class="plan-editor-mask"></div>
+          <div class="plan-editor-body card rl-pv">
+            <h3>${escapeHtml(d.title)} <i>${escapeHtml(d.base_key)} · ${d.words} 词</i></h3>
+            <div class="rl-pv-text">${(full.text || '').split(/\n+/).map((par) =>
+              `<p>${escapeHtml(par).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>`).join('')}</div>
+            <div class="chip-row"><button class="chip" id="rl-pv-close">关闭</button></div>
+          </div>`
+        document.body.appendChild(dlg)
+        const close = () => dlg.remove()
+        dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
+        dlg.querySelector('#rl-pv-close').addEventListener('click', close)
       }))
     el.querySelectorAll('[data-del]').forEach((b) =>
       b.addEventListener('click', async () => {

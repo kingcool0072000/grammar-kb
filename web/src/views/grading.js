@@ -88,102 +88,97 @@ export async function mountGrading(el) {
     : null
   const focusWeekMin = Math.round(focusWeek.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)
 
+  // ---- 按作业类型的独立卡片（每卡 Top5 + 查看全部进全量列表） ----
+  const cards = [
+    {
+      key: 'recording', icon: '🎙', title: '精读朗读录音', list: recs,
+      pending: pendRec.length,
+      row: (r) => recRow(r),
+      empty: '暂无录音提交',
+    },
+    {
+      key: 'essay', icon: '✍️', title: 'FCE 作文与练习', list: fceSubs,
+      pending: pendEssay.length,
+      row: (x) => fceRow(x),
+      empty: '暂无 FCE 练习',
+    },
+    {
+      key: 'haya-exam', icon: '📊', title: '哈一作业成绩', list: exams,
+      row: (e) => `
+        <div class="fce-his-row">
+          <span class="fce-his-what">第 ${e.lecture} 讲</span>
+          <b class="fce-his-score ${e.score >= 90 ? 'ok' : e.score >= 70 ? '' : 'bad'}">${e.score}</b>
+          <span class="fce-his-date">${e.date}${e.wrong && e.wrong.length ? ` · 错 ${e.wrong.length} 题` : ''}</span>
+        </div>`,
+      empty: '暂无成绩',
+      tool: 'exams',
+    },
+    {
+      key: 'recite', icon: '📖', title: '背单词练习', list: recite,
+      row: (x) => `
+        <div class="fce-his-row">
+          <span class="fce-his-what">${escapeHtml(x.user)} · ${scopeCn(x.scope)}${x.mode === 'flip' ? '（自评）' : ''}</span>
+          <b class="fce-his-score ${x.acc >= 80 ? 'ok' : ''}">${x.acc}%</b>
+          <span class="fce-his-date">${x.total} 词 · 错 ${x.wrong} · ${fmtDur(x.duration_sec || 0)} · ${(x.created_at || '').slice(5, 10)}</span>
+        </div>`,
+      empty: '暂无背单词记录',
+    },
+  ]
+
   el.innerHTML = `
     <div class="view-head">
       <h1>批改中心</h1>
       <p>学生作业的待批与动态汇总。${totalPend ? `<b class="gd-pend-badge">${totalPend} 项待批</b>` : '当前没有待批项 ✅'}</p>
     </div>
-
-    <div class="grading-stats">
-      <div class="grading-stat ${pendRec.length ? 'warn' : ''}" data-go="recording" title="FCE 口语朗读录音批改">
-        <b>${pendRec.length}</b><span>FCE 朗读录音待批</span>
-      </div>
-      <div class="grading-stat ${pendEssay.length ? 'warn' : ''}" data-go="essay" title="FCE 写作批改">
-        <b>${pendEssay.length}</b><span>FCE 作文待批</span>
-      </div>
-      <div class="grading-stat" data-go="haya-exam" title="哈一作业成绩管理">
-        <b>${latestExam ? latestExam.score : '—'}</b><span>最近哈一成绩${latestExam ? `（第${latestExam.lecture}讲）` : ''}</span>
-      </div>
-      <div class="grading-stat" data-go="recite" title="背单词练习记录">
-        <b>${reciteToday.length}</b><span>今日背单词（组）</span>
-      </div>
-      <div class="grading-stat gd-focus-stat" title="泛读馆阅读专注评分 · 近 7 天会话平均">
-        <b>${focusWeekAvg ?? '—'}</b><span>本周专注均分${focusWeek.length ? `（${focusWeek.length} 次）` : ''}</span>
-      </div>
-    </div>
-
-    <div class="gd-board">
-      <!-- ================= FCE 听说读写 ================= -->
-      <section class="gd-section">
-        <header class="gd-section-head">
-          <h2>🎧 FCE 听说读写</h2>
-          <nav>
-            <button class="reading-btn small primary" data-go="recording">🎙 朗读录音${pendRec.length ? `（${pendRec.length}）` : ''}</button>
-            <button class="reading-btn small primary" data-go="essay">✍️ 作文${pendEssay.length ? `（${pendEssay.length}）` : ''}</button>
-            <button class="reading-btn small" data-go="fce-subs">📋 练习明细</button>
-          </nav>
-        </header>
-        <div class="gd-subgroup">
-          <h3>🎙 朗读录音${pendRec.length ? ` · 待批 ${pendRec.length}` : ''}</h3>
-          ${recs.slice(0, 5).map((r) => recRow(r)).join('') || '<p class="reading-hint">暂无录音提交</p>'}
-        </div>
-        <div class="gd-subgroup">
-          <h3>✍️ 作文与练习</h3>
-          ${fceSubs.slice(0, 5).map((s) => fceRow(s)).join('') || '<p class="reading-hint">暂无 FCE 练习</p>'}
-        </div>
-      </section>
-
-      <!-- ================= 哈1 语法 ================= -->
-      <section class="gd-section">
-        <header class="gd-section-head">
-          <h2>📚 哈1 语法</h2>
-          <nav>
-            <button class="reading-btn small primary" data-go="haya-exam">📊 哈一作业成绩</button>
-            <button class="reading-btn small" data-go="recite">📖 背单词记录</button>
-          </nav>
-        </header>
-        <div class="gd-subgroup">
-          <h3>📊 哈一作业成绩 · 最近</h3>
-          ${exams.slice(0, 5).map((e) => `
-            <div class="fce-his-row">
-              <span class="fce-his-what">第 ${e.lecture} 讲</span>
-              <b class="fce-his-score ${e.score >= 90 ? 'ok' : e.score >= 70 ? '' : 'bad'}">${e.score}</b>
-              <span class="fce-his-date">${e.date}${e.wrong && e.wrong.length ? ` · 错 ${e.wrong.length} 题` : ''}</span>
-            </div>`).join('') || '<p class="reading-hint">暂无成绩</p>'}
-        </div>
-        <div class="gd-subgroup">
-          <h3>📖 背单词 · 最近练习</h3>
-          ${recite.slice(0, 5).map((s) => `
-            <div class="fce-his-row">
-              <span class="fce-his-what">${escapeHtml(s.user)} · ${scopeCn(s.scope)}${s.mode === 'flip' ? '（自评）' : ''}</span>
-              <b class="fce-his-score ${s.acc >= 80 ? 'ok' : ''}">${s.acc}%</b>
-              <span class="fce-his-date">${s.total} 词 · 错 ${s.wrong} · ${fmtDur(s.duration_sec || 0)} · ${(s.created_at || '').slice(5, 10)}</span>
-            </div>`).join('') || '<p class="reading-hint">暂无背单词记录</p>'}
-          ${recite.length ? `<p class="reading-hint">易错词（最近）：${topWrongWords(recite)}</p>` : ''}
-        </div>
-      </section>
-
-      <!-- ================= 专注力 · 泛读阅读 ================= -->
-      <section class="gd-section gd-focus-section">
-        <header class="gd-section-head">
+    <div class="gcard-grid">
+      ${cards.map((c) => `
+        <section class="gcard ${c.pending ? 'has-pend' : ''}" data-card="${c.key}">
+          <header class="gcard-head">
+            <h2>${c.icon} ${c.title}</h2>
+            ${c.pending ? `<b class="gcard-pend">待批 ${c.pending}</b>` : `<b class="gcard-n">${c.list.length}</b>`}
+          </header>
+          <div class="gcard-list">
+            ${c.list.slice(0, 5).map((x) => c.row(x)).join('') || `<p class="reading-hint">${c.empty}</p>`}
+          </div>
+          <button class="gcard-more" data-all="${c.key}">查看全部（${c.list.length}）→</button>
+        </section>`).join('')}
+      <section class="gcard" data-card="focus">
+        <header class="gcard-head">
           <h2>👁 专注力 · 泛读阅读</h2>
-          <nav><span class="gd-focus-head-hint">点会话查看专注详情</span></nav>
+          <b class="gcard-n">${focus.length}</b>
         </header>
-        <div class="gd-subgroup">
-          <h3>📖 阅读会话 · 全部记录</h3>
-          ${focus.length ? `<p class="reading-hint">近 7 天 ${focusWeek.length} 次会话 · 平均 ${focusWeekAvg ?? '—'} 分 · 累计专注 ${focusWeekMin} 分钟</p>` : ''}
+        <div class="gcard-list">
+          ${focus.length ? `<p class="reading-hint">近 7 天 ${focusWeek.length} 次 · 平均 ${focusWeekAvg ?? '—'} 分 · 累计 ${focusWeekMin} 分钟</p>` : ''}
           <div id="gd-focus-list"><p class="reading-hint">加载中…</p></div>
         </div>
+        <button class="gcard-more" data-all="focus">查看全部专注会话 →</button>
       </section>
     </div>
   `
 
-  el.querySelectorAll('[data-go]').forEach((b) => {
+  // 各卡「查看全部」→ 全量列表视图（页内切换）
+  const showAll = {
+    recording: async () => openRecordingReview(),
+    essay: () => go('essay'),
+    'haya-exam': () => go('exams'),
+    recite: () => go('recite'),
+    focus: () => {
+      const host = el.querySelector('#gd-focus-list')
+      // 专注力已有分页流，全部=当前列表翻页；此处跳学情分析看趋势
+      go('fce-subs')
+    },
+  }
+  el.querySelectorAll('[data-all]').forEach((b) =>
     b.addEventListener('click', () => {
-      if (b.dataset.go === 'recording') { openRecordingReview(); return }
-      go(b.dataset.go)
-    })
+      const fn = showAll[b.dataset.all]
+      if (fn) fn()
+    }))
+  // 录音卡内行点击 → 批改视图
+  el.querySelector('[data-card="recording"] .gcard-list').addEventListener('click', (e) => {
+    if (e.target.closest('[data-rec-del],[data-rec-edit],audio,a')) return
+    openRecordingReview()
   })
+  renderFocusPage(0)
   // readingAdmin 跳转联动：自动展开批改视图
   if (sessionStorage.getItem('gkb-open-review') === '1') {
     sessionStorage.removeItem('gkb-open-review')
@@ -235,7 +230,6 @@ export async function mountGrading(el) {
       host.appendChild(pager)
     }
   }
-  renderFocusPage(0)
 }
 
 // 专注会话标题：泛读 = 「泛读-书名-章节」（后端已按 book_id 补书名，章节用 range_label）
