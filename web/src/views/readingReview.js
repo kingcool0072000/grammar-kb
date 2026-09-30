@@ -1,4 +1,4 @@
-import { api } from '../api.js'
+import { api, getAuth } from '../api.js'
 import { escapeHtml, escAttr } from '../render.js'
 
 // 精读录音批改（共享模块）：从 readingAdmin 抽出，批改中心承载。v2 缓存刷新。
@@ -99,23 +99,19 @@ async function renderReview(el, recs, onBack) {
     <div id="rd-review-list"></div>
   `
   const box = el.querySelector('#rd-review-list')
-  // 并行预取全部录音（每条仅几 KB～几十 KB）与文章，转 Blob URL 一次性挂到
-  // <audio>——原生控件直接播放，无懒加载时序/自动播放策略问题
+  // 音频走二进制端点直连（<audio src> 浏览器按需流式拉取，不再预取
+  // 详情 JSON 里 2MB+ 的 base64——首开全量预取曾是主瓶颈）。
+  // 文章全文仍预取（纯文本，量小）；单条最多等 4 秒不阻塞整个列表。
   const slice = list.slice(0, 30)
-  // 详情音频/全文不是列表展示的前置条件：单条接口偶发卡住时不能阻塞
-  // 整个批改列表。每条最多等 4 秒，超时则先显示批改行，稍后刷新可再取。
   const withTimeout = (promise, ms = 4000) => Promise.race([
     promise,
     new Promise((resolve) => setTimeout(() => resolve(null), ms)),
   ]).catch(() => null)
-  const [fulls, arts] = await Promise.all([
-    Promise.all(slice.map((r) => withTimeout(api.readingRecording(r.id)))),
-    Promise.all(slice.map((r) => withTimeout(api.readingArticle(r.article_id)))),
-  ])
-  const exportable = [] // {blobUrl, name, textName, text} 供导出
+  const arts = await Promise.all(
+    slice.map((r) => withTimeout(api.readingArticle(r.article_id))))
+  const exportable = [] // {audioUrl, name, textName, text} 供导出
   for (let i = 0; i < slice.length; i++) {
     const r = slice[i]
-    const full = fulls[i]
     const art = arts[i]
     const row = document.createElement('div')
     row.className = 'reading-review-card'
@@ -141,26 +137,21 @@ async function renderReview(el, recs, onBack) {
       </div>
       <div class="reading-review-msg"></div>
     `
-    // 音频：Blob URL（Chrome/Safari 原生播放；m4a 已在入库时转码）
+    // 音频：二进制端点直连（token 走查询参数——媒体标签无法带
+    // Authorization 头）；浏览器按需流式拉取，列表秒开
     const audio = row.querySelector('audio')
-    let objectUrl = null
-    if (full?.audio_b64) {
-      try {
-        const bin = atob(full.audio_b64)
-        const buf = new Uint8Array(bin.length)
-        for (let j = 0; j < bin.length; j++) buf[j] = bin.charCodeAt(j)
-        objectUrl = URL.createObjectURL(new Blob([buf], { type: full.mime || 'audio/mp4' }))
-        audio.src = objectUrl
-      } catch { /* 解码失败则留空，播放控件显示无源 */ }
-    }
+    const audioUrl = getAuth()?.token
+      ? `/api/reading/recordings/${r.id}/audio?token=${encodeURIComponent(getAuth().token)}`
+      : null
+    if (audioUrl) audio.src = audioUrl
     // 导出命名（与 CLI export-recordings 一致）
     const when = (r.created_at || '').slice(0, 16).replace(/[-:T]/g, '')
-    const ext = (full?.mime || 'audio/mp4').includes('webm') ? 'webm' : 'm4a'
+    const ext = (r.mime || 'audio/mp4').includes('webm') ? 'webm' : 'm4a'
     const audioName = `rec${r.id}_${r.user}_${when}.${ext}`
     const textName = `rec${r.id}_selected_text.txt`
-    if (objectUrl) exportable.push({ url: objectUrl, name: audioName, textName, text: r.selected_text })
-    row.querySelector('[data-dl]').addEventListener('click', () => {
-      if (objectUrl) dlFileGlobal(objectUrl, audioName)
+    if (audioUrl) exportable.push({ url: audioUrl, name: audioName, textName, text: r.selected_text })
+    row.querySelector('[data-dl]').addEventListener('click', async () => {
+      if (audioUrl) await dlAudioGlobal(audioUrl, audioName)
       if (r.selected_text) dlTextGlobal(textName, r.selected_text)
     })
     row.querySelector('[data-grade]').addEventListener('click', async () => {
@@ -182,7 +173,6 @@ async function renderReview(el, recs, onBack) {
       if (!confirm(`确定删除 ${r.user} 的这条录音（${fmtDur(r.duration_sec || 0)}）？删除后不可恢复。`)) return
       try {
         await api.readingDeleteRecording(r.id)
-        if (objectUrl) URL.revokeObjectURL(objectUrl)
         const at = exportable.findIndex((x) => x.name === audioName)
         if (at >= 0) exportable.splice(at, 1)
         row.remove()
@@ -198,8 +188,8 @@ async function renderReview(el, recs, onBack) {
       return
     }
     exportable.forEach((x, i) => {
-      setTimeout(() => {
-        dlFileGlobal(x.url, x.name)
+      setTimeout(async () => {
+        await dlAudioGlobal(x.url, x.name)
         if (x.text) dlTextGlobal(x.textName, x.text)
       }, i * 350) // 浏览器对连发下载有拦截，错峰触发
     })
@@ -229,6 +219,19 @@ function dlFileGlobal(blobUrl, name) {
   document.body.append(a)
   a.click()
   a.remove()
+}
+
+// 二进制音频端点 → Blob 下载（音频不再有本地 blob URL，下载时现取）
+async function dlAudioGlobal(url, name) {
+  try {
+    const resp = await fetch(url)
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+    const u = URL.createObjectURL(await resp.blob())
+    dlFileGlobal(u, name)
+    setTimeout(() => URL.revokeObjectURL(u), 5000)
+  } catch (e) {
+    alert(`音频下载失败：${e.message}`)
+  }
 }
 
 function dlTextGlobal(name, text) {

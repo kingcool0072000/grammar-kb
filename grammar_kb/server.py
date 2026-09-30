@@ -175,7 +175,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
               fce_db_path: Optional[str] = None):
     """构造 FastAPI 应用。``db_path`` 为 None 时走默认库（GRAMMAR_KB_DB 或 data/grammar.db）；
     ``exam_db_path`` 为成绩库路径（默认 data/exam.db）。"""
-    from fastapi import FastAPI, HTTPException, Query as FQuery
+    from fastapi import FastAPI, HTTPException, Query as FQuery, Response
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
 
@@ -306,6 +306,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("GET", "/library/settings"),
         ("POST", "/library/books/"),  # 放行 /{id}/open（skip 等教师端点内有 _require_teacher 兜底）
         ("PUT", "/library/books/"),   # 放行 /{id}/progress（skip 端点内有 _require_teacher 兜底）
+        # 录音音频二进制（<audio src> 直连；端点内校验只能听自己的）
+        ("GET", "/reading/recordings/"),
     )
 
     @app.middleware("http")
@@ -320,6 +322,11 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             return await call_next(request)
         auth_header = request.headers.get("Authorization", "")
         token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
+        # 二进制媒体端点（如 /reading/recordings/{id}/audio）由 <audio src>
+        # 直连——HTML 媒体标签无法带 Authorization 头，token 走查询参数。
+        # 仅对 /audio 结尾的只读媒体端点开放此通道。
+        if not token and path.endswith("/audio"):
+            token = request.query_params.get("token", "")
         payload = read_token(token) if token else None
         if payload is None:
             return JSONResponse(
@@ -871,6 +878,24 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         if request.state.role != "teacher" and data["user"] != request.state.user:
             raise HTTPException(status_code=403, detail="只能查看自己的录音")
         return _ok(data)
+
+    @app.get("/reading/recordings/{rec_id}/audio")
+    def reading_recording_audio(rec_id: int, request: "fastapi.Request"):
+        """录音音频二进制流（<audio src> 直连：浏览器按需流式拉取，
+        替代详情 JSON 里 2MB+ 的 base64——批改首开全量预取的主瓶颈）。
+        权限同详情：学生只能听自己的。token 走查询参数（audio 标签无法带
+        Authorization 头），仅读且短时效场景可接受。"""
+        data = reading.get_recording(rec_id)
+        if data is None:
+            raise HTTPException(status_code=404, detail=f"录音 id={rec_id} 不存在")
+        if request.state.role != "teacher" and data["user"] != request.state.user:
+            raise HTTPException(status_code=403, detail="只能播放自己的录音")
+        import base64 as _b64
+        try:
+            raw = _b64.b64decode(data.get("audio_b64") or "")
+        except Exception:
+            raise HTTPException(status_code=500, detail="音频数据损坏")
+        return Response(content=raw, media_type=data.get("mime") or "audio/mp4")
 
     @app.put("/reading/recordings/{rec_id}")
     def reading_grade_recording(rec_id: int, rec: ReadingGradeIn, request: "fastapi.Request"):
