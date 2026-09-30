@@ -183,7 +183,7 @@ export async function mountPlan(el) {
           <header class="pw-nav">
             <button class="chip" data-wk="prev" ${viewWeek <= earliest ? 'disabled' : ''}>← 上一周</button>
             <div class="pw-title">
-              <h3>${isCur ? '本周' : '周'} · ${weekLabel(wv.week_start)}${wv.current_week ? '' : '（已结束）'}</h3>
+              <h3>${isCur ? '本周' : '周'} · ${weekLabel(wv.week_start)}${wv.current_week ? '' : wv.week_start > curWeek ? '（未开始）' : '（已结束）'}</h3>
             </div>
             <button class="chip" data-wk="next" ${wv.week_start >= '2027-01-25' ? 'disabled' : ''}>下一周 →</button>
             <button class="chip" data-edit="${wv.week_start}">✏️ 编辑本周</button>

@@ -114,7 +114,7 @@ export async function mountStudents(el, { bare = false } = {}) {
       }))
   }
 
-  function openGoalDialog(user) {
+  async function openGoalDialog(user) {
     const ga = editorData?.goal_assets || {}
     const lecOpts = ga.lectures || []
     const vocabLv = ga.vocab_levels || []
@@ -122,13 +122,20 @@ export async function mountStudents(el, { bare = false } = {}) {
     const arts = (ga.articles || []).filter((a) => a.kind === 'derived')
     const books = ga.books || []
     const papers = ga.vocab_papers || []
+    // 回填：一个学生同一时段只有一个总目标（plan_goals 一人一行），
+    // 打开即带出当前配置——保存=修改覆盖，学习记录不受影响。
+    let cur = {}
+    try { cur = (await api.planGoals({ user })).goals || {} } catch { cur = {} }
+    const hasGoal = Object.keys(cur).length > 0
     const dlg = document.createElement('div')
     dlg.className = 'plan-editor'
     dlg.innerHTML = `
       <div class="plan-editor-mask"></div>
       <div class="plan-editor-body card pe-body st-goal-body">
         <h3>🎯 ${escapeHtml(user)} 的总目标</h3>
-        <p class="muted" style="margin:0 0 12px;font-size:12px">所有选项来自备课中心已有资产。</p>
+        <p class="muted" style="margin:0 0 12px;font-size:12px">${hasGoal
+          ? '已带出当前配置——保存即整体替换这一个目标；学习过的内容不受影响。'
+          : '该生暂无总目标。所有选项来自备课中心已有资产。'}</p>
 
         <div class="pe-sec"><h4>📚 哈一课程 + 考卷 <i>选择要完成的讲次（标「卷」= 有考卷）</i><button type="button" class="chip sg-all" data-all="lec">全选</button></h4>
           <div class="pe-lec-grid" id="sg-lec">${lecOpts.map((l) => `
@@ -180,10 +187,11 @@ export async function mountStudents(el, { bare = false } = {}) {
         </div>
 
         <label class="plan-field">冲刺截止日期
-          <input id="sg-deadline" type="date" value="2027-01-31"/>
+          <input id="sg-deadline" type="date" value="${cur.deadline || '2027-01-31'}"/>
         </label>
         <div class="chip-row">
           <button class="btn-primary" id="sg-save">保存</button>
+          ${hasGoal ? '<button class="chip st-abandon" id="sg-abandon">放弃目标</button>' : ''}
           <button class="chip" id="sg-cancel">取消</button>
         </div>
       </div>`
@@ -196,6 +204,41 @@ export async function mountStudents(el, { bare = false } = {}) {
       lectures: new Set(), vocab_levels: new Set(), fce_parts: new Set(),
       articles: new Set(), books: new Set(), vocab_papers: new Set(),
     }
+    // ---- 回填当前配置（按钮 on / checkbox checked 与 sel 同步）----
+    const prefill = () => {
+      for (const n of cur.lectures || []) {
+        sel.lectures.add(String(n))
+        const b = dlg.querySelector(`[data-sg-lec="${CSS.escape(String(n))}"]`)
+        if (b) b.classList.add('on')
+      }
+      for (const lv of cur.vocab_levels || []) {
+        sel.vocab_levels.add(Number(lv))
+        const c = dlg.querySelector(`[data-sg-vlv="${Number(lv)}"]`)
+        if (c) c.checked = true
+      }
+      for (const label of cur.fce_parts || []) {
+        sel.fce_parts.add(label)
+        const b = dlg.querySelector(`[data-sg-fce="${CSS.escape(label)}"]`)
+        if (b) b.classList.add('on')
+      }
+      for (const id of cur.articles || []) {
+        sel.articles.add(String(id))
+        const b = dlg.querySelector(`[data-sg-art="${id}"]`)
+        if (b) b.classList.add('on')
+      }
+      for (const id of cur.reading || []) {
+        sel.books.add(String(id))
+        const c = dlg.querySelector(`[data-sg-bk="${id}"]`)
+        if (c) c.checked = true
+      }
+      for (const pid of cur.vocab_papers || []) {
+        sel.vocab_papers.add(pid)
+        const b = dlg.querySelector(`[data-sg-paper="${CSS.escape(pid)}"]`)
+        if (b) b.classList.add('on')
+      }
+      if (cur.vocab_target) dlg.querySelector('#sg-vocab-n').value = cur.vocab_target
+    }
+    prefill()
     // attr 用连字符（选择器 [data-xx]），dataset 键自动驼峰
     const bindToggle = (attr, set) => dlg.querySelectorAll(`[data-${attr}]`).forEach((b) =>
       b.addEventListener('click', (e) => {
@@ -273,6 +316,17 @@ export async function mountStudents(el, { bare = false } = {}) {
         close()
         loadAllGoals()
       } catch (e) { alert('保存失败：' + e.message) }
+    })
+    // 放弃目标：清空配置（唯一目标置空），学习记录保留在成绩/录音/背词等活动数据中
+    const abBtn = dlg.querySelector('#sg-abandon')
+    if (abBtn) abBtn.addEventListener('click', async () => {
+      if (!confirm(`放弃「${user}」的当前总目标？\n学习过的内容（成绩/录音/背词/阅读进度）全部保留，只是不再跟踪该目标。`)) return
+      try {
+        await api.planGoalsPut(user, {})
+        toast(`已放弃 ${user} 的总目标（学习记录保留）`)
+        close()
+        loadAllGoals()
+      } catch (e) { alert('操作失败：' + e.message) }
     })
   }
 
