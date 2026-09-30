@@ -766,8 +766,30 @@ class PlanStore:
             t2["done"] = t2["auto_done"]
             out.append(t2)
         done_n = sum(1 for x in out if x["done"])
+        # ---- 当日实录（教师周历单日卡补充显示）----
+        # 计划内任务已按信号打勾；这里补两类信息：
+        # 1) 计划外的朗读提交（计划没排该篇，但学生做了——原逻辑直接不可见）
+        # 2) 量化实录：泛读分钟+词数 / 背单词个数+分钟（无论是否在计划内）
+        acts = getattr(self, "_day_acts", None) or {}
+        planned_articles = {t.get("article_id") for t in derived}
+        extra_speaks = []
+        for aid in acts.get("speak_articles", []):
+            if aid not in planned_articles:
+                title = self._article_title(aid)
+                extra_speaks.append({
+                    "type": "speak", "done": True,
+                    "text": f"朗读《{title[:16]}》" if title else f"朗读提交（文章{aid}）",
+                    "detail": "计划外提交，录音已进批改中心",
+                })
+        acts_out = {
+            "extra_speaks": extra_speaks,
+            "reading_min": acts.get("reading_min", 0),
+            "reading_words": acts.get("reading_words", 0),
+            "vocab_n": acts.get("vocab_n", 0),
+            "vocab_min": acts.get("vocab_min", 0),
+        }
         return {"date": d, "week_start": ws, "tasks": out,
-                "done": done_n, "total": len(out)}
+                "done": done_n, "total": len(out), "acts": acts_out}
 
     def week_todo(self, user: str = "malin") -> dict:
         """学生周清单：本周目标 + 周一至周日逐日任务完成矩阵。"""
@@ -878,6 +900,7 @@ class PlanStore:
                 "tasks": [{"key": x["key"], "text": x["text"],
                            "detail": x.get("detail"), "type": x["type"],
                            "done": x["done"]} for x in td["tasks"]],
+                "acts": td.get("acts") or {},
             })
         return {
             "week_start": week_start, "tasks": t, "notes": w.get("notes") or "",
@@ -1344,6 +1367,42 @@ class PlanStore:
         except sqlite3.Error:
             return set()
 
+    def _reading_gained_words(self, rows: list, gained_pct: float) -> int:
+        """泛读会话的全书百分比推进差 → 估算词数。
+
+        percent_start/end 为 0-100 口径百分数；各书总词数从
+        library.chapters 汇总，按各会话推进差分摊。缺库/缺章节数据
+        返回 0（前端只显示分钟，不显示拍脑袋的词数）。
+        """
+        conn = self._lib_connect()
+        total_by_book: dict[int, int] = {}
+        if conn is not None:
+            try:
+                with contextlib.closing(conn):
+                    ids = {r["book_id"] for r in rows if r["book_id"] is not None}
+                    if ids:
+                        ph = ",".join("?" * len(ids))
+                        for r in conn.execute(
+                            f"SELECT book_id, COALESCE(SUM(word_count),0) w"
+                            f" FROM chapters WHERE book_id IN ({ph}) GROUP BY book_id",
+                            list(ids),
+                        ):
+                            if r["w"]:
+                                total_by_book[r["book_id"]] = r["w"]
+            except sqlite3.Error:
+                pass
+        if not total_by_book:
+            return 0
+        words = 0
+        for r in rows:
+            delta = max(0.0, ((r["percent_end"] or 0) - (r["percent_start"] or 0)) / 100)
+            if delta <= 0 or r["book_id"] is None:
+                continue
+            tw = total_by_book.get(r["book_id"])
+            if tw:
+                words += int(round(delta * tw))
+        return words
+
     def _auto_done(self, user: str, day: str) -> tuple[dict[str, bool], list[str]]:
         """当天活动信号 → (task_key 完成表, 当日阅读书名列表)。
 
@@ -1352,6 +1411,8 @@ class PlanStore:
         """
         out: dict[str, bool] = {}
         read_titles: list[str] = []
+        self._day_acts = {"speak_articles": [], "reading_min": 0,
+                          "reading_words": 0, "vocab_n": 0, "vocab_min": 0}
         nxt = (date.fromisoformat(day) + timedelta(days=1)).isoformat()
         exam_path = self._exam_db()
         if exam_path and Path(exam_path).exists():
@@ -1382,12 +1443,16 @@ class PlanStore:
                         out["wrong_words"] = True
                 if "recite_sessions" in tabs:
                     row = conn.execute(
-                        "SELECT COUNT(*) n FROM recite_sessions"
+                        "SELECT COUNT(*) n, COALESCE(SUM(total),0) w,"
+                        " COALESCE(SUM(duration_sec),0) dur"
+                        " FROM recite_sessions"
                         " WHERE user = ? AND (created_at >= ? AND created_at < ?)",
                         (user, day, nxt),
                     ).fetchone()
                     if row and row["n"]:
                         out.setdefault("wrong_words", True)
+                        self._day_acts["vocab_n"] = row["w"]
+                        self._day_acts["vocab_min"] = round(row["dur"] / 60)
                 if "fce_submission" in tabs:
                     row = conn.execute(
                         "SELECT COUNT(*) n FROM fce_submission"
@@ -1407,9 +1472,12 @@ class PlanStore:
                         for r in rows:
                             if r["article_id"]:
                                 out[f"article:{r['article_id']}"] = True
+                                self._day_acts["speak_articles"].append(r["article_id"])
                 if "focus_sessions" in tabs:
                     rows = conn.execute(
-                        "SELECT DISTINCT book_title FROM focus_sessions"
+                        "SELECT module, book_title, book_id, active_sec,"
+                        " percent_start, percent_end"
+                        " FROM focus_sessions"
                         " WHERE user = ? AND (created_at >= ? AND created_at < ?)"
                         " AND book_title IS NOT NULL",
                         (user, day, nxt),
@@ -1418,6 +1486,17 @@ class PlanStore:
                     for r in rows:
                         out[f"reading:{(r['book_title'] or '')[:14]}"] = True
                         out.setdefault("reading", True)
+                    # 泛读（library 模块）实录：分钟 + 词数（按全书百分比推进差 × 总词数）
+                    lib_rows = [r for r in rows if r["module"] == "library"]
+                    if lib_rows:
+                        self._day_acts["reading_min"] = round(
+                            sum(r["active_sec"] or 0 for r in lib_rows) / 60)
+                        gained = sum(
+                            max(0.0, (r["percent_end"] or 0) - (r["percent_start"] or 0))
+                            for r in lib_rows)
+                        if gained > 0:
+                            self._day_acts["reading_words"] = self._reading_gained_words(
+                                lib_rows, gained)
         except sqlite3.Error:
             pass
         return out, read_titles

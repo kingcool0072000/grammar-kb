@@ -2515,6 +2515,8 @@ li.open .topic-reveal-btn { display: none; }
 .pw-task.done span { text-decoration: line-through; }
 .pw-task em { font-style: normal; color: #2e7d4f; font-weight: 800; flex: none; }
 .pw-none { font-style: normal; font-size: 10.5px; color: var(--ink-faint); }
+.pw-acts { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--line); }
+.pw-acts span { font-size: 10.5px; color: var(--ink-soft); }
 .pw-goals {
   border: 1px solid var(--line); border-radius: 12px; background: var(--card);
   padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;

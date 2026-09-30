@@ -237,21 +237,34 @@ export async function mountPlan(el) {
     function dayCell(d, i, dayNames) {
       const dd = Number(d.date.slice(8))
       const isToday = d.date === today
-      const icon = { micro_drill: '✏️', wrong_words: '🔤', lecture: '📚', fce: '🎧', reading: '📖' }
-      // 单日卡片只显示当天完成的工作；未完成的计划不在卡上列出
+      const icon = { micro_drill: '✏️', wrong_words: '🔤', lecture: '📚', fce: '🎧', reading: '📖', speak: '🎤', article: '📄', paper: '📝' }
+      // 单日卡片只显示当天完成的工作；未完成的计划不在卡上列出。
+      // 计划外的工作（朗读/泛读/背单词量化实录）由 acts 补充显示。
       const rows = (d.tasks || []).filter((x) => x.done).map((x) => `
         <div class="pw-task done">
           <i>${icon[x.type] || '•'}</i>
           <span title="${escapeHtml(x.text)}">${escapeHtml(x.text)}</span>
           <em>✓</em>
         </div>`).join('')
+      const acts = d.acts || {}
+      const extraRows = (acts.extra_speaks || []).map((x) => `
+        <div class="pw-task done">
+          <i>${icon[x.type] || '🎤'}</i>
+          <span title="${escapeHtml(x.text)}">${escapeHtml(x.text)}</span>
+          <em>✓</em>
+        </div>`).join('')
+      const statRows = []
+      if (acts.reading_min) statRows.push(`📖 泛读 ${acts.reading_min} 分钟${acts.reading_words ? `（${acts.reading_words} 词）` : ''}`)
+      if (acts.vocab_n) statRows.push(`🔤 背单词 ${acts.vocab_n} 个${acts.vocab_min ? `（${acts.vocab_min} 分钟）` : ''}`)
+      const statHtml = statRows.length
+        ? `<div class="pw-acts">${statRows.map((s) => `<span>${escapeHtml(s)}</span>`).join('')}</div>` : ''
       const full = !d.future && d.total > 0 && d.done >= d.total
       return `<div class="pw-day ${isToday ? 'today' : ''} ${d.future ? 'future' : ''} ${full ? 'fulled' : ''}">
         <div class="pw-day-head">
           <b>周${dayNames[i]}</b><span>${dd} 日</span>
           <em>${d.future ? '待来' : (d.done ? `${d.done} ✓` : '—')}</em>
         </div>
-        <div class="pw-tasks">${rows || (d.future ? '' : '<i class="pw-none">无完成</i>')}</div>
+        <div class="pw-tasks">${rows + extraRows || (d.future ? '' : '<i class="pw-none">无完成</i>')}${statHtml}</div>
       </div>`
     }
 
