@@ -2863,6 +2863,7 @@ li.open .topic-reveal-btn { display: none; }
 }
 .gp-empty { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-soft); }
 .gp-head { display: flex; align-items: center; gap: 16px; margin-bottom: 10px; }
+.gp-mode-tabs { margin-left: auto; display: flex; gap: 6px; flex: none; }
 .gp-ring {
   --p: 0; width: 74px; height: 74px; border-radius: 50%; flex: none;
   background: conic-gradient(var(--brand) calc(var(--p) * 1%), var(--bg-soft) 0);

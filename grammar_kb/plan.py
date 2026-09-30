@@ -922,7 +922,114 @@ class PlanStore:
         return {
             "week_start": week_start, "tasks": t, "notes": w.get("notes") or "",
             "breakdown": breakdown, "days": days, "current_week": in_week,
+            "goal_progress": self._week_goal_progress(t, days, user, week_start),
         }
+
+    def _week_goal_progress(self, t: dict, days: list, user: str,
+                            week_start: str) -> dict:
+        """周目标的各维度目标+进度（与总目标 goal_progress 的 dims 同构，
+        供前端同一张「目标+进度」卡切换展示）。
+
+        维度口径（按周任务配置）：
+        - 讲次：计划讲次数 vs 本周考过的讲次数
+        - 词汇：vocab_goal（级别百分比折算的累计词数）vs 周内新掌握词数
+        - FCE：计划 Part 数 vs 周内提交覆盖数
+        - 泛读：按各书周目标%（词数口径）vs 周内已读词数（实录汇总）
+        - 精读：计划文章数 vs 已提交录音数
+        - 试卷：计划卷数 vs 登记考试数
+        """
+        dims = []
+        wk_done = sum(d.get("done") or 0 for d in days)
+        wk_total = sum(d.get("total") or 0 for d in days)
+
+        def dim(icon, name, ok, total, extra=""):
+            if total:
+                dims.append({"icon": icon, "name": name,
+                             "done": round(ok, 1), "total": total, "extra": extra})
+
+        lecs = t.get("lectures") or []
+        if lecs:
+            try:
+                with sqlite3.connect(
+                        f"file:{self._exam_db()}?mode=ro", uri=True) as conn:
+                    ph = ",".join("?" * len(lecs))
+                    n = conn.execute(
+                        f"SELECT COUNT(DISTINCT lecture) n FROM exam_records"
+                        f" WHERE lecture IN ({ph})"
+                        f" AND date >= ? AND date <= ?",
+                        [*lecs, week_start, add_days(week_start, 6)]).fetchone()
+                    done_lec = n[0] if n else 0
+            except sqlite3.Error:
+                done_lec = 0
+            dim("📚", "讲次", done_lec, len(lecs))
+
+        vg = t.get("vocab_goal")
+        if vg:
+            gained = self._vocab_actuals(week_start, add_days(week_start, 7), user)
+            base = max(0, vg - gained)
+            dim("🔤", "词汇", gained, vg, extra=f"起算 {base} → 目标 {vg}")
+
+        fce = t.get("fce") or []
+        if fce:
+            try:
+                with self._connect() as conn:
+                    rows = conn.execute(
+                        "SELECT test_id, paper, part FROM fce_submission"
+                        " WHERE user = ? AND created_at >= ? AND created_at < ?",
+                        (user, week_start, add_days(week_start, 7))).fetchall()
+                    got = {f"Test {r['test_id']} · {_paper_short(r['paper'])} P{r['part']}"
+                           for r in rows}
+                done_fce = sum(1 for x in fce if x in got)
+            except sqlite3.Error:
+                done_fce = 0
+            dim("🎧", "FCE", done_fce, len(fce))
+
+        reading_map = t.get("reading") or {}
+        if reading_map:
+            acts_w = sum((r.get("words") or 0)
+                         for d in days for r in (d.get("acts") or {}).get("readings") or [])
+            # 目标词数：各书配置目标% × 该书总词数（周维度 total）；
+            # 进度 = 周内实录词数/目标词数封顶
+            total_w = 0
+            ids = [k for k in reading_map if str(k).isdigit()]
+            if ids:
+                lib = self._lib_connect()
+                if lib is not None:
+                    try:
+                        with contextlib.closing(lib):
+                            for bid in ids:
+                                row = lib.execute(
+                                    "SELECT COALESCE(SUM(word_count),0) FROM chapters"
+                                    " WHERE book_id = ?", (int(bid),)).fetchone()
+                                total_w += int((row[0] or 0) * reading_map[bid] / 100)
+                    except sqlite3.Error:
+                        pass
+            if total_w:
+                dim("📖", "泛读", min(acts_w, total_w), total_w,
+                    extra=f"周内实录 {acts_w} 词")
+
+        arts = t.get("articles") or []
+        if arts:
+            done_a = sum(
+                1 for d in days
+                for x in (d.get("tasks") or [])
+                if x.get("type") == "article" and x.get("done"))
+            dim("📄", "精读", done_a, len(arts))
+
+        papers = t.get("vocab_papers") or []
+        if papers:
+            done_p = sum(
+                1 for d in days
+                for x in (d.get("tasks") or [])
+                if x.get("type") == "paper" and x.get("done"))
+            dim("📝", "试卷", done_p, len(papers))
+
+        total_items = sum(d["total"] for d in dims)
+        done_items = sum(min(d["done"], d["total"]) for d in dims)
+        pct = round(done_items / total_items * 100) if total_items else None
+        return {"dims": dims, "percent": pct,
+                "done_items": round(done_items), "total_items": total_items,
+                "week_start": week_start}
 
     # ---- 总目标 + 编辑器数据源（与备课内容完整挂钩） ----
 

@@ -72,6 +72,9 @@ export async function mountPlan(el) {
 
     let goalProg = null
     try { goalProg = await api.planGoalProgress({ user: state.student }) } catch { goalProg = null }
+    // 目标卡模式：week 周（默认，随翻周联动）/ total 总
+    let goalMode = 'week'
+    let weekProg = null // 当前展示周的周目标进度（week-view 返回）
 
     body.innerHTML = `
       <div class="pw-stubar">
@@ -86,9 +89,11 @@ export async function mountPlan(el) {
           <button class="chip ${view.mode === 'overview' ? 'primary' : ''}" data-vmode="overview">🗺 全览</button>
         </div>
       </div>
-      ${progressCardHtml(goalProg)}
+      ${'' /* 目标卡容器：周/总切换内容由 renderGoalCard 填充 */}
+      <div id="goal-card"></div>
       <div id="plan-view"></div>
     `
+    renderGoalCard()
     body.querySelector('#pw-cfg-goal').addEventListener('click', () => {
       sessionStorage.setItem('gkb-open-goal', state.student)
       const t = el.querySelector('[data-ptab="students"]')
@@ -128,12 +133,21 @@ export async function mountPlan(el) {
 
 
 
-    // 总目标进度卡：总% + 六维度进度条
-    function progressCardHtml(gp) {
-      if (!gp || gp.percent == null) {
+    // 统一目标卡：周目标/总目标切换（默认周），两种模式同构「目标+进度」展示
+    function progressCardHtml() {
+      const isWeek = goalMode === 'week'
+      const gp = isWeek ? weekProg : goalProg
+      const title = isWeek
+        ? `🎯 本周目标 · ${weekProg?.week_label || ''}`
+        : `🎯 ${escapeHtml(state.student)} 的总目标`
+      const emptyTxt = isWeek ? '本周未排计划' : `${escapeHtml(state.student)} 的总目标未配置`
+      const emptyBtn = isWeek
+        ? '<button class="chip" data-edit-cur="1">去排本周计划</button>'
+        : '<button class="chip" id="gp-go-cfg">去配置</button>'
+      if (!gp || gp.percent == null || !(gp.dims || []).length) {
         return `<div class="gp-card gp-empty">
-          <span>🎯 ${escapeHtml(state.student)} 的总目标未配置</span>
-          <button class="chip" id="gp-go-cfg">去配置</button>
+          <span>${title} · ${emptyTxt}</span>
+          ${emptyBtn}
         </div>`
       }
       const bars = gp.dims.map((d) => {
@@ -147,18 +161,41 @@ export async function mountPlan(el) {
       return `<div class="gp-card">
         <div class="gp-head">
           <div class="gp-ring" style="--p:${gp.percent}">
-            <b>${gp.percent}%</b><span>总进度</span>
+            <b>${gp.percent}%</b><span>${isWeek ? '周进度' : '总进度'}</span>
           </div>
           <div class="gp-meta">
-            <b>🎯 ${escapeHtml(state.student)} 的总目标</b>
-            <span class="muted">${gp.done_items}/${gp.total_items} 项完成${gp.deadline ? ` · 截止 ${gp.deadline}` : ''}</span>
+            <b>${title}</b>
+            <span class="muted">${gp.done_items}/${gp.total_items} 项完成${!isWeek && gp.deadline ? ` · 截止 ${gp.deadline}` : ''}</span>
+          </div>
+          <div class="gp-mode-tabs">
+            <button class="chip ${isWeek ? 'primary' : ''}" data-gmode="week">周目标</button>
+            <button class="chip ${!isWeek ? 'primary' : ''}" data-gmode="total">总目标</button>
           </div>
         </div>
         <div class="gp-dims">${bars}</div>
       </div>`
     }
 
-    // ---- 周历视图：← 本周 → 翻周，7 天格子逐日任务 + 周目标区 ----
+    function renderGoalCard() {
+      const host = body.querySelector('#goal-card')
+      if (!host) return
+      host.innerHTML = progressCardHtml()
+      host.querySelectorAll('[data-gmode]').forEach((b) =>
+        b.addEventListener('click', () => {
+          goalMode = b.dataset.gmode
+          renderGoalCard()
+        }))
+      const cfg = host.querySelector('#gp-go-cfg')
+      if (cfg) cfg.addEventListener('click', () => {
+        sessionStorage.setItem('gkb-open-goal', state.student)
+        const t = el.querySelector('[data-ptab="students"]')
+        if (t) t.click()
+      })
+      const editCur = host.querySelector('[data-edit-cur]')
+      if (editCur) editCur.addEventListener('click', () => openEditor(viewWeek))
+    }
+
+    // ---- 周历视图：← 本周 → 翻周，7 天格子逐日任务 ----
     async function renderWeeks() {
       const host = viewHost
       host.innerHTML = '<p class="muted">周历加载中…</p>'
@@ -170,14 +207,14 @@ export async function mountPlan(el) {
         return
       }
       const t = wv.tasks || {}
-      const bd = wv.breakdown || {}
       const isCur = wv.week_start === curWeek
       const seeded = [...byStart.keys()].sort()
       const earliest = seeded.length ? seeded[0] : iso(new Date(new Date(curWeek + 'T00:00:00').getTime() - 14 * 86400000))
+      // 周目标进度进统一目标卡（翻周联动；目标卡默认显示周模式）
+      weekProg = { ...(wv.goal_progress || null), week_label: weekLabel(wv.week_start) }
+      renderGoalCard()
 
       const dayNames = ['一', '二', '三', '四', '五', '六', '日']
-      // 书名解析需要编辑器数据（缓存）；失败不阻塞周历
-      const ed = await getEditorData()
       host.innerHTML = `
         <section class="pw-view">
           <header class="pw-nav">
@@ -189,7 +226,6 @@ export async function mountPlan(el) {
             <button class="chip" data-edit="${wv.week_start}">✏️ 编辑本周</button>
             ${isCur ? '' : '<button class="chip" data-wk="cur">回到本周</button>'}
           </header>
-          ${weekGoalsHtml(t, bd, ed)}
           <div class="pw-grid">
             ${(wv.days || []).map((d, i) => dayCell(d, i, dayNames)).join('')}
           </div>
@@ -266,17 +302,6 @@ export async function mountPlan(el) {
       if (t.vocab_papers?.length) chips.push(`📝 试卷 ${t.vocab_papers.length} 卷`)
       if (t.speak) chips.push(`🎤 朗读 ${t.speak} 篇`)
       return chips
-    }
-
-    // 周目标独立区：结构化展示本周排了什么（与编辑器的目标/补充双区对应）
-    function weekGoalsHtml(t, bd, ed) {
-      const chips = weekGoalChips(t, ed)
-      return `<section class="pw-goals">
-        <div class="pw-goals-title">🎯 本周目标</div>
-        <div class="pw-goals-chips">${chips.length
-          ? chips.map((c) => `<i>${escapeHtml(c)}</i>`).join('')
-          : '<em class="muted">本周未排计划</em>'}</div>
-      </section>`
     }
 
     // 阅读实况文案：全书口径——读到第几章（该章占全书的百分比区间）、
