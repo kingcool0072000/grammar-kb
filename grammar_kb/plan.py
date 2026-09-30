@@ -817,11 +817,25 @@ class PlanStore:
 
         # ---- 逐日矩阵 ----
         days = []
+        current_monday = monday_of(date.today()).isoformat()
+        is_historical = week_start < current_monday
         for i in range(7):
             d = (date.fromisoformat(week_start) + timedelta(days=i)).isoformat()
             if d > today_iso:
                 days.append({"date": d, "future": True, "done": 0, "total": 0,
                              "tasks": []})
+                continue
+            if is_historical:
+                hist = self.history_day(user, d) or []
+                days.append({
+                    "date": d, "future": False,
+                    "done": len(hist), "total": len(hist),
+                    "tasks": [{"key": x.get("key") or _task_key(x),
+                               "text": x.get("text", ""),
+                               "detail": x.get("detail"),
+                               "type": x.get("type", "history"),
+                               "done": True} for x in hist],
+                })
                 continue
             td = self.today_tasks(user=user, day=d)
             days.append({
