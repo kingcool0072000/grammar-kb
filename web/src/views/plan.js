@@ -249,7 +249,11 @@ export async function mountPlan(el) {
       const chips = []
       if (t.focus_kps?.length) chips.push(`🎯 攻坚 ${t.focus_kps.map((l) => '第' + l + '讲').join('、')}`)
       if (t.lectures?.length) chips.push(`📚 讲次 ${[...t.lectures].sort((a, b) => a - b).join('/')}讲`)
-      if (t.vocab_goal != null) chips.push(`🔤 词汇 累计${t.vocab_goal}词`)
+      if (t.vocab_goal != null) {
+        chips.push(t.vocab_lv != null
+          ? `🔤 词汇 学到L${t.vocab_lv}的${t.vocab_pct ?? 100}%（${t.vocab_goal}词）`
+          : `🔤 词汇 累计${t.vocab_goal}词`)
+      }
       if (t.fce?.length) chips.push(`🎧 FCE ${t.fce.join('+')}`)
       const books = ed?.books || []
       for (const [k, pct] of Object.entries(t.reading || {})) {
@@ -435,7 +439,6 @@ export async function mountPlan(el) {
         (x) => !(goals.vocab_papers || []).includes(x.paper_id))
       const paperSel = new Set(t.vocab_papers || [])
 
-      const focusSel = new Set(t.focus_kps || [])
       const lecSel = new Set(t.lectures || [])
       const fceSel = new Set(t.fce || [])
       // reading: {bookId: pct}
@@ -444,16 +447,32 @@ export async function mountPlan(el) {
         readSel.set(normalizeReadingKey(k, books), Number(v))
       }
       let speakOn = Boolean(t.speak), speakN = t.speak || 2
+      // 词汇目标（级别百分比口径）：累计词数表来自 goal_assets.vocab_levels
+      // （cum_words 由后端算好）；旧数据 vocab_goal=绝对词数 → 反推最近的
+      // (级别, 百分比) 组合作为初值。
+      const vLevels = ed.goal_assets?.vocab_levels || []
+      const mastered = ed.vocab_mastered || 0
+      let vocabLv = vLevels.length ? vLevels[vLevels.length - 1].level : 5
+      let vocabPct = 100
+      {
+        const goal = t.vocab_goal
+        if (goal != null && vLevels.length) {
+          let best = null
+          for (const v of vLevels) {
+            for (const pct of [100, 90, 80, 70, 60, 50, 40, 30, 20, 10]) {
+              const n = Math.round((v.cum_words || 0) * pct / 100)
+              if (n <= goal && (!best || n > best.n)) best = { lv: v.level, pct, n }
+            }
+          }
+          if (best) { vocabLv = best.lv; vocabPct = best.pct }
+        }
+      }
       const artSel = new Set(t.articles || [])
       const artChips = () => (ed.articles || []).map((a) => `
         <button type="button" class="pe-part ${artSel.has(a.id) ? 'on' : ''}" data-art="${a.id}" title="${escapeHtml(a.title)} ${a.words} 词">
           ${a.kind === 'base' ? '📄' : '✍️'} ${escapeHtml(a.title.slice(0, 18))}<i>${a.words}</i>
         </button>`).join('')
 
-      const lecChips = (selSet, attr) => lectures.map((l) => `
-        <button type="button" class="pe-lec ${selSet.has(l.number) ? 'on' : ''}" data-${attr}="${l.number}" title="${escapeHtml(l.category || '')}">
-          <b>${l.number}</b>${escapeHtml(l.title)}
-        </button>`).join('')
       // 池化讲次 chips（done=✓ 标记，仍可选用于复习）
       const lecChipsPool = (pool, selSet, attr) => pool.map((l) => `
         <button type="button" class="pe-lec ${selSet.has(l.number) ? 'on' : ''}" data-${attr}="${l.number}" title="${escapeHtml(l.category || '')}">
@@ -497,10 +516,6 @@ export async function mountPlan(el) {
         <div class="plan-editor-mask"></div>
         <div class="plan-editor-body card pe-body">
           <h3>编辑 ${weekLabel(ws)} 周计划 <i>· ${state.student}</i></h3>
-          <div class="pe-sec">
-            <h4>🎯 攻坚讲次 <i>≤5 个，来自诊断信号优先</i></h4>
-            <div class="pe-lec-grid" id="pe-focus-grid">${lecChips(focusSel, 'fl')}</div>
-          </div>
           <div class="pe-zone pe-zone-goal">
             <h3 class="pe-zone-title">🎯 从总目标选 <i>总目标的子集；已完成项自动排除</i></h3>
             <div class="pe-sec">
@@ -508,12 +523,14 @@ export async function mountPlan(el) {
               <div class="pe-lec-grid" id="pe-lec-grid">${lecChipsPool(goalLecs, lecSel, 'lc') || '<p class="muted">总目标未选讲次，去学生管理配置</p>'}</div>
             </div>
             <div class="pe-sec">
-              <h4>🔤 词汇目标 <i>已掌握 ${ed.vocab_mastered || 0} 词${(goals.vocab_levels || []).length ? ` · 目标级别 L${(goals.vocab_levels || []).join('/L')}` : ''}</i></h4>
+              <h4>🔤 词汇目标 <i>学到 L几 的百分比；已掌握 ${ed.vocab_mastered || 0} 词</i></h4>
               <div class="pe-vocab-row">
-                <input id="pe-vocab" type="number" min="0" value="${t.vocab_goal ?? ''}" placeholder="累计目标词数"/>
-                <button type="button" class="chip" data-vadd="20">+20</button>
-                <button type="button" class="chip" data-vadd="50">+50</button>
-                <button type="button" class="chip" data-vadd="100">+100</button>
+                <select id="pe-vocab-lv">
+                  ${(ed.goal_assets?.vocab_levels || []).map((v) =>
+                    `<option value="${v.level}" ${vocabLv === v.level ? 'selected' : ''}>学到 L${v.level}</option>`).join('')}
+                </select>
+                <label>完成 <input id="pe-vocab-pct" type="number" min="1" max="100" value="${vocabPct}" style="width:56px"/>%</label>
+                <span id="pe-vocab-diff" class="pe-vocab-diff"></span>
               </div>
             </div>
             <div class="pe-sec">
@@ -593,7 +610,6 @@ export async function mountPlan(el) {
             else { set.add(n); b.classList.add('on') }
           }))
       }
-      bindToggle(dlg.querySelector('#pe-focus-grid'), 'fl', focusSel)
       bindToggle(dlg.querySelector('#pe-lec-grid'), 'lc', lecSel)
       const extraGrid = dlg.querySelector('#pe-extra-lec')
       if (extraGrid) bindToggle(extraGrid, 'lx', lecSel)
@@ -616,11 +632,26 @@ export async function mountPlan(el) {
           if (fceSel.has(k)) { fceSel.delete(k); b.classList.remove('on') }
           else { fceSel.add(k); b.classList.add('on') }
         }))
-      dlg.querySelectorAll('[data-vadd]').forEach((b) =>
-        b.addEventListener('click', () => {
-          const inp = dlg.querySelector('#pe-vocab')
-          inp.value = (Number(inp.value) || ed.vocab_mastered || 0) + Number(b.dataset.vadd)
-        }))
+      // 词汇目标（级别百分比口径）：选择即显示目标词数与当前差距
+      const vocabDiff = () => {
+        const lvSel = dlg.querySelector('#pe-vocab-lv')
+        const pctInp = dlg.querySelector('#pe-vocab-pct')
+        const hint = dlg.querySelector('#pe-vocab-diff')
+        if (!lvSel || !pctInp || !hint) return
+        const lv = Number(lvSel.value)
+        const pct = Math.min(100, Math.max(1, Number(pctInp.value) || 0))
+        const v = vLevels.find((x) => x.level === lv)
+        const cum = v?.cum_words || v?.words || 0
+        const target = Math.round(cum * pct / 100)
+        const delta = target - mastered
+        hint.innerHTML = delta > 0
+          ? `目标 <b>${target}</b> 词 · 还需掌握 <b>+${delta}</b> 词`
+          : `目标 <b>${target}</b> 词 · 已达成（现 ${mastered} 词）`
+        hint.className = `pe-vocab-diff ${delta > 0 ? '' : 'ok'}`
+      }
+      dlg.querySelector('#pe-vocab-lv').addEventListener('change', vocabDiff)
+      dlg.querySelector('#pe-vocab-pct').addEventListener('input', vocabDiff)
+      vocabDiff()
       const rerenderBooks = () => {
         dlg.querySelector('#pe-books').innerHTML = bookRows()
         dlg.querySelectorAll('[data-bk-del]').forEach((b) =>
@@ -650,12 +681,19 @@ export async function mountPlan(el) {
       dlg.querySelector('#pe-cancel').addEventListener('click', close)
       dlg.querySelector('#pe-save').addEventListener('click', async () => {
         const tasks = {}
-        const focus = [...focusSel].slice(0, 5)
-        if (focus.length) tasks.focus_kps = focus
         const lec = [...lecSel]
         if (lec.length) tasks.lectures = lec
-        const vocab = Number(dlg.querySelector('#pe-vocab').value)
-        if (vocab > 0) tasks.vocab_goal = vocab
+        // 词汇目标：级别百分比口径（vocab_lv/vocab_pct），兼容字段 vocab_goal
+        // 由后端按 cum_words 折算；两者都存便于旧端点/周目标区显示
+        const lv = Number(dlg.querySelector('#pe-vocab-lv').value)
+        const pct = Math.min(100, Math.max(1, Number(dlg.querySelector('#pe-vocab-pct').value) || 0))
+        const vInfo = vLevels.find((x) => x.level === lv)
+        const vTarget = Math.round((vInfo?.cum_words || 0) * pct / 100)
+        if (vTarget > 0) {
+          tasks.vocab_lv = lv
+          tasks.vocab_pct = pct
+          tasks.vocab_goal = vTarget
+        }
         if (fceSel.size) tasks.fce = [...fceSel]
         if (readSel.size) tasks.reading = Object.fromEntries(readSel)
         if (artSel.size) tasks.articles = [...artSel]

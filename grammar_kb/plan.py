@@ -1241,7 +1241,7 @@ class PlanStore:
             "questions": hw.get(l["number"], 0),
         } for l in lectures]
 
-        # 4.2 单词级别 + 词数（词表在 grammar.db）
+        # 4.2 单词级别 + 词数（词表在 grammar.db）；cum_words=到该级止累计词数
         vocab_levels = []
         vocab_counts: dict[int, int] = {}
         if Path(gp).exists():
@@ -1253,9 +1253,12 @@ class PlanStore:
                         vocab_counts[r[0]] = r[1]
             except sqlite3.Error:
                 pass
+        cum = 0
         for lv in range(6):
+            cum += vocab_counts.get(lv, 0)
             vocab_levels.append({"level": lv,
-                                 "words": vocab_counts.get(lv, 0)})
+                                 "words": vocab_counts.get(lv, 0),
+                                 "cum_words": cum})
 
         # 4.6 单词试卷资产（vocab_paper_history，fce.db）
         vocab_papers = []
