@@ -7,7 +7,8 @@ import { escapeHtml } from '../render.js'
 
 // ---- 专题清单（当前仅一册：26~28 讲时态专项） ----
 // assignedTo 为空＝所有学生可见；'malin'＝仅 malin 的专属专题
-const TOPICS = [
+// 导出供备课中心计数（教师视角全量，忽略 assignedTo）
+export const TOPICS = [
   {
     id: 'tense-26-28',
     title: '⏰ 时态错题歼灭手册',

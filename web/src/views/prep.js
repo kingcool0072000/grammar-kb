@@ -1,5 +1,6 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
+import { TOPICS as TOPIC_LIST } from './topics.js'
 
 // 教师版 · 备课中心：教学内容管理按两大板块组织——
 //   哈1 语法（初中语法课 / 知识点体系 / 词汇表 / 作业题库）
@@ -12,15 +13,16 @@ export async function mountPrep(el, ctx) {
 async function mountContent(el) {
   el.innerHTML = '<p class="muted">加载中…</p>'
   const stats = await api.stats().catch(() => null)
-  let papers = null, bases = null, derived = null, vex = null, lib = null, vlevels = null
+  let papers = null, bases = null, derived = null, vex = null, lib = null, vlevels = null, topicsProg = null
   try {
-    ;[papers, bases, derived, vex, lib, vlevels] = await Promise.all([
+    ;[papers, bases, derived, vex, lib, vlevels, topicsProg] = await Promise.all([
       api.fcePapers().catch(() => null),
       api.readingArticles({ kind: 'base' }).catch(() => null),
       api.readingArticles().catch(() => null),
       api.vocabExams().catch(() => null),
       api.libraryBooks().catch(() => null),
       api.vocabLevels({ maxLevel: 5, countsOnly: true }).catch(() => null),
+      api.topicsProgress().catch(() => null),
     ])
   } catch { /* FCE 数据不可用时仍展示哈1板块 */ }
   const libCount = lib?.books?.length ?? 0
@@ -32,6 +34,9 @@ async function mountContent(el) {
   const fceTotal = papers?.reduce((s, t) => s + Object.values(t.papers).flat().reduce((x, p) => x + p.questions, 0), 0) || 0
   const derivedCount = derived?.length || 0
   const baseCount = bases?.length || 0
+  // 专题手册数（静态清单在 topics.js；教师视角全量）+ 已完成进度
+  const topicCount = TOPIC_LIST.length
+  const topicsDone = (topicsProg || []).filter((r) => r.done).length
 
   el.innerHTML = `
     <div class="gd-board">
@@ -108,6 +113,22 @@ async function mountContent(el) {
             </button>
           </div>
           <p class="reading-hint">真题库查看四套试卷与练习明细；FCE 知识库为语法专题手册。</p>
+        </div>
+      </section>
+
+      <!-- ================= 专题学习（错题歼灭手册等自学专题） ================= -->
+      <section class="gd-section">
+        <header class="gd-section-head">
+          <h2>🧩 专题学习</h2>
+        </header>
+        <div class="gd-subgroup">
+          <h3>🎯 自学专题手册</h3>
+          <div class="prep-cards">
+            <button class="prep-card" data-go="topics">
+              <b>${topicCount}</b><span>专题手册${topicsDone ? ` · 已完成 ${topicsDone} 人次` : ''}</span>
+            </button>
+          </div>
+          <p class="reading-hint">错题聚类生成的补课专题（如时态错题歼灭手册）；点开查看手册内容与学生「我学完了」进度。学生在学生版「专题学习」Tab 使用。</p>
         </div>
       </section>
 

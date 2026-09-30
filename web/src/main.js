@@ -48,7 +48,8 @@ const VIEWS = [
   { key: 'grading', label: '批改中心', teacher: true },
   { key: 'recite', label: '背单词', studentOnly: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
-  { key: 'topics', label: '专题学习', studentOnly: true },
+  // 专题学习：学生 Tab；教师从备课中心大卡片进入（hiddenTab=教师不进顶部 Tab）
+  { key: 'topics', label: '专题学习', studentOnly: true, hiddenTab: true },
   // hiddenTab 语义：教师不进 Tab、学生仍显示（学生读书主入口）
   { key: 'library', label: '泛读馆', hiddenTab: true },
   // 子工具页（不在 Tab 显示，hash 直达）：fcePapers 师生共用
@@ -112,8 +113,10 @@ function currentRoute(role) {
     key = 'grading'
   }
   const view = VIEWS.find((x) => x.key === key)
-  // 学生访问教师页 → 回背单词；教师访问学生页 → 回批改中心；未匹配同理
-  if (!view || (view.teacher && role !== 'teacher') || (view.studentOnly && role === 'teacher')) {
+  // 学生访问教师页 → 回背单词；教师访问学生页 → 回批改中心；未匹配同理。
+  // 例外：hiddenTab 的学生页（教师从备课中心卡片进入，如 topics）教师可访问。
+  if (!view || (view.teacher && role !== 'teacher')
+      || (view.studentOnly && role === 'teacher' && !view.hiddenTab)) {
     return role === 'teacher' ? 'prep' : 'recite'
   }
   return key
@@ -362,6 +365,7 @@ async function bootstrap() {
             paperAdmin: ['/prep', '← 返回备课中心'],
             vocabExam: ['/vocabLevel/0', '← 返回背单词'],
             exams: ['/grading', '← 返回批改中心'],
+            topics: ['/prep', '← 返回备课中心'],
           }
           const [hash, label] = BACK_BASE[route] || ['/prep', '← 返回备课中心']
           const back = h('button', 'fce-back-btn gd-tool-back', label)
