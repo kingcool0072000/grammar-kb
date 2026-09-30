@@ -93,8 +93,13 @@ function currentRoute(role) {
   // 旧隐藏页归一：#/ttsconf #/readconf → #/config；#/analytics → #/plan?tab=analytics
   let key = v === 'ttsconf' || v === 'readconf' ? 'config' : v
   if (key === 'analytics') {
-    location.replace('#/plan?tab=analytics')
-    key = 'plan'
+    location.replace('#/grading?tab=analytics')
+    key = 'grading'
+  }
+  // 旧入口归一：#/plan?tab=analytics（学情分析曾挂在计划表下）
+  if (key === 'plan' && /(?:^|&)tab=analytics(?:&|$)/.test(location.hash.split('?')[1] || '')) {
+    location.replace('#/grading?tab=analytics')
+    key = 'grading'
   }
   const view = VIEWS.find((x) => x.key === key)
   // 学生访问教师页 → 回背单词；教师访问学生页 → 回批改中心；未匹配同理
@@ -278,9 +283,6 @@ async function bootstrap() {
       mounted = mountGrading(container)
     } else if (route === 'prep') {
       mounted = mountPrep(container, ctx)
-    } else if (route === 'analytics') {
-      // 学情分析并入计划表：子 Tab 渲染（bare 模式去页头）
-      mounted = mountAnalytics(container, { bare: true })
     } else if (route === 'plan') {
       mounted = mountPlan(container)
     } else if (route === 'courses') {

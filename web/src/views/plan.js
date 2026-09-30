@@ -6,9 +6,7 @@ import { escapeHtml } from '../render.js'
 // 计划数据由 scripts/seed_plan_weeks.py 自动排程预填，教师可编辑微调。
 // 词汇考试：登记成绩（≥80 解锁下一级）+ 打印考卷入口。
 export async function mountPlan(el) {
-  const subTab = new URLSearchParams(location.hash.split('?')[1] || '').get('tab') || 'plan'
   const state = {
-    tab: subTab === 'analytics' ? 'analytics' : 'plan',
     view: 'week',   // week | month | overview
     student: 'malin',
   }
@@ -21,28 +19,10 @@ export async function mountPlan(el) {
         <h1>计划表</h1>
         <p>四目标冲刺（2027-01-31）：哈1完课 · FCE 8 Test · L0-L5 词汇 · 泛读 3 本。计划已自动排好，可微调。</p>
       </div>
-      <div class="ana-tabs plan-subtabs">
-        <button class="reading-btn ${state.tab === 'plan' ? 'primary' : ''}" data-ptab="plan">📅 周历计划</button>
-        <button class="reading-btn ${state.tab === 'analytics' ? 'primary' : ''}" data-ptab="analytics">📊 学情分析</button>
-      </div>
       <div id="plan-body"></div>
     `
-    el.querySelectorAll('[data-ptab]').forEach((b) =>
-      b.addEventListener('click', () => {
-        state.tab = b.dataset.ptab
-        render()
-      }),
-    )
     const body = el.querySelector('#plan-body')
-    if (state.tab === 'analytics') {
-      import('./analytics.js').then(({ mountAnalytics }) => {
-        const host = document.createElement('div')
-        body.replaceChildren(host)
-        mountAnalytics(host, { bare: true })
-      })
-    } else {
-      mountCalendar(body)
-    }
+    mountCalendar(body)
   }
 
   async function mountCalendar(body) {

@@ -7,7 +7,39 @@ import { escapeHtml } from '../render.js'
 //   专注力 · 泛读阅读（泛读馆阅读器行为采集，点会话行看详情弹窗）
 // 每个分区：待办数字 + 最近动态 + 一键跳到对应工具。
 export async function mountGrading(el) {
-  el.innerHTML = '<div class="view-head"><h1>批改中心</h1><p>加载中…</p></div>'
+  // 双子 Tab：批改看板（默认）/ 学情分析（原计划表子 Tab 迁入）
+  const subTab = new URLSearchParams(location.hash.split('?')[1] || '').get('tab') || 'board'
+  const state = { tab: subTab === 'analytics' ? 'analytics' : 'board' }
+  render()
+
+  function render() {
+    el.innerHTML = `
+      <div class="view-head">
+        <h1>批改中心</h1>
+        <p>学生作业的待批与动态汇总。</p>
+      </div>
+      <div class="ana-tabs plan-subtabs">
+        <button class="reading-btn ${state.tab === 'board' ? 'primary' : ''}" data-gtab="board">📋 批改看板</button>
+        <button class="reading-btn ${state.tab === 'analytics' ? 'primary' : ''}" data-gtab="analytics">📊 学情分析</button>
+      </div>
+      <div id="gd-body"></div>
+    `
+    el.querySelectorAll('[data-gtab]').forEach((b) =>
+      b.addEventListener('click', () => { state.tab = b.dataset.gtab; render() }))
+    const body = el.querySelector('#gd-body')
+    if (state.tab === 'analytics') {
+      import('./analytics.js').then(({ mountAnalytics }) => {
+        const host = document.createElement('div')
+        body.replaceChildren(host)
+        mountAnalytics(host, { bare: true })
+      })
+      return
+    }
+    mountBoard(body)
+  }
+
+  async function mountBoard(el) {
+    el.innerHTML = '<p class="muted">加载中…</p>'
   let recs, fceSubs, recite, exams, focus
   try {
     ;[recs, fceSubs, recite, exams, focus] = await Promise.all([
@@ -658,6 +690,8 @@ function fceRow(s) {
           : '<b class="fce-his-score pend">待批改</b>'}
       <span class="fce-his-date">${s.duration_sec ? fmtDur(s.duration_sec) + ' · ' : ''}${(s.created_at || '').slice(0, 10)}</span>
     </div>`
+}
+
 }
 
 // 跳转路由（sessionStorage 联动目标页自动打开对应面板）
