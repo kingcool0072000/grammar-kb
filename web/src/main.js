@@ -22,6 +22,7 @@ import { mountToday } from './views/today.js'
 import { mountVocabExam } from './views/vocabExam.js'
 import { mountStudents } from './views/students.js'
 import { mountPaperAdmin } from './views/paperAdmin.js'
+import { mountVocabLevel } from './views/vocabLevel.js'
 import { mountConfig } from './views/config.js'
 import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
@@ -66,6 +67,7 @@ const VIEWS = [
   { key: 'vocabExam', hiddenTab: true, teacher: true },
   { key: 'students', hiddenTab: true, teacher: true },
   { key: 'paperAdmin', hiddenTab: true, teacher: true },
+  { key: 'vocabLevel', hiddenTab: true, teacher: true },
   { key: 'readingAdmin', hiddenTab: true, teacher: true },
   // 泛读馆子页：阅读器 hash 带 /{bookId}；noTab = 双角色都不进 Tab，hash 直达
   { key: 'libraryReader', hiddenTab: true, noTab: true },
@@ -92,6 +94,10 @@ function currentRoute(role) {
   const [v] = routeSegs()
   // 旧隐藏页归一：#/ttsconf #/readconf → #/config；#/analytics → #/plan?tab=analytics
   let key = v === 'ttsconf' || v === 'readconf' ? 'config' : v
+  if (key === 'vocabExam') {
+    location.replace('#/vocabLevel/0')
+    key = 'vocabLevel'
+  }
   if (key === 'analytics') {
     location.replace('#/grading?tab=analytics')
     key = 'grading'
@@ -318,6 +324,9 @@ async function bootstrap() {
       mounted = mountLibraryManage(container, { bookId: Number(routeSegs()[1]) })
     } else if (route === 'librarySettings') {
       mounted = mountLibrarySettings(container)
+    } else if (route === 'vocabLevel') {
+      // 背单词级别详情：本级词表 + 考试设计 + 解锁配置（hash 携带级别）
+      mounted = mountVocabLevel(container, { level: Number(routeSegs()[1]) || 0 })
     } else if (route === 'paperAdmin') {
       // 作业卷管理：题目 + 答案（爱问云已批改测验逐题对错）
       mounted = mountPaperAdmin(container)

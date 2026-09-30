@@ -42,9 +42,9 @@ async function mountContent(el) {
   let papers = null, bases = null, derived = null, vex = null, lib = null, vlevels = null
   try {
     ;[papers, bases, derived, vex, lib, vlevels] = await Promise.all([
-      api.fcePapers(),
-      api.readingArticles({ kind: 'base' }),
-      api.readingArticles(),
+      api.fcePapers().catch(() => null),
+      api.readingArticles({ kind: 'base' }).catch(() => null),
+      api.readingArticles().catch(() => null),
       api.vocabExams().catch(() => null),
       api.libraryBooks().catch(() => null),
       api.vocabLevels({ maxLevel: 5 }).catch(() => null),
@@ -99,19 +99,12 @@ async function mountContent(el) {
           <div class="prep-cards">
             ${[0, 1, 2, 3, 4, 5].map((lv) => {
               const n = vocabCounts[String(lv)] ?? 0
-              const open = lv <= vocabUnlocked
-              return `<button class="prep-card vocab-lv ${open ? '' : 'locked'}" data-vlv="${lv}" ${open ? '' : 'disabled'}>
-                <b>${open ? `${n}` : '🔒'}</b><span>${open ? `L${lv} · ${lv === 0 ? '课本高频词' : '级别词库'}${lv === vocabUnlocked && lv < 5 ? ' · 当前解锁到' : ''}` : `L${lv} · 考试解锁`}</span>
+              return `<button class="prep-card vocab-lv" data-vlv="${lv}">
+                <b>${n}</b><span>L${lv} · ${lv === 0 ? '课本高频词' : '级别词库'}</span>
               </button>`
             }).join('')}
-            <button class="prep-card" data-go="vocabExam">
-              <b>L${vocabUnlocked}</b><span>词汇级别考试 · 解锁配置</span>
-            </button>
-            <button class="prep-card" data-go="vocab">
-              <b>词汇表</b><span>释义 · 词形 · 出处</span>
-            </button>
           </div>
-          <p class="reading-hint">L0 恒开；L${vocabUnlocked} → L${vocabUnlocked + 1} 需在词汇级别考试中 ≥80 分自动解锁（登记成绩即生效），点击「词汇级别考试」配置。</p>
+          <p class="reading-hint">点开级别管理词库、生成考卷、配置解锁（当前生效解锁到 L${vocabUnlocked}）；学生端 L${vocabUnlocked} 以上仍锁定。</p>
         </div>
       </section>
 
@@ -167,5 +160,5 @@ async function mountContent(el) {
     })
   })
   el.querySelectorAll('[data-vlv]').forEach((b) =>
-    b.addEventListener('click', () => { location.hash = '/vocabExam' }))
+    b.addEventListener('click', () => { location.hash = `/vocabLevel/${b.dataset.vlv}` }))
 }

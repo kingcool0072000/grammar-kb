@@ -24,6 +24,11 @@ from typing import Optional
 from .fce_query import _default_db_path
 
 SCHEMA = """
+CREATE TABLE IF NOT EXISTS vocab_unlock (
+  user       TEXT PRIMARY KEY,
+  level      INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT
+);
 CREATE TABLE IF NOT EXISTS vocab_exams (
     id         INTEGER PRIMARY KEY,
     user       TEXT NOT NULL,
@@ -84,9 +89,42 @@ class VocabExamStore:
             return [dict(r) for r in conn.execute(sql, args).fetchall()]
 
     def unlocked_level(self, user: str) -> int:
-        """学生当前最高可用级别：L0 恒开；L{n} 考试 ≥80 → 解锁 L{n+1}。"""
+        """学生当前最高可用级别：L0 恒开。
+
+        双路来源取最大：L{n} 考试 ≥80 自动解锁 L{n+1}；教师手动解锁配置
+        （vocab_unlock 表，备课中心-背单词-级别解锁配置）直接生效。
+        两者取 max——手动配置不会把已考出来的级别锁回去。
+        """
         passed = self.passed_levels(user)
-        return min(5, max(passed) + 1) if passed else 0
+        by_exam = min(5, max(passed) + 1) if passed else 0
+        return max(by_exam, self.get_unlock_override(user))
+
+    # ---- 手动解锁配置（教师，备课中心-背单词） ----
+
+    def get_unlock_override(self, user: str) -> int:
+        """教师手动配置的解锁级别（未配置返回 0）。"""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT level FROM vocab_unlock WHERE user = ?",
+                ((user or "").strip()[:60],),
+            ).fetchone()
+        return min(5, max(0, row["level"])) if row else 0
+
+    def list_unlock_all(self) -> dict[str, int]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT user, level FROM vocab_unlock").fetchall()
+        return {r["user"]: r["level"] for r in rows}
+
+    def put_unlock(self, user: str, level: int) -> None:
+        lv = min(5, max(0, int(level)))
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO vocab_unlock (user, level, updated_at)"
+                " VALUES (?,?,?)",
+                ((user or "").strip()[:60], lv,
+                 datetime.now(_tz.utc).isoformat(timespec="seconds")),
+            )
 
     def passed_levels(self, user: str) -> set[int]:
         with self._connect() as conn:

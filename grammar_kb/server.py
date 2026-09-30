@@ -533,6 +533,25 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     # ---- 词汇级别考试（线下考卷 + 成绩登记；考试驱动解锁） ----
 
+    @app.get("/vocab-exams/unlock")
+    def vocab_unlock_get(request: "fastapi.Request"):
+        """手动解锁配置：{学生: 级别}。教师专属。"""
+        _require_teacher(request)
+        return _ok(vocab_exam.list_unlock_all())
+
+    @app.put("/vocab-exams/unlock")
+    def vocab_unlock_put(rec: dict, request: "fastapi.Request"):
+        """设置某学生的手动解锁级别（0-5；与考试解锁取 max）。教师专属。"""
+        _require_teacher(request)
+        body = rec if isinstance(rec, dict) else {}
+        user = str(body.get("user") or "").strip()
+        level = body.get("level")
+        if not user or not isinstance(level, int) or not (0 <= level <= 5):
+            raise HTTPException(status_code=422, detail="user 必填且 level 须为 0-5 整数")
+        vocab_exam.put_unlock(user, level)
+        return _ok({"user": user, "level": level,
+                    "unlocked": vocab_exam.unlocked_level(user)})
+
     @app.get("/vocab-exams")
     def vocab_exams_list(request: "fastapi.Request", user: Optional[str] = None):
         """词汇考试记录（师生可见：学生看自己的，教师看全部/指定 user）。"""

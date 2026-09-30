@@ -243,6 +243,9 @@ export const api = {
   planWeekView: ({ weekStart } = {}) =>
     req('/plan/week-view', { searchParams: weekStart ? { week_start: weekStart } : {} }),
   // 词汇级别考试（成绩登记驱动解锁；≥80 解锁下一级）
+  vocabUnlockGet: () => req('/vocab-exams/unlock'),
+  vocabUnlockPut: (user, level) =>
+    reqJson('/vocab-exams/unlock', 'PUT', { user, level }),
   vocabExams: ({ user } = {}) =>
     req('/vocab-exams', { searchParams: { user } }),
   vocabExamAdd: (rec) => reqJson('/vocab-exams', 'POST', rec),
