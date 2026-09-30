@@ -1120,30 +1120,19 @@ class PlanStore:
 
         gr = g.get("reading") or []
         if gr:
-            # 书：读完=done；进行中按进度折算（0.6 本=60%）
+            # 书：按词数比例折算——已读词数(必读章口径)/该书必读(或全书)词数。
+            # percent 是位置百分比，与词数分布不匀（封面/目录/非必读前置章
+            # 占位），直接按 percent 会失真；词数比例与「泛读 N 词」实录同口径。
             done_books = set(done["books"] or [])
             score = 0.0
-            conn = self._lib_connect()
-            if conn is not None:
-                try:
-                    with contextlib.closing(conn):
-                        ph = ",".join("?" * len(gr))
-                        rows = conn.execute(
-                            f"SELECT book_id, percent FROM reading_progress"
-                            f" WHERE user = ? AND book_id IN ({ph})",
-                            [user] + list(gr)).fetchall()
-                    pct = {r["book_id"]: (r["percent"] or 0) for r in rows}
-                except sqlite3.Error:
-                    pct = {}
-            else:
-                pct = {}
+            ratios = self._book_word_ratios(gr, user)
             for bid in gr:
                 if bid in done_books:
                     score += 1
                 else:
-                    score += min(1.0, (pct.get(bid) or 0) / 98)
-            dim("📖", "泛读书目", round(score), len(gr),
-                extra="按阅读进度折算")
+                    score += min(1.0, ratios.get(bid, 0.0))
+            dim("📖", "泛读书目", round(score, 1), len(gr),
+                extra="按词数比例折算")
 
         gp = g.get("vocab_papers") or []
         if gp:
@@ -1214,6 +1203,63 @@ class PlanStore:
             except sqlite3.Error:
                 pass
         return done
+
+    def _book_word_ratios(self, book_ids: list, user: str) -> dict:
+        """每本书的已读词数比例（0-1）：必读章口径，未配置则全书口径。
+
+        已读词数 = 全书词位置（percent/100×总词数）与必读章区间的重叠，
+        非必读章（封面/目录/前置章等）不计入分子；分母=必读章词数和。
+        缺进度/缺章节数据返回 0。
+        """
+        conn = self._lib_connect()
+        if conn is None or not book_ids:
+            return {}
+        out: dict = {}
+        try:
+            with contextlib.closing(conn):
+                ph = ",".join("?" * len(book_ids))
+                prog = {r["book_id"]: (r["percent"] or 0)
+                        for r in conn.execute(
+                            f"SELECT book_id, percent FROM reading_progress"
+                            f" WHERE user = ? AND book_id IN ({ph})",
+                            [user] + list(book_ids))}
+                for bid in book_ids:
+                    chs = conn.execute(
+                        "SELECT idx, word_count FROM chapters"
+                        " WHERE book_id = ? ORDER BY idx", (bid,),
+                    ).fetchall()
+                    if not chs:
+                        continue
+                    cfg = conn.execute(
+                        "SELECT chapters FROM book_reading_config WHERE book_id = ?",
+                        (bid,)).fetchone()
+                    try:
+                        required = set(json.loads(cfg[0])) if cfg and cfg[0] else None
+                    except (ValueError, TypeError):
+                        required = None
+                    words = [(c[0], c[1] or 0) for c in chs]
+                    total = sum(w for _, w in words)
+                    if total <= 0:
+                        continue
+                    # 必读章的词位置区间集合
+                    req_spans = []
+                    cum = 0
+                    for idx, wc in words:
+                        c0, c1 = cum, cum + wc
+                        cum = c1
+                        if required is None or idx in required:
+                            req_spans.append((c0, c1))
+                    req_total = sum(c1 - c0 for c0, c1 in req_spans)
+                    if req_total <= 0:
+                        continue
+                    read_pos = prog.get(bid, 0.0) / 100 * total
+                    read_words = sum(min(read_pos, c1) - c0
+                                     for c0, c1 in req_spans
+                                     if read_pos > c0)
+                    out[bid] = max(0.0, min(1.0, read_words / req_total))
+        except sqlite3.Error:
+            return out
+        return out
 
     def goal_assets(self, lectures: list, fce_parts: list, books: list,
                     articles: list, user: str = "malin") -> dict:
