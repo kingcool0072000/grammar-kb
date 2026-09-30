@@ -541,6 +541,33 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     # ---- 词汇级别考试（线下考卷 + 成绩登记；考试驱动解锁） ----
 
+    # ---- 单词试卷生成（考试资产，与学生无关） ----
+
+    @app.post("/vocab-papers/generate")
+    def vocab_paper_generate(rec: dict, request: "fastapi.Request"):
+        """生成一份级别考试卷（三题型+历史去重）。save=0 仅预览。教师专属。"""
+        _require_teacher(request)
+        from .vocab_paper import generate_paper, render_new_paper_html
+        level = rec.get("level") if isinstance(rec, dict) else None
+        if not isinstance(level, int) or not (0 <= level <= 7):
+            raise HTTPException(status_code=422, detail="level 须为 0-7 整数")
+        save = bool(rec.get("save", True)) if isinstance(rec, dict) else True
+        try:
+            paper = generate_paper(level, save=save)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        return _ok({"paper": paper,
+                    "html": render_new_paper_html(paper)})
+
+    @app.get("/vocab-papers/history")
+    def vocab_paper_history(request: "fastapi.Request", level: int = -1,
+                            limit: int = 30):
+        """已生成试卷历史（去重追溯/复用）。教师专属。"""
+        _require_teacher(request)
+        from .vocab_paper import list_paper_history
+        items = list_paper_history(None if level < 0 else level, limit=limit)
+        return _ok({"papers": items})
+
     @app.get("/vocab-exams/unlock")
     def vocab_unlock_get(request: "fastapi.Request"):
         """手动解锁配置：{学生: 级别}。教师专属。"""

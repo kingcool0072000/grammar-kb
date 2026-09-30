@@ -9,15 +9,11 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
   const lv = Math.max(0, Math.min(5, Number(level) || 0))
   el.innerHTML = `
     <div class="view-head">
-      <button class="chip" data-back>← 返回备课中心</button>
       <h1>背单词 · L${lv}${lv === 0 ? '（课本高频词）' : ''}</h1>
       <p>本级词库 · 考试设计 · 解锁配置。</p>
     </div>
     <div id="vl-body"><p class="muted">加载中…</p></div>
   `
-  el.querySelector('[data-back]').addEventListener('click', () => {
-    location.hash = '/prep'
-  })
   const body = el.querySelector('#vl-body')
 
   // ---- 数据：本级词 + 解锁配置 + 学生列表 ----
@@ -61,14 +57,18 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
         <div class="vl-pager" id="vl-pager"></div>
       </section>
 
-      <!-- 2.2 单词考试设计 -->
+      <!-- 2.2 单词考试 · 试卷生成（考试资产，与学生无关） -->
       <section class="vl-sec card">
-        <header class="vl-head"><h3>📝 单词考试 · 试卷生成</h3></header>
-        <p class="muted">按本级词库生成线下考卷（默写/选择混合），打印后课堂使用。考试通过（≥80 分）自动解锁下一级，也可在下方手动配置。</p>
-        <div class="vl-paper-row">
-          <label>考生 <select id="vl-student">${studs.map((u) => `<option value="${escapeHtml(u.user)}">${escapeHtml(u.user)}</option>`).join('')}</select></label>
-          <button class="btn-primary" id="vl-paper">🖨 生成并打印 L${lv} 考卷</button>
-        </div>
+        <header class="vl-head">
+          <h3>📝 单词考试 · 试卷生成</h3>
+          <div class="vl-tools">
+            <button class="btn-primary" id="vl-gen">🎲 生成试卷</button>
+            <button class="chip" id="vl-gen-preview">生成（仅预览不存档）</button>
+          </div>
+        </header>
+        <p class="muted">随机选词（不同首字母/词性）· 中译英 20 + 英译中 20 + 拼写挖空 10 · 与历史试卷重复 ≤10 词。生成后自动存档为考试资产，可打印线下使用。</p>
+        <div id="vl-paper-out"></div>
+        <div id="vl-paper-history"></div>
       </section>
 
       <!-- 2.3 级别解锁配置 -->
@@ -151,11 +151,57 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
       dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
       dlg.querySelector('#vl-dlg-close').addEventListener('click', close)
     }
-    // 试卷
-    body.querySelector('#vl-paper').addEventListener('click', () => {
-      const stu = body.querySelector('#vl-student').value
-      window.open(`/api/vocab-exams/paper?level=${lv}&student=${encodeURIComponent(stu)}`, '_blank')
-    })
+    // 试卷生成
+    async function genPaper(save) {
+      const out = body.querySelector('#vl-paper-out')
+      out.innerHTML = '<p class="muted">生成中…</p>'
+      try {
+        const r = await api.vocabPaperGenerate(lv, save)
+        const p = r.paper
+        out.innerHTML = `
+          <div class="vl-paper-card">
+            <div class="vl-paper-meta">
+              <b>卷号 ${escapeHtml(p.paper_id)}</b>
+              <span>中译英 ${p.zh2en.length} · 英译中 ${p.en2zh.length} · 拼写 ${p.spell.length} · 与历史重复 ${p.overlap_with_history} 词</span>
+            </div>
+            <details class="vl-paper-preview">
+              <summary>预览试卷内容</summary>
+              <div class="vl-pv-sec"><b>一、中译英</b>${p.zh2en.slice(0, 5).map((w, i) => `<p>${i + 1}. ${escapeHtml(w.gloss)} → ______</p>`).join('')}<p class="muted">…共 ${p.zh2en.length} 题</p></div>
+              <div class="vl-pv-sec"><b>二、英译中</b>${p.en2zh.slice(0, 5).map((w, i) => `<p>${i + 1}. ${escapeHtml(w.word)} → ______</p>`).join('')}<p class="muted">…共 ${p.en2zh.length} 题</p></div>
+              <div class="vl-pv-sec"><b>三、拼写</b>${p.spell.map((w, i) => `<p>${i + 1}. ${escapeHtml(w.gloss.slice(0, 16))}： <code>${escapeHtml(w.blanked)}</code></p>`).join('')}</div>
+            </details>
+            <div class="vl-paper-ops">
+              <button class="btn-primary" id="vl-print">🖨 打印试卷（含答案页）</button>
+            </div>
+          </div>`
+        // 打印：新窗口写 HTML
+        out.querySelector('#vl-print').addEventListener('click', () => {
+          const w = window.open('', '_blank')
+          w.document.write(r.html)
+          w.document.close()
+          setTimeout(() => w.print(), 400)
+        })
+        if (save) loadHistory()
+      } catch (e) {
+        out.innerHTML = `<p style="color:#b42318">生成失败：${escapeHtml(e.message)}</p>`
+      }
+    }
+    body.querySelector('#vl-gen').addEventListener('click', () => genPaper(true))
+    body.querySelector('#vl-gen-preview').addEventListener('click', () => genPaper(false))
+
+    async function loadHistory() {
+      const host = body.querySelector('#vl-paper-history')
+      try {
+        const r = await api.vocabPaperHistory(lv)
+        const items = r.papers || []
+        host.innerHTML = items.length ? `
+          <div class="vl-hist">
+            <b>📚 已生成 ${items.length} 卷（考试资产）</b>
+            ${items.slice(0, 5).map((x) => `<span class="vl-hist-item">${escapeHtml(x.paper_id)} · ${x.count} 词 · ${x.created_at.slice(0, 10)}</span>`).join('')}
+          </div>` : '<p class="muted">尚无生成记录。</p>'
+      } catch { host.innerHTML = '' }
+    }
+    loadHistory()
     // 解锁配置
     body.querySelectorAll('.vl-unlock-row').forEach((row) => {
       const stu = row.dataset.stu
