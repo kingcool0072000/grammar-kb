@@ -107,14 +107,11 @@ async function mountContent(el) {
         <div class="gd-subgroup">
           <h3>✍️ 派生阅读文章</h3>
           <div class="prep-cards">
-            <button class="prep-card" data-go="readingAdmin">
-              <b>${derivedCount}</b><span>派生阅读文章 · 管理与列表</span>
-            </button>
-            <button class="prep-card" data-go="readingAdmin">
-              <b>${baseCount}</b><span>FCE 原文段落（派生源）</span>
+            <button class="prep-card" data-go="readingList">
+              <b>${derivedCount}</b><span>派生精读文章 · 列表与编辑</span>
             </button>
           </div>
-          <p class="reading-hint">精读文章按 Test/Part 从 FCE 原文段落派生（新增/编辑/删除）；学生的历史录音提交与评分统一在批改中心查看。</p>
+          <p class="reading-hint">派生精读文章列表（新增/编辑/删除）；原文段落管理在 FCE 板块；学生的录音提交与评分在批改中心。</p>
         </div>
       </section>
 

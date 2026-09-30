@@ -9,6 +9,7 @@ import { mountFce } from './views/fce.js'
 import { mountFcePapers } from './views/fcePapers.js'
 import { mountReading } from './views/reading.js'
 import { mountReadingAdmin } from './views/readingAdmin.js'
+import { mountReadingList } from './views/readingList.js'
 import { mountLibraryShelf } from './views/library/shelf.js'
 import { mountLibraryReader } from './views/library/reader.js'
 import { mountLibraryManage } from './views/library/manage.js'
@@ -69,6 +70,7 @@ const VIEWS = [
   { key: 'paperAdmin', hiddenTab: true, teacher: true },
   { key: 'vocabLevel', hiddenTab: true, teacher: true },
   { key: 'readingAdmin', hiddenTab: true, teacher: true },
+  { key: 'readingList', hiddenTab: true, teacher: true },
   // 泛读馆子页：阅读器 hash 带 /{bookId}；noTab = 双角色都不进 Tab，hash 直达
   { key: 'libraryReader', hiddenTab: true, noTab: true },
   { key: 'libraryManage', hiddenTab: true, noTab: true, teacher: true },
@@ -312,6 +314,9 @@ async function bootstrap() {
       mounted = mountFce(container)
     } else if (route === 'fcePapers') {
       mounted = mountFcePapers(container, { role })
+    } else if (route === 'readingList') {
+      // 精读文章列表（纯派生文；备课中心-精读板块）
+      mounted = mountReadingList(container)
     } else if (route === 'readingAdmin') {
       mounted = mountReadingAdmin(container)
     } else if (route === 'reading') {
