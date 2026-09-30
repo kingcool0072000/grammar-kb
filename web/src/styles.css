@@ -2894,3 +2894,11 @@ li.open .topic-reveal-btn { display: none; }
 .sg-book-main b { color: var(--ink); font-size: 13px; }
 .sg-book-main i { font-style: normal; font-size: 11.5px; color: var(--brand-ink); font-variant-numeric: tabular-nums; }
 .sg-book-main em { font-style: normal; font-size: 11px; color: var(--ink-faint); }
+/* 周编辑器：总目标区 / 额外补充区 */
+.pe-zone { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 4px; margin-bottom: 12px; }
+.pe-zone-goal { border-color: #8a6d3b44; background: #faf5e8; }
+.pe-zone-extra { border-style: dashed; }
+.pe-zone-title { font-size: 13.5px; font-weight: 800; color: var(--brand-ink); margin: 0 0 8px; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.pe-zone-extra .pe-zone-title { color: var(--ink-soft); }
+.pe-zone-title i { font-style: normal; font-weight: 500; font-size: 11px; color: var(--ink-faint); }
+.pe-lec i { font-style: normal; color: #2e7d4f; font-size: 10px; margin-left: 2px; }

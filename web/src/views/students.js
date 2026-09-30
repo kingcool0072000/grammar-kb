@@ -124,14 +124,14 @@ export async function mountStudents(el, { bare = false } = {}) {
         <h3>🎯 ${escapeHtml(user)} 的总目标</h3>
         <p class="muted" style="margin:0 0 12px;font-size:12px">所有选项来自备课中心已有资产。</p>
 
-        <div class="pe-sec"><h4>📚 哈一课程 + 考卷 <i>选择要完成的讲次（标「卷」= 有考卷）</i></h4>
+        <div class="pe-sec"><h4>📚 哈一课程 + 考卷 <i>选择要完成的讲次（标「卷」= 有考卷）</i><button type="button" class="chip sg-all" data-all="lec">全选</button></h4>
           <div class="pe-lec-grid" id="sg-lec">${lecOpts.map((l) => `
             <button type="button" class="pe-lec" data-sg-lec="${l.number}" title="${l.has_paper ? l.questions + ' 题考卷' : '无考卷'}">
               <b>${l.number}</b>${escapeHtml(l.title)}${l.has_paper ? '<i>卷</i>' : ''}
             </button>`).join('')}</div>
         </div>
 
-        <div class="pe-sec"><h4>🔤 单词级别 + 完成数量</h4>
+        <div class="pe-sec"><h4>🔤 单词级别 + 完成数量<button type="button" class="chip sg-all" data-all="vlv">全选</button></h4>
           <div class="sg-vocab-row">
             ${vocabLv.map((v) => `
               <label class="sg-vocab-lv"><input type="checkbox" data-sg-vlv="${v.level}"/> L${v.level}
@@ -144,19 +144,20 @@ export async function mountStudents(el, { bare = false } = {}) {
           ${[1, 2, 3, 4].map((tid) => {
             const ps = fceParts.filter((x) => x.test_id === tid)
             if (!ps.length) return ''
-            return `<div class="pe-fce-group"><b>${ps[0].test_title}</b>
+            return `<div class="pe-fce-group"><b>${ps[0].test_title}
+                <button type="button" class="chip sg-all" data-all="fce" data-tid="${tid}">全选</button></b>
               <div class="pe-fce-parts">${ps.map((x) => `
                 <button type="button" class="pe-part" data-sg-fce="${escapeHtml(x.label)}">${escapeHtml(x.label.replace(ps[0].test_title + ' · ', ''))}<i>${x.questions}</i></button>`).join('')}</div>
             </div>`
           }).join('') || '<p class="muted">FCE 题库不可用</p>'}
         </div>
 
-        <div class="pe-sec"><h4>📖 精读文章</h4>
+        <div class="pe-sec"><h4>📖 精读文章<button type="button" class="chip sg-all" data-all="art">全选</button></h4>
           <div class="pe-fce-parts" style="max-height:120px;overflow-y:auto">${arts.map((a) => `
             <button type="button" class="pe-part" data-sg-art="${a.id}">${escapeHtml(a.title.slice(0, 20))}<i>${a.words}</i></button>`).join('') || '<p class="muted">暂无派生文章</p>'}</div>
         </div>
 
-        <div class="pe-sec"><h4>📚 泛读书-章节目标 <i>按必读章配置口径显示词数</i></h4>
+        <div class="pe-sec"><h4>📚 泛读书-章节目标 <i>按必读章配置口径显示词数</i><button type="button" class="chip sg-all" data-all="bk">全选</button></h4>
           ${books.map((b) => `
             <div class="sg-book-row">
               <label class="sg-book-main"><input type="checkbox" data-sg-bk="${b.id}"/>
@@ -167,7 +168,7 @@ export async function mountStudents(el, { bare = false } = {}) {
             </div>`).join('') || '<p class="muted">书架暂无书目</p>'}
         </div>
 
-        <div class="pe-sec"><h4>📝 单词考试试卷 <i>关联已生成的试卷资产</i></h4>
+        <div class="pe-sec"><h4>📝 单词考试试卷 <i>关联已生成的试卷资产</i><button type="button" class="chip sg-all" data-all="paper">全选</button></h4>
           <div class="pe-fce-parts">${papers.map((x) => `
             <button type="button" class="pe-part" data-sg-paper="${escapeHtml(x.paper_id)}">L${x.level} · ${x.paper_id.slice(-8)}<i>${(x.created_at || '').slice(5, 10)}</i></button>`).join('') || '<p class="muted">尚未生成试卷（备课中心-背单词）</p>'}</div>
         </div>
@@ -202,6 +203,41 @@ export async function mountStudents(el, { bare = false } = {}) {
     bindToggle('sg-fce', sel.fce_parts)
     bindToggle('sg-art', sel.articles)
     bindToggle('sg-paper', sel.vocab_papers)
+    // 全选/全不选（再点一次取消全部）
+    const selMap = { lec: sel.lectures, vlv: sel.vocab_levels,
+                     fce: sel.fce_parts, art: sel.articles,
+                     bk: sel.books, paper: sel.vocab_papers }
+    const attrMap = { lec: 'sg-lec', fce: 'sg-fce', art: 'sg-art',
+                      paper: 'sg-paper' }
+    dlg.querySelectorAll('.sg-all').forEach((b) =>
+      b.addEventListener('click', (e) => {
+        e.stopPropagation()
+        const kind = b.dataset.all
+        const set = selMap[kind]
+        if (kind === 'vlv' || kind === 'bk') {
+          // checkbox 型：全选 = 全部勾上；再点 = 全清
+          const boxes = b.closest('.pe-sec').querySelectorAll('input[type=checkbox]')
+          const allOn = [...boxes].every((x) => x.checked)
+          boxes.forEach((x) => {
+            const v = kind === 'vlv' ? Number(x.dataset.sgVlv) : x.dataset.sgBk
+            x.checked = !allOn
+            if (!allOn) set.add(v); else set.delete(v)
+          })
+        } else {
+          const attr = attrMap[kind]
+          let btns = [...b.closest(kind === 'fce' ? '.pe-fce-group' : '.pe-sec')
+            .querySelectorAll(`[data-${attr}]`)]
+          if (kind === 'fce') btns = btns.filter((x) =>
+            x.closest('.pe-fce-group').querySelector('.sg-all').dataset.tid === b.dataset.tid)
+          const allOn = btns.every((x) => x.classList.contains('on'))
+          const key = attr.replace(/-(.)/g, (_, c) => c.toUpperCase())
+          btns.forEach((x) => {
+            const v = x.dataset[key]
+            if (allOn) { set.delete(v); x.classList.remove('on') }
+            else { set.add(v); x.classList.add('on') }
+          })
+        }
+      }))
     dlg.querySelectorAll('[data-sg-vlv]').forEach((c) =>
       c.addEventListener('change', () => {
         const v = Number(c.dataset.sgVlv)

@@ -427,10 +427,37 @@ export async function mountPlan(el) {
       const ed = await getEditorData()
       const books = ed.books || []
       const lectures = ed.lectures || []
+      const goals = ed.goals || {}
+      const done = ed.done || {}
       const lecTitle = (n) => {
         const l = lectures.find((x) => x.number === n)
         return l ? l.title : ''
       }
+      // 目标池与补充池：goal 选中的进「从总目标选」（已完成过滤）；
+      // 其余全部进「额外补充」（旧课复习/考试材料，不限完成态）
+      const doneLec = new Set(done.lectures || [])
+      const goalLecs = (goals.lectures || []).filter((n) => !doneLec.has(n))
+      const extraLecs = lectures.filter((l) => !(goals.lectures || []).includes(l.number))
+      const doneFce = new Set(done.fce_parts || [])
+      const goalFce = (goals.fce_parts || []).filter((x) => !doneFce.has(x))
+      const fceLabels = new Set((ed.fce_parts || []).map((x) => x.label))
+      const extraFce = (ed.fce_parts || []).filter(
+        (x) => !(goals.fce_parts || []).includes(x.label))
+      const doneArt = new Set(done.articles || [])
+      const goalArts = (ed.articles || []).filter(
+        (a) => (goals.articles || []).includes(a.id) && !doneArt.has(a.id))
+      const extraArts = (ed.articles || []).filter(
+        (a) => !(goals.articles || []).includes(a.id))
+      const doneBk = new Set(done.books || [])
+      const goalBooks = books.filter(
+        (b) => (goals.reading || []).includes(b.id) && !doneBk.has(b.id))
+      const extraBooks = books.filter(
+        (b) => !(goals.reading || []).includes(b.id))
+      const goalPapers = (ed.goal_assets?.vocab_papers || []).filter(
+        (x) => (goals.vocab_papers || []).includes(x.paper_id))
+      const extraPapers = (ed.goal_assets?.vocab_papers || []).filter(
+        (x) => !(goals.vocab_papers || []).includes(x.paper_id))
+      const paperSel = new Set(t.vocab_papers || [])
 
       const focusSel = new Set(t.focus_kps || [])
       const lecSel = new Set(t.lectures || [])
@@ -451,6 +478,19 @@ export async function mountPlan(el) {
         <button type="button" class="pe-lec ${selSet.has(l.number) ? 'on' : ''}" data-${attr}="${l.number}" title="${escapeHtml(l.category || '')}">
           <b>${l.number}</b>${escapeHtml(l.title)}
         </button>`).join('')
+      // 池化讲次 chips（done=✓ 标记，仍可选用于复习）
+      const lecChipsPool = (pool, selSet, attr) => pool.map((l) => `
+        <button type="button" class="pe-lec ${selSet.has(l.number) ? 'on' : ''}" data-${attr}="${l.number}" title="${escapeHtml(l.category || '')}">
+          <b>${l.number}</b>${escapeHtml(l.title)}${doneLec.has(l.number) ? '<i>✓</i>' : ''}
+        </button>`).join('')
+      const fcePartsPool = (pool) => pool.map((x) => `
+        <button type="button" class="pe-part ${fceSel.has(x.label) ? 'on' : ''}" data-fce="${escapeHtml(x.label)}" title="${escapeHtml(x.label)}">${escapeHtml(x.label.split(' · ').slice(1).join('·'))}<i>${x.questions}</i></button>`).join('')
+      const artChipsPool = (pool) => pool.map((a) => `
+        <button type="button" class="pe-part ${artSel.has(a.id) ? 'on' : ''}" data-art="${a.id}" title="${escapeHtml(a.title)} ${a.words} 词">
+          ${a.kind === 'base' ? '📄' : '✍️'} ${escapeHtml(a.title.slice(0, 18))}<i>${a.words}</i>
+        </button>`).join('')
+      const paperChipsPool = (pool) => pool.map((x) => `
+        <button type="button" class="pe-part ${paperSel.has(x.paper_id) ? 'on' : ''}" data-paper="${escapeHtml(x.paper_id)}">L${x.level} · ${x.paper_id.slice(-8)}<i>${(x.created_at || '').slice(5, 10)}</i></button>`).join('')
 
       const fceGroups = [1, 2, 3, 4].map((tid) => {
         const parts = (ed.fce_parts || []).filter((x) => x.test_id === tid)
@@ -485,38 +525,74 @@ export async function mountPlan(el) {
             <h4>🎯 攻坚讲次 <i>≤5 个，来自诊断信号优先</i></h4>
             <div class="pe-lec-grid" id="pe-focus-grid">${lecChips(focusSel, 'fl')}</div>
           </div>
-          <div class="pe-sec">
-            <h4>📚 本周讲次任务</h4>
-            <div class="pe-lec-grid" id="pe-lec-grid">${lecChips(lecSel, 'lc')}</div>
-          </div>
-          <div class="pe-sec">
-            <h4>🔤 词汇目标 <i>当前已掌握 ${ed.vocab_mastered || 0} 词</i></h4>
-            <div class="pe-vocab-row">
-              <input id="pe-vocab" type="number" min="0" value="${t.vocab_goal ?? ''}" placeholder="累计目标词数"/>
-              <button type="button" class="chip" data-vadd="20">+20</button>
-              <button type="button" class="chip" data-vadd="50">+50</button>
-              <button type="button" class="chip" data-vadd="100">+100</button>
+          <div class="pe-zone pe-zone-goal">
+            <h3 class="pe-zone-title">🎯 从总目标选 <i>总目标的子集；已完成项自动排除</i></h3>
+            <div class="pe-sec">
+              <h4>📚 讲次推进</h4>
+              <div class="pe-lec-grid" id="pe-lec-grid">${lecChipsPool(goalLecs, lecSel, 'lc') || '<p class="muted">总目标未选讲次，去学生管理配置</p>'}</div>
+            </div>
+            <div class="pe-sec">
+              <h4>🔤 词汇目标 <i>已掌握 ${ed.vocab_mastered || 0} 词${(goals.vocab_levels || []).length ? ` · 目标级别 L${(goals.vocab_levels || []).join('/L')}` : ''}</i></h4>
+              <div class="pe-vocab-row">
+                <input id="pe-vocab" type="number" min="0" value="${t.vocab_goal ?? ''}" placeholder="累计目标词数"/>
+                <button type="button" class="chip" data-vadd="20">+20</button>
+                <button type="button" class="chip" data-vadd="50">+50</button>
+                <button type="button" class="chip" data-vadd="100">+100</button>
+              </div>
+            </div>
+            <div class="pe-sec">
+              <h4>🎧 FCE 做题</h4>
+              <div class="pe-fce-parts">${fcePartsPool((ed.fce_parts || []).filter((x) => goalFce.includes(x.label))) || '<p class="muted">总目标未选 FCE Part</p>'}</div>
+            </div>
+            <div class="pe-sec">
+              <h4>📄 精读课文 <i>做完录音自动勾</i></h4>
+              <div class="pe-fce-parts" id="pe-articles">${artChipsPool(goalArts) || '<p class="muted">总目标未选精读文章</p>'}</div>
+            </div>
+            <div class="pe-sec">
+              <h4>📖 泛读 <i>按必读章配置算词数</i></h4>
+              <div id="pe-books">${bookRows()}</div>
+              <div class="pe-add-book">
+                <select id="pe-book-sel">
+                  <option value="">＋ 添加书目…</option>
+                  ${goalBooks.filter((b) => !readSel.has(String(b.id))).map((b) =>
+                    `<option value="${b.id}">🎯 ${escapeHtml(b.title.slice(0, 34))}${b.configured_chapters?.length ? `（必读${b.configured_chapters.length}章/${fmtK(b.goal_words)}词）` : ''}</option>`).join('')}
+                </select>
+                <label>目标 <input id="pe-book-pct" type="number" min="1" max="100" value="100" style="width:56px"/>%</label>
+              </div>
+            </div>
+            <div class="pe-sec">
+              <h4>📝 单词试卷</h4>
+              <div class="pe-fce-parts">${paperChipsPool(goalPapers) || '<p class="muted">总目标未关联试卷</p>'}</div>
             </div>
           </div>
-          <div class="pe-sec">
-            <h4>🎧 FCE 做题 <i>勾选本周要做的 Part</i></h4>
-            ${fceGroups || '<p class="muted">FCE 题库不可用</p>'}
-          </div>
-          <div class="pe-sec">
-            <h4>📖 泛读目标 <i>目标按泛读馆必读章配置算词数</i></h4>
-            <div id="pe-books">${bookRows()}</div>
-            <div class="pe-add-book">
-              <select id="pe-book-sel">
-                <option value="">＋ 从书架添加书目…</option>
-                ${books.filter((b) => !readSel.has(String(b.id))).map((b) =>
-                  `<option value="${b.id}">${escapeHtml(b.title.slice(0, 40))}${b.configured_chapters?.length ? `（必读 ${b.configured_chapters.length} 章/${fmtK(b.goal_words)} 词）` : `（${b.chapters} 章/${fmtK(b.total_words)} 词）`}</option>`).join('')}
-              </select>
-              <label>目标 <input id="pe-book-pct" type="number" min="1" max="100" value="100" style="width:56px"/>%</label>
+          <div class="pe-zone pe-zone-extra">
+            <h3 class="pe-zone-title">➕ 额外补充 <i>复习旧课 / 其他考试材料（不限完成态）</i></h3>
+            <div class="pe-sec">
+              <h4>📚 旧课复习 <i>✓ = 已完成，可复习巩固</i></h4>
+              <div class="pe-lec-grid" id="pe-extra-lec">${lecChipsPool(extraLecs, lecSel, 'lx') || '<p class="muted">无</p>'}</div>
             </div>
-          </div>
-          <div class="pe-sec">
-            <h4>📄 本周精读课文 <i>阅读训练文章，做完自动勾</i></h4>
-            <div class="pe-fce-parts" id="pe-articles">${artChips()}</div>
+            <div class="pe-sec">
+              <h4>🎧 FCE 补充练习</h4>
+              <div class="pe-fce-parts">${fcePartsPool(extraFce) || '<p class="muted">无</p>'}</div>
+            </div>
+            <div class="pe-sec">
+              <h4>📄 精读补充</h4>
+              <div class="pe-fce-parts">${artChipsPool(extraArts) || '<p class="muted">无</p>'}</div>
+            </div>
+            <div class="pe-sec">
+              <h4>📖 泛读补充</h4>
+              <div class="pe-add-book">
+                <select id="pe-extra-book-sel">
+                  <option value="">＋ 补充书目…</option>
+                  ${extraBooks.filter((b) => !readSel.has(String(b.id))).map((b) =>
+                    `<option value="${b.id}">${escapeHtml(b.title.slice(0, 34))}（${fmtK(b.total_words)} 词）</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <div class="pe-sec">
+              <h4>📝 试卷补充</h4>
+              <div class="pe-fce-parts">${paperChipsPool(extraPapers) || '<p class="muted">无</p>'}</div>
+            </div>
           </div>
           <div class="pe-sec">
             <h4>🎤 朗读（阅读训练）</h4>
@@ -546,6 +622,15 @@ export async function mountPlan(el) {
       }
       bindToggle(dlg.querySelector('#pe-focus-grid'), 'fl', focusSel)
       bindToggle(dlg.querySelector('#pe-lec-grid'), 'lc', lecSel)
+      const extraGrid = dlg.querySelector('#pe-extra-lec')
+      if (extraGrid) bindToggle(extraGrid, 'lx', lecSel)
+      // 试卷勾选（两区共用）
+      dlg.querySelectorAll('[data-paper]').forEach((b) =>
+        b.addEventListener('click', () => {
+          const k = b.dataset.paper
+          if (paperSel.has(k)) { paperSel.delete(k); b.classList.remove('on') }
+          else { paperSel.add(k); b.classList.add('on') }
+        }))
       dlg.querySelectorAll('[data-art]').forEach((b) =>
         b.addEventListener('click', () => {
           const id = Number(b.dataset.art)
@@ -580,6 +665,13 @@ export async function mountPlan(el) {
         readSel.set(e.target.value, Number(dlg.querySelector('#pe-book-pct').value) || 100)
         rerenderBooks()
       })
+      const extraSel = dlg.querySelector('#pe-extra-book-sel')
+      if (extraSel) extraSel.addEventListener('change', (e) => {
+        if (!e.target.value) return
+        readSel.set(e.target.value, 100)
+        rerenderBooks()
+        extraSel.value = ''
+      })
 
       dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
       dlg.querySelector('#pe-cancel').addEventListener('click', close)
@@ -594,6 +686,7 @@ export async function mountPlan(el) {
         if (fceSel.size) tasks.fce = [...fceSel]
         if (readSel.size) tasks.reading = Object.fromEntries(readSel)
         if (artSel.size) tasks.articles = [...artSel]
+        if (paperSel.size) tasks.vocab_papers = [...paperSel]
         if (dlg.querySelector('#pe-speak-on').checked) tasks.speak = Number(dlg.querySelector('#pe-speak-n').value) || 2
         const notes = dlg.querySelector('#pe-notes').value.trim()
         try {

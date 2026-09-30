@@ -449,6 +449,14 @@ class PlanStore:
                 "type": "speak", "text": "朗读 1 篇（阅读训练）",
                 "detail": f"每周 {t['speak']} 篇，录音自动进批改中心",
             })
+        for pid in (t.get("vocab_papers") or []):
+            plv = self._paper_level(pid)
+            tasks.append({
+                "type": "paper", "key": f"paper:{pid}",
+                "text": f"📝 单词试卷练习（{pid}）",
+                "detail": (f"L{plv} 级试卷" if plv is not None else "试卷资产")
+                          + " · 线下完成后到词汇考试登记",
+            })
         for aid in (t.get("articles") or []):
             title = self._article_title(aid)
             if title:
@@ -461,6 +469,16 @@ class PlanStore:
         for book_key, pct in (t.get("reading") or {}).items():
             tasks.append(self._reading_task(book_key, pct, user, days_left))
         return tasks
+
+    def _paper_level(self, paper_id: str) -> Optional[int]:
+        try:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT level FROM vocab_paper_history WHERE paper_id = ?",
+                    (str(paper_id)[:64],)).fetchone()
+                return row["level"] if row else None
+        except sqlite3.Error:
+            return None
 
     def _article_title(self, article_id: int) -> Optional[str]:
         try:
@@ -917,9 +935,65 @@ class PlanStore:
         # ---- 目标管理选项源（六类，全部关联备课资产） ----
         goal_assets = self.goal_assets(lectures, fce_parts, books, articles,
                                        user=user)
+        # 周编辑器需要：该生总目标 + 各类资产完成状态（已完成不再出现在
+        # 「从总目标选」池；额外补充池不受限，可复习旧内容）
+        goals = self.get_goals(user)
+        done = self._completion_status(user)
         return {"lectures": lectures, "fce_parts": fce_parts, "books": books,
                 "articles": articles, "vocab_mastered": mastered,
-                "goal_assets": goal_assets}
+                "goal_assets": goal_assets, "goals": goals, "done": done}
+
+    def _completion_status(self, user: str) -> dict:
+        """各类资产的「已完成」判定（供周编辑器过滤目标池）。
+
+        讲次=有考试成绩；FCE Part=有提交覆盖；精读文章=有录音提交；
+        词汇级别=考试≥80 通过；书=进度≥98%（读完）。查询容错缺表。
+        """
+        done: dict[str, list] = {"lectures": [], "fce_parts": [],
+                                 "articles": [], "vocab_levels": [],
+                                 "books": []}
+        exam_path = self._exam_db()
+        if exam_path and Path(exam_path).exists():
+            try:
+                with sqlite3.connect(f"file:{exam_path}?mode=ro", uri=True) as conn:
+                    done["lectures"] = [r[0] for r in conn.execute(
+                        "SELECT DISTINCT lecture FROM exam_records")]
+            except sqlite3.Error:
+                pass
+        try:
+            with self._connect() as conn:
+                conn.row_factory = sqlite3.Row
+                tabs = {r[0] for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'")}
+                if "fce_submission" in tabs:
+                    for r in conn.execute(
+                        "SELECT DISTINCT test_id, paper, part FROM fce_submission"
+                        " WHERE user = ?", (user,)):
+                        done["fce_parts"].append(
+                            f"Test {r[0]} · {_paper_short(r[1])} P{r[2]}")
+                if "reading_recordings" in tabs:
+                    for r in conn.execute(
+                        "SELECT DISTINCT article_id FROM reading_recordings"
+                        " WHERE user = ? AND article_id IS NOT NULL", (user,)):
+                        done["articles"].append(r[0])
+                if "vocab_exams" in tabs:
+                    for r in conn.execute(
+                        "SELECT DISTINCT level FROM vocab_exams"
+                        " WHERE user = ? AND score >= 80", (user,)):
+                        done["vocab_levels"].append(r[0])
+        except sqlite3.Error:
+            pass
+        conn2 = self._lib_connect()
+        if conn2 is not None:
+            try:
+                with contextlib.closing(conn2):
+                    for r in conn2.execute(
+                        "SELECT book_id FROM reading_progress"
+                        " WHERE user = ? AND percent >= 98", (user,)):
+                        done["books"].append(r[0])
+            except sqlite3.Error:
+                pass
+        return done
 
     def goal_assets(self, lectures: list, fce_parts: list, books: list,
                     articles: list, user: str = "malin") -> dict:
