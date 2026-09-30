@@ -8,7 +8,7 @@ export async function mountPaperAdmin(el) {
     <div class="view-head">
       <button class="chip" data-back>← 返回备课中心</button>
       <h1>作业卷管理</h1>
-      <p>每讲作业卷的原题与答案（45 讲 · 1575 题）。作答记录在批改中心。</p>
+      <p>每讲作业卷的原题与答案（45 讲 · 1575 题，AI 生成已全覆盖）。作答记录在批改中心。</p>
     </div>
     <div id="pa-body"><p class="muted">加载中…</p></div>
   `
@@ -72,7 +72,6 @@ export async function mountPaperAdmin(el) {
         </div>
       </section>`
     host.querySelector('#pa-close').addEventListener('click', () => { host.innerHTML = '' })
-    bindAnswers(lec, host)
     host.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
@@ -85,29 +84,11 @@ export async function mountPaperAdmin(el) {
       <div class="pa-qmain">
         <p class="pa-stem">${escapeHtml(q.stem)}</p>
         ${opts.length ? `<div class="pa-opts">${opts.map((o, i) => `<span><i>${optLetters[i] || '·'}</i>${escapeHtml(String(o))}</span>`).join('')}</div>` : ''}
-        <div class="pa-ans-row">
-          <label>答案 <input data-ans="${q.qnum}" value="${escapeHtml(q.answer || '')}" placeholder="待补…"/></label>
-        </div>
+        <div class="pa-ans-line ${q.answer ? '' : 'empty'}">答案：${q.answer ? escapeHtml(q.answer) : '待补'}</div>
       </div>
     </div>`
   }
 
-  function bindAnswers(lec, host) {
-    host.querySelectorAll('[data-ans]').forEach((inp) => {
-      let timer = null
-      inp.addEventListener('input', () => {
-        clearTimeout(timer)
-        timer = setTimeout(async () => {
-          const qnum = Number(inp.dataset.ans)
-          try {
-            await api.hwAnswerPut(lec, qnum, inp.value.trim())
-            inp.style.borderColor = '#2e7d4f'
-            setTimeout(() => { inp.style.borderColor = '' }, 900)
-          } catch (e) { alert('答案保存失败：' + e.message) }
-        }, 600)
-      })
-    })
-  }
 
   await load()
 }
