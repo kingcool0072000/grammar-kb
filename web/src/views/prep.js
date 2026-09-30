@@ -68,12 +68,6 @@ async function mountContent(el) {
       <section class="gd-section">
         <header class="gd-section-head">
           <h2>📚 哈1 语法</h2>
-          <nav>
-            <button class="reading-btn small primary" data-go="courses">📖 语法课</button>
-            <button class="reading-btn small" data-go="taxonomy">🌳 知识点体系</button>
-            <button class="reading-btn small" data-go="vocab">🔤 词汇表</button>
-            <button class="reading-btn small" data-go="paperAdmin">📋 作业卷管理</button>
-          </nav>
         </header>
         <div class="gd-subgroup">
           <h3>📖 初中语法课</h3>
@@ -102,11 +96,6 @@ async function mountContent(el) {
       <section class="gd-section">
         <header class="gd-section-head">
           <h2>🎧 FCE 听说读写</h2>
-          <nav>
-            <button class="reading-btn small primary" data-go="readingAdmin">🧬 阅读内容管理</button>
-            <button class="reading-btn small" data-go="fce">📘 FCE 知识库</button>
-            <button class="reading-btn small" data-go="fcePapers">📝 真题库</button>
-          </nav>
         </header>
         <div class="gd-subgroup">
           <h3>🧬 阅读内容</h3>
@@ -132,10 +121,6 @@ async function mountContent(el) {
       <section class="gd-section">
         <header class="gd-section-head">
           <h2>📚 泛读馆</h2>
-          <nav>
-            <button class="reading-btn small primary" data-go="library">📖 书架</button>
-            <button class="reading-btn small" data-go="librarySettings">⚙️ 全馆设置</button>
-          </nav>
         </header>
         <div class="gd-subgroup">
           <h3>📖 书架与管理</h3>
