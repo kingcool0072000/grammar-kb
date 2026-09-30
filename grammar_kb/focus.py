@@ -56,7 +56,9 @@ CREATE TABLE IF NOT EXISTS focus_sessions (
     module           TEXT DEFAULT 'library',
     range_start      REAL,
     range_end        REAL,
-    range_label      TEXT DEFAULT ''
+    range_label      TEXT DEFAULT '',
+    -- v3：位置轨迹（[{t秒,p%}] JSON），段级有效性（跳章剔除）用
+    percent_track    TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_fs_user ON focus_sessions(user, created_at);
 """
@@ -240,7 +242,8 @@ class FocusStore:
     """focus_sessions 读写。"""
 
     _V2_COLUMNS = ("lookup_words", "speak_words", "selected_words", "activity_json",
-                   "module", "range_start", "range_end", "range_label")
+                   "module", "range_start", "range_end", "range_label",
+                   "percent_track")
 
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or _default_db_path()
@@ -285,7 +288,7 @@ class FocusStore:
         module: str = "library", range_start: Optional[float] = None,
         range_end: Optional[float] = None, range_label: str = "",
         lookup_words=None, speak_words=None, selected_words=None,
-        activity=None,
+        activity=None, percent_track=None,
     ) -> dict:
         """按 session_id 幂等写入（心跳重传覆盖累计值），返回完整行。"""
         user = (user or "").strip()[:60]
@@ -345,8 +348,9 @@ class FocusStore:
                 " plays, prep_opens, prep_starts, percent_start, percent_end,"
                 " fast_scroll_flags, mouse_metrics, polyline, score, score_detail,"
                 " created_at, lookup_words, speak_words, selected_words,"
-                " activity_json, module, range_start, range_end, range_label)"
-                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " activity_json, module, range_start, range_end, range_label,"
+                " percent_track)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (sid, row["user"], row["book_id"], row["book_title"],
                  row["started_at"], row["ended_at"], row["total_sec"],
                  row["active_sec"], row["away_count"], row["away_sec"],
@@ -360,7 +364,8 @@ class FocusStore:
                  module,
                  None if range_start is None else _clamp_float(range_start, 0, 100),
                  None if range_end is None else _clamp_float(range_end, 0, 100),
-                 (range_label or "")[:120]),
+                 (range_label or "")[:120],
+                 json.dumps(percent_track or [], ensure_ascii=False)[:60000]),
             )
             saved = conn.execute(
                 "SELECT * FROM focus_sessions WHERE session_id = ?", (sid,)

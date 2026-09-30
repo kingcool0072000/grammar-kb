@@ -242,6 +242,20 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     percentEnd: null,
     fastScrollFlags: 0,
   })
+  // v3 位置轨迹：{t 秒, p 0-100}——只记变化点（新值≠上一值才推），
+  // 供后端做段级有效性（跳章剔除/短停留段剔除/限速校验）。
+  let percentTrack = []
+  let lastTrackAt = 0
+  function pushPercentTrack(p) {
+    if (p == null || !Number.isFinite(p)) return
+    const t = relNow()
+    const last = percentTrack[percentTrack.length - 1]
+    if (last && last.p === p && t - last.t < 300) return
+    if (last && t - last.t < 1) percentTrack[percentTrack.length - 1] = { t, p }
+    else percentTrack.push({ t, p })
+    // 上限保护：超长会话截断保留两端（头 3000 点 + 尾 500 点）
+    if (percentTrack.length > 3500) percentTrack = percentTrack.slice(0, 3000).concat(percentTrack.slice(-500))
+  }
   st = newSt()
   // 内容漏斗（v2）：词 → 次数；selected 为「选了但没查没听」的词
   let lookupMap = new Map()
@@ -300,6 +314,7 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     lastWheelBucket = -1
     lastWheelAt = 0
     scrollSamples.length = 0
+    percentTrack = []
     lastEngageAt = -Infinity; lastFastAt = -Infinity
   }
 
@@ -475,6 +490,8 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
       range_start: st.percentStart == null ? null : Math.round(st.percentStart * 100) / 100,
       range_end: st.percentEnd == null ? null : Math.round(st.percentEnd * 100) / 100,
       range_label: (curChapterLabel || initialRangeLabel || '').slice(0, 120),
+      // v3 位置轨迹：[{t秒,p%}]（只记变化点），后端段级有效性用
+      percent_track: percentTrack,
       lookup_words: wordsToArray(lookupMap),
       speak_words: wordsToArray(speakMap),
       selected_words: wordsToArray(selectedMap),
@@ -614,6 +631,7 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
         if (Number.isFinite(p)) {
           if (st.percentStart == null) st.percentStart = p
           st.percentEnd = p
+          pushPercentTrack(p)
         }
         if (label) curChapterLabel = String(label).slice(0, 120)
       },

@@ -127,6 +127,8 @@ try:
         speak_words: Optional[list] = None
         selected_words: Optional[list] = None
         activity: Optional[list] = None
+        # v3 位置轨迹 [{t秒, p%}]：段级有效性（跳章剔除/短停留段剔除）
+        percent_track: Optional[list] = None
 
         session_id: str = Field(min_length=1, max_length=64)
         book_id: Optional[int] = None

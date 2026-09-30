@@ -51,6 +51,11 @@ def reading_env(tmp_path, monkeypatch):
     shutil.copy(REAL_FCE_DB, tmp_path / "fce.db")
     conn = sqlite3.connect(tmp_path / "fce.db")
     conn.execute("DELETE FROM reading_article WHERE kind != 'base' OR base_key NOT IN ('T1P1')")
+    # 活动数据清零：data/fce.db 可能是生产备份（背词/专注/录音等业务数据），
+    # 用例断言「提交后只有 1 条」会被真数据污染
+    for tbl in ("recite_sessions", "focus_sessions", "reading_recordings",
+                "fce_submission", "plan_weeks", "plan_history_days", "plan_goals"):
+        conn.execute(f"DELETE FROM {tbl}")
     conn.commit()
     conn.close()
     monkeypatch.setenv("GRAMMAR_KB_USERS", str(tmp_path / "users.json"))

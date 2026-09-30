@@ -1465,26 +1465,123 @@ class PlanStore:
                 "words": 0,
             }
             info = lib.get(bid)
-            s = min((r["percent_start"] or 0) for r in srows)
-            e = max((r["percent_end"] or 0) for r in srows)
-            if info and e > s:
-                total = sum(w for _, w in info["chs"])
-                if total > 0:
-                    s_pos, e_pos = s / 100 * total, e / 100 * total
-                    cum = 0
-                    counted: list[int] = []
-                    for idx, wc in info["chs"]:
-                        c0, c1 = cum, cum + wc
-                        cum = c1
-                        if info["required"] is not None and idx not in info["required"]:
-                            continue  # 非必读章剔除
-                        ov = min(e_pos, c1) - max(s_pos, c0)
-                        if ov > 0:
-                            entry["words"] += int(round(ov))
-                            counted.append(idx)
-                    if counted:
-                        entry["from"], entry["to"] = min(counted), max(counted)
+            if not info:
+                out.append(entry)
+                continue
+            total = sum(w for _, w in info["chs"])
+            if total <= 0:
+                out.append(entry)
+                continue
+
+            # ---- 段级词数（v3 位置轨迹优先；无轨迹的存量会话退回 span 口径+限速封顶）----
+            # 有效段集合：[(s_pos, e_pos)] 词位置区间（已剔跳章与短停留段）
+            segs: list[tuple[float, float]] = []
+            for r in srows:
+                track = self._session_track(r)
+                if track:
+                    segs.extend(self._valid_track_segments(track, total))
+                else:
+                    # 存量会话：span 口径 + 会话级限速封顶（400 词/分 × active 分钟）
+                    s = r["percent_start"] or 0
+                    e = r["percent_end"] or 0
+                    if e > s:
+                        cap = max(0.0, (r["active_sec"] or 0)) / 60 * self.READ_WPM_CAP
+                        span_words = (e - s) / 100 * total
+                        ratio = min(1.0, cap / span_words) if span_words > 0 else 1.0
+                        segs.append((s / 100 * total,
+                                     s / 100 * total + span_words * ratio))
+            # 去重合并（段可能跨会话重叠），再逐章计词
+            segs.sort()
+            merged: list[list[float]] = []
+            for s_pos, e_pos in segs:
+                if e_pos <= s_pos:
+                    continue
+                if merged and s_pos <= merged[-1][1]:
+                    merged[-1][1] = max(merged[-1][1], e_pos)
+                else:
+                    merged.append([s_pos, e_pos])
+            counted: list[int] = []
+            for s_pos, e_pos in merged:
+                cum = 0
+                for idx, wc in info["chs"]:
+                    c0, c1 = cum, cum + wc
+                    cum = c1
+                    if info["required"] is not None and idx not in info["required"]:
+                        continue  # 非必读章剔除
+                    ov = min(e_pos, c1) - max(s_pos, c0)
+                    if ov > 0:
+                        entry["words"] += int(round(ov))
+                        counted.append(idx)
+            if counted:
+                entry["from"], entry["to"] = min(counted), max(counted)
             out.append(entry)
+        return out
+
+    # 阅读限速（词/分钟）：超过即判定为跳章/快滚位移，不计词数
+    READ_WPM_CAP = 400.0
+    # 轨迹切段：相邻采样间隔超过此值视为段中断（idle 分段/跳走再回）
+    TRACK_GAP_SEC = 60
+    # 段最短停留（秒）：跳章前后停留太短的段剔除
+    SEG_MIN_DWELL_SEC = 15
+
+    @staticmethod
+    def _session_track(r) -> list[dict]:
+        """会话行的 percent_track JSON → [{t, p}]（缺/坏返回 []）。"""
+        raw = None
+        try:
+            raw = r["percent_track"]
+        except (IndexError, KeyError):
+            raw = None
+        if not raw:
+            return []
+        try:
+            data = json.loads(raw)
+        except (ValueError, TypeError):
+            return []
+        out = []
+        if isinstance(data, list):
+            for x in data:
+                try:
+                    out.append({"t": float(x["t"]), "p": float(x["p"])})
+                except (KeyError, TypeError, ValueError):
+                    continue
+        return out
+
+    def _valid_track_segments(self, track: list[dict],
+                              total_words: int) -> list[tuple[float, float]]:
+        """位置轨迹 → 有效阅读段（词位置区间）。
+
+        规则（用户口径）：
+        1. 切段：相邻采样间隔 > TRACK_GAP_SEC 断开；
+        2. 段内限速：段推进词数 ≤ 段时长 × READ_WPM_CAP/60——超出即含跳章，
+           该段整体剔除（跳前/跳后停留太短的滑动位移段同样被时限卡掉）；
+        3. 段停留 < SEG_MIN_DWELL_SEC 剔除（切换章未停留足够即走）。
+        回退段（e<s）不计。
+        """
+        if not track:
+            return []
+        segs_raw: list[list[dict]] = [[]]
+        for pt in track:
+            if segs_raw[-1]:
+                if pt["t"] - segs_raw[-1][-1]["t"] > self.TRACK_GAP_SEC:
+                    segs_raw.append([])
+            segs_raw[-1].append(pt)
+        out = []
+        for seg in segs_raw:
+            if len(seg) < 2:
+                continue
+            dur = seg[-1]["t"] - seg[0]["t"]
+            if dur < self.SEG_MIN_DWELL_SEC:
+                continue
+            s_pos = seg[0]["p"] / 100 * total_words
+            e_pos = seg[-1]["p"] / 100 * total_words
+            if e_pos <= s_pos:
+                continue  # 回退
+            cap = dur / 60 * self.READ_WPM_CAP
+            span = e_pos - s_pos
+            if span <= cap:
+                out.append((s_pos, e_pos))
+            # span > cap：段内发生跳章/极快位移——整段丢弃
         return out
 
     def _auto_done(self, user: str, day: str) -> tuple[dict[str, bool], list[str]]:
@@ -1561,7 +1658,7 @@ class PlanStore:
                     rows = conn.execute(
                         "SELECT module, book_title, book_id, active_sec,"
                         " percent_start, percent_end, lookups, plays,"
-                        " scroll_count, chapter_navs"
+                        " scroll_count, chapter_navs, percent_track"
                         " FROM focus_sessions"
                         " WHERE user = ? AND (created_at >= ? AND created_at < ?)"
                         " AND book_title IS NOT NULL",
