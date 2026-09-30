@@ -478,12 +478,15 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         return _ok(kbq.vocabulary(limit=limit, min_freq=min_freq))
 
     @app.get("/vocab-levels")
-    def vocab_levels(request: "fastapi.Request", max_level: int = 7):
+    def vocab_levels(request: "fastapi.Request", max_level: int = 7,
+                    counts_only: int = 0, level: int = -1):
         """分层词库（vocab_word 表）：单词 + L0-L7 级别 + 释义/例句。
 
         L0=哈一课本高频词（与 /vocabulary min_freq=2 同源，带语料增强）；
         L1-L7 为外部词表增量（孩子侧只显示 L 编号，级别名不下发）。
         max_level 截断层数（如 5 = L0-L5）。
+        counts_only=1 只返回 counts+unlocked（备课中心级别卡——避免 1.9MB
+        全量词库拖慢打开）；level=n 只返回该级词条（级别详情页单级拉取）。
         """
         req_level = max(0, min(7, int(max_level)))
         # 学生端解锁规则（2026-09-26 起，取代教师手动 vocabUnlock）：
@@ -492,6 +495,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         max_level = req_level
         if request.state.role != "teacher":
             max_level = min(req_level, vocab_exam.unlocked_level(_request_user(request)))
+        if level >= 0:
+            max_level = max(0, min(req_level, int(level)))
         import json as _json
 
         def _j(s, dft):
@@ -509,6 +514,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
                     (req_level,),
                 ).fetchall()
             )
+            if counts_only:
+                return _ok({"counts": counts_all, "unlocked": max_level,
+                            "items": []})
             rows = conn.execute(
                 "SELECT word, level, pos, gloss, meanings, example, extra"
                 " FROM vocab_word WHERE level <= ?",

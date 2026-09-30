@@ -199,8 +199,14 @@ export const api = {
     req('/focus/sessions', { searchParams: { user, limit, offset } }),
   focusSession: (id) => req(`/focus/sessions/${id}`),
   // 分层词库（vocab_word 表；学生端受教师 vocabUnlock 解锁约束）+ 错词本
-  vocabLevels: ({ maxLevel = 7 } = {}) =>
-    req('/vocab-levels', { searchParams: { max_level: maxLevel } }),
+  vocabLevels: ({ maxLevel = 7, countsOnly = false, level = null } = {}) =>
+    req('/vocab-levels', {
+      searchParams: {
+        max_level: maxLevel,
+        ...(countsOnly ? { counts_only: 1 } : {}),
+        ...(level != null ? { level } : {}),
+      },
+    }),
   wrongbook: ({ user, limit = 500 } = {}) =>
     req('/recite/wrongbook', { searchParams: { user, limit } }),
   // 专题学习（学生自学手册进度；谁登录记谁的行，跨设备同步）

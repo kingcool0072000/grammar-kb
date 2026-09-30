@@ -24,7 +24,7 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
   let data, unlock, students
   try {
     ;[data, unlock, students] = await Promise.all([
-      api.vocabLevels({ maxLevel: lv }),
+      api.vocabLevels({ maxLevel: 5, level: lv }),
       api.vocabUnlockGet().catch(() => ({})),
       api.users().catch(() => ({ users: [] })),
     ])

@@ -47,7 +47,7 @@ async function mountContent(el) {
       api.readingArticles().catch(() => null),
       api.vocabExams().catch(() => null),
       api.libraryBooks().catch(() => null),
-      api.vocabLevels({ maxLevel: 5 }).catch(() => null),
+      api.vocabLevels({ maxLevel: 5, countsOnly: true }).catch(() => null),
     ])
   } catch { /* FCE 数据不可用时仍展示哈1板块 */ }
   const libCount = lib?.books?.length ?? 0
