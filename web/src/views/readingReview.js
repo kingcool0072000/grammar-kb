@@ -1,7 +1,7 @@
 import { api } from '../api.js'
 import { escapeHtml, escAttr } from '../render.js'
 
-// 精读录音批改（共享模块）：从 readingAdmin 抽出，批改中心承载。
+// 精读录音批改（共享模块）：从 readingAdmin 抽出，批改中心承载。v2 缓存刷新。
 // 含：批改视图（renderReview，试听+10 分制打分+评语+导出）、
 // 提交行（recRow）、行内删除/编辑（bindRecRowActions）。
 
@@ -102,9 +102,15 @@ async function renderReview(el, recs, onBack) {
   // 并行预取全部录音（每条仅几 KB～几十 KB）与文章，转 Blob URL 一次性挂到
   // <audio>——原生控件直接播放，无懒加载时序/自动播放策略问题
   const slice = list.slice(0, 30)
+  // 详情音频/全文不是列表展示的前置条件：单条接口偶发卡住时不能阻塞
+  // 整个批改列表。每条最多等 4 秒，超时则先显示批改行，稍后刷新可再取。
+  const withTimeout = (promise, ms = 4000) => Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(null), ms)),
+  ]).catch(() => null)
   const [fulls, arts] = await Promise.all([
-    Promise.all(slice.map((r) => api.readingRecording(r.id).catch(() => null))),
-    Promise.all(slice.map((r) => api.readingArticle(r.article_id).catch(() => null))),
+    Promise.all(slice.map((r) => withTimeout(api.readingRecording(r.id)))),
+    Promise.all(slice.map((r) => withTimeout(api.readingArticle(r.article_id)))),
   ])
   const exportable = [] // {blobUrl, name, textName, text} 供导出
   for (let i = 0; i < slice.length; i++) {
@@ -203,4 +209,23 @@ async function renderReview(el, recs, onBack) {
     if (onBack) onBack()
     else location.hash = '/grading'
   })
+}
+
+function fmtDur(sec) {
+  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
+}
+
+function dlFileGlobal(blobUrl, name) {
+  const a = document.createElement('a')
+  a.href = blobUrl
+  a.download = name
+  document.body.append(a)
+  a.click()
+  a.remove()
+}
+
+function dlTextGlobal(name, text) {
+  const u = URL.createObjectURL(new Blob([text], { type: 'text/plain' }))
+  dlFileGlobal(u, name)
+  setTimeout(() => URL.revokeObjectURL(u), 5000)
 }

@@ -1,5 +1,6 @@
 import { api, getAuth } from '../api.js'
 import { escapeHtml } from '../render.js'
+import { renderReadingReview } from './readingReview.js'
 
 // 教师版 · 批改中心（首页）：学生提交的作业按三大板块归类——
 //   FCE 听说读写（朗读录音批改 / 作文批改 / 练习明细）
@@ -10,6 +11,8 @@ export async function mountGrading(el) {
   // 双子 Tab：批改看板（默认）/ 学情分析（原计划表子 Tab 迁入）
   const subTab = new URLSearchParams(location.hash.split('?')[1] || '').get('tab') || 'board'
   const state = { tab: subTab === 'analytics' ? 'analytics' : 'board' }
+  // 批改视图返回看板时复用最近一次已加载数据，避免再次等待 5 个接口。
+  let boardSnapshot = null
   render()
 
   function render() {
@@ -46,7 +49,6 @@ export async function mountGrading(el) {
       host.innerHTML = '<p class="muted">加载录音批改…</p>'
       try {
         const recs = await api.readingRecordings({ limit: 200 })
-        const { renderReadingReview } = await import('./readingReview.js')
         await renderReadingReview(host, recs, {
           onBack: () => { state.tab = 'board'; render() },
         })
@@ -55,20 +57,27 @@ export async function mountGrading(el) {
       }
     }
     el.innerHTML = '<p class="muted">加载中…</p>'
-  let recs, fceSubs, recite, exams, focus
-  try {
-    ;[recs, fceSubs, recite, exams, focus] = await Promise.all([
-      api.readingRecordings({ limit: 200 }),
-      api.fceSubmissions({ limit: 200 }),
-      api.reciteSessions({ limit: 100 }),
-      api.examsList(),
-      // 专注力后端并行开发中，失败不拖垮整页
-      api.focusSessions({ limit: 50 }).catch(() => []),
-    ])
-  } catch (e) {
-    el.querySelector('p').innerHTML = `<span style="color:#b42318">加载失败：${escapeHtml(e.message)}</span>`
-    return
-  }
+    let recs, fceSubs, recite, exams, focus
+    if (boardSnapshot) {
+      ({ recs, fceSubs, recite, exams, focus } = boardSnapshot)
+    } else {
+      try {
+        const timed = (p, ms = 8000) => Promise.race([
+          p, new Promise((resolve) => setTimeout(() => resolve([]), ms)),
+        ]).catch(() => [])
+        ;[recs, fceSubs, recite, exams, focus] = await Promise.all([
+          timed(api.readingRecordings({ limit: 200 })),
+          timed(api.fceSubmissions({ limit: 200 })),
+          timed(api.reciteSessions({ limit: 100 })),
+          timed(api.examsList()),
+          timed(api.focusSessions({ limit: 50 })),
+        ])
+        boardSnapshot = { recs, fceSubs, recite, exams, focus }
+      } catch (e) {
+        el.querySelector('p').innerHTML = `<span style="color:#b42318">加载失败：${escapeHtml(e.message)}</span>`
+        return
+      }
+    }
 
   // ---- 待办汇总 ----
   const pendRec = recs.filter((r) => r.status === 'pending')
