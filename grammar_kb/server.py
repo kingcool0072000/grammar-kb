@@ -241,6 +241,11 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         allow_headers=["*"],
     )
 
+    # ---- 响应压缩：JS/CSS/JSON gzip（bundle 770K → ~250K，2C1G 小机与
+    # 公网带宽下的首屏主瓶颈）。音频 wav/mp3 已压缩格式，最低阈值跳过
+    from fastapi.middleware.gzip import GZipMiddleware
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
+
     # ---- 统一错误响应 ----
     @app.exception_handler(HTTPException)
     async def _http_exc(_, exc):  # noqa: ANN001
@@ -1631,7 +1636,18 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             resp.headers["Cache-Control"] = "no-cache"
             return resp
 
-        app.mount("/", StaticFiles(directory=web_dist, html=True), name="web")
+        # 静态资源长缓存：vite 产物文件名带内容 hash（index-xxxx.js），
+        # 内容变则名变——可安全 immutable 一年；index.html 已显式 no-cache
+        from starlette.staticfiles import StaticFiles as _SM, NotModifiedResponse as _NMR  # noqa: F401
+        _web_mount = StaticFiles(directory=web_dist, html=True)
+
+        class _CachedStatic(_web_mount.__class__):
+            def file_response(self, *args, **kwargs):  # noqa: ANN002, ANN003
+                resp = super().file_response(*args, **kwargs)
+                resp.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
+                return resp
+
+        app.mount("/", _CachedStatic(directory=web_dist, html=True), name="web")
     else:
 
         @app.get("/", include_in_schema=False)

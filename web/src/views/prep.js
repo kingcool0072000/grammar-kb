@@ -1,6 +1,7 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
-import { TOPICS as TOPIC_LIST } from './topics.js'
+// 专题清单动态加载：TOPICS 是整本静态手册（大内容块），拉进首包会显著
+// 增大 index bundle——只在备课中心需要计数，await 动态 import 取。
 
 // 教师版 · 备课中心：教学内容管理按两大板块组织——
 //   哈1 语法（初中语法课 / 知识点体系 / 词汇表 / 作业题库）
@@ -13,6 +14,10 @@ export async function mountPrep(el, ctx) {
 async function mountContent(el) {
   el.innerHTML = '<p class="muted">加载中…</p>'
   const stats = await api.stats().catch(() => null)
+  // 专题手册数（动态 import；失败显示 — 不阻塞备课中心）
+  let topicCount = '—'
+  try { const { TOPICS } = await import('./topics.js'); topicCount = TOPICS.length }
+  catch { /* 手册模块不可用 */ }
   let papers = null, bases = null, derived = null, vex = null, lib = null, vlevels = null, topicsProg = null
   try {
     ;[papers, bases, derived, vex, lib, vlevels, topicsProg] = await Promise.all([
@@ -34,8 +39,7 @@ async function mountContent(el) {
   const fceTotal = papers?.reduce((s, t) => s + Object.values(t.papers).flat().reduce((x, p) => x + p.questions, 0), 0) || 0
   const derivedCount = derived?.length || 0
   const baseCount = bases?.length || 0
-  // 专题手册数（静态清单在 topics.js；教师视角全量）+ 已完成进度
-  const topicCount = TOPIC_LIST.length
+  // 专题手册数（上方动态 import 已取）+ 已完成进度
   const topicsDone = (topicsProg || []).filter((r) => r.done).length
 
   el.innerHTML = `

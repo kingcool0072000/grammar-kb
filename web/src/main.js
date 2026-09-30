@@ -16,8 +16,8 @@ import { mountLibraryManage } from './views/library/manage.js'
 import { mountLibrarySettings } from './views/library/settings.js'
 import { mountGrading } from './views/grading.js'
 import { mountPrep } from './views/prep.js'
-// 学情分析由批改中心动态 import('./analytics.js')，此处不静态引入（减首包）
-import { mountTopics } from './views/topics.js'
+// 学情分析由批改中心动态 import('./analytics.js')；topics 手册（大静态
+// 内容块）同样不静态引入（避免拖大首包）——两者都在路由分支动态 import
 import { mountPlan } from './views/plan.js'
 import { mountVocabExam } from './views/vocabExam.js'
 import { mountStudents } from './views/students.js'
@@ -305,8 +305,9 @@ async function bootstrap() {
     } else if (route === 'recite') {
       mounted = mountRecite(container, { vocab: state.vocab, role })
     } else if (route === 'topics') {
-      // 专题学习：#/topics 列表 / #/topics/{id} 手册详情（视图内部按 hash 分发）
-      mounted = mountTopics(container, { role })
+      // 专题学习（大静态手册独立 chunk）：#/topics 列表 / #/topics/{id} 详情
+      mounted = import('./views/topics.js').then(({ mountTopics }) =>
+        mountTopics(container, { role }))
     } else if (route === 'config') {
       // 设置中心（隐藏页 #/config；旧 #/ttsconf #/readconf 已并入）
       mounted = mountConfig(container)
