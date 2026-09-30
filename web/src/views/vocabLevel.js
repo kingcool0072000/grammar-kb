@@ -55,11 +55,10 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
           <h3>📚 本级单词 <i>${words.length} 词${lv === 0 ? ' · 哈一课本高频词（原词汇表）' : ''}</i></h3>
           <div class="vl-tools">
             <input id="vl-search" placeholder="搜索单词 / 释义…"/>
-            <button class="chip" data-go-vocab="${lv}">完整词汇表 →</button>
           </div>
         </header>
-        <div class="vl-words" id="vl-words">${wordRows(words)}</div>
-        ${words.length > 60 ? `<p class="vl-more muted">仅展示前 60 词，共 ${words.length} 词（完整列表点右上「完整词汇表」）</p>` : ''}
+        <div class="vl-words" id="vl-words"></div>
+        <div class="vl-pager" id="vl-pager"></div>
       </section>
 
       <!-- 2.2 单词考试设计 -->
@@ -88,18 +87,70 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
         </div>
       </section>`
 
-    // 搜索
+    // 分页展示（每页 40 词；搜索时按结果分页）
+    const PAGE = 40
+    let page = 0
     const search = body.querySelector('#vl-search')
-    search.addEventListener('input', () => {
+    const curList = () => {
       const q = search.value.trim().toLowerCase()
-      const list = !q ? words : words.filter((w) =>
+      return !q ? words : words.filter((w) =>
         (w.word || '').toLowerCase().includes(q) || glossOf(w).includes(q))
-      body.querySelector('#vl-words').innerHTML = wordRows(list.slice(0, 60))
-    })
-    // 完整词汇表
-    body.querySelector('[data-go-vocab]').addEventListener('click', () => {
-      location.hash = '/vocab'
-    })
+    }
+    function renderPage() {
+      const list = curList()
+      const pages = Math.max(1, Math.ceil(list.length / PAGE))
+      if (page >= pages) page = pages - 1
+      const slice = list.slice(page * PAGE, page * PAGE + PAGE)
+      body.querySelector('#vl-words').innerHTML = wordRows(slice)
+      body.querySelector('#vl-pager').innerHTML = `
+        <button class="chip" data-pg="prev" ${page === 0 ? 'disabled' : ''}>‹ 上一页</button>
+        <span class="vl-page-info">第 ${page + 1} / ${pages} 页 · 共 ${list.length} 词</span>
+        <button class="chip" data-pg="next" ${page >= pages - 1 ? 'disabled' : ''}>下一页 ›</button>`
+      body.querySelectorAll('[data-pg]').forEach((b) =>
+        b.addEventListener('click', () => {
+          page += b.dataset.pg === 'next' ? 1 : -1
+          if (page < 0) page = 0
+          renderPage()
+        }))
+      // 点词卡 → 完整内容弹窗
+      body.querySelectorAll('.vl-word[data-word]').forEach((w) =>
+        w.addEventListener('click', () => openWordDialog(w.dataset.word)))
+    }
+    search.addEventListener('input', () => { page = 0; renderPage() })
+    renderPage()
+
+    // 词卡完整内容弹窗
+    function openWordDialog(wordStr) {
+      const w = words.find((x) => x.word === wordStr)
+      if (!w) return
+      const dlg = document.createElement('div')
+      dlg.className = 'plan-editor'
+      let exEn = '', exZh = ''
+      try {
+        const ex = typeof w.example === 'string' ? JSON.parse(w.example || '{}') : (w.example || {})
+        exEn = ex.en || ''
+        exZh = ex.zh || ex.explain || ''
+      } catch { /* 无例句 */ }
+      let forms = ''
+      try {
+        const extra = typeof w.extra === 'string' ? JSON.parse(w.extra || '{}') : (w.extra || {})
+        const f = extra.forms || {}
+        forms = Object.entries(f).map(([k, v]) => `${k}: ${v}`).join(' · ')
+      } catch { /* 无词形 */ }
+      dlg.innerHTML = `
+        <div class="plan-editor-mask"></div>
+        <div class="plan-editor-body card vl-word-dlg">
+          <h3>${escapeHtml(w.word || '')} <i class="vl-dlg-pos">${(w.pos || []).join(' ')}</i></h3>
+          <div class="vl-dlg-sec"><b>释义</b><p>${escapeHtml(glossOf(w) || '（暂无）')}</p></div>
+          ${forms ? `<div class="vl-dlg-sec"><b>词形变化</b><p>${escapeHtml(forms)}</p></div>` : ''}
+          ${exEn ? `<div class="vl-dlg-sec"><b>例句</b><p class="vl-dlg-en">${escapeHtml(exEn)}</p>${exZh ? `<p class="vl-dlg-zh">${escapeHtml(exZh)}</p>` : ''}</div>` : ''}
+          <div class="chip-row"><button class="chip" id="vl-dlg-close">关闭</button></div>
+        </div>`
+      document.body.appendChild(dlg)
+      const close = () => dlg.remove()
+      dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
+      dlg.querySelector('#vl-dlg-close').addEventListener('click', close)
+    }
     // 试卷
     body.querySelector('#vl-paper').addEventListener('click', () => {
       const stu = body.querySelector('#vl-student').value
@@ -125,13 +176,13 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
   }
 
   function wordRows(list) {
-    if (!list.length) return '<p class="muted">本级暂无词条。</p>'
-    return `<div class="vl-word-grid">${list.slice(0, 60).map((w) => `
-      <div class="vl-word">
+    if (!list.length) return '<p class="muted">没有匹配的词条。</p>'
+    return list.map((w) => `
+      <div class="vl-word" data-word="${escapeHtml(w.word || '')}" title="点击查看完整内容">
         <b>${escapeHtml(w.word || '')}</b>
         <span class="vl-pos">${(w.pos || []).join(' ')}</span>
-        <i>${escapeHtml(glossOf(w).slice(0, 40))}</i>
-      </div>`).join('')}</div>`
+        <i>${escapeHtml(glossOf(w).slice(0, 36))}</i>
+      </div>`).join('')
   }
 
   function toast(msg) {

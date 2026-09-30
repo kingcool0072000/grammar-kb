@@ -2803,8 +2803,19 @@ li.open .topic-reveal-btn { display: none; }
 .vl-head h3 i { font-style: normal; font-weight: 500; font-size: 11.5px; color: var(--ink-faint); }
 .vl-tools { display: flex; gap: 8px; align-items: center; }
 .vl-tools input { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg-soft); font-size: 13px; width: 190px; }
-.vl-word-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.vl-word { border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.vl-words { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.vl-word { border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; display: flex; flex-direction: column; gap: 1px; min-width: 0; cursor: pointer; }
+.vl-word:hover { border-color: var(--brand); background: #f6efdd; }
+.vl-pager { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.vl-page-info { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.vl-word-dlg { width: min(480px, calc(100vw - 32px)); }
+.vl-word-dlg h3 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 12px; }
+.vl-dlg-pos { font-style: normal; font-size: 12px; color: var(--brand-ink); }
+.vl-dlg-sec { margin-bottom: 10px; }
+.vl-dlg-sec b { font-size: 12px; color: var(--ink-faint); display: block; margin-bottom: 3px; }
+.vl-dlg-sec p { margin: 0; font-size: 13.5px; color: var(--ink); line-height: 1.6; }
+.vl-dlg-en { font-family: Georgia, serif; }
+.vl-dlg-zh { color: var(--ink-soft); font-size: 12.5px; }
 .vl-word b { font-size: 13.5px; color: var(--ink); }
 .vl-pos { font-size: 10.5px; color: var(--brand-ink); }
 .vl-word i { font-style: normal; font-size: 11px; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2820,5 +2831,5 @@ li.open .topic-reveal-btn { display: none; }
 .vl-unlock-state b { color: var(--brand-ink); }
 
 @media (max-width: 860px) {
-  .vl-word-grid { grid-template-columns: repeat(2, 1fr); }
+  .vl-words { grid-template-columns: repeat(2, 1fr); }
 }
