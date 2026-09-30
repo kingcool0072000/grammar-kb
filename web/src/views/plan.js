@@ -39,12 +39,9 @@ export async function mountPlan(el) {
 
   async function mountCalendar(body) {
     body.innerHTML = '<p class="muted">加载中…</p>'
-    let data, diag, review, daily
+    let data
     try {
-      ;[data, diag, review, daily] = await Promise.all([
-        api.planWeeks(), api.planDiagnosis(), api.planReview(),
-        api.planDailyPreview().catch(() => null),
-      ])
+      data = await api.planWeeks()
     } catch (e) {
       body.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
       return
@@ -90,7 +87,6 @@ export async function mountPlan(el) {
         </div>
       </div>
       ${progressCardHtml(goalProg)}
-      ${loopDeckHtml()}
       <div id="plan-review">${reviewHtml(lastReview)}</div>
       <div id="plan-view"></div>
     `
@@ -161,106 +157,6 @@ export async function mountPlan(el) {
         </div>
         <div class="gp-dims">${bars}</div>
       </div>`
-    }
-
-    // ---- 外循环驾驶舱：诊断 → 周目标 → 展开 → 验收 一屏串联 ----
-    function currentFocus() {
-      const w = byStart.get(curWeek)
-      return (w?.tasks?.focus_kps) || []
-    }
-
-    function loopDeckHtml() {
-      const items = (diag && diag.items) || []
-      const focus = currentFocus()
-      const rvItems = (review && review.items) || []
-      const dailyTasks = (daily && daily.tasks) || []
-      const reviewMap = new Map(rvItems.map((i) => [i.lecture, i]))
-
-      const statusMeta = {
-        converged: ['✅ 已收敛', 'ok'],
-        rolling: ['🔁 滚动', 'roll'],
-        escalate: ['🚀 建议转专题', 'esc'],
-      }
-      const reviewHtmlRows = rvItems.length
-        ? rvItems.map((i) => {
-            const [label, cls] = statusMeta[i.status] || statusMeta.rolling
-            return `<div class="ld-review-item ${cls}">
-              <span class="ld-lec">第${i.lecture}讲${i.title ? ' · ' + escapeHtml(i.title.slice(0, 10)) : ''}</span>
-              <span class="ld-badge">${label}</span>
-              <span class="ld-detail">${i.retested
-                ? (i.last_wrong === 0 ? '重测全对' : `重测仍错 ${i.last_wrong} 题`)
-                : '本周未重测'}${i.focus_streak > 1 ? ` · 连续 ${i.focus_streak} 周在焦` : ''}</span>
-            </div>`
-          }).join('')
-        : '<p class="muted" style="margin:0">上周未设攻坚讲次，无验收记录。</p>'
-
-      const dailyHtml = dailyTasks.length
-        ? dailyTasks.map((t) => `<div class="ld-task"><span class="ld-task-type">${taskIcon(t.type)}</span><b>${escapeHtml(t.text)}</b>${t.detail ? `<i>${escapeHtml(t.detail)}</i>` : ''}</div>`).join('')
-        : '<p class="muted" style="margin:0">本周还没排任务，先在下方周历编辑或从诊断区钉入讲次。</p>'
-
-      return `<section class="ld-deck">
-        <div class="ld-deck-head">
-          <h2>🔁 外循环 · 周驾驶舱</h2>
-          <p class="muted">诊断信号 → 钉入本周攻坚 → 系统展开每日任务 → 下周自动验收</p>
-        </div>
-        <div class="ld-cols">
-          <div class="ld-col ld-col-diag">
-            <h3>① 诊断感知 <i>近 8 周错题聚类</i></h3>
-            ${items.length ? `<div class="ld-diag-list">${items.slice(0, 6).map((x) => {
-              const pinned = focus.includes(x.lecture)
-              return `<div class="ld-diag-row ${pinned ? 'pinned' : ''}">
-                <button class="ld-pin ${pinned ? 'on' : ''}" data-pin="${x.lecture}" title="${pinned ? '移出本周攻坚' : '钉入本周攻坚'}">${pinned ? '📌' : '＋'}</button>
-                <span class="ld-lec">第${x.lecture}讲</span>
-                <span class="ld-title">${escapeHtml(x.title || '')}</span>
-                <span class="ld-wrong">${x.total_wrong} 错</span>
-                <span class="ld-meta">${x.attempts} 次 · ${x.last_score} 分 · ${x.last_date.slice(5)}</span>
-              </div>`
-            }).join('')}</div>` : '<p class="muted" style="margin:0">近 8 周无错题记录。</p>'}
-          </div>
-          <div class="ld-col ld-col-review">
-            <h3>④ 上周验收 <i>${review ? weekLabel(review.week_start) : ''}</i></h3>
-            ${reviewHtmlRows}
-          </div>
-          <div class="ld-col ld-col-daily">
-            <h3>③ 每日任务展开 <i>自动派生 · 学生端将逐日执行</i></h3>
-            ${dailyHtml}
-          </div>
-        </div>
-      </section>`
-    }
-
-    function taskIcon(type) {
-      return { micro_drill: '✏️', wrong_words: '🔤', lecture: '📚', fce: '🎧', reading: '📖' }[type] || '•'
-    }
-
-    async function togglePin(lecture) {
-      const lec = Number(lecture)
-      const focus = currentFocus()
-      const next = focus.includes(lec)
-        ? focus.filter((l) => l !== lec)
-        : [...new Set([...focus, lec])].slice(0, 5)
-      const w = byStart.get(curWeek) || { tasks: {}, notes: '' }
-      const tasks = { ...(w.tasks || {}), focus_kps: next }
-      if (!next.length) delete tasks.focus_kps
-      try {
-        await api.planWeekPut(curWeek, { tasks, notes: w.notes || '' })
-        const [freshWeeks, freshDaily] = await Promise.all([
-          api.planWeeks(), api.planDailyPreview(),
-        ])
-        freshWeeks.weeks.forEach((x) => byStart.set(x.week_start, x))
-        daily = freshDaily
-        renderWeeks()
-        const deck = body.querySelector('.ld-deck')
-        if (deck) {
-          deck.outerHTML = loopDeckHtml()
-          bindLoopDeck()
-        }
-      } catch (e) { alert('保存失败：' + e.message) }
-    }
-
-    function bindLoopDeck() {
-      body.querySelectorAll('[data-pin]').forEach((b) =>
-        b.addEventListener('click', () => togglePin(b.dataset.pin)))
     }
 
     function reviewHtml(rv) {
