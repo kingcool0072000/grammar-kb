@@ -4,6 +4,7 @@
 // 专题对学生的可见性在前端清单里声明 assignedTo：'malin' 表示仅 malin 可见。
 import { api, getAuth } from '../api.js'
 import { escapeHtml } from '../render.js'
+import { createFocusTracker } from './library/focus.js'
 
 // ---- 专题清单（当前仅一册：26~28 讲时态专项） ----
 // assignedTo 为空＝所有学生可见；'malin'＝仅 malin 的专属专题
@@ -476,6 +477,30 @@ export async function mountTopics(el, { role } = {}) {
         }
       })
     })
+    setupTopicFocus(el, t)
+  }
+
+  // ---- 专题学习专注力采集（module=topics：所有学习内容统一进批改中心轨迹）----
+  // 与精读同款接法：容器即滚动源，0→100 全范围；路由离开时由 main 的
+  // _cleanups 机制触发 destroy（flush 末段会话）。
+  function setupTopicFocus(el, t) {
+    const auth = getAuth()
+    if (!auth || auth.role === 'teacher') return  // 学生才采集
+    const root = el.querySelector('.topic-page')
+    if (!root) return
+    const label = `${t.emoji || ''}${t.title || ''}`.slice(0, 120)
+    const tracker = createFocusTracker({
+      readerRoot: root, viewerEl: root, bookId: null, bookTitle: label,
+      enabled: true, module: 'topics', initialRangeLabel: label,
+    })
+    tracker.hooks.onReloc(0, label)
+    tracker.hooks.onReloc(100)
+    // 教师开关：student.focus=false 时静默停采（与泛读馆同一开关）
+    api.librarySettings().then((cfg) => {
+      if (cfg && cfg.student && cfg.student.focus === false) tracker.disable()
+    }).catch(() => {})
+    const cleanups = el._cleanups || (el._cleanups = [])
+    cleanups.push(() => tracker.destroy())
   }
 
   // ---- 手册详情页（hash: #/topics/{id}）----

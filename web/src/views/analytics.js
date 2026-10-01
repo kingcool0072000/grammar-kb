@@ -5,17 +5,18 @@ import { escapeHtml, renderMd } from '../render.js'
 //   周视图：最近 8 周各类作业量与成绩趋势 + 本周明细
 //   月视图：最近 6 个月成绩趋势 + 本月明细与统计
 //   AI 周报：手动触发，用泛读馆设置里配置的 GLM 分析上一自然周四类数据。
-export async function mountAnalytics(el, { bare = false } = {}) {
+export async function mountAnalytics(el, { bare = false, user = '' } = {}) {
   // bare：作为计划表子 Tab 内嵌时去掉自己的页头（父级已有）
+  // user：按学生过滤（批改中心筛选条传入）
   el.innerHTML = bare ? '<p class="muted">加载中…</p>'
     : '<div class="view-head"><h1>学情分析</h1><p>加载中…</p></div>'
   let recs, fceSubs, recite, exams
   try {
     ;[recs, fceSubs, recite, exams] = await Promise.all([
-      api.readingRecordings({ limit: 500 }),
-      api.fceSubmissions({ limit: 500 }),
-      api.reciteSessions({ limit: 500 }),
-      api.examsList(),
+      api.readingRecordings({ limit: 500, user }),
+      api.fceSubmissions({ limit: 500, user }),
+      api.reciteSessions({ limit: 500, user }),
+      api.examsList(user),
     ])
   } catch (e) {
     el.querySelector('p').innerHTML = `<span style="color:#b42318">加载失败：${escapeHtml(e.message)}</span>`

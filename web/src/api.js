@@ -114,7 +114,7 @@ export const api = {
   homeworkBatch: (lectures) =>
     req('/homework', { searchParams: { lectures: lectures.join(',') } }),
   // 哈一作业成绩（后端 exam.db 持久化；学生只可提交，管理需教师）
-  examsList: () => req('/exams'),
+  examsList: (user) => req('/exams', { searchParams: user ? { user } : {} }),
   examsAdd: (rec) => reqJson('/exams', 'POST', rec),
   examsUpdate: (id, rec) => reqJson(`/exams/${id}`, 'PUT', rec),
   examsDelete: (id) => reqJson(`/exams/${id}`, 'DELETE'),

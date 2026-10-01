@@ -43,6 +43,12 @@ class ExamStore:
         os.makedirs(os.path.dirname(os.path.abspath(self.path)), exist_ok=True)
         with self._tx() as con:
             con.executescript(_SCHEMA)
+            # v2：按学生隔离（批改中心筛选用）。存量行归 malin（历史单孩数据）
+            cols = {r[1] for r in con.execute("PRAGMA table_info(exam_records)")}
+            if "user" not in cols:
+                con.execute(
+                    "ALTER TABLE exam_records ADD COLUMN"
+                    " user TEXT NOT NULL DEFAULT 'malin'")
 
     def _conn(self) -> sqlite3.Connection:
         con = sqlite3.connect(self.path)
@@ -67,21 +73,31 @@ class ExamStore:
             "date": row["date"],
             "score": row["score"],
             "wrong": json.loads(row["wrong"]),
+            "user": row["user"],
             "updatedAt": row["updated_at"],
         }
 
-    def list(self) -> list[dict[str, Any]]:
+    def list(self, user: Optional[str] = None) -> list[dict[str, Any]]:
+        """成绩列表；user 过滤（None=全部，教师看板用）。"""
         with self._tx() as con:
-            rows = con.execute(
-                "SELECT * FROM exam_records ORDER BY date DESC, id DESC"
-            ).fetchall()
+            if user:
+                rows = con.execute(
+                    "SELECT * FROM exam_records WHERE user = ?"
+                    " ORDER BY date DESC, id DESC", (user,)).fetchall()
+            else:
+                rows = con.execute(
+                    "SELECT * FROM exam_records ORDER BY date DESC, id DESC"
+                ).fetchall()
         return [self._row_to_dict(r) for r in rows]
 
-    def add(self, lecture: int, date: str, score: int = 0, wrong: list[int] | None = None) -> dict[str, Any]:
+    def add(self, lecture: int, date: str, score: int = 0,
+            wrong: list[int] | None = None, user: str = "malin") -> dict[str, Any]:
         with self._tx() as con:
             cur = con.execute(
-                "INSERT INTO exam_records (lecture, date, score, wrong) VALUES (?, ?, ?, ?)",
-                (lecture, date, score, json.dumps(sorted(set(wrong or [])))),
+                "INSERT INTO exam_records (lecture, date, score, wrong, user)"
+                " VALUES (?, ?, ?, ?, ?)",
+                (lecture, date, score,
+                 json.dumps(sorted(set(wrong or []))), (user or "malin")[:60]),
             )
             row = con.execute(
                 "SELECT * FROM exam_records WHERE id = ?", (cur.lastrowid,)

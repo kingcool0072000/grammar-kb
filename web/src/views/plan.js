@@ -284,7 +284,7 @@ export async function mountPlan(el) {
     function weekGoalChips(t, ed) {
       const chips = []
       if (t.focus_kps?.length) chips.push(`🎯 攻坚 ${t.focus_kps.map((l) => '第' + l + '讲').join('、')}`)
-      if (t.lectures?.length) chips.push(`📚 讲次 ${[...t.lectures].sort((a, b) => a - b).join('/')}讲`)
+      if (t.lectures?.length) chips.push(`📚 语法课程 ${[...t.lectures].sort((a, b) => a - b).join('/')}讲`)
       if (t.vocab_goal != null) {
         chips.push(t.vocab_lv != null
           ? `🔤 词汇 学到L${t.vocab_lv}的${t.vocab_pct ?? 100}%（${t.vocab_goal}词）`
@@ -544,7 +544,7 @@ export async function mountPlan(el) {
           <div class="pe-zone pe-zone-goal">
             <h3 class="pe-zone-title">🎯 从总目标选 <i>总目标的子集；已完成项自动排除</i></h3>
             <div class="pe-sec">
-              <h4>📚 讲次推进</h4>
+              <h4>📚 语法课程推进</h4>
               <div class="pe-lec-grid" id="pe-lec-grid">${lecChipsPool(goalLecs, lecSel, 'lc') || '<p class="muted">总目标未选讲次，去学生管理配置</p>'}</div>
             </div>
             <div class="pe-sec">

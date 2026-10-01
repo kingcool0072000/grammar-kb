@@ -229,6 +229,18 @@ class PlanStore:
         except sqlite3.Error:
             return 0
 
+    def _vocab_mastered_before(self, day: str, user: str) -> int:
+        """某日 00:00 前已掌握的词数（周词汇差额口径的基线）。"""
+        try:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT COUNT(*) n FROM recite_word_progress"
+                    " WHERE user = ? AND mastered_at IS NOT NULL AND mastered_at < ?",
+                    (user, day)).fetchone()
+                return row["n"] if row else 0
+        except sqlite3.Error:
+            return 0
+
     def _fce_actuals(self, lo: str, hi: str, user: str) -> list[str]:
         """周内提交覆盖的 Test/Part（"Test 1 · RUE P1" 形式）。"""
         try:
@@ -961,13 +973,17 @@ class PlanStore:
                     done_lec = n[0] if n else 0
             except sqlite3.Error:
                 done_lec = 0
-            dim("📚", "讲次", done_lec, len(lecs))
+            dim("📚", "语法课程", done_lec, len(lecs))
 
+        # 词汇差额口径：分母 = 目标词数 − 周初已掌握词数（学生从本周起点
+        # 还需新学的量）；分子 = 周内新掌握。基线取「周一 00:00 前已掌握」。
         vg = t.get("vocab_goal")
         if vg:
             gained = self._vocab_actuals(week_start, add_days(week_start, 7), user)
-            base = max(0, vg - gained)
-            dim("🔤", "词汇", gained, vg, extra=f"起算 {base} → 目标 {vg}")
+            base = self._vocab_mastered_before(week_start, user)
+            denom = max(1, vg - base)
+            dim("🔤", "词汇", min(gained, denom), denom,
+                extra=f"周初 {base} → 目标 {vg}（还差 {denom}）")
 
         fce = t.get("fce") or []
         if fce:
@@ -1010,11 +1026,13 @@ class PlanStore:
 
         arts = t.get("articles") or []
         if arts:
+            # 精读与朗读合并为一个维度：精读作业须提交朗读录音才算完成
+            # （done 判定 type=article 的任务本就以录音为准，此处只改名称口径）
             done_a = sum(
                 1 for d in days
                 for x in (d.get("tasks") or [])
                 if x.get("type") == "article" and x.get("done"))
-            dim("📄", "精读", done_a, len(arts))
+            dim("🎤", "精读朗读", done_a, len(arts))
 
         papers = t.get("vocab_papers") or []
         if papers:
@@ -1195,7 +1213,7 @@ class PlanStore:
         gl = g.get("lectures") or []
         if gl:
             d = len(set(gl) & set(done["lectures"]))
-            dim("📚", "哈一讲次", d, len(gl))
+            dim("📚", "语法课程", d, len(gl))
 
         if g.get("vocab_target"):
             mastered = 0
@@ -1222,8 +1240,9 @@ class PlanStore:
 
         ga_ = g.get("articles") or []
         if ga_:
+            # 精读与朗读合并：完成判定=有录音（done["articles"] 本就以录音为准）
             d = len(set(ga_) & set(done["articles"]))
-            dim("📄", "精读文章", d, len(ga_))
+            dim("🎤", "精读朗读", d, len(ga_))
 
         gr = g.get("reading") or []
         if gr:

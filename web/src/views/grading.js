@@ -10,17 +10,31 @@ import { renderReadingReview } from './readingReview.js'
 export async function mountGrading(el) {
   // 双子 Tab：批改看板（默认）/ 学情分析（原计划表子 Tab 迁入）
   const subTab = new URLSearchParams(location.hash.split('?')[1] || '').get('tab') || 'board'
-  const state = { tab: subTab === 'analytics' ? 'analytics' : 'board' }
-  // 批改视图返回看板时复用最近一次已加载数据，避免再次等待 5 个接口。
-  let boardSnapshot = null
+  const state = { tab: subTab === 'analytics' ? 'analytics' : 'board', student: '' }
+  // 批改视图返回看板时复用最近一次已加载数据，避免再次等待 5 个接口（按学生分键）。
+  const boardSnapshots = new Map()
+  let students = []
+  try {
+    const r = await api.users()
+    students = (r.users || []).filter((u) => u.role === 'student').map((u) => u.user)
+    if (students.length) state.student = students[0]
+  } catch { /* 单学生/接口不可用时筛选条隐藏，展示全部 */ }
   render()
 
   function render() {
     el.innerHTML = `
       <div class="view-head">
         <h1>批改中心</h1>
-        <p>学生作业的待批与动态汇总。</p>
+        <p>学生作业的待批与动态汇总${students.length ? '——按学生独立查看' : ''}。</p>
       </div>
+      ${students.length ? `
+      <div class="pw-stubar" style="margin-bottom:14px">
+        <label class="pw-student">学生
+          <select id="gd-user">
+            ${students.map((x) => `<option value="${escapeHtml(x)}" ${state.student === x ? 'selected' : ''}>${escapeHtml(x)}</option>`).join('')}
+          </select>
+        </label>
+      </div>` : ''}
       <div class="ana-tabs plan-subtabs">
         <button class="reading-btn ${state.tab === 'board' ? 'primary' : ''}" data-gtab="board">📋 批改看板</button>
         <button class="reading-btn ${state.tab === 'analytics' ? 'primary' : ''}" data-gtab="analytics">📊 学情分析</button>
@@ -29,12 +43,17 @@ export async function mountGrading(el) {
     `
     el.querySelectorAll('[data-gtab]').forEach((b) =>
       b.addEventListener('click', () => { state.tab = b.dataset.gtab; render() }))
+    const sel = el.querySelector('#gd-user')
+    if (sel) sel.addEventListener('change', (e) => {
+      state.student = e.target.value
+      render()
+    })
     const body = el.querySelector('#gd-body')
     if (state.tab === 'analytics') {
       import('./analytics.js').then(({ mountAnalytics }) => {
         const host = document.createElement('div')
         body.replaceChildren(host)
-        mountAnalytics(host, { bare: true })
+        mountAnalytics(host, { bare: true, user: state.student })
       })
       return
     }
@@ -42,13 +61,14 @@ export async function mountGrading(el) {
   }
 
   async function mountBoard(el) {
+    const student = state.student
     const openRecordingReview = async () => {
       // 渲染进卡片网格容器（保留外层页头/子Tab），返回时重挂看板
       const host = document.createElement('div')
       el.replaceChildren(host)
       host.innerHTML = '<p class="muted">加载录音批改…</p>'
       try {
-        const recs = await api.readingRecordings({ limit: 200 })
+        const recs = await api.readingRecordings({ limit: 200, user: student })
         await renderReadingReview(host, recs, {
           onBack: () => {
             state.tab = 'board'
@@ -64,6 +84,7 @@ export async function mountGrading(el) {
     }
     el.innerHTML = '<p class="muted">加载中…</p>'
     let recs, fceSubs, recite, exams, focus
+    const boardSnapshot = boardSnapshots.get(student)
     if (boardSnapshot) {
       ({ recs, fceSubs, recite, exams, focus } = boardSnapshot)
     } else {
@@ -72,13 +93,13 @@ export async function mountGrading(el) {
           p, new Promise((resolve) => setTimeout(() => resolve([]), ms)),
         ]).catch(() => [])
         ;[recs, fceSubs, recite, exams, focus] = await Promise.all([
-          timed(api.readingRecordings({ limit: 200 })),
-          timed(api.fceSubmissions({ limit: 200 })),
-          timed(api.reciteSessions({ limit: 100 })),
-          timed(api.examsList()),
-          timed(api.focusSessions({ limit: 50 })),
+          timed(api.readingRecordings({ limit: 200, user: student })),
+          timed(api.fceSubmissions({ limit: 200, user: student })),
+          timed(api.reciteSessions({ limit: 100, user: student })),
+          timed(api.examsList(student)),
+          timed(api.focusSessions({ limit: 50, user: student })),
         ])
-        boardSnapshot = { recs, fceSubs, recite, exams, focus }
+        boardSnapshots.set(student, { recs, fceSubs, recite, exams, focus })
       } catch (e) {
         el.querySelector('p').innerHTML = `<span style="color:#b42318">加载失败：${escapeHtml(e.message)}</span>`
         return
@@ -240,9 +261,11 @@ export async function mountGrading(el) {
   renderFocusPage(0)
 }
 
-// 专注会话标题：泛读 = 「泛读-书名-章节」（后端已按 book_id 补书名，章节用 range_label）
+// 专注会话标题：泛读 = 「泛读-书名-章节」；精读/专题=内容名（后端已按
+// book_id 补书名，章节用 range_label）
 function focusTitle(s) {
-  if (s.module === 'reading') return s.book_title || '精读'
+  if (s.module === 'reading') return `精读-${s.book_title || ''}`
+  if (s.module === 'topics') return `专题-${s.book_title || ''}`
   const title = (s.book_title || '').trim() || (s.book_id != null ? `#${s.book_id}` : '')
   const label = (s.range_label || '').trim()
   if (title && label) return `泛读-${title}-${label}`

@@ -1456,12 +1456,18 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     # ---- 作业成绩（可写；独立 exam.db） ----
 
     @app.get("/exams")
-    def exams_list():
-        return _ok(exams.list())
+    def exams_list(request: "fastapi.Request", user: Optional[str] = None):
+        # 学生只看自己的成绩；教师可用 ?user= 筛选（缺省全部）
+        who = user
+        if getattr(request.state, "role", "") != "teacher":
+            who = _request_user(request)
+        return _ok(exams.list(user=who))
 
     @app.post("/exams")
-    def exams_add(rec: ExamRecordIn):
-        return _ok(exams.add(**rec.model_dump()))
+    def exams_add(rec: ExamRecordIn, request: "fastapi.Request"):
+        payload = rec.model_dump()
+        payload.pop("user", None)  # user 只认登录态，不收客户端声明
+        return _ok(exams.add(user=_request_user(request), **payload))
 
     @app.put("/exams/{exam_id}")
     def exams_update(exam_id: int, rec: ExamRecordIn):
