@@ -30,14 +30,29 @@ CREATE TABLE IF NOT EXISTS topic_progress (
     updated_at     TEXT DEFAULT '',
     UNIQUE(user, topic_id)
 );
+CREATE TABLE IF NOT EXISTS topic_content (
+    topic_id       TEXT PRIMARY KEY,        -- 稳定 id（slug）
+    title          TEXT NOT NULL,
+    subtitle       TEXT NOT NULL DEFAULT '',
+    emoji          TEXT NOT NULL DEFAULT '📘',
+    assigned_to    TEXT NOT NULL DEFAULT '', -- 空=全员；逗号分隔用户名=指定学生
+    content        TEXT NOT NULL DEFAULT '{}', -- 结构化 JSON（nodes 树）
+    published      INTEGER NOT NULL DEFAULT 1,
+    created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_topic_progress_user ON topic_progress(user, topic_id);
 """
 
 
 class TopicStore:
-    """topic_progress 读写。"""
+    """topic_progress 读写 + topic_content（v2 结构化专题）读写。"""
 
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: Optional[str] = None,
+                 grammar_db_path: Optional[str] = None):
         self.db_path = db_path or _default_db_path()
+        self.grammar_db_path = grammar_db_path or str(
+            Path(__file__).resolve().parent.parent / "data" / "grammar.db")
         if Path(self.db_path).exists():
             # 打开一次触发建表（SCHEMA 在 _connect 内执行）
             self._connect().close()
@@ -119,6 +134,234 @@ class TopicStore:
                 (user, topic_id),
             ).fetchone()
         return _out(row)
+
+    # ================= v2 结构化专题内容 =================
+
+    @staticmethod
+    def validate_content(data: dict) -> list[str]:
+        """结构校验：返回错误列表（空=通过）。
+
+        结构：{nodes: [{key, title, explain, wrong_qs[], general_qs[],
+        children[]...}]}；wrong_qs/general_qs 项为
+        {ref: {lecture, qnum}} 或自含 {stem, answer, explain}。
+        """
+        errs = []
+        if not isinstance(data, dict) or not isinstance(data.get("nodes"), list):
+            return ["顶层须为 {nodes: [...]}"]
+        keys = set()
+
+        def walk(nodes: list, path: str) -> None:
+            for i, n in enumerate(nodes):
+                p = f"{path}.nodes[{i}]"
+                if not isinstance(n, dict):
+                    errs.append(f"{p} 须为对象")
+                    continue
+                k = str(n.get("key") or "").strip()
+                if not k:
+                    errs.append(f"{p}.key 不能为空")
+                elif k in keys:
+                    errs.append(f"{p}.key 重复：{k}")
+                else:
+                    keys.add(k)
+                if not str(n.get("title") or "").strip():
+                    errs.append(f"{p}.title 不能为空")
+                for qf in ("wrong_qs", "general_qs"):
+                    qs = n.get(qf) or []
+                    if not isinstance(qs, list):
+                        errs.append(f"{p}.{qf} 须为数组")
+                        continue
+                    for j, q in enumerate(qs):
+                        qp = f"{p}.{qf}[{j}]"
+                        if not isinstance(q, dict):
+                            errs.append(f"{qp} 须为对象")
+                            continue
+                        ref = q.get("ref")
+                        if ref is not None:
+                            if not (isinstance(ref, dict) and ref.get("lecture")
+                                    and ref.get("qnum")):
+                                errs.append(f"{qp}.ref 须含 lecture 与 qnum")
+                        elif not str(q.get("stem") or "").strip():
+                            errs.append(f"{qp} 自含题缺 stem")
+                        else:
+                            continue
+                children = n.get("children")
+                if children is not None:
+                    if not isinstance(children, list):
+                        errs.append(f"{p}.children 须为数组")
+                    else:
+                        walk(children, p)
+
+        walk(data["nodes"], "")
+        return errs
+
+    def upsert_topic(self, meta: dict, content: dict) -> dict:
+        """导入/更新专题（同 topic_id 覆盖内容，进度行不动）。"""
+        errs = self.validate_content(content)
+        if errs:
+            raise ValueError("内容校验失败：" + "；".join(errs[:8]))
+        tid = str(meta.get("topic_id") or "").strip()[:64]
+        if not tid:
+            raise ValueError("topic_id 不能为空")
+        now = datetime.now(_tz.utc).isoformat(timespec="seconds")
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO topic_content"
+                " (topic_id, title, subtitle, emoji, assigned_to, content, published, updated_at)"
+                " VALUES (?,?,?,?,?,?,1,?)"
+                " ON CONFLICT(topic_id) DO UPDATE SET"
+                " title=excluded.title, subtitle=excluded.subtitle,"
+                " emoji=excluded.emoji, assigned_to=excluded.assigned_to,"
+                " content=excluded.content, updated_at=excluded.updated_at",
+                (tid, str(meta.get("title") or "")[:120],
+                 str(meta.get("subtitle") or "")[:200],
+                 str(meta.get("emoji") or "📘")[:8],
+                 ",".join(x.strip() for x in str(meta.get("assigned_to") or "").split(",") if x.strip()),
+                 json.dumps(content, ensure_ascii=False), now),
+            )
+        return self.get_topic(tid)
+
+    def _expand_qs(self, qs: list) -> list[dict]:
+        """题目项 → 展开：ref 引用 grammar.db 题库（带出题干/AI 答案/解析），
+        自含项原样透传（缺字段补空）。"""
+        out = []
+        refs = [q.get("ref") for q in qs
+                if isinstance(q, dict) and isinstance(q.get("ref"), dict)]
+        bank: dict = {}
+        if refs and Path(self.grammar_db_path).exists():
+            try:
+                # 注意：此连接不设 row_factory，row 是 tuple（按位取值）
+                with sqlite3.connect(
+                        f"file:{self.grammar_db_path}?mode=ro", uri=True) as conn:
+                    for r in refs:
+                        row = conn.execute(
+                            "SELECT stem, options_json, answer FROM homework_question"
+                            " WHERE lecture_number = ? AND qnum = ?",
+                            (int(r["lecture"]), int(r["qnum"]))).fetchone()
+                        if row:
+                            bank[(int(r["lecture"]), int(r["qnum"]))] = {
+                                "stem": row[0] or "",
+                                "options": json.loads(row[1] or "[]"),
+                                "answer": row[2] or "",
+                            }
+            except (sqlite3.Error, ValueError, TypeError):
+                pass
+        for q in qs or []:
+            if not isinstance(q, dict):
+                continue
+            ref = q.get("ref")
+            if isinstance(ref, dict):
+                b = bank.get((int(ref.get("lecture", 0)), int(ref.get("qnum", 0))))
+                out.append({
+                    "kind": "ref",
+                    "lecture": ref.get("lecture"), "qnum": ref.get("qnum"),
+                    "stem": (b or {}).get("stem", ""),
+                    "options": (b or {}).get("options", []),
+                    "answer": (b or {}).get("answer", ""),
+                    "explain": str(q.get("explain") or ""),
+                    "note": str(q.get("note") or ""),  # 教师批注（如「当时做错」）
+                })
+            else:
+                out.append({
+                    "kind": "self",
+                    "stem": str(q.get("stem") or ""),
+                    "options": q.get("options") or [],
+                    "answer": str(q.get("answer") or ""),
+                    "explain": str(q.get("explain") or ""),
+                    "note": str(q.get("note") or ""),
+                })
+        return out
+
+    def _expand_nodes(self, nodes: list) -> list[dict]:
+        out = []
+        for n in nodes or []:
+            if not isinstance(n, dict):
+                continue
+            out.append({
+                "key": str(n.get("key") or ""),
+                "title": str(n.get("title") or ""),
+                "explain": str(n.get("explain") or ""),
+                "wrong_qs": self._expand_qs(n.get("wrong_qs") or []),
+                "general_qs": self._expand_qs(n.get("general_qs") or []),
+                "children": self._expand_nodes(n.get("children") or []),
+            })
+        return out
+
+    def get_topic(self, topic_id: str, expand: bool = True) -> Optional[dict]:
+        """单个专题内容（expand=True 展开题库引用为完整题目）。"""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM topic_content WHERE topic_id = ?",
+                ((topic_id or "").strip(),)).fetchone()
+        if row is None:
+            return None
+        try:
+            content = json.loads(row["content"] or "{}")
+        except (ValueError, TypeError):
+            content = {"nodes": []}
+        return {
+            "topic_id": row["topic_id"],
+            "title": row["title"],
+            "subtitle": row["subtitle"],
+            "emoji": row["emoji"],
+            "assigned_to": row["assigned_to"],
+            "published": bool(row["published"]),
+            "updated_at": row["updated_at"],
+            "nodes": self._expand_nodes(content.get("nodes") or []) if expand
+                     else content.get("nodes") or [],
+        }
+
+    def list_topics(self, viewer: str = "", role: str = "teacher") -> list[dict]:
+        """专题内容列表：教师全量；学生只见 published 且 assigned 含自己。"""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM topic_content ORDER BY updated_at DESC").fetchall()
+        out = []
+        for r in rows:
+            assigned = [x for x in (r["assigned_to"] or "").split(",") if x]
+            if role != "teacher":
+                if not r["published"] or (assigned and viewer not in assigned):
+                    continue
+            out.append({
+                "topic_id": r["topic_id"], "title": r["title"],
+                "subtitle": r["subtitle"], "emoji": r["emoji"],
+                "assigned_to": r["assigned_to"],
+                "published": bool(r["published"]),
+                "updated_at": r["updated_at"],
+                "node_count": self._count_nodes(r["content"]),
+            })
+        return out
+
+    @staticmethod
+    def _count_nodes(content_json: str) -> int:
+        try:
+            nodes = json.loads(content_json or "{}").get("nodes") or []
+        except (ValueError, TypeError):
+            return 0
+
+        def cnt(ns):
+            return sum(1 + cnt(n.get("children") or []) for n in ns
+                       if isinstance(n, dict))
+        return cnt(nodes)
+
+    def set_published(self, topic_id: str, published: bool) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE topic_content SET published = ?,"
+                " updated_at = datetime('now') WHERE topic_id = ?",
+                (1 if published else 0, (topic_id or "").strip()))
+
+    def set_assigned(self, topic_id: str, assigned_to: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE topic_content SET assigned_to = ?,"
+                " updated_at = datetime('now') WHERE topic_id = ?",
+                (",".join(x.strip() for x in (assigned_to or "").split(",")
+                          if x.strip()), (topic_id or "").strip()))
+
+    def delete_topic(self, topic_id: str) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM topic_content WHERE topic_id = ?",
+                         ((topic_id or "").strip(),))
 
 
 def _out(row: sqlite3.Row) -> dict:

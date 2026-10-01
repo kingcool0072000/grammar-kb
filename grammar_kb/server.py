@@ -158,6 +158,18 @@ try:
         done_keys: list[str] = Field(default_factory=list)
         assigned_user: str = Field(default="", max_length=60)
 
+    class TopicImportIn(BaseModel):
+        """结构化专题 JSON 导入：meta（标题/emoji/开放学生）+ content（nodes 树）。"""
+
+        meta: Optional[dict] = None
+        content: Optional[dict] = None
+
+    class TopicFlagIn(BaseModel):
+        on: bool = False
+
+    class TopicAssignIn(BaseModel):
+        assigned_to: str = Field(default="", max_length=240)
+
 except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
     ExamRecordIn = None
     FceSubmissionIn = None
@@ -297,6 +309,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("GET", "/focus/sessions"),  # /{id} 详情学生仍被端点内 _require_teacher 拦 403
         # 专题学习（学生自学手册进度；/topics/{id}/progress 学生只能写自己的行）
         ("GET", "/topics/"),
+        ("GET", "/topics-v2"),
         ("PUT", "/topics/"),
         # 泛读馆（结尾斜杠不可省：前缀匹配语义）——上传 POST /library/books 本体不带斜杠，仍仅教师
         ("GET", "/library/books"),
@@ -1095,6 +1108,79 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             ))
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
+
+    # ---- v2 结构化专题内容：教师制作（JSON 导入），学生按 assigned 开放 ----
+
+    @app.get("/topics-admin/list")
+    def topics_admin_list(request: "fastapi.Request"):
+        """专题内容管理列表（教师）。"""
+        _require_teacher(request)
+        return _ok(topics.list_topics())
+
+    @app.post("/topics-admin/import")
+    def topics_admin_import(rec: "TopicImportIn", request: "fastapi.Request"):
+        """JSON 导入/更新专题（同 topic_id 覆盖）。教师。"""
+        _require_teacher(request)
+        try:
+            return _ok(topics.upsert_topic(rec.meta or {}, rec.content or {}))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+
+    @app.get("/topics-admin/{topic_id}")
+    def topics_admin_get(topic_id: str, request: "fastapi.Request"):
+        """专题内容详情（教师；不展开题库引用，用于回填编辑）。"""
+        _require_teacher(request)
+        got = topics.get_topic(topic_id, expand=False)
+        if got is None:
+            raise HTTPException(status_code=404, detail=f"专题 {topic_id} 不存在")
+        return _ok(got)
+
+    @app.put("/topics-admin/{topic_id}/published")
+    def topics_admin_publish(
+        topic_id: str, rec: "TopicFlagIn", request: "fastapi.Request",
+    ):
+        """上架/下架。教师。"""
+        _require_teacher(request)
+        topics.set_published(topic_id, bool(rec.on))
+        return _ok({"topic_id": topic_id, "published": bool(rec.on)})
+
+    @app.put("/topics-admin/{topic_id}/assigned")
+    def topics_admin_assign(
+        topic_id: str, rec: "TopicAssignIn", request: "fastapi.Request",
+    ):
+        """配置开放学生（空=全员；逗号分隔=指定学生）。教师。"""
+        _require_teacher(request)
+        topics.set_assigned(topic_id, rec.assigned_to or "")
+        return _ok({"topic_id": topic_id, "assigned_to": rec.assigned_to or ""})
+
+    @app.delete("/topics-admin/{topic_id}")
+    def topics_admin_delete(topic_id: str, request: "fastapi.Request"):
+        """删除专题内容（进度行保留）。教师。"""
+        _require_teacher(request)
+        topics.delete_topic(topic_id)
+        return _ok({"deleted": topic_id})
+
+    @app.get("/topics-v2")
+    def topics_v2_list(request: "fastapi.Request"):
+        """学生可见的结构化专题列表（published+assigned）。"""
+        return _ok(topics.list_topics(
+            _request_user(request),
+            getattr(request.state, "role", ""),
+        ))
+
+    @app.get("/topics-v2/{topic_id}")
+    def topics_v2_get(topic_id: str, request: "fastapi.Request"):
+        """单个结构化专题（题目已展开：题库引用带题干/AI 答案）。学生按开放权限。"""
+        user = _request_user(request)
+        role = getattr(request.state, "role", "")
+        got = topics.get_topic(topic_id)
+        if got is None:
+            raise HTTPException(status_code=404, detail=f"专题 {topic_id} 不存在")
+        if role != "teacher":
+            assigned = [x for x in (got["assigned_to"] or "").split(",") if x]
+            if not got["published"] or (assigned and user not in assigned):
+                raise HTTPException(status_code=403, detail="该专题未对你开放")
+        return _ok(got)
 
     # ---- 计划表（教师专属：周维度计划 + 实时完成度 + 上周回顾） ----
 

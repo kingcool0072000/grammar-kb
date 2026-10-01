@@ -14,10 +14,9 @@ export async function mountPrep(el, ctx) {
 async function mountContent(el) {
   el.innerHTML = '<p class="muted">加载中…</p>'
   const stats = await api.stats().catch(() => null)
-  // 专题手册数（动态 import；失败显示 — 不阻塞备课中心）
+  // 已上架专题数（topics-admin/list；失败显示 — 不阻塞备课中心）
   let topicCount = '—'
-  try { const { TOPICS } = await import('./topics.js'); topicCount = TOPICS.length }
-  catch { /* 手册模块不可用 */ }
+  try { topicCount = (await api.topicsAdminList()).length } catch { /* 忽略 */ }
   let papers = null, bases = null, derived = null, vex = null, lib = null, vlevels = null, topicsProg = null
   try {
     ;[papers, bases, derived, vex, lib, vlevels, topicsProg] = await Promise.all([
@@ -128,11 +127,14 @@ async function mountContent(el) {
         <div class="gd-subgroup">
           <h3>🎯 自学专题手册</h3>
           <div class="prep-cards">
+            <button class="prep-card" data-go="topicsAdmin">
+              <b>制作 / 管理</b><span>JSON 导入 · 上架 · 开放学生</span>
+            </button>
             <button class="prep-card" data-go="topics">
-              <b>${topicCount}</b><span>专题手册${topicsDone ? ` · 已完成 ${topicsDone} 人次` : ''}</span>
+              <b>${topicCount}</b><span>已上架专题 · 预览与学生进度</span>
             </button>
           </div>
-          <p class="reading-hint">错题聚类生成的补课专题（如时态错题歼灭手册）；点开查看手册内容与学生「我学完了」进度。学生在学生版「专题学习」Tab 使用。</p>
+          <p class="reading-hint">专题是结构化内容：子知识点{讲解+错题回顾+泛化题}，题目引用题库或自含；制作后上架、配置给特定学生；学生在学生版「专题学习」自学并标记进度。</p>
         </div>
       </section>
 

@@ -211,6 +211,19 @@ export const api = {
     req('/recite/wrongbook', { searchParams: { user, limit } }),
   // 专题学习（学生自学手册进度；谁登录记谁的行，跨设备同步）
   topicsProgress: () => req('/topics/progress'),
+  // v2 结构化专题：学生列表/详情（题库引用已展开）+ 教师管理
+  topicsV2: () => req('/topics-v2'),
+  topicsV2Get: (id) => req(`/topics-v2/${encodeURIComponent(id)}`),
+  topicsAdminList: () => req('/topics-admin/list'),
+  topicsAdminImport: (meta, content) =>
+    reqJson('/topics-admin/import', 'POST', { meta, content }),
+  topicsAdminGet: (id) => req(`/topics-admin/${encodeURIComponent(id)}`),
+  topicsAdminPublish: (id, on) =>
+    reqJson(`/topics-admin/${encodeURIComponent(id)}/published`, 'PUT', { on }),
+  topicsAdminAssign: (id, assignedTo) =>
+    reqJson(`/topics-admin/${encodeURIComponent(id)}/assigned`, 'PUT', { assigned_to: assignedTo }),
+  topicsAdminDelete: (id) =>
+    reqJson(`/topics-admin/${encodeURIComponent(id)}`, 'DELETE'),
   // 计划表（教师周计划：任务/实时完成度/上周回顾）
   planWeeks: ({ user } = {}) => req('/plan/weeks', { searchParams: { user } }),
   planWeekPut: (weekStart, payload) =>

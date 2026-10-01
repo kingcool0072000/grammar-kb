@@ -2168,6 +2168,40 @@ li.open .topic-answer { display: block; animation: topicFadeUp .25s ease; }
 li.open .topic-reveal-btn { display: none; }
 @keyframes topicFadeUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
+/* v2 结构化题目块（topic_content）：题头（编号/来源/教师批注）+ 题干 + 揭示答案 */
+.topic-q-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.topic-q-head b { font-size: 13px; color: var(--tc); }
+.topic-q-src {
+  font-size: 11.5px; color: var(--ink-faint); background: var(--bg-soft);
+  border-radius: 6px; padding: 1px 8px;
+}
+.topic-q-note {
+  font-size: 11.5px; color: #b42318; background: #fbeae5;
+  border-radius: 6px; padding: 1px 8px;
+}
+.topic-q-head .topic-reveal-btn { margin-left: auto; padding: 3px 14px; font-size: 12.5px; }
+.topic-q-stem { margin: 8px 0 0; font-size: 15px; line-height: 1.75; }
+.topic-q-answer {
+  display: none; margin-top: 10px; padding: 10px 14px;
+  background: #e9f5ee; border: 1px solid #c8e2d2; border-radius: 11px; font-size: 14.5px;
+}
+.topic-q-answer b { color: #2e7d4f; font-size: 15px; }
+.topic-q-answer p { color: #48705c; font-size: 13.5px; margin: 4px 0 0; }
+li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
+
+/* 教师端专题管理 */
+.ta-import textarea {
+  width: 100%; min-height: 200px; resize: vertical; font-family: ui-monospace, Menlo, monospace;
+  font-size: 12.5px; line-height: 1.6; padding: 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg-soft); color: var(--ink);
+}
+.ta-import .chip-row { margin-top: 10px; }
+.ta-row { display: flex; align-items: center; gap: 12px; padding: 13px 16px; margin-bottom: 10px; flex-wrap: wrap; position: relative; }
+.ta-info { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 2px; }
+.ta-info b { font-size: 15px; color: var(--ink); }
+.ta-ops { display: flex; gap: 6px; flex-wrap: wrap; }
+.ta-off-flag { position: absolute; top: 8px; right: 12px; font-style: normal; font-size: 10.5px; color: #b42318; }
+
 /* 「我学完了」 */
 .topic-done-row {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
