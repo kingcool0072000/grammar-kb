@@ -73,6 +73,8 @@ const VIEWS = [
   { key: 'libraryReader', hiddenTab: true, noTab: true },
   { key: 'libraryManage', hiddenTab: true, noTab: true, teacher: true },
   { key: 'librarySettings', hiddenTab: true, noTab: true, teacher: true },
+  // 专题内容管理（教师，备课中心进入）：JSON 导入/上架/开放配置
+  { key: 'topicsAdmin', hiddenTab: true, teacher: true },
 ]
 
 // hash 路径切段：#/libraryReader/7 -> ['libraryReader','7']
@@ -308,6 +310,10 @@ async function bootstrap() {
       // 专题学习（大静态手册独立 chunk）：#/topics 列表 / #/topics/{id} 详情
       mounted = import('./views/topics.js').then(({ mountTopics }) =>
         mountTopics(container, { role }))
+    } else if (route === 'topicsAdmin') {
+      // 专题内容管理（教师）：JSON 导入制作/上架/开放配置
+      mounted = import('./views/topicsAdmin.js').then(({ mountTopicsAdmin }) =>
+        mountTopicsAdmin(container))
     } else if (route === 'config') {
       // 设置中心（隐藏页 #/config；旧 #/ttsconf #/readconf 已并入）
       mounted = mountConfig(container)
@@ -367,6 +373,7 @@ async function bootstrap() {
             vocabExam: ['/vocabLevel/0', '← 返回背单词'],
             exams: ['/grading', '← 返回批改中心'],
             topics: ['/prep', '← 返回备课中心'],
+            topicsAdmin: ['/prep', '← 返回备课中心'],
           }
           const [hash, label] = BACK_BASE[route] || ['/prep', '← 返回备课中心']
           const back = h('button', 'fce-back-btn gd-tool-back', label)
