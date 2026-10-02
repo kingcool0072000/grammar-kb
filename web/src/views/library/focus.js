@@ -244,14 +244,14 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
   })
   // v3 位置轨迹：{t 秒, p 0-100}——只记变化点（新值≠上一值才推），
   // 供后端做段级有效性（跳章剔除/短停留段剔除/限速校验）。
+  // t 必须是秒（relNow 是 ms，除以 1000）——后端按秒判速。
   let percentTrack = []
   let lastTrackAt = 0
   function pushPercentTrack(p) {
     if (p == null || !Number.isFinite(p)) return
-    const t = relNow()
+    const t = Math.round(relNow() / 1000)
     const last = percentTrack[percentTrack.length - 1]
-    if (last && last.p === p && t - last.t < 300) return
-    if (last && t - last.t < 1) percentTrack[percentTrack.length - 1] = { t, p }
+    if (last && last.p === p && t - last.t < 1) percentTrack[percentTrack.length - 1] = { t, p }
     else percentTrack.push({ t, p })
     // 上限保护：超长会话截断保留两端（头 3000 点 + 尾 500 点）
     if (percentTrack.length > 3500) percentTrack = percentTrack.slice(0, 3000).concat(percentTrack.slice(-500))

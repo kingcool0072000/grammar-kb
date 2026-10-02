@@ -780,6 +780,15 @@ class PlanStore:
             else:
                 t2["auto_done"] = auto.get(key, False)
             t2["done"] = t2["auto_done"]
+            # 朗读任务完成时带上实际读的文章名（通用文案「朗读 1 篇」看不出读了什么）
+            if t.get("type") == "speak" and t2["done"]:
+                names = []
+                for aid in acts_out.get("all_speak_articles", []):
+                    ti = self._article_title(aid)
+                    if ti:
+                        names.append(ti[:16])
+                if names:
+                    t2["detail"] = "读了：" + "、".join(dict.fromkeys(names))
             out.append(t2)
         done_n = sum(1 for x in out if x["done"])
         # ---- 当日实录（教师周历单日卡补充显示，构建逻辑见 _signals_and_acts）----
@@ -807,6 +816,7 @@ class PlanStore:
                 })
         acts_out = {
             "extra_speaks": extra_speaks,
+            "all_speak_articles": acts.get("speak_articles", []),
             "readings": acts.get("readings", []),
             "vocab_n": acts.get("vocab_n", 0),
             "vocab_min": acts.get("vocab_min", 0),
@@ -1025,14 +1035,22 @@ class PlanStore:
                     extra=f"周内实录 {acts_w} 词")
 
         arts = t.get("articles") or []
+        # 周内全部朗读提交（含计划外）：精读朗读 = 提交过录音才算完成
+        week_recorded = []
+        for d in days:
+            for x in (d.get("tasks") or []):
+                if x.get("type") == "article" and x.get("done") and x.get("article_id") is not None:
+                    week_recorded.append(x["article_id"])
+            for x in (d.get("acts") or {}).get("extra_speaks", []):
+                week_recorded.append(-1)  # 计划外朗读（无任务行）
         if arts:
-            # 精读与朗读合并为一个维度：精读作业须提交朗读录音才算完成
-            # （done 判定 type=article 的任务本就以录音为准，此处只改名称口径）
-            done_a = sum(
-                1 for d in days
-                for x in (d.get("tasks") or [])
-                if x.get("type") == "article" and x.get("done"))
-            dim("🎤", "精读朗读", done_a, len(arts))
+            done_a = sum(1 for a in arts if a in week_recorded)
+            extra_n = sum(1 for x in week_recorded if x == -1)
+            dim("🎤", "精读朗读", done_a, len(arts),
+                extra=f"计划外另朗 {extra_n} 篇" if extra_n else "")
+        elif week_recorded:
+            dim("🎤", "精读朗读", len(week_recorded), len(week_recorded),
+                extra="均为计划外朗读")
 
         papers = t.get("vocab_papers") or []
         if papers:
@@ -1654,7 +1672,8 @@ class PlanStore:
             for r in srows:
                 track = self._session_track(r)
                 if track:
-                    segs.extend(self._valid_track_segments(track, total))
+                    segs.extend(self._valid_track_segments(
+                        track, total, r["active_sec"] or 0))
                 else:
                     # 存量会话：span 口径 + 会话级限速封顶（400 词/分 × active 分钟）
                     s = r["percent_start"] or 0
@@ -1692,16 +1711,13 @@ class PlanStore:
             out.append(entry)
         return out
 
-    # 阅读限速（词/分钟）：超过即判定为跳章/快滚位移，不计词数
+    # 阅读限速（词/分钟）：会话级封顶用（跳章剔除见 _valid_track_segments）
     READ_WPM_CAP = 400.0
-    # 轨迹切段：相邻采样间隔超过此值视为段中断（idle 分段/跳走再回）
-    TRACK_GAP_SEC = 60
-    # 段最短停留（秒）：跳章前后停留太短的段剔除
-    SEG_MIN_DWELL_SEC = 15
 
     @staticmethod
     def _session_track(r) -> list[dict]:
-        """会话行的 percent_track JSON → [{t, p}]（缺/坏返回 []）。"""
+        """会话行的 percent_track JSON → [{t, p}]（缺/坏返回 []）。
+        兼容历史毫秒时间戳（会话上限 4h；末点 t>90000 必是 ms，整体换算秒）。"""
         raw = None
         try:
             raw = r["percent_track"]
@@ -1720,44 +1736,54 @@ class PlanStore:
                     out.append({"t": float(x["t"]), "p": float(x["p"])})
                 except (KeyError, TypeError, ValueError):
                     continue
+        if out and out[-1]["t"] > 90000:
+            out = [{"t": pt["t"] / 1000, "p": pt["p"]} for pt in out]
         return out
 
-    def _valid_track_segments(self, track: list[dict],
-                              total_words: int) -> list[tuple[float, float]]:
-        """位置轨迹 → 有效阅读段（词位置区间）。
+    def _valid_track_segments(self, track: list[dict], total_words: int,
+                              active_sec: int = 0) -> list[tuple[float, float]]:
+        """位置轨迹 → 有效阅读跨度（词位置区间，每会话一段）。双层判定：
 
-        规则（用户口径）：
-        1. 切段：相邻采样间隔 > TRACK_GAP_SEC 断开；
-        2. 段内限速：段推进词数 ≤ 段时长 × READ_WPM_CAP/60——超出即含跳章，
-           该段整体剔除（跳前/跳后停留太短的滑动位移段同样被时限卡掉）；
-        3. 段停留 < SEG_MIN_DWELL_SEC 剔除（切换章未停留足够即走）。
-        回退段（e<s）不计。
+        ①跳章剔除（位置级）：单步位移 >4%，或 <30 秒内 >2% —— 视为章导航/
+          快滚位移，不计并触发 30s 冷却；回退不计。epubjs 位置为 1% 整数粒度
+          （约 930 词/格），真实阅读的瞬时速度差异无法在粒度内分辨，故不做
+          逐点限速（会误杀正常快读）。
+        ②会话级封顶：有效跨度词数 ≤ 400 词/分 × active_sec——物理读速上限，
+          连续快滚（每步都不触发跳章判定的匀速刷）在这里被整体压回。
+        返回 [(起点词位, 终点词位)]；无有效增量返回 []。
         """
-        if not track:
+        if len(track) < 2:
             return []
-        segs_raw: list[list[dict]] = [[]]
-        for pt in track:
-            if segs_raw[-1]:
-                if pt["t"] - segs_raw[-1][-1]["t"] > self.TRACK_GAP_SEC:
-                    segs_raw.append([])
-            segs_raw[-1].append(pt)
-        out = []
-        for seg in segs_raw:
-            if len(seg) < 2:
+        lo_p = hi_p = None
+        cool_until = -1.0
+        last_change_t = track[0]["t"]
+        prev_p = track[0]["p"]
+        for pt in track[1:]:
+            if pt["t"] < last_change_t:  # 时钟回拨：重置锚点
+                last_change_t = pt["t"]
+                prev_p = pt["p"]
                 continue
-            dur = seg[-1]["t"] - seg[0]["t"]
-            if dur < self.SEG_MIN_DWELL_SEC:
+            if pt["p"] == prev_p:
                 continue
-            s_pos = seg[0]["p"] / 100 * total_words
-            e_pos = seg[-1]["p"] / 100 * total_words
-            if e_pos <= s_pos:
-                continue  # 回退
-            cap = dur / 60 * self.READ_WPM_CAP
-            span = e_pos - s_pos
-            if span <= cap:
-                out.append((s_pos, e_pos))
-            # span > cap：段内发生跳章/极快位移——整段丢弃
-        return out
+            dpct = pt["p"] - prev_p
+            if dpct > 0:
+                dt = pt["t"] - last_change_t
+                is_jump = dpct > 4 or (dt < 30 and dpct > 2)
+                if not is_jump and pt["t"] >= cool_until:
+                    lo_p = prev_p if lo_p is None else min(lo_p, prev_p)
+                    hi_p = pt["p"] if hi_p is None else max(hi_p, pt["p"])
+                elif is_jump:
+                    cool_until = pt["t"] + 30
+            last_change_t = pt["t"]
+            prev_p = pt["p"]
+        if lo_p is None or hi_p is None or hi_p <= lo_p:
+            return []
+        span = (hi_p - lo_p) / 100 * total_words
+        cap = max(0, active_sec or 0) / 60 * self.READ_WPM_CAP
+        if cap > 0:
+            span = min(span, cap)
+        s_pos = lo_p / 100 * total_words
+        return [(s_pos, s_pos + span)]
 
     def _auto_done(self, user: str, day: str) -> tuple[dict[str, bool], list[str]]:
         """当天活动信号 → (task_key 完成表, 当日阅读书名列表)。

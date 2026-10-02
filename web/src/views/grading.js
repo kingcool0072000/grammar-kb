@@ -25,7 +25,6 @@ export async function mountGrading(el) {
     el.innerHTML = `
       <div class="view-head">
         <h1>批改中心</h1>
-        <p>学生作业的待批与动态汇总${students.length ? '——按学生独立查看' : ''}。</p>
       </div>
       ${students.length ? `
       <div class="pw-stubar" style="margin-bottom:14px">
