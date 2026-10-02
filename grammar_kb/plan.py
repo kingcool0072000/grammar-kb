@@ -1217,7 +1217,7 @@ class PlanStore:
         """总目标进度：六维度 done/goal 覆盖 + 总百分比。
 
         维度完成口径（与 _completion_status 一致）：讲次=考过；FCE Part=提交过；
-        精读=有录音；泛读=进度≥98% 视为完成（进行中按词数折算贡献）；
+        精读=有录音；泛读=所有时间实录词数总和/目标书目词数总和（会话级）；
         试卷=其级别考试 ≥80；词汇=已掌握词数/vocab_target。
         """
         g = self.get_goals(user)
@@ -1264,19 +1264,15 @@ class PlanStore:
 
         gr = g.get("reading") or []
         if gr:
-            # 书：按词数比例折算——已读词数(必读章口径)/该书必读(或全书)词数。
-            # percent 是位置百分比，与词数分布不匀（封面/目录/非必读前置章
-            # 占位），直接按 percent 会失真；词数比例与「泛读 N 词」实录同口径。
-            done_books = set(done["books"] or [])
-            score = 0.0
-            ratios = self._book_word_ratios(gr, user)
-            for bid in gr:
-                if bid in done_books:
-                    score += 1
-                else:
-                    score += min(1.0, ratios.get(bid, 0.0))
-            dim("📖", "泛读书目", round(score, 1), len(gr),
-                extra="按词数比例折算")
+            # 泛读 = 统计周期内（总目标=所有时间）实录词数总和 vs 目标书目
+            # 词数总和——会话级口径，与周目标/日卡片同一公式（有效性过滤 +
+            # 轨迹剔跳章 + 必读章重叠），跨会话重叠段去重不重复计。
+            done_w = sum(e["words"] for e in self._reading_day_detail(
+                self._library_sessions_all(user)))
+            total_w = self._goal_reading_words(gr)
+            if total_w:
+                dim("📖", "泛读", min(done_w, total_w), total_w,
+                    extra=f"所有时间累计 {done_w} 词")
 
         gp = g.get("vocab_papers") or []
         if gp:
@@ -1348,62 +1344,33 @@ class PlanStore:
                 pass
         return done
 
-    def _book_word_ratios(self, book_ids: list, user: str) -> dict:
-        """每本书的已读词数比例（0-1）：必读章口径，未配置则全书口径。
-
-        已读词数 = 全书词位置（percent/100×总词数）与必读章区间的重叠，
-        非必读章（封面/目录/前置章等）不计入分子；分母=必读章词数和。
-        缺进度/缺章节数据返回 0。
-        """
-        conn = self._lib_connect()
-        if conn is None or not book_ids:
-            return {}
-        out: dict = {}
+    def _library_sessions_all(self, user: str) -> list:
+        """该生全部泛读会话（library 模块，不限日期；总目标词数口径数据源）。"""
         try:
-            with contextlib.closing(conn):
-                ph = ",".join("?" * len(book_ids))
-                prog = {r["book_id"]: (r["percent"] or 0)
-                        for r in conn.execute(
-                            f"SELECT book_id, percent FROM reading_progress"
-                            f" WHERE user = ? AND book_id IN ({ph})",
-                            [user] + list(book_ids))}
-                for bid in book_ids:
-                    chs = conn.execute(
-                        "SELECT idx, word_count FROM chapters"
-                        " WHERE book_id = ? ORDER BY idx", (bid,),
-                    ).fetchall()
-                    if not chs:
-                        continue
-                    cfg = conn.execute(
-                        "SELECT chapters FROM book_reading_config WHERE book_id = ?",
-                        (bid,)).fetchone()
-                    try:
-                        required = set(json.loads(cfg[0])) if cfg and cfg[0] else None
-                    except (ValueError, TypeError):
-                        required = None
-                    words = [(c[0], c[1] or 0) for c in chs]
-                    total = sum(w for _, w in words)
-                    if total <= 0:
-                        continue
-                    # 必读章的词位置区间集合
-                    req_spans = []
-                    cum = 0
-                    for idx, wc in words:
-                        c0, c1 = cum, cum + wc
-                        cum = c1
-                        if required is None or idx in required:
-                            req_spans.append((c0, c1))
-                    req_total = sum(c1 - c0 for c0, c1 in req_spans)
-                    if req_total <= 0:
-                        continue
-                    read_pos = prog.get(bid, 0.0) / 100 * total
-                    read_words = sum(min(read_pos, c1) - c0
-                                     for c0, c1 in req_spans
-                                     if read_pos > c0)
-                    out[bid] = max(0.0, min(1.0, read_words / req_total))
+            with self._connect() as conn:
+                return conn.execute(
+                    "SELECT module, book_title, book_id, active_sec,"
+                    " percent_start, percent_end, lookups, plays,"
+                    " scroll_count, chapter_navs, percent_track"
+                    " FROM focus_sessions"
+                    " WHERE user = ? AND module = 'library'"
+                    " AND book_id IS NOT NULL", (user,)).fetchall()
         except sqlite3.Error:
-            return out
-        return out
+            return []
+
+    def _goal_reading_words(self, book_ids: list) -> int:
+        """总目标书目的目标词数总和：必读章配置口径（未配置=全书词数）。"""
+        bids = [int(b) for b in book_ids if str(b).isdigit()]
+        lib = self._lib_connect()
+        if lib is None or not bids:
+            return 0
+        try:
+            with contextlib.closing(lib):
+                meta = self._book_meta(lib, bids)
+        except sqlite3.Error:
+            return 0
+        return sum(w for info in meta.values() for i, w in info["chs"]
+                   if info["required"] is None or i in info["required"])
 
     def goal_assets(self, lectures: list, fce_parts: list, books: list,
                     articles: list, user: str = "malin") -> dict:
@@ -1611,33 +1578,7 @@ class PlanStore:
             try:
                 with contextlib.closing(conn):
                     ids = {r["book_id"] for r in rows if r["book_id"] is not None}
-                    if ids:
-                        ph = ",".join("?" * len(ids))
-                        for bid in ids:
-                            chs = conn.execute(
-                                "SELECT idx, word_count FROM chapters"
-                                " WHERE book_id = ? ORDER BY idx", (bid,),
-                            ).fetchall()
-                            if chs:
-                                req = conn.execute(
-                                    "SELECT chapters FROM book_reading_config"
-                                    " WHERE book_id = ?", (bid,),
-                                ).fetchone()
-                                try:
-                                    req_set = set(json.loads(req[0])) if req and req[0] else None
-                                except (ValueError, TypeError):
-                                    req_set = None
-                                lib[bid] = {
-                                    "chs": [(c[0], c[1] or 0) for c in chs],
-                                    "required": req_set,
-                                }
-                        # 书名（书已删时缺行，前端用会话里的 book_title 兜底）
-                        for bid in ids:
-                            r = conn.execute(
-                                "SELECT title FROM books WHERE id = ?", (bid,),
-                            ).fetchone()
-                            if r:
-                                lib[bid]["title"] = r[0]
+                    lib = self._book_meta(conn, ids)
             except sqlite3.Error:
                 pass
 
@@ -1670,45 +1611,119 @@ class PlanStore:
             # 有效段集合：[(s_pos, e_pos)] 词位置区间（已剔跳章与短停留段）
             segs: list[tuple[float, float]] = []
             for r in srows:
-                track = self._session_track(r)
-                if track:
-                    segs.extend(self._valid_track_segments(
-                        track, total, r["active_sec"] or 0))
-                else:
-                    # 存量会话：span 口径 + 会话级限速封顶（400 词/分 × active 分钟）
-                    s = r["percent_start"] or 0
-                    e = r["percent_end"] or 0
-                    if e > s:
-                        cap = max(0.0, (r["active_sec"] or 0)) / 60 * self.READ_WPM_CAP
-                        span_words = (e - s) / 100 * total
-                        ratio = min(1.0, cap / span_words) if span_words > 0 else 1.0
-                        segs.append((s / 100 * total,
-                                     s / 100 * total + span_words * ratio))
+                segs.extend(self._row_segs(r, total))
             # 去重合并（段可能跨会话重叠），再逐章计词
-            segs.sort()
-            merged: list[list[float]] = []
-            for s_pos, e_pos in segs:
-                if e_pos <= s_pos:
-                    continue
-                if merged and s_pos <= merged[-1][1]:
-                    merged[-1][1] = max(merged[-1][1], e_pos)
-                else:
-                    merged.append([s_pos, e_pos])
-            counted: list[int] = []
-            for s_pos, e_pos in merged:
-                cum = 0
-                for idx, wc in info["chs"]:
-                    c0, c1 = cum, cum + wc
-                    cum = c1
-                    if info["required"] is not None and idx not in info["required"]:
-                        continue  # 非必读章剔除
-                    ov = min(e_pos, c1) - max(s_pos, c0)
-                    if ov > 0:
-                        entry["words"] += int(round(ov))
-                        counted.append(idx)
+            words, counted = self._segs_words(segs, info["chs"], info["required"])
+            entry["words"] = words
             if counted:
                 entry["from"], entry["to"] = min(counted), max(counted)
             out.append(entry)
+        return out
+
+    @staticmethod
+    def _book_meta(lib, ids) -> dict[int, dict]:
+        """书目元数据批量取：章词数 + 必读章配置 + 书名。
+        缺章节数据的书不出现（调用方按缺元数据兜底）。"""
+        meta: dict[int, dict] = {}
+        for bid in ids:
+            chs = lib.execute(
+                "SELECT idx, word_count FROM chapters"
+                " WHERE book_id = ? ORDER BY idx", (bid,)).fetchall()
+            if not chs:
+                continue
+            cfg = lib.execute(
+                "SELECT chapters FROM book_reading_config WHERE book_id = ?",
+                (bid,)).fetchone()
+            try:
+                req = set(json.loads(cfg[0])) if cfg and cfg[0] else None
+            except (ValueError, TypeError):
+                req = None
+            meta[bid] = {"chs": [(c[0], c[1] or 0) for c in chs],
+                         "required": req}
+        # 书名（书已删时缺行，调用方用会话里的 book_title 兜底）
+        for bid in list(meta):
+            r = lib.execute("SELECT title FROM books WHERE id = ?", (bid,)).fetchone()
+            if r:
+                meta[bid]["title"] = r[0]
+        return meta
+
+    def _row_segs(self, r, total: int) -> list[tuple[float, float]]:
+        """单会话 → 有效词位置区段：位置轨迹优先（剔跳章+限速封顶），
+        无轨迹的存量会话退回 span 口径 + 会话级封顶（400 词/分 × active 分钟）。"""
+        track = self._session_track(r)
+        if track:
+            return self._valid_track_segments(track, total, r["active_sec"] or 0)
+        s = r["percent_start"] or 0
+        e = r["percent_end"] or 0
+        if e <= s:
+            return []
+        cap = max(0.0, (r["active_sec"] or 0)) / 60 * self.READ_WPM_CAP
+        span_words = (e - s) / 100 * total
+        ratio = min(1.0, cap / span_words) if span_words > 0 else 1.0
+        return [(s / 100 * total, s / 100 * total + span_words * ratio)]
+
+    @staticmethod
+    def _segs_words(segs: list, chs: list, required) -> tuple[int, list[int]]:
+        """词位置区段 →（排序去重合并后）与必读章的重叠词数 + 计入章 idx。"""
+        merged: list[list[float]] = []
+        for s_pos, e_pos in sorted(segs):
+            if e_pos <= s_pos:
+                continue
+            if merged and s_pos <= merged[-1][1]:
+                merged[-1][1] = max(merged[-1][1], e_pos)
+            else:
+                merged.append([s_pos, e_pos])
+        words = 0
+        counted: list[int] = []
+        for s_pos, e_pos in merged:
+            cum = 0
+            for idx, wc in chs:
+                c0, c1 = cum, cum + wc
+                cum = c1
+                if required is not None and idx not in required:
+                    continue  # 非必读章剔除
+                ov = min(e_pos, c1) - max(s_pos, c0)
+                if ov > 0:
+                    words += int(round(ov))
+                    counted.append(idx)
+        return words, counted
+
+    def focus_words(self, ids: list) -> dict[int, int]:
+        """学习日志逐会话泛读词数（与计划表日卡片同一公式）：library 模块
+        的有效会话按 词位置区段 ∩ 必读章 计词。返回 {focus会话id: 词数}。"""
+        out: dict[int, int] = {}
+        if not ids:
+            return out
+        try:
+            with self._connect() as conn:
+                ph = ",".join("?" * len(ids))
+                rows = conn.execute(
+                    "SELECT id, module, book_id, active_sec, percent_start,"
+                    " percent_end, lookups, plays, scroll_count, chapter_navs,"
+                    f" percent_track FROM focus_sessions WHERE id IN ({ph})",
+                    list(ids)).fetchall()
+        except sqlite3.Error:
+            return out
+        rows = [r for r in rows if r["module"] == "library"
+                and r["book_id"] is not None and self._reading_session_valid(r)]
+        if not rows:
+            return out
+        meta: dict[int, dict] = {}
+        lib = self._lib_connect()
+        if lib is not None:
+            try:
+                with contextlib.closing(lib):
+                    meta = self._book_meta(lib, {r["book_id"] for r in rows})
+            except sqlite3.Error:
+                meta = {}
+        for r in rows:
+            info = meta.get(r["book_id"])
+            if not info:
+                out[r["id"]] = 0
+                continue
+            total = sum(w for _, w in info["chs"])
+            segs = self._row_segs(r, total) if total > 0 else []
+            out[r["id"]] = self._segs_words(segs, info["chs"], info["required"])[0]
         return out
 
     # 阅读限速（词/分钟）：会话级封顶用（跳章剔除见 _valid_track_segments）

@@ -1065,6 +1065,13 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         _fill_focus_book_titles([data])
         return _ok(data)
 
+    @app.get("/focus/words")
+    def focus_words(request: "fastapi.Request", ids: str = ""):
+        """学习日志逐会话泛读词数（与计划表日卡片同一公式）。教师专属。"""
+        _require_teacher(request)
+        id_list = [int(x) for x in ids.split(",") if x.strip().isdigit()][:50]
+        return _ok(plan.focus_words(id_list))
+
     def _fill_focus_book_titles(items: list) -> None:
         """泛读会话存量行没存书名（前端曾传空）：按 book_id 批量反查补全。"""
         ids = [x.get("book_id") for x in items

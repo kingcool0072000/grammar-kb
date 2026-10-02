@@ -198,6 +198,8 @@ export const api = {
   focusSessions: ({ user, limit = 50, offset = 0 } = {}) =>
     req('/focus/sessions', { searchParams: { user, limit, offset } }),
   focusSession: (id) => req(`/focus/sessions/${id}`),
+  // 学习日志逐会话泛读词数（教师端；与计划表日卡片同一公式）
+  focusWords: (ids) => req('/focus/words', { searchParams: { ids: ids.join(',') } }),
   // 分层词库（vocab_word 表；学生端受教师 vocabUnlock 解锁约束）+ 错词本
   vocabLevels: ({ maxLevel = 7, countsOnly = false, level = null } = {}) =>
     req('/vocab-levels', {

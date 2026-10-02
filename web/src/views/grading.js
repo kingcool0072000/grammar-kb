@@ -247,6 +247,15 @@ export async function mountGrading(el) {
     focusPage = page
     const pageItems = items.slice(page * FOCUS_PAGE, (page + 1) * FOCUS_PAGE)
     const hasNext = items.length > (page + 1) * FOCUS_PAGE
+    // 泛读行逐会话词数：后端与计划表日卡片同一公式（剔跳章+必读章口径），
+    // 接口失败时行内不显示，不阻塞列表
+    const libIds = pageItems.filter((s) => s.kind === 'focus' && s.raw.module === 'library').map((s) => s.raw.id)
+    if (libIds.length) {
+      try {
+        const wm = await api.focusWords(libIds)
+        pageItems.forEach((s) => { if (s.kind === 'focus' && wm[s.raw.id] != null) s.raw.words = wm[s.raw.id] })
+      } catch { /* 词数接口失败时跳过 */ }
+    }
     if (!pageItems.length) {
       host.innerHTML = page === 0
         ? '<p class="reading-hint">暂无学习记录——学生在泛读馆读书/背单词后自动生成</p>'
@@ -289,7 +298,7 @@ function focusTitle(s) {
   return title ? `泛读-${title}` : '泛读'
 }
 
-// 学习日志-泛读/精读/专题会话行（带学生名；泛读附词数=位置推进×书词数）
+// 学习日志-泛读/精读/专题会话行（带学生名；泛读词数=后端逐会话精确口径）
 function focusRow(s) {
   const score = typeof s.score === 'number' ? Math.round(s.score) : null
   const scoreCls = score === null ? 'pend' : score >= 80 ? 'ok' : score >= 60 ? '' : 'bad'
@@ -297,8 +306,7 @@ function focusRow(s) {
   const modCls = s.module === 'reading' ? 'gd-focus-mod reading' : 'gd-focus-mod'
   const chips = [
     `<i class="${modCls}">${mod}</i>`,
-    ...(mod === '泛读' && s.percent_end != null && s.percent_start != null
-      ? [`<i class="gd-focus-chip">${Math.max(0, Math.round((s.percent_end - s.percent_start) * 0.93))} 词</i>`] : []),
+    ...(mod === '泛读' && s.words != null ? [`<i class="gd-focus-chip">${s.words} 词</i>`] : []),
     `<i class="gd-focus-chip">查词 ${s.lookups || 0}</i>`,
     `<i class="gd-focus-chip">发音 ${s.plays || 0}</i>`,
     ...(s.away_count ? [`<i class="gd-focus-chip">离开 ${s.away_count}</i>`] : []),
