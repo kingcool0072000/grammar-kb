@@ -247,13 +247,13 @@ export async function mountGrading(el) {
     focusPage = page
     const pageItems = items.slice(page * FOCUS_PAGE, (page + 1) * FOCUS_PAGE)
     const hasNext = items.length > (page + 1) * FOCUS_PAGE
-    // 泛读行逐会话词数：后端与计划表日卡片同一公式（剔跳章+必读章口径），
-    // 接口失败时行内不显示，不阻塞列表
+    // 泛读行逐会话词数+连续性/异常标记：后端与计划表日卡片同一公式
+    // （剔跳章+必读章口径）+ 与同书上一会话的衔接关系，接口失败不阻塞列表
     const libIds = pageItems.filter((s) => s.kind === 'focus' && s.raw.module === 'library').map((s) => s.raw.id)
     if (libIds.length) {
       try {
         const wm = await api.focusWords(libIds)
-        pageItems.forEach((s) => { if (s.kind === 'focus' && wm[s.raw.id] != null) s.raw.words = wm[s.raw.id] })
+        pageItems.forEach((s) => { if (s.kind === 'focus' && wm[s.raw.id]) s.raw.rw = wm[s.raw.id] })
       } catch { /* 词数接口失败时跳过 */ }
     }
     if (!pageItems.length) {
@@ -298,15 +298,29 @@ function focusTitle(s) {
   return title ? `泛读-${title}` : '泛读'
 }
 
-// 学习日志-泛读/精读/专题会话行（带学生名；泛读词数=后端逐会话精确口径）
+// 学习日志-泛读/精读/专题会话行（带学生名；泛读附精确词数+位置区间+
+// 与上会话衔接/异常标记，rw 来自后端 /focus/words）
 function focusRow(s) {
   const score = typeof s.score === 'number' ? Math.round(s.score) : null
   const scoreCls = score === null ? 'pend' : score >= 80 ? 'ok' : score >= 60 ? '' : 'bad'
   const mod = s.module === 'reading' ? '精读' : s.module === 'topics' ? '专题' : '泛读'
   const modCls = s.module === 'reading' ? 'gd-focus-mod reading' : 'gd-focus-mod'
+  const rw = s.rw
+  const linkChip = rw
+    ? (rw.link === 'next' ? '<i class="gd-focus-chip ok">↪ 衔接</i>'
+      : rw.link === 'first' ? '<i class="gd-focus-chip">首读</i>'
+        : rw.link_note ? `<i class="gd-focus-chip warn">⚠ ${escapeHtml(rw.link_note)}</i>` : '')
+    : ''
   const chips = [
     `<i class="${modCls}">${mod}</i>`,
-    ...(mod === '泛读' && s.words != null ? [`<i class="gd-focus-chip">${s.words} 词</i>`] : []),
+    ...(rw
+      ? [
+          `<i class="gd-focus-chip">${rw.words} 词</i>`,
+          `<i class="gd-focus-chip">${rw.s_pct}%→${rw.e_pct}%</i>`,
+          linkChip,
+          ...(rw.flags || []).map((f) => `<i class="gd-focus-chip warn">⚠ ${escapeHtml(f)}</i>`),
+        ]
+      : []),
     `<i class="gd-focus-chip">查词 ${s.lookups || 0}</i>`,
     `<i class="gd-focus-chip">发音 ${s.plays || 0}</i>`,
     ...(s.away_count ? [`<i class="gd-focus-chip">离开 ${s.away_count}</i>`] : []),

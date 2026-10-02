@@ -1688,26 +1688,48 @@ class PlanStore:
                     counted.append(idx)
         return words, counted
 
-    def focus_words(self, ids: list) -> dict[int, int]:
-        """学习日志逐会话泛读词数（与计划表日卡片同一公式）：library 模块
-        的有效会话按 词位置区段 ∩ 必读章 计词。返回 {focus会话id: 词数}。"""
-        out: dict[int, int] = {}
+    def focus_words(self, ids: list) -> dict[int, dict]:
+        """学习日志逐会话泛读词数 + 连续性/异常标记（教师端行内展示）。
+
+        - words：有效词数（与计划表日卡片同一公式：轨迹剔跳章 ∩ 必读章）。
+        - link：与同书上一会话（按开始时间）的衔接关系——
+          next=顺延（|开头−上会话结尾|≤2%）、first=该书首个会话、
+          back=回读（开头落后）、skip=跳读（开头超前，中间有断档）。
+        - flags 异常标记：异常快=整段位移超 400 词/分物理读速（≥100 词才判，
+          避免短会话小位移误报）；进度反向=结束位置低于开头 >1%；
+          无有效阅读=闪进闪出/纯翻章会话（词数为 0）。
+        返回 {会话id: {words, s_pct, e_pct, link, link_note, flags[]}}。
+        """
+        out: dict[int, dict] = {}
         if not ids:
             return out
+        rows: list = []
+        prev_end: dict[int, float] = {}
         try:
             with self._connect() as conn:
                 ph = ",".join("?" * len(ids))
                 rows = conn.execute(
-                    "SELECT id, module, book_id, active_sec, percent_start,"
-                    " percent_end, lookups, plays, scroll_count, chapter_navs,"
-                    f" percent_track FROM focus_sessions WHERE id IN ({ph})",
+                    "SELECT id, user, started_at, book_id, active_sec,"
+                    " percent_start, percent_end, lookups, plays,"
+                    " scroll_count, chapter_navs, percent_track"
+                    f" FROM focus_sessions WHERE id IN ({ph})"
+                    " AND module = 'library'",
                     list(ids)).fetchall()
+                for r in rows:
+                    if r["book_id"] is None:
+                        continue
+                    p = conn.execute(
+                        "SELECT percent_end FROM focus_sessions"
+                        " WHERE user = ? AND module = 'library' AND book_id = ?"
+                        " AND (started_at, id) < (?, ?)"
+                        " ORDER BY started_at DESC, id DESC LIMIT 1",
+                        (r["user"], r["book_id"],
+                         r["started_at"], r["id"])).fetchone()
+                    if p is not None and p[0] is not None:
+                        prev_end[r["id"]] = p[0]
         except sqlite3.Error:
             return out
-        rows = [r for r in rows if r["module"] == "library"
-                and r["book_id"] is not None and self._reading_session_valid(r)]
-        if not rows:
-            return out
+        rows = [r for r in rows if r["book_id"] is not None]
         meta: dict[int, dict] = {}
         lib = self._lib_connect()
         if lib is not None:
@@ -1718,12 +1740,43 @@ class PlanStore:
                 meta = {}
         for r in rows:
             info = meta.get(r["book_id"])
-            if not info:
-                out[r["id"]] = 0
-                continue
-            total = sum(w for _, w in info["chs"])
-            segs = self._row_segs(r, total) if total > 0 else []
-            out[r["id"]] = self._segs_words(segs, info["chs"], info["required"])[0]
+            total = sum(w for _, w in info["chs"]) if info else 0
+            valid = self._reading_session_valid(r)
+            if valid and info and total > 0:
+                words = self._segs_words(self._row_segs(r, total),
+                                         info["chs"], info["required"])[0]
+            else:
+                words = 0
+            s0 = r["percent_start"] or 0
+            e0 = r["percent_end"] or 0
+            flags: list[str] = []
+            if not valid:
+                # 纯翻章/闪进闪出：词数 0 已说明问题，不再叠加速度标记
+                # （这类会话 active_sec 极小，raw 速度会是荒谬大数）。
+                flags.append("无有效阅读")
+            elif info and total > 0:
+                # 有效会话的「异常快」按原始位移速度判（词数口径已按
+                # 400 词/分限速折算，被折算过的会话正是要暴露的对象）。
+                span_w = max(0.0, (e0 - s0) / 100 * total)
+                mins = (r["active_sec"] or 0) / 60
+                if (mins > 0 and span_w >= 100
+                        and span_w / mins > self.READ_WPM_CAP):
+                    flags.append(f"异常快 {round(span_w / mins)} 词/分")
+            if e0 < s0 - 1:
+                flags.append(f"进度反向 {round(s0 - e0)}%")
+            link, note = "first", ""
+            pe = prev_end.get(r["id"])
+            if pe is not None:
+                gap = s0 - pe
+                if gap > 2:
+                    link, note = "skip", f"跳读 {round(gap)}%"
+                elif gap < -2:
+                    link, note = "back", f"回读 {round(-gap)}%"
+                else:
+                    link, note = "next", ""
+            out[r["id"]] = {"words": words, "s_pct": round(s0),
+                            "e_pct": round(e0), "link": link,
+                            "link_note": note, "flags": flags}
         return out
 
     # 阅读限速（词/分钟）：会话级封顶用（跳章剔除见 _valid_track_segments）
