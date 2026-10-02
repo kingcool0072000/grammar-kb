@@ -277,7 +277,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     # 白名单路径免登录：根信息、API 文档、登录本身
     _AUTH_OPEN = frozenset({"/", "/api-info", "/docs", "/redoc", "/openapi.json", "/auth/login"})
     # 静态前端资源（web/dist 挂载时）：HTML/JS/CSS/字体免登录
-    _STATIC_PREFIXES = ("/assets/", "/favicon", "/vite.svg")
+    _STATIC_PREFIXES = ("/assets/", "/favicon", "/vite.svg",
+                        "/analytics-report.html")  # 学情静态报告（public 资源）
     # 学生角色可访问的 (method, path 前缀)：背单词所需数据 + 提交成绩 + FCE 真题练习
     _STUDENT_ALLOW = (
         ("GET", "/stats"),

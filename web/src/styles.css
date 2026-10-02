@@ -2673,6 +2673,10 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 .pe-lec span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pe-lec.on { border-color: var(--brand); background: #f6efdd; color: var(--brand-ink); }
 .pe-lec.on b { color: var(--brand-ink); }
+/* 学情分析：静态报告宿主与说明条 */
+.ana-static-note { margin-bottom: 12px; }
+.ana-report-host .wrap { max-width: 900px; margin: 0 auto; }
+
 .pe-vocab-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .pe-vocab-row input { width: 110px; }
 .pe-vocab-row select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); font-size: 13px; }
