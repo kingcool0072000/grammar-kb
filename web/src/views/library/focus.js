@@ -212,7 +212,8 @@ export function compressMouse(points) {
  * @returns {{ hooks, flush, destroy, disable, enable }}
  */
 export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '', enabled = true,
-                                       module = 'library', initialRangeLabel = '', idleMs = IDLE_SPLIT_MS }) {
+                                       module = 'library', initialRangeLabel = '', idleMs = IDLE_SPLIT_MS,
+                                       restoredPromise = null }) {
   // 书名可后补（reader 打开后从 chapters 接口拿到，供上报 book_title）
   let bookTitleVal = String(bookTitle || '')
   // 会话可变状态（超时不活跃拆分时整体重置）
@@ -257,6 +258,12 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
     if (percentTrack.length > 3500) percentTrack = percentTrack.slice(0, 3000).concat(percentTrack.slice(-500))
   }
   st = newSt()
+  // 恢复落位门（library 模块）：阅读器初始恢复会经历「渲染开头→闪 1%→
+  // 自愈滚到上次结尾」的瞬态（约 2.5s），落位稳定前不喂 onReloc——否则
+  // 瞬态首点成为 percentStart/轨迹首点，表现为「每次都从 5% 起读 +
+  // 回读 N%」的假异常（真实衔接其实精确吻合）。
+  let settled = restoredPromise == null
+  if (restoredPromise) restoredPromise.then(() => { settled = true }).catch(() => { settled = true })
   // 内容漏斗（v2）：词 → 次数；selected 为「选了但没查没听」的词
   let lookupMap = new Map()
   let speakMap = new Map()
@@ -624,16 +631,18 @@ export function createFocusTracker({ readerRoot, viewerEl, bookId, bookTitle = '
       onThemeAdjust() {
         if (!collecting) return
       },
-      /** 阅读进度（handleReloc 调用，percent 0-100；label 为章标题/范围标签） */
+      /** 阅读进度（handleReloc 调用，percent 0-100；label 为章标题/范围标签）。
+       * 恢复落位稳定前的瞬态位置不入采集（见 settled 注释）。 */
       onReloc(percent, label) {
         if (!collecting) return
+        if (label) curChapterLabel = String(label).slice(0, 120)
+        if (!settled) return
         const p = Number(percent)
         if (Number.isFinite(p)) {
           if (st.percentStart == null) st.percentStart = p
           st.percentEnd = p
           pushPercentTrack(p)
         }
-        if (label) curChapterLabel = String(label).slice(0, 120)
       },
       /**
        * iframe 正文鼠标轨迹（reader 的 onRendered 通道调用，幂等防重复挂）。

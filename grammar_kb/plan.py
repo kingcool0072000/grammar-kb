@@ -1695,9 +1695,11 @@ class PlanStore:
         - link：与同书上一会话（按开始时间）的衔接关系——
           next=顺延（|开头−上会话结尾|≤2%）、first=该书首个会话、
           back=回读（开头落后）、skip=跳读（开头超前，中间有断档）。
+          开头取「恢复瞬态净化」后的稳定点（开局 3s 内 >4%/步的跳变
+          是阅读器自愈落位，不是阅读）。
         - flags 异常标记：异常快=整段位移超 400 词/分物理读速（≥100 词才判，
-          避免短会话小位移误报）；进度反向=结束位置低于开头 >1%；
-          无有效阅读=闪进闪出/纯翻章会话（词数为 0）。
+          避免短会话小位移误报；含恢复瞬态的会话不判）；进度反向=结束位置
+          低于开头 >1%；无有效阅读=闪进闪出/纯翻章会话（词数为 0）。
         返回 {会话id: {words, s_pct, e_pct, link, link_note, flags[]}}。
         """
         out: dict[int, dict] = {}
@@ -1742,21 +1744,37 @@ class PlanStore:
             info = meta.get(r["book_id"])
             total = sum(w for _, w in info["chs"]) if info else 0
             valid = self._reading_session_valid(r)
+            track = self._session_track(r)
+            # 恢复瞬态净化：开局 3 秒内出现的大幅正向跳变（>4%/步）是
+            # 阅读器「渲染开头→自愈滚到上次结尾」的落位动作（曾表现为
+            # 「每次都从 5% 起读/回读 N%」假异常）。以瞬态后的稳定点为
+            # 真实起点；无瞬态则用 percent_start。
+            s0 = r["percent_start"] or 0
+            e0 = r["percent_end"] or 0
+            transient = False
+            if track:
+                prev = track[0]["p"]
+                for pt in track[1:]:
+                    if pt["t"] > 3:
+                        break
+                    if pt["p"] - prev > 4:
+                        transient = True
+                        s0 = max(s0, pt["p"])
+                    prev = pt["p"]
             if valid and info and total > 0:
                 words = self._segs_words(self._row_segs(r, total),
                                          info["chs"], info["required"])[0]
             else:
                 words = 0
-            s0 = r["percent_start"] or 0
-            e0 = r["percent_end"] or 0
             flags: list[str] = []
             if not valid:
                 # 纯翻章/闪进闪出：词数 0 已说明问题，不再叠加速度标记
                 # （这类会话 active_sec 极小，raw 速度会是荒谬大数）。
                 flags.append("无有效阅读")
-            elif info and total > 0:
+            elif info and total > 0 and not transient:
                 # 有效会话的「异常快」按原始位移速度判（词数口径已按
                 # 400 词/分限速折算，被折算过的会话正是要暴露的对象）。
+                # 含恢复瞬态的会话不判——瞬态位移是程序落位不是阅读。
                 span_w = max(0.0, (e0 - s0) / 100 * total)
                 mins = (r["active_sec"] or 0) / 60
                 if (mins > 0 and span_w >= 100

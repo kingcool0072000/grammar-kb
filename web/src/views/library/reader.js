@@ -247,12 +247,17 @@ export function mountLibraryReader(viewEl, ctx) {
   }
 
   // ---- 专注力采集（教师自己读书不追踪；学生开关未到前先采，确认关闭后 disable）----
+  // restored 门：初始恢复落位（display+自愈滚动）稳定后才开始喂位置，
+  // 否则恢复瞬态首点会变成 percentStart（「每次从 5% 起读」假象的根因）。
+  let restoreResolve
+  const restoredGate = new Promise((res) => { restoreResolve = res })
   const focusTracker = createFocusTracker({
     readerRoot: root,
     viewerEl,
     bookId,
     bookTitle: '',
     enabled: !isTeacher,
+    restoredPromise: restoredGate,
   })
 
   // 学生账号：配色与字体由教师统一配置（字号仍可自调）
@@ -504,6 +509,8 @@ export function mountLibraryReader(viewEl, ctx) {
     },
     (e) => showError(e),
   )
+  // renderer 的恢复落位信号 → 开放专注采集的位置通道
+  renderer.restored.then(() => restoreResolve())
 
   // ---- cleanup：hash 离开路由时由自杀监听触发 ----
   function cleanup() {

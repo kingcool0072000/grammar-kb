@@ -50,6 +50,14 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
     readyReject = rej
   })
 
+  let restoreResolve
+  /** 初始恢复落位完成时 resolve（display 完成 + 自愈滚动窗口过后）。
+   * 落位前的 relocated 是瞬态位置（初始渲染开头→自愈滚到上次结尾），
+   * 调用方据此区分瞬态与真实阅读起点（曾表现为「每次都从 5% 起读」）。 */
+  const restored = new Promise((res) => {
+    restoreResolve = res
+  })
+
   /** 序列化所有 display/next/prev：按调用顺序生效；单步 20s 超时防死锁 */
   function navigate(fn) {
     const p = navChain
@@ -292,6 +300,12 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
       const p = stored
         ? rendition.display(stored).catch(() => rendition.display())
         : rendition.display()
+      // 恢复落位窗口：display 完成 + 自愈滚动 350ms + 重报 120ms 后视为稳定
+      p.then(() => {
+        setTimeout(() => {
+          if (!destroyed) restoreResolve()
+        }, 620)
+      })
       // epubjs scrolled 帧式渲染的恢复自愈：display(cfi) 时目标可能落在尚未 append 的
       // 后续帧里，moveTo 的 scrollTo 被 clamp 回 0。等帧真正显示后按目标 offset 再滚一次。
       if (stored) {
@@ -567,6 +581,7 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
     injectChapterLinksNow,
     updateReadMask,
     applyTheme,
+    restored,
     destroy,
   }
 }
