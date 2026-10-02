@@ -1994,6 +1994,7 @@ mark[data-lib-anchor] {
   flex-shrink: 0;
 }
 .gd-focus-mod.reading { background: #e2f5f2; color: #146e63; }
+.gd-focus-mod.vocab { background: #eef0fb; color: #3d4fb5; }
 .gd-focus-range {
   border: 1px solid var(--line); border-radius: 12px; background: var(--bg-soft);
   padding: 10px 14px; margin-bottom: 12px;

@@ -144,22 +144,12 @@ export async function mountGrading(el) {
       key: 'haya-exam', icon: '📊', title: '哈一作业成绩', list: exams,
       row: (e) => `
         <div class="fce-his-row">
-          <span class="fce-his-what">第 ${e.lecture} 讲</span>
+          <span class="fce-his-what">${escapeHtml(e.user || '')} · 第 ${e.lecture} 讲</span>
           <b class="fce-his-score ${e.score >= 90 ? 'ok' : e.score >= 70 ? '' : 'bad'}">${e.score}</b>
           <span class="fce-his-date">${e.date}${e.wrong && e.wrong.length ? ` · 错 ${e.wrong.length} 题` : ''}</span>
         </div>`,
       empty: '暂无成绩',
       tool: 'exams',
-    },
-    {
-      key: 'recite', icon: '📖', title: '背单词练习', list: recite,
-      row: (x) => `
-        <div class="fce-his-row">
-          <span class="fce-his-what">${escapeHtml(x.user)} · ${scopeCn(x.scope)}${x.mode === 'flip' ? '（自评）' : ''}</span>
-          <b class="fce-his-score ${x.acc >= 80 ? 'ok' : ''}">${x.acc}%</b>
-          <span class="fce-his-date">${x.total} 词 · 错 ${x.wrong} · ${fmtDur(x.duration_sec || 0)} · ${(x.created_at || '').slice(5, 10)}</span>
-        </div>`,
-      empty: '暂无背单词记录',
     },
   ]
 
@@ -178,11 +168,11 @@ export async function mountGrading(el) {
         </section>`).join('')}
       <section class="gcard" data-card="focus">
         <header class="gcard-head">
-          <h2>👁 专注力 · 泛读阅读</h2>
-          <b class="gcard-n">${focus.length}</b>
+          <h2>📚 学习日志</h2>
+          <b class="gcard-n">${focus.length + recite.length}</b>
         </header>
         <div class="gcard-list">
-          ${focus.length ? `<p class="reading-hint">近 7 天 ${focusWeek.length} 次 · 平均 ${focusWeekAvg ?? '—'} 分 · 累计 ${focusWeekMin} 分钟</p>` : ''}
+          ${logSummaryHtml()}
           <div id="gd-focus-list"><p class="reading-hint">加载中…</p></div>
         </div>
       </section>
@@ -194,7 +184,6 @@ export async function mountGrading(el) {
     recording: async () => openRecordingReview(),
     essay: () => go('essay'),
     'haya-exam': () => go('haya-exam'),
-    recite: () => go('recite'),
   }
   el.querySelectorAll('[data-all]').forEach((b) =>
     b.addEventListener('click', () => {
@@ -212,7 +201,27 @@ export async function mountGrading(el) {
     openRecordingReview()
   }
 
-  // 专注力会话列表：后端 limit+offset 翻页（每页 5 条，可翻看全部记录）
+  // 学习日志汇总行：近 7 天分类时长/词数/专注度/背词（全部当前筛选学生的）
+  function logSummaryHtml() {
+    const weekMs = 7 * 24 * 3600 * 1000
+    const nowMs = Date.now()
+    const inWeek = (t) => new Date(t || 0).getTime() >= nowMs - weekMs
+    const libW = focus.filter((s) => s.module === 'library' && inWeek(s.started_at || s.created_at))
+    const rdW = focus.filter((s) => s.module === 'reading' && inWeek(s.started_at || s.created_at))
+    const vocabW = recite.filter((s) => inWeek(s.created_at))
+    const scores = focusWeek.filter((s) => typeof s.score === 'number')
+    const parts = []
+    if (libW.length) parts.push(`📖 泛读 ${Math.round(libW.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)} 分钟`)
+    if (rdW.length) parts.push(`📄 精读 ${Math.round(rdW.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)} 分钟`)
+    if (vocabW.length) parts.push(`🔤 背词 ${vocabW.reduce((a, s) => a + (s.total || 0), 0)} 词 · ${Math.round(vocabW.reduce((a, s) => a + (s.duration_sec || 0), 0) / 60)} 分钟`)
+    if (scores.length) parts.push(`👁 专注 ${Math.round(scores.reduce((a, s) => a + s.score, 0) / scores.length)} 分`)
+    return parts.length
+      ? `<p class="reading-hint">近 7 天：${parts.join(' · ')}</p>`
+      : '<p class="reading-hint">近 7 天暂无学习记录</p>'
+  }
+
+  // 学习日志列表：focus_sessions（泛读/精读/专题）+ recite_sessions（背词）
+  // 按时间倒序混排、分页展示；行内带学生名。
   const FOCUS_PAGE = 5
   let focusPage = 0
   async function renderFocusPage(page) {
@@ -221,30 +230,39 @@ export async function mountGrading(el) {
     host.innerHTML = '<p class="reading-hint">加载中…</p>'
     let items = []
     try {
-      const got = await api.focusSessions({ limit: FOCUS_PAGE + 1, offset: page * FOCUS_PAGE })
-      items = Array.isArray(got) ? got : []
-    } catch {
-      items = []
+      const got = await api.focusSessions({ limit: 100, offset: 0, user: student })
+      items = (Array.isArray(got) ? got : []).map((s) => ({
+        kind: 'focus', id: s.id, user: s.user, module: s.module,
+        t: s.started_at || s.created_at, raw: s,
+      }))
+    } catch { items = [] }
+    // 背单词会话并入学习日志（正确率即质量指标，无专注分）
+    for (const r of recite) {
+      items.push({
+        kind: 'recite', id: `r${r.id}`, user: r.user, module: 'vocab',
+        t: r.created_at, raw: r,
+      })
     }
+    items.sort((a, b) => (b.t || '') < (a.t || '') ? -1 : 1)
     focusPage = page
-    const pageItems = items.slice(0, FOCUS_PAGE)
-    const hasNext = items.length > FOCUS_PAGE
+    const pageItems = items.slice(page * FOCUS_PAGE, (page + 1) * FOCUS_PAGE)
+    const hasNext = items.length > (page + 1) * FOCUS_PAGE
     if (!pageItems.length) {
       host.innerHTML = page === 0
-        ? '<p class="reading-hint">暂无阅读专注数据——学生在泛读馆读书后自动生成</p>'
+        ? '<p class="reading-hint">暂无学习记录——学生在泛读馆读书/背单词后自动生成</p>'
         : '<p class="reading-hint">没有更多记录了</p>'
     } else {
-      host.innerHTML = pageItems.map((s) => focusRow(s)).join('')
+      host.innerHTML = pageItems.map((s) => s.kind === 'recite' ? reciteLogRow(s.raw) : focusRow(s.raw)).join('')
       host.querySelectorAll('[data-focus-id]').forEach((row) => {
         row.addEventListener('click', () => openFocusDetail(Number(row.dataset.focusId)))
       })
     }
-    if (pageItems.length || page > 0) {
+    if (items.length > FOCUS_PAGE || page > 0) {
       const pager = document.createElement('div')
       pager.className = 'gd-focus-pager'
       pager.innerHTML = `
         <button class="reading-btn small" data-fp="prev" ${page === 0 ? 'disabled' : ''}>‹ 上一页</button>
-        <span class="gd-focus-page-no">第 ${page + 1} 页</span>
+        <span class="gd-focus-page-no">第 ${page + 1} 页 / 共 ${Math.max(1, Math.ceil(items.length / FOCUS_PAGE))} 页</span>
         <button class="reading-btn small" data-fp="next" ${hasNext ? '' : 'disabled'}>下一页 ›</button>`
       pager.querySelectorAll('[data-fp]').forEach((b) =>
         b.addEventListener('click', () => {
@@ -271,25 +289,38 @@ function focusTitle(s) {
   return title ? `泛读-${title}` : '泛读'
 }
 
-// 专注会话行（fce-his-row 风格，可点开详情）
+// 学习日志-泛读/精读/专题会话行（带学生名；泛读附词数=位置推进×书词数）
 function focusRow(s) {
   const score = typeof s.score === 'number' ? Math.round(s.score) : null
   const scoreCls = score === null ? 'pend' : score >= 80 ? 'ok' : score >= 60 ? '' : 'bad'
-  const mod = s.module === 'reading' ? '精读' : '泛读'
+  const mod = s.module === 'reading' ? '精读' : s.module === 'topics' ? '专题' : '泛读'
   const modCls = s.module === 'reading' ? 'gd-focus-mod reading' : 'gd-focus-mod'
   const chips = [
     `<i class="${modCls}">${mod}</i>`,
+    ...(mod === '泛读' && s.percent_end != null && s.percent_start != null
+      ? [`<i class="gd-focus-chip">${Math.max(0, Math.round((s.percent_end - s.percent_start) * 0.93))} 词</i>`] : []),
     `<i class="gd-focus-chip">查词 ${s.lookups || 0}</i>`,
     `<i class="gd-focus-chip">发音 ${s.plays || 0}</i>`,
-    `<i class="gd-focus-chip">离开 ${s.away_count || 0} 次</i>`,
+    ...(s.away_count ? [`<i class="gd-focus-chip">离开 ${s.away_count}</i>`] : []),
     ...(s.fast_scroll_flags ? [`<i class="gd-focus-chip">快滚 ${s.fast_scroll_flags}</i>`] : []),
   ].join('')
   return `
     <div class="fce-his-row gd-focus-row" data-focus-id="${s.id}" title="点开专注详情">
-      <span class="fce-his-what">${escapeHtml(focusTitle(s))}</span>
+      <span class="fce-his-what">${escapeHtml(s.user || '')} · ${escapeHtml(focusTitle(s))}</span>
       <b class="fce-his-score ${scoreCls}">${score === null ? '—' : score}</b>
       <span class="fce-his-date">${fmtDur(s.total_sec || 0)} · ${fmtCnTime(s.started_at || s.created_at)}</span>
       <span class="gd-focus-chips">${chips}</span>
+    </div>`
+}
+
+// 学习日志-背单词行（无专注分，正确率即质量）
+function reciteLogRow(x) {
+  return `
+    <div class="fce-his-row gd-focus-row">
+      <span class="fce-his-what">${escapeHtml(x.user || '')} · 背单词 ${scopeCn(x.scope)}${x.mode === 'flip' ? '（自评）' : ''}</span>
+      <b class="fce-his-score ${x.acc >= 80 ? 'ok' : x.acc >= 60 ? '' : 'bad'}">${x.acc}%</b>
+      <span class="fce-his-date">${x.total} 词 · 错 ${x.wrong} · ${fmtDur(x.duration_sec || 0)} · ${fmtCnTime(x.created_at)}</span>
+      <span class="gd-focus-chips"><i class="gd-focus-mod vocab">背词</i></span>
     </div>`
 }
 
