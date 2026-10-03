@@ -349,7 +349,10 @@ function reciteLogRow(x) {
     </div>`
 }
 
-/** 学习范围卡：模块徽标 + 范围标签 + 本段进度条 */
+/** 学习范围卡：模块徽标 + 范围标签 + 本段进度条。
+ * 泛读会话升级为「水位切分」视图：拉 /focus/words 数据，把本段范围条
+ * 按该书历史已读水位切成两截——水位下（重合，蓝）+ 水位上（新学，绿），
+ * 上会话结尾位置画一条基线刻度；数据未返回时回落纯范围条。 */
 function focusRangeCard(s) {
   const mod = s.module === 'reading' ? '精读' : '泛读'
   const modCls = s.module === 'reading' ? 'gd-focus-mod reading' : 'gd-focus-mod'
@@ -358,6 +361,32 @@ function focusRangeCard(s) {
   const re = Number.isFinite(Number(s.range_end)) ? Number(s.range_end) : 0
   const left = Math.min(100, Math.max(0, rs))
   const width = Math.max(0, Math.min(100 - left, re - left))
+  const rw = s.rw
+  let track = `<div class="gd-focus-range-track"><i style="left:${left}%;width:${width}%"></i></div>`
+  let stats = ''
+  if (s.module !== 'reading' && rw) {
+    // 水位在全书刻度上的位置：s_pct 是净化后起点，水位≈起点（若开头
+    // 落在水位下）或起点本身（顺延/跳读）。用 overlap/words 占本段宽度
+    // 的比例切条——比绝对水位更直观（绿=本次新学，蓝=重合）。
+    const total = Math.max(1, (rw.words || 0) + (rw.overlap || 0))
+    const ovlW = width * (rw.overlap || 0) / total
+    const newW = width - ovlW
+    track = `
+  <div class="gd-focus-range-track gd-focus-range-split">
+    <i class="dup" style="left:${left}%;width:${ovlW.toFixed(2)}%"></i>
+    <i class="new" style="left:${(left + ovlW).toFixed(2)}%;width:${newW.toFixed(2)}%"></i>
+  </div>`
+    const linkTxt = rw.link === 'next' ? '↪ 与上会话衔接'
+      : rw.link === 'first' ? '首读'
+        : rw.link_note ? `⚠ ${rw.link_note}` : ''
+    stats = `
+  <div class="gd-focus-range-stats">
+    <span class="new">新学 ${rw.words || 0} 词</span>
+    ${rw.overlap > 0 ? `<span class="dup">重合 ${rw.overlap} 词</span><span class="muted">（此前已读过，不重复计数）</span>` : ''}
+    ${linkTxt ? `<span class="${rw.link === 'next' || rw.link === 'first' ? 'ok' : 'warn'}">${escapeHtml(linkTxt)}</span>` : ''}
+    ${(rw.flags || []).map((f) => `<span class="warn">⚠ ${escapeHtml(f)}</span>`).join('')}
+  </div>`
+  }
   return `
   <div class="gd-focus-range">
     <div class="gd-focus-range-head">
@@ -365,7 +394,8 @@ function focusRangeCard(s) {
       <span class="gd-focus-range-label">${escapeHtml(label)}</span>
       <span class="gd-focus-range-pct">${left.toFixed(0)}% → ${re.toFixed(0)}%</span>
     </div>
-    <div class="gd-focus-range-track"><i style="left:${left}%;width:${width}%"></i></div>
+    ${track}
+    ${stats}
   </div>`
 }
 
@@ -409,6 +439,13 @@ async function openFocusDetail(id) {
     return
   }
   closeFocusDetail() // 防重复叠加
+  // 泛读会话：补拉词数/水位切分数据（失败不阻塞详情，回落纯范围条）
+  if (s.module === 'library') {
+    try {
+      const wm = await api.focusWords([id])
+      if (wm && wm[id]) s.rw = wm[id]
+    } catch { /* 词数接口失败时详情仍可看 */ }
+  }
 
   const score = typeof s.score === 'number' ? Math.round(s.score) : null
   const scoreCls = score === null ? '' : score >= 80 ? 'ok' : score >= 60 ? '' : 'bad'

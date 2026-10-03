@@ -167,3 +167,78 @@ def _mini_epub_bytes(title: str) -> bytes:
                        f"Chapter {i + 1}</title></head><body><h1>Chapter {i + 1}</h1>"
                        "<p>" + "word " * 100 + "</p></body></html>")
     return buf.getvalue()
+
+
+def _seed_watermark_bookcase(env):
+    """水位去重测试脚手架：library.db 造 1 本书 10 章（每章 1000 词），
+    fce.db 造带轨迹的泛读会话。返回 fce.db 路径。"""
+    lib = sqlite3.connect(env / "library.db")
+    lib.execute("CREATE TABLE IF NOT EXISTS books (id INTEGER PRIMARY KEY,"
+                " title TEXT, author TEXT, file_path TEXT, created_at TEXT)")
+    lib.execute("CREATE TABLE IF NOT EXISTS chapters (book_id INTEGER, idx INTEGER,"
+                " title TEXT, word_count INTEGER, spine_index INTEGER)")
+    lib.execute("CREATE TABLE IF NOT EXISTS book_reading_config (book_id INTEGER,"
+                " user TEXT, chapters TEXT, vocabUnlock TEXT)")
+    lib.execute("CREATE TABLE IF NOT EXISTS reading_progress (book_id INTEGER,"
+                " user TEXT, cfi TEXT, chapter_index INTEGER, percent REAL,"
+                " reading_seconds INTEGER, updated_at TEXT)")
+    lib.execute("INSERT INTO books (id, title) VALUES (1, 'TestBook')")
+    for i in range(10):
+        lib.execute("INSERT INTO chapters VALUES (1, ?, ?, 1000, ?)",
+                    (i, f"Ch{i}", i))
+    lib.commit()
+    lib.close()
+
+    fce = sqlite3.connect(env / "fce.db")
+    fce.execute("CREATE TABLE IF NOT EXISTS focus_sessions ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT, user TEXT,"
+                " book_id INTEGER, book_title TEXT, started_at TEXT, ended_at TEXT,"
+                " total_sec INTEGER, active_sec INTEGER, away_count INTEGER,"
+                " away_sec INTEGER, longest_away_sec INTEGER, scroll_count INTEGER,"
+                " chapter_navs INTEGER, lookups INTEGER, plays INTEGER,"
+                " prep_opens INTEGER, prep_starts INTEGER, percent_start REAL,"
+                " percent_end REAL, fast_scroll_flags INTEGER, mouse_metrics TEXT,"
+                " polyline TEXT, score REAL, score_detail TEXT, created_at TEXT,"
+                " lookup_words TEXT, speak_words TEXT, selected_words TEXT,"
+                " activity_json TEXT, module TEXT, range_start REAL, range_end REAL,"
+                " range_label TEXT, percent_track TEXT)")
+    return fce
+
+
+def _add_session(fce, sid, started, track, active_sec):
+    """track=[(t秒,pct)]，起止取轨迹首尾；started 用可排序的 ISO 字符串。"""
+    fce.execute(
+        "INSERT INTO focus_sessions (id, session_id, user, book_id, book_title,"
+        " started_at, ended_at, total_sec, active_sec, away_count, away_sec,"
+        " longest_away_sec, scroll_count, chapter_navs, lookups, plays,"
+        " percent_start, percent_end, module, percent_track, created_at)"
+        " VALUES (?, ?, 'malin', 1, 'TestBook', ?, ?, ?, ?, 0, 0, 0, 10, 0,"
+        " 5, 2, ?, ?, 'library', ?, ?)",
+        (sid, f"s{sid}", started, started, active_sec + 10, active_sec,
+         track[0][1], track[-1][1],
+         __import__("json").dumps([{"t": t, "p": p} for t, p in track]), started))
+
+
+def test_focus_words_watermark_dedup(plan_env):
+    """水位去重：第二次读重叠区 → words 只计水位以上新学，水位以下=overlap。"""
+    from grammar_kb.plan import PlanStore
+    _seed_watermark_bookcase(plan_env)
+    fce = sqlite3.connect(plan_env / "fce.db")
+    # 会话1：10s 内 5%→10%（慢速有效推进，5%≈500 词），水位推到 ~1000 词位
+    _add_session(fce, 1, "2026-10-01T10:00:00Z",
+                 [(2, 5), (6, 6), (10, 7), (200, 10)], 300)
+    # 会话2：从 8% 顺延读到 15%——8-10% 重合（~200 词），10-15% 新学（~500 词）
+    _add_session(fce, 2, "2026-10-02T10:00:00Z",
+                 [(2, 8), (100, 9), (300, 12), (500, 15)], 500)
+    fce.commit()
+    fce.close()
+
+    p = PlanStore(str(plan_env / "fce.db"),
+                  exam_db_path=str(plan_env / "exam.db"))
+    wm = p.focus_words([1, 2])
+    assert wm[1]["words"] > 0 and wm[1]["overlap"] == 0  # 首读全量
+    assert wm[2]["overlap"] > 0 and wm[2]["words"] > 0   # 部分重合部分新学
+    assert wm[2]["link"] == "next"                        # 8% 起点≈上会话 10% 结尾
+    # 重合+新学 ≈ 本次区段词数（10000 词/10%≈1000 词/1%，7% 段≈700 词）
+    total2 = wm[2]["words"] + wm[2]["overlap"]
+    assert 500 < total2 < 900
