@@ -111,11 +111,14 @@ async function mountContent(el) {
             <button class="prep-card" data-go="fcePapers">
               <b>${fceTotal}</b><span>FCE 真题（4 Test）</span>
             </button>
+            <button class="prep-card" data-go="fceListen">
+              <b>🎧 16 段</b><span>FCE 听力播放台</span>
+            </button>
             <button class="prep-card" data-go="fce">
               <b>FCE 知识库</b><span>19 天语法专题</span>
             </button>
           </div>
-          <p class="reading-hint">真题库查看四套试卷与练习明细；FCE 知识库为语法专题手册。</p>
+          <p class="reading-hint">真题库查看四套试卷与练习明细；听力播放台带频谱进度条（平坦段=空白时间）；FCE 知识库为语法专题手册。</p>
         </div>
       </section>
 

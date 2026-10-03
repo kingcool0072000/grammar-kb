@@ -238,6 +238,7 @@ export const api = {
   // 外循环（双循环教学）：诊断聚类 / 上周验收 / 日任务展开预览
   planDiagnosis: ({ weeksBack } = {}) =>
     req('/plan/diagnosis', { searchParams: weeksBack ? { weeks_back: weeksBack } : {} }),
+  planWeekTodo: () => req('/plan/week-todo'),
   planReview: () => req('/plan/review'),
   planDailyPreview: () => req('/plan/daily-preview'),
 

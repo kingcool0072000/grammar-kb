@@ -10,6 +10,7 @@ import { mountFcePapers } from './views/fcePapers.js'
 import { mountReading } from './views/reading.js'
 import { mountReadingAdmin } from './views/readingAdmin.js'
 import { mountReadingList } from './views/readingList.js'
+import { mountFceListen } from './views/fceListen.js'
 import { mountLibraryShelf } from './views/library/shelf.js'
 import { mountLibraryReader } from './views/library/reader.js'
 import { mountLibraryManage } from './views/library/manage.js'
@@ -62,6 +63,8 @@ const VIEWS = [
   { key: 'vocab', hiddenTab: true, teacher: true },
   { key: 'taxonomy', hiddenTab: true, teacher: true },
   { key: 'fce', hiddenTab: true, teacher: true },
+  // FCE 听力播放台（教师，备课中心进入）
+  { key: 'fceListen', hiddenTab: true, teacher: true },
   { key: 'exams', hiddenTab: true, teacher: true },
   { key: 'vocabExam', hiddenTab: true, teacher: true },
   { key: 'students', hiddenTab: true, teacher: true },
@@ -323,6 +326,9 @@ async function bootstrap() {
       mounted = mountFce(container)
     } else if (route === 'fcePapers') {
       mounted = mountFcePapers(container, { role })
+    } else if (route === 'fceListen') {
+      // FCE 听力播放台（教师备课：16 段音频 + 频谱进度条）
+      mounted = mountFceListen(container)
     } else if (route === 'readingList') {
       // 精读文章列表（纯派生文；备课中心-精读板块）
       mounted = mountReadingList(container)

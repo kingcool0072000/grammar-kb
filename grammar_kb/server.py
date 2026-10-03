@@ -336,11 +336,14 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             return await call_next(request)
         auth_header = request.headers.get("Authorization", "")
         token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
-        # 二进制媒体端点（如 /reading/recordings/{id}/audio）由 <audio src>
-        # 直连——HTML 媒体标签无法带 Authorization 头，token 走查询参数。
-        # 仅对 /audio 结尾的只读媒体端点开放此通道。
-        if not token and path.endswith("/audio"):
-            token = request.query_params.get("token", "")
+        # 二进制媒体端点（如 /reading/recordings/{id}/audio、
+        # /fce-papers/{id}/audio/{key}）由 <audio src> 直连——HTML 媒体标签
+        # 无法带 Authorization 头，token 走查询参数。仅对 /audio 结尾或
+        # /audio/ 下属文件的只读媒体端点开放此通道。
+        if not token and ("/audio" in path):
+            tail = path.split("/audio", 1)[1]
+            if tail == "" or tail.startswith("/"):
+                token = request.query_params.get("token", "")
         payload = read_token(token) if token else None
         if payload is None:
             return JSONResponse(
@@ -830,10 +833,11 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         return FileResponse(path, media_type="audio/wav")
 
     # ---- FCE 听力音频（文件到位即生效；占位目录 data/audio/fce/） ----
-    # 命名约定：data/audio/fce/{test_id}/{paper}_{part}.mp3（paper 简写，
-    # 如 listening_p1.mp3）；404=音频未就绪，前端显示占位提示。
+    # 命名约定：data/audio/fce/{test_id}/listening_p{n}.m4a（afconvert 48k
+    # mono AAC，原 253MB 压到 65MB；旧 .mp3 仍兼容）；404=音频未就绪。
     fce_audio_dir = _P(os.environ.get("GRAMMAR_KB_FCE_AUDIO_DIR")
                        or _P(__file__).resolve().parent.parent / "data" / "audio" / "fce")
+    _AUDIO_MIME = {".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".wav": "audio/wav"}
 
     @app.get("/fce-papers/{test_id}/audio/{key}")
     def fce_audio_file(test_id: int, key: str):
@@ -841,10 +845,13 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         safe = _re.sub(r"[^a-z0-9_]", "", key.lower())
         if not safe:
             raise HTTPException(status_code=422, detail="非法音频 key")
-        path = fce_audio_dir / str(int(test_id)) / f"{safe}.mp3"
-        if not path.is_file():
-            raise HTTPException(status_code=404, detail="该部分听力音频暂未就绪")
-        return FileResponse(path, media_type="audio/mpeg")
+        d = fce_audio_dir / str(int(test_id))
+        for ext in (".m4a", ".mp3", ".wav"):
+            path = d / f"{safe}{ext}"
+            if path.is_file():
+                return FileResponse(path, media_type=_AUDIO_MIME[ext],
+                                    headers={"Accept-Ranges": "bytes"})
+        raise HTTPException(status_code=404, detail="该部分听力音频暂未就绪")
 
     @app.get("/fce-papers/{test_id}/audio")
     def fce_audio_status(test_id: int):
@@ -852,8 +859,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         d = fce_audio_dir / str(int(test_id))
         if not d.is_dir():
             return _ok({"available": []})
-        keys = sorted(p.stem for p in d.glob("*.mp3"))
-        return _ok({"available": keys})
+        keys = {p.stem for p in d.glob("*.m4a")}
+        keys |= {p.stem for p in d.glob("*.mp3")}
+        return _ok({"available": sorted(keys)})
 
     @app.post("/reading/articles")
     def reading_add_derived(rec: ReadingDerivedIn, request: "fastapi.Request"):

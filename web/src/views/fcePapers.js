@@ -1,5 +1,6 @@
 import { api, getAuth } from '../api.js'
 import { escapeHtml, escAttr } from '../render.js'
+import { createSpectrumPlayer } from './fceAudio.js'
 
 // FCE 真题练习（青少版模拟卷，data/fce.db）：按「一个大题（Part）」为练习单位。
 // 流程：选 Test → 选大题（带历史成绩）→ 做题（阅读原文优化排版）→ 提交自动批改；
@@ -17,9 +18,13 @@ export async function mountFcePapers(el, { role } = {}) {
   const auth = getAuth()
   const myRole = role || (auth && auth.role) || 'teacher'
   el.innerHTML = '<div class="view-head"><h1>FCE 真题</h1><p>加载中…</p></div>'
-  let papers, history
+  let papers, history, weekTodo
   try {
-    ;[papers, history] = await Promise.all([api.fcePapers(), api.fceSubmissions()])
+    ;[papers, history, weekTodo] = await Promise.all([
+      api.fcePapers(),
+      api.fceSubmissions(),
+      api.planWeekTodo().catch(() => null), // 学生过滤用；失败则不过滤
+    ])
   } catch (e) {
     el.querySelector('p').innerHTML = `<span style="color:#b42318">加载失败：${escapeHtml(e.message)}</span>`
     return
@@ -29,17 +34,35 @@ export async function mountFcePapers(el, { role } = {}) {
     return
   }
 
+  // 学生版：只显示本周计划配置的 Test（教师先在周计划里布置；其余隐藏）
+  let allowedTests = null
+  if (myRole !== 'teacher' && weekTodo) {
+    const labels = (weekTodo.goals && weekTodo.goals.fce) || []
+    allowedTests = new Set(
+      labels.map((l) => (String(l).match(/Test\s*(\d+)/i) || [])[1]).filter(Boolean).map(Number),
+    )
+    papers = papers.filter((t) => allowedTests.has(t.test_id))
+  }
+
   const pending = history.filter((s) => s.status === 'pending')
   const totalQ = (t) => Object.values(t.papers).flat().reduce((s, p) => s + p.questions, 0)
 
+  const emptyPlan = myRole !== 'teacher' && allowedTests !== null && allowedTests.size === 0
   el.innerHTML = `
     <div class="view-head">
       <h1>FCE 真题</h1>
-      <p>选一套试卷，每次练习一个大题。客观题提交即自动批改；作文提交后由老师批改。</p>
+      <p>${myRole === 'teacher'
+        ? '选一套试卷，每次练习一个大题。客观题提交即自动批改；作文提交后由老师批改。'
+        : '老师本周布置的试卷在这里；每次练习一个大题，客观题提交即自动批改。'}</p>
     </div>
     ${myRole === 'teacher' && pending.length ? `
       <button class="fce-essay-review-btn" id="essay-review">📝 待批改作文（${pending.length}）</button>
     ` : ''}
+    ${emptyPlan ? `
+      <section class="fce-group">
+        <div class="fce-group-title">📅 本周暂无 FCE 布置</div>
+        <p class="fce-empty-plan">老师还没有在周计划里布置 FCE 练习。布置后会出现在这里。</p>
+      </section>` : `
     <div class="course-grid">
       ${papers.map((t) => `
         <article class="course-card fce-paper-card" data-test="${t.test_id}" style="--cat-color:#7c3aed">
@@ -50,7 +73,7 @@ export async function mountFcePapers(el, { role } = {}) {
             <span>${doneCount(history, t.test_id)} 次练习</span>
           </div>
         </article>`).join('')}
-    </div>
+    </div>`}
     ${history.length ? `
       <section class="fce-group" style="margin-top:26px">
         <div class="fce-group-title">📊 我的练习记录</div>
@@ -275,17 +298,18 @@ async function renderPractice(el, testId, sec, role) {
   const isChoice = qs.every((q) => ['mcq3', 'mcq4', 'matchSentence', 'matchPerson', 'matchOpinion'].includes(q.type))
   const hasPassage = section.passage && section.passage.trim()
 
-  // 听力部分：音频文件到位则给播放器，否则占位提示（文件按
-  // data/audio/fce/{test}/listening_p{n}.mp3 放置即生效）
+  // 听力部分：频谱播放器（音频文件到位即生效，.m4a/.mp3 均可）
   const audioKey = `listening_p${section.part}`
   let audioHtml = ''
+  let audioReady = false
   if (section.paper === 'Listening') {
     let avail = []
     try {
       avail = (await api.fceAudioStatus(testId)).available || []
     } catch { avail = [] }
-    audioHtml = avail.includes(audioKey)
-      ? `<div class="fce-audio"><span class="fce-audio-label">🎧 听力音频</span><audio controls preload="none" src="/api/fce-papers/${testId}/audio/${audioKey}"></audio></div>`
+    audioReady = avail.includes(audioKey)
+    audioHtml = audioReady
+      ? `<div class="fce-audio"><span class="fce-audio-label">🎧 听力音频</span><div id="fce-audio-host"></div></div>`
       : `<div class="fce-audio fce-audio-missing"><span>🎧 本部分听力音频暂未就绪（音频放置后自动出现播放器）</span></div>`
   }
 
@@ -319,6 +343,17 @@ async function renderPractice(el, testId, sec, role) {
     </form>
     <div id="fce-result"></div>
   `
+
+  // ---- 听力频谱播放器（音频就绪时挂载；离开页面由 cleanups 撤销） ----
+  if (audioReady) {
+    const host = el.querySelector('#fce-audio-host')
+    if (host) {
+      const sp = createSpectrumPlayer(host, `/api/fce-papers/${testId}/audio/${audioKey}`, {
+        compact: isStudent,
+      })
+      cleanups.push(sp.destroy)
+    }
+  }
 
   // ---- 字号调节 ----
   const root = el.querySelector('#fce-form').parentElement

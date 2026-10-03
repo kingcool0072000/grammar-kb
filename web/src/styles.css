@@ -2990,6 +2990,66 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 .rd-aid.vb { color: #b42318; font-weight: 600; }          /* 动词：红 */
 .rd-aid.hd { background: #fffaeb; border-bottom: 2px dotted #93601a; } /* L3+：黄底点线 */
 .rd-aid.vb.cj { color: #7c3aed; }                          /* 双标罕见，紫 */
+
+/* ===== FCE 听力频谱播放器（教师播放台 + 练习页内嵌共用） ===== */
+.fsp { border: 1px solid var(--line, #e2e8f0); border-radius: 12px; padding: 10px 14px; background: var(--bg-soft, #f8fafc); }
+.fsp-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.fsp-btn {
+  min-width: 40px; height: 32px; padding: 0 12px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--line, #e2e8f0); background: white; color: var(--ink);
+  font-size: 14px; font-weight: 700;
+}
+.fsp-btn:hover { border-color: #0e7490; color: #0e7490; }
+.fsp-btn.tiny { min-width: 0; height: 24px; padding: 0 8px; font-size: 11.5px; font-weight: 600; }
+.fsp-btn.tiny.on { background: #0e7490; border-color: #0e7490; color: white; }
+.fsp-time { font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.fsp-time b { color: var(--ink); }
+.fsp-rate { display: flex; gap: 4px; margin-left: auto; }
+.fsp-stage { position: relative; }
+.fsp-canvas { display: block; width: 100%; height: 56px; border-radius: 8px; background: #f2f6fa; }
+.fsp-compact .fsp-canvas { height: 36px; }
+.fsp-progress {
+  position: relative; height: 18px; margin-top: 6px; cursor: pointer;
+  background: var(--line, #e2e8f0); border-radius: 9px;
+}
+.fsp-progress:hover { background: #cbd5e1; }
+.fsp-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+  background: linear-gradient(90deg, #0e7490, #22b8cf); border-radius: 9px;
+}
+.fsp-knob {
+  position: absolute; right: -9px; top: 50%; transform: translateY(-50%);
+  width: 18px; height: 18px; border-radius: 50%; background: white;
+  border: 3px solid #0e7490; box-shadow: 0 1px 4px rgba(0,0,0,.25);
+}
+.fsp-hint { font-size: 11.5px; color: var(--ink-faint); margin-top: 5px; }
+
+/* ===== FCE 听力播放台（教师备课独立页） ===== */
+.flm-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 16px; }
+.flm-test { border: 1px solid var(--line, #e2e8f0); border-radius: 12px; padding: 12px 14px; background: white; }
+.flm-test-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: 800; color: var(--ink); margin-bottom: 8px; }
+.flm-test-n { font-size: 12px; color: var(--ink-faint); font-weight: 600; }
+.flm-part { margin-bottom: 6px; }
+.flm-part-btn {
+  width: 100%; text-align: left; padding: 8px 12px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--line, #e2e8f0); background: var(--bg-soft, #f8fafc);
+  color: var(--ink); font-size: 13.5px; font-weight: 600;
+}
+.flm-part-btn:hover { border-color: #0e7490; color: #0e7490; background: #f0faff; }
+.flm-part-missing {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; border-radius: 8px; font-size: 13.5px;
+  color: var(--ink-faint); border: 1px dashed var(--line, #e2e8f0);
+}
+.flm-part-missing i { font-style: normal; font-size: 11.5px; }
+.flm-stage { margin-top: 16px; border: 1px solid #b8e0f1; border-radius: 12px; padding: 10px 14px; background: #f0faff; }
+.flm-stage-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.flm-stage-head b { color: #14707f; font-size: 14.5px; }
+.fce-empty-plan { color: var(--ink-soft); font-size: 13.5px; }
+@media (max-width: 760px) {
+  .flm-grid { grid-template-columns: 1fr; }
+  .fsp-rate { margin-left: 0; }
+}
 @media (max-width: 700px) {
   .rl-dim-grid { grid-template-columns: 1fr; }
   .rl-dim-grid section:last-child { grid-column: auto; }
