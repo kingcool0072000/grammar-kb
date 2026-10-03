@@ -256,16 +256,23 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
   /** 当前帧对应的 spine 项（rendered 事件的 section；插值帧锚点用，
    * 不靠 iframe src 匹配——epubjs 用 srcdoc 注入 iframe，src 恒 null） */
   let currentSection = null
+  /** 最近一次插值的章内 %（0-100，本章读到的位置；null=插值未生效）。
+   * 顶栏主显示用它（用户心智=本章读到哪），全书%仅内部统计用。 */
+  let chapterWithinPct = null
   /** 章词位锚（外部注入）：{spineIndex: {startPct, endPct}}——由 reader
    * 从 /library/chapters 词数表算出（章前累计词/总词 → 章尾）。插值锚
    * 用它而非 locations.percentageFromCfi：后者对无 charOffset 的
    * cfiBase 恒返回 0（实测），对完整 cfi 的粗值在大书上亦失真。 */
   let chapterAnchors = null
-  function setChapterAnchors(anchors) { chapterAnchors = anchors || null }
+  function setChapterAnchors(anchors) {
+    chapterAnchors = anchors || null
+    chapterWithinPct = null // 换书/换锚时重置
+  }
 
   /** rendered 事件：epubjs 签名 (section, view)，view.contents 才挂在真实 iframe 文档上 */
   function renderedHandler(section, view) {
     currentSection = section || null
+    chapterWithinPct = null // 新章帧：章内%待插值重算
     const contents = view && view.contents ? view.contents : null
     if (contents && callbacks.onRendered) callbacks.onRendered(contents)
     injectChapterLinks(contents)
@@ -566,6 +573,7 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
           (gazeLine - best.frameTop) / (best.fH || 1)))
         precisePct = Math.max(0, Math.min(100,
           (headPct + (endPct - headPct) * within) * 100))
+        chapterWithinPct = Math.round(within * 100)
       }
     } catch {
       precisePct = null
@@ -601,8 +609,9 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
       mask.style.background = `linear-gradient(to bottom, rgba(60,50,35,0.6) 0%, rgba(60,50,35,0.6) ${Math.max(0, h - 6)}%, rgba(60,50,35,0) ${h}%)`
     }
     // 回调精确百分比（整数变化才发，避免每像素刷顶栏）。
-    // 插值失败（locations 未就绪/找不到帧）不发——relocated 的粗值兜底，
-    // 绝不退回滚动流分母（那是本 bug 的根源）。
+    // payload: pct=全书%（内部统计用）+ chapterPct=章内%（顶栏主显示）。
+    // 插值失败（locations 未就绪/找不到帧/锚缺失）不发——宁缺毋滥，
+    // 绝不退回 relocated 粗值或滚动流分母（两者都失真过）。
     // 恢复落位窗口内也不发：display 后 iframe 高度是渐进展开的（先≈视口高
     // 后长到章高），此刻 within 会被钳到 1，把恢复位置误报成帧尾
     // （实测：恢复在第5章27%被报成全书19.44%=章内98.5%）。
@@ -612,7 +621,9 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
         : Math.round(precisePct)
       if (rounded !== lastPrecisePct) {
         lastPrecisePct = rounded
-        if (callbacks.onPrecisePercent) callbacks.onPrecisePercent(rounded)
+        if (callbacks.onPrecisePercent) {
+          callbacks.onPrecisePercent(rounded, chapterWithinPct)
+        }
       }
     }
   }

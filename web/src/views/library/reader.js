@@ -339,6 +339,16 @@ export function mountLibraryReader(viewEl, ctx) {
 
   // ---- epub 事件 ----
   let hasPrecisePct = false // 滚动驱动的精确百分比到过一次后，relocated 不再回写迟钝的 location 值
+  let lastChapterPct = null // 最近一次插值章内%（null=插值未生效，顶栏不显示%）
+  /** 顶栏文案：书名位=「章标题 · 本章X%」。X 用章内%（插值口径）；
+   * 插值未生效时只显示章标题不显示%——relocated/locations 粗值在大书
+   * 上失真过（27%被显示成19%），宁缺毋滥。 */
+  function updateTopbar(chapterPct) {
+    if (Number.isFinite(chapterPct)) lastChapterPct = chapterPct
+    labelEl.textContent = lastChapterPct == null
+      ? chapterLabel
+      : `${chapterLabel} · 本章${lastChapterPct}%`
+  }
   function handleReloc(info) {
     progress.cfi = info.cfi
     progress.chapterIndex = info.chapterIndex
@@ -347,8 +357,7 @@ export function mountLibraryReader(viewEl, ctx) {
     const merged = mergedChapterAt(chapterIndex)
     chapterLabel = info.chapterTitle || (merged && merged.title) || ''
     focusTracker.hooks.onReloc(progress.percent, chapterLabel)
-    const shownPct = hasPrecisePct ? progress.percent : info.percent
-    labelEl.textContent = `${chapterLabel}${shownPct > 0 ? ` · ${Math.round(shownPct)}%` : ''}`
+    updateTopbar()
     try {
       localStorage.setItem(`gkb-lib-cfi-${bookId}`, info.cfi || '')
     } catch {
@@ -505,11 +514,13 @@ export function mountLibraryReader(viewEl, ctx) {
   renderer = createEpubRenderer(bookId, viewerEl, themeStyleNow(), {
     progressSync,
     onReloc: handleReloc,
-    // 视线带下缘精确百分比（滚动实时刷新，替代 1024 粒度 location 的迟钝跳动）
-    onPrecisePercent: (pct) => {
+    // 视线带下缘精确百分比（滚动实时刷新）——pct=全书%（进度上报/统计
+    // 内部用），chapterPct=章内%（顶栏主显示：用户心智是"本章读到哪"，
+    // 全书%在长章书上几乎不动、观感"不更新"）。
+    onPrecisePercent: (pct, chapterPct) => {
       hasPrecisePct = true
       progress.percent = pct
-      labelEl.textContent = `${chapterLabel}${pct > 0 ? ` · ${pct}%` : ''}`
+      updateTopbar(chapterPct)
       focusTracker.hooks.onReloc(pct, chapterLabel)
     },
     onSelect: handleSelect,
