@@ -1161,12 +1161,20 @@ class PlanStore:
                           f"（{int(round(done_pct, 1))}/{goal_ch_count} 章）")
 
         arts = t.get("articles") or []
-        # 周内全部朗读提交（含计划外）：精读朗读 = 提交过录音才算完成
+        # 周内全部朗读提交（含计划外）：精读朗读 = 提交过录音才算完成。
+        # 完成行的 article_id 可能缺字段（快照/占位行只有 key="article:N"），
+        # 从 key 解析兜底。
         week_recorded = []
         for d in days:
             for x in (d.get("tasks") or []):
-                if x.get("type") == "article" and x.get("done") and x.get("article_id") is not None:
-                    week_recorded.append(x["article_id"])
+                if x.get("type") == "article" and x.get("done"):
+                    aid = x.get("article_id")
+                    if aid is None:
+                        k = str(x.get("key") or "")
+                        if k.startswith("article:") and k[8:].isdigit():
+                            aid = int(k[8:])
+                    if aid is not None:
+                        week_recorded.append(aid)
             for x in (d.get("acts") or {}).get("extra_speaks", []):
                 week_recorded.append(-1)  # 计划外朗读（无任务行）
         if arts:
