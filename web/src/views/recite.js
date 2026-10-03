@@ -17,6 +17,7 @@ const FORM_CN = {
 }
 const FORM_KEYS = ['past', 'past_participle', 'present_participle', 'third_singular', 'comparative', 'superlative', 'plural']
 const GROUP_SIZES = [20, 30]
+const WB_COLLAPSE_N = 60 // 错题本超过此数折叠，点「展开全部」看所有词
 
 function shuffle(arr) {
   const a = arr.slice()
@@ -392,16 +393,34 @@ export async function mountRecite(el, { vocab, role }) {
       <section class="fce-group">
         <div class="fce-group-title">📕 错题本（${words.length} 词）· 点词看释义</div>
         <div class="rc-wb-words">
-          ${words.slice(0, 60).map((w) => {
+          ${words.slice(0, WB_COLLAPSE_N).map((w) => {
             const e = findEntry(w.word)
             return `<span class="rc-wb-word" data-word="${escapeHtml(w.word)}" title="${e && e.gloss ? escapeHtml(e.gloss.slice(0, 40)) : ''}">${escapeHtml(w.word)}<sup>${w.wrong_count}</sup></span>`
           }).join('')}
-          ${words.length > 60 ? `<span class="reading-hint">…共 ${words.length} 词</span>` : ''}
+          ${words.length > WB_COLLAPSE_N ? `
+            <button class="reading-btn small" id="rc-wb-toggle">展开全部（${words.length} 词）⌄</button>
+            <div class="rc-wb-rest" hidden>
+              ${words.slice(WB_COLLAPSE_N).map((w) => {
+                const e = findEntry(w.word)
+                return `<span class="rc-wb-word" data-word="${escapeHtml(w.word)}" title="${e && e.gloss ? escapeHtml(e.gloss.slice(0, 40)) : ''}">${escapeHtml(w.word)}<sup>${w.wrong_count}</sup></span>`
+              }).join('')}
+            </div>` : ''}
         </div>
         <div class="chip-row" style="margin-top:10px">
           <button class="btn-primary" id="rc-wb-drill">只练错词（${Math.min(20, words.length)} 词）</button>
         </div>
       </section>`
+    const toggle = host.querySelector('#rc-wb-toggle')
+    if (toggle) {
+      toggle.addEventListener('click', () => {
+        const rest = host.querySelector('.rc-wb-rest')
+        const open = !rest.hidden
+        rest.hidden = open
+        toggle.textContent = open
+          ? `展开全部（${words.length} 词）⌄`
+          : '收起 ⌃'
+      })
+    }
     // 点击错词：行内展开中文释义（无本地释义时查 /dict 兜底，再没有就明说）
     host.querySelectorAll('.rc-wb-word').forEach((chip) => {
       chip.addEventListener('click', async () => {
