@@ -136,6 +136,9 @@ export const api = {
   readingAddDerived: (rec) => reqJson('/reading/articles', 'POST', rec),
   readingUpdateDerived: (id, rec) => reqJson(`/reading/articles/${id}`, 'PUT', rec),
   readingDeleteDerived: (id) => reqJson(`/reading/articles/${id}`, 'DELETE'),
+  // 精读难度评价（教师）：三维评分 LX词汇/语法结构/题材
+  readingDifficulty: (ids) =>
+    req('/reading/difficulty', { searchParams: ids ? { ids } : {} }),
   readingRecordings: ({ user, status, limit = 100 } = {}) =>
     req('/reading/recordings', { searchParams: { user, status, limit } }),
   readingRecording: (id) => req(`/reading/recordings/${id}`),

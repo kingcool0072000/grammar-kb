@@ -795,6 +795,22 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         data["has_audio"] = (audio_dir / f"{article_id}.wav").is_file()
         return _ok(data)
 
+    @app.get("/reading/difficulty")
+    def reading_difficulty(request: "fastapi.Request", ids: Optional[str] = None):
+        """精读难度评价（教师备课用）：LX 词汇分布 / 语法结构（映射哈1讲次）/ 题材。
+
+        ids=1,2,3 限定文章；缺省全部派生文。
+        """
+        if getattr(request.state, "role", "teacher") != "teacher":
+            raise HTTPException(status_code=403, detail="难度评价仅教师账号可用")
+        id_list: Optional[list[int]] = None
+        if ids:
+            try:
+                id_list = [int(x) for x in ids.split(",")][:50]
+            except ValueError:
+                raise HTTPException(status_code=400, detail="ids 格式应为逗号分隔的文章 id")
+        return _ok(reading.difficulty(id_list))
+
     @app.get("/reading/audio/{article_id}")
     def reading_article_audio_file(article_id: int):
         """派生文范读 WAV 文件流。"""

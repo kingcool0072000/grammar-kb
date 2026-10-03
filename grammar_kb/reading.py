@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import base64
+import re
 import sqlite3
 from datetime import datetime, timezone as _tz
 from pathlib import Path
@@ -101,6 +102,26 @@ class ReadingStore:
                 "SELECT * FROM reading_article WHERE id = ?", (article_id,)
             ).fetchone()
         return _art_out(row, with_text=True) if row else None
+
+    def difficulty(self, article_ids: Optional[list[int]] = None) -> list[dict]:
+        """批量难度报告（教师备课用）。ids 为空 = 全部派生文。"""
+        with self._connect() as conn:
+            if article_ids:
+                ph = ",".join("?" * len(article_ids))
+                rows = conn.execute(
+                    "SELECT id, kind, base_key, title, words, text FROM reading_article"
+                    f" WHERE id IN ({ph}) ORDER BY base_key, id",
+                    [int(x) for x in article_ids]).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT id, kind, base_key, title, words, text FROM reading_article"
+                    " WHERE kind = 'derived' ORDER BY base_key, id").fetchall()
+        out = []
+        for r in rows:
+            rep = difficulty_report(r["text"] or "")
+            out.append({"id": r["id"], "kind": r["kind"], "base_key": r["base_key"],
+                        "title": r["title"], "words": r["words"], **rep})
+        return out
 
     def add_derived(
         self, base_key: str, title: str, text: str, source: str = ""
@@ -325,3 +346,355 @@ def _rec_out(r: sqlite3.Row, with_audio: bool = False) -> dict:
     if with_audio:
         d["audio_b64"] = r["audio_b64"]
     return d
+
+
+# ---- 精读难度评价（备课中心-精读板块：LX 词汇 / 语法结构 / 题材 三维） ----
+# 纯函数分析 + ReadingStore.difficulty() 批量出口；评分口径见各 _score_* 函数。
+
+_FUNCTION_WORDS = frozenset("""
+a an the and or but if then than that this these those there here of in on at to
+from by for with about into over under after before between during without within
+as is am are was were be been being do does did doing done have has had having
+i you he she it we they me him her us them my your his its our their mine yours
+hers ours theirs myself yourself himself herself itself ourselves themselves
+who whom whose which what when where why how not no nor so too very just also
+only ever never always often sometimes usually will would shall should can could
+may might must ought because whether while once whereas unless since although
+though much many more most some any all each every both few several other
+another such same own else someone somebody something anything anybody anyone
+everything everyone everybody nothing nobody nowhere somewhere anywhere
+everywhere above below through across against along among around behind beyond
+near outside toward towards upon per via still already yet again almost nearly
+quite rather together away back down up out off
+there's it's don't doesn't didn't won't can't couldn't
+wouldn't shouldn't isn't aren't wasn't weren't hasn't haven't hadn't i'm you're
+he's she's we're they're that's what's let's
+""".split())
+
+_IRREG_PP = frozenset("""
+arisen awoken been borne beaten become begun bent bitten bled blown broken bred
+brought built bought caught chosen come done drawn drunk driven eaten fallen fed
+felt fought found flown forgotten forgiven frozen given gone grown heard hidden
+hit held hurt kept known laid led left lent let lost made meant met paid put
+read ridden risen run said seen sold sent shaken shone shot shown sung sunk sat
+slept spoken spent split spread stood stolen struck sworn taken taught told
+thought thrown understood woken worn won written
+""".split())
+
+_BASE_VERBS = frozenset("""
+be am is are was were do does did have has had go goes went come came get gets
+got make makes made take takes took see sees saw know knows knew think thinks
+thought find finds found give gives gave tell told say says said work works
+worked call called called try tries tried ask asks asked need needs needed feel
+feels felt become became leave left put mean means meant keep kept let begin
+began begun seem seems help helps show showed show talk talked turn turned start
+started lose lost run ran move moved live lived play played believe believed
+bring brought happen happened write wrote written provide provided sit sat stand
+stood pay paid meet met include included continue continued learn learned read
+spend spent grow grew open opened walk walked win won offer offered remember
+remembered love loved consider considered appear appeared buy bought wait waited
+serve served die died send sent expect expected build built stay stayed fall fell
+cut hit reach reached remain remained suggest suggested raise raised pass passed
+sell sold require required report reported decide decided pull pulled
+""".split())
+
+_TOPIC_CATS = [
+    # (key, 名称, 难度权重 1易-4难, 关键词, 说明)
+    ("daily", "日常生活", 1,
+     "school family home friend party holiday food cook dinner mum dad brother "
+     "sister teacher class classroom homework birthday game weekend shop",
+     "贴近学生日常经验，理解门槛最低"),
+    ("sport", "运动与冒险", 2,
+     "race racing bmx bike bicycle ride riding climb climbing surf surfing "
+     "swim swimming run runner sport sports team match competition coach "
+     "adventure journey trip camp explore explorer sail kayak",
+     "动作与情节驱动，词汇集中于运动场景"),
+    ("animal", "动物与自然", 2,
+     "animal animals bird dolphin dolphins whale sharks shark insect dog cat "
+     "horse horses plant plants tree forest nature natural species wild wildlife "
+     "sea ocean zoo farm monkey bear lion tiger elephant penguin camel",
+     "科普类高频题材，专有动物词需预习"),
+    ("story", "小说叙事", 2,
+     "story chapter suddenly whispered shouted cried laughed stared nodded "
+     "sighed climbed jumped girl boy they'd mr mrs",
+     "叙事文本：有人物/情节链，句式多为过去时"),
+    ("history", "历史与文化", 3,
+     "history historical ancient king queen century war battle empire tradition "
+     "traditional culture cultural museum art artist painting famous explorer "
+     "egypt greek roman medieval dynasty",
+     "需背景知识，词汇含时期/人物专名"),
+    ("tech", "科技与发明", 3,
+     "computer computers phone mobile internet website online app technology "
+     "robot robots machine machines engine invent invention inventor invention "
+     "screen electric electronic device design software digital code",
+     "抽象概念词多，常涉被动语态与复合句"),
+    ("space", "太空与科学前沿", 4,
+     "space planet planets moon rocket astronaut astronauts satellite mars "
+     "universe solar galaxy orbit gravity telescope nasa stars light-year",
+     "科普前沿题材，概念抽象、术语密度高"),
+    ("env", "环境与全球议题", 4,
+     "climate environment environmental pollution pollute polluted recycle "
+     "recycling global warming energy plastic plastics carbon earth protect "
+     "protection endangered extinct rainforest waste",
+     "全球议题类说明文，抽象名词与议论文式句法"),
+]
+
+# 语法结构检出：正则按出现次数计数（约值），映射哈1讲次
+_GRAMMAR_DEFS = [
+    ("passive", "被动语态", "第29-30讲", 2.0,
+     r"\b(?:am|is|are|was|were|been|being|get|gets|got)\s+"
+     r"(?:\w{2,}ed|%s)\b" % "|".join(sorted(_IRREG_PP))),
+    ("relcl", "定语从句", "第47讲", 3.0,
+     r"\b(?:who|whom|whose|which)\s+"
+     r"(?:is|are|was|were|am|has|have|had|can|could|will|would|do|does|did|"
+     r"\w+ed|\w+s)\b"
+     r"|,\s*(?:who|which|that)\s+\w+"),
+    ("objcl", "宾语从句", "第45讲", 2.5,
+     r"\b(?:say|says|said|think|thinks|thought|know|knows|knew|believe|believes|"
+     r"believed|hope|hopes|hoped|ask|asks|asked|wonder|wonders|explained?|"
+     r"realis?ed|notice|noticed|found|feel|feels|felt)\s+"
+     r"(?:that|if|whether|what|where|why|how|who)\b"),
+    ("advcl", "状语从句", "第46讲", 1.2,
+     r"\b(?:when|while|because|although|though|if|until|after|before|since|"
+     r"as soon as|so that|even though|whereas|unless)\b"),
+    ("presperf", "现在完成时", "第22-27讲", 2.0,
+     r"\b(?:have|has)\s+(?:\w{2,}ed|%s)\b" % "|".join(sorted(_IRREG_PP))),
+    ("pastperf", "过去完成时", "第26-27讲", 2.5,
+     r"\bhad\s+(?:\w{2,}ed|%s)\b" % "|".join(sorted(_IRREG_PP))),
+    ("modal", "情态动词", "第31-32讲", 1.0,
+     r"\b(?:can|could|may|might|must|should|would|shall|ought to|"
+     r"have to|has to|had to)\b"),
+    ("gerund", "动名词", "第36-37讲", 1.5,
+     r"\b(?:enjoy|enjoys|enjoyed|finish|finishes|finished|mind|minds|practis|"
+     r"practic|suggest|suggests|avoid|avoids|keep|keeps|stop|stops|start|starts|"
+     r"begin|begins|love|loves|like|likes|hate|hates|prefer|prefers|"
+     r"remember|remembers|forget|forgets|try|tries)\w*\s+\w+ing\b"
+     r"|\b(?:at|in|on|of|for|with|about|by|from|without|before|after)\s+"
+     r"\w+ing\b"),
+    ("infinitive", "不定式", "第34-35讲", 1.2,
+     r"\bto\s+(?:%s)\b" % "|".join(sorted(_BASE_VERBS))),
+    ("progressive", "进行时", "第22-27讲", 1.0,
+     r"\b(?:am|is|are|was|were)\s+\w+ing\b"),
+    ("comparative", "比较级/最高级", "第15-18讲", 0.8,
+     r"\b\w+er\s+than\b|\bmore\s+\w+\s+than\b|\b(?:most|best|worst)\b|\bthe\s+\w+est\b"),
+    ("inversion", "倒装句", "第42讲", 3.0,
+     r"\b(?:Never|Seldom|Hardly|Not only|Only then)\s+\w+\s+"
+     r"(?:do|does|did|is|are|was|were|have|has|had|can|will|would)\b"),
+]
+_GRAMMAR_RE = [(k, n, ls, w, re.compile(p, re.IGNORECASE))
+               for k, n, ls, w, p in _GRAMMAR_DEFS]
+
+_LEVEL_LABELS = ["入门", "进阶", "中阶", "中高", "高阶"]
+
+_vocab_map_cache: dict = {}
+
+
+def _vocab_level_map() -> dict[str, int]:
+    """vocab_word 全量 {word: level}（进程内缓存；库缺失返回空表）。"""
+    if _vocab_map_cache:
+        return _vocab_map_cache
+    try:
+        from .ingest import default_db_path as _grammar_db
+        path = _grammar_db()
+        if not Path(path).exists():
+            return _vocab_map_cache
+        with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
+            _vocab_map_cache.update(
+                dict(conn.execute("SELECT word, level FROM vocab_word").fetchall()))
+    except Exception:  # noqa: BLE001
+        pass  # 词库缺失时词汇维度降级（按库外词处理）
+    return _vocab_map_cache
+
+
+_IRREG_FORMS = {
+    "said": "say", "says": "say", "known": "know", "knew": "know", "shown": "show",
+    "showed": "show", "told": "tell", "made": "make", "went": "go", "gone": "go",
+    "came": "come", "taken": "take", "took": "take", "found": "find", "began": "begin",
+    "begun": "begin", "thought": "think", "felt": "feel", "kept": "keep",
+    "left": "leave", "meant": "mean", "met": "meet", "paid": "pay", "built": "build",
+    "sat": "sit", "stood": "stand", "lost": "lose", "sent": "send", "spent": "spend",
+    "brought": "bring", "bought": "buy", "taught": "teach", "caught": "catch",
+    "ran": "run", "grew": "grow", "grown": "grow", "drew": "draw", "drawn": "draw",
+    "fell": "fall", "fallen": "fall", "held": "hold", "heard": "hear", "sold": "sell",
+    "wore": "wear", "worn": "wear", "won": "win", "wrote": "write", "written": "write",
+    "rode": "ride", "ridden": "ride", "chose": "choose", "chosen": "choose",
+    "broke": "break", "broken": "break", "drove": "drive", "driven": "drive",
+    "ate": "eat", "eaten": "eat", "gave": "give", "given": "give", "saw": "see",
+    "seen": "see", "flew": "fly", "flown": "fly", "rose": "rise", "risen": "rise",
+    "spoke": "speak", "spoken": "speak", "woke": "wake", "woken": "wake",
+    "sang": "sing", "sung": "sing", "swam": "swim", "swum": "swim",
+    "men": "man", "women": "woman", "children": "child", "feet": "foot",
+    "teeth": "tooth", "mice": "mouse", "died": "die", "dying": "die",
+    "lay": "lie", "lain": "lie", "laid": "lay", "lying": "lie", "tried": "try",
+    "studied": "study", "carried": "carry", "worried": "worry",
+}
+
+
+def _lemma_candidates(w: str):
+    """屈折变形 → 原形候选（vocab_word 只存原形；按命中次序尝试）。"""
+    yield w
+    if w.endswith("ies"):
+        yield w[:-3] + "y"
+    if w.endswith("ves"):
+        yield w[:-3] + "f"
+        yield w[:-3] + "fe"
+    if w.endswith("es"):
+        yield w[:-2]
+        yield w[:-1]
+    if w.endswith("s"):
+        yield w[:-1]
+    if w.endswith("ied"):
+        yield w[:-3] + "y"
+    if w.endswith("ed"):
+        stem = w[:-2]
+        yield stem + "e"        # liked → like
+        yield stem              # walked → walk
+        if len(stem) > 1 and stem[-1] == stem[-2]:
+            yield stem[:-1]     # stopped → stop
+    if w.endswith("ing"):
+        stem = w[:-3]
+        yield stem + "e"        # making → make
+        yield stem              # reading → read
+        if len(stem) > 1 and stem[-1] == stem[-2]:
+            yield stem[:-1]     # running → run
+    if w.endswith("est"):
+        yield w[:-3]            # toughest → tough
+        yield w[:-2]
+        if len(w) > 4 and w[-4] == w[-5]:
+            yield w[:-4]        # biggest → big
+    if w.endswith("er"):
+        yield w[:-2]
+        yield w[:-1]
+        if len(w) > 4 and w[-3] == w[-4]:
+            yield w[:-3]        # bigger → big
+
+
+def _lookup_level(vm: dict, w: str) -> tuple[Optional[int], str]:
+    """查词层级；命中非原形时返回还原后的原形（供词形统计）。"""
+    if w in vm:
+        return vm[w], w
+    base = _IRREG_FORMS.get(w)
+    if base is not None and base in vm:
+        return vm[base], base
+    for c in _lemma_candidates(w):
+        if c in vm:
+            return vm[c], c
+    return None, w
+
+
+def _sentence_stats(text: str) -> tuple[float, int]:
+    sents = [s.strip() for s in re.split(r"[.!?]+", text) if s.strip()]
+    lens = [len(re.findall(r"[A-Za-z']+", s)) for s in sents]
+    if not lens:
+        return 0.0, 0
+    return sum(lens) / len(lens), max(lens)
+
+
+def _proper_nouns(text: str) -> set[str]:
+    """句首（非句首）仍大写的词 → 专名（人名/地名等，不计难度）。"""
+    out: set[str] = set()
+    for m in re.finditer(r"\b[A-Z][a-z']+\b", text):
+        prev = text[:m.start()].rstrip()
+        if not prev or prev[-1] in ".!?\"':—-\n":
+            continue  # 句首/段首/引语开头的大写不是专名
+        out.add(m.group(0).lower())
+    return out
+
+
+def difficulty_report(text: str) -> dict:
+    """三维难度报告：词汇（LX 分层）/ 语法（结构检出×哈1讲次）/ 题材。
+
+    纯静态分析（正则 + vocab_word 查询），不依赖学生数据；分数量纲均 0-100。
+    """
+    text = text or ""
+    words_iter = re.finditer(r"[A-Za-z']+", text)
+    raw_tokens = [m.group(0) for m in words_iter]
+    proper = _proper_nouns(text)
+    content = [t.lower() for t in raw_tokens
+               if t.lower() not in _FUNCTION_WORDS and t.lower() not in proper]
+    n_content = len(content) or 1
+
+    lv_map = _vocab_level_map()
+    levels: list[int] = []
+    offlist: dict[str, int] = {}
+    hard_words: dict[str, int] = {}
+    dist = {str(i): 0 for i in range(8)}
+    for w in content:
+        lv, lemma = _lookup_level(lv_map, w)
+        if lv is None:
+            offlist[w] = offlist.get(w, 0) + 1
+        else:
+            levels.append(lv)
+            dist[str(lv)] += 1
+            if lv >= 5:
+                hard_words[lemma] = hard_words.get(lemma, 0) + 1
+    avg_lv = sum(levels) / len(levels) if levels else 0.0
+    off_pct = sum(offlist.values()) / n_content * 100
+    hard_pct = sum(hard_words.values()) / n_content * 100
+    vocab_score = min(100.0, avg_lv / 7 * 55
+                      + min(hard_pct, 15) * 1.8 + min(off_pct, 15) * 1.2)
+
+    n_words = len(raw_tokens) or 1
+    structures = []
+    for key, name, lessons, weight, rx in _GRAMMAR_RE:
+        found = rx.findall(text)
+        if found:
+            structures.append({"key": key, "name": name, "lessons": lessons,
+                               "count": len(found), "weight": weight})
+    # 结构密度 = 加权结构数/百词（本库典型 5-12），句长因子 = 平均句长超 9 词部分
+    dens100 = sum(s["weight"] * s["count"] * 100 / n_words for s in structures)
+    avg_sent, max_sent = _sentence_stats(text)
+    sent_factor = max(0.0, min(25.0, (avg_sent - 9) * 4))
+    grammar_score = min(100.0, dens100 * 5 + sent_factor)
+
+    text_l = " " + text.lower() + " "
+    topic_scores = []
+    for key, label, tw, kws, desc in _TOPIC_CATS:
+        hits = sum(text_l.count(" " + k + " ") for k in kws.split())
+        if hits:
+            topic_scores.append((hits, key, label, tw, desc,
+                                 [k for k in kws.split()
+                                  if " " + k + " " in text_l][:12]))
+    topic_scores.sort(key=lambda x: -x[0])
+    expository = bool(re.search(
+        r"\b(?:because|however|although|therefore|as a result|in fact|"
+        r"for example|such as|this means)\b", text, re.IGNORECASE))
+    if topic_scores:
+        t_hits, _, t_label, t_weight, t_desc, t_kws = topic_scores[0]
+    else:
+        past_dens = len(re.findall(r"\b\w+ed\b", text)) * 100 / n_words
+        t_label, t_weight = ("小说叙事", 2) if past_dens >= 4 else ("一般说明文", 3)
+        t_desc, t_kws, t_hits = "未命中题材关键词，按文体推断", [], 0
+    # 题材难度 = 基础权重(1易-4难→0-70) + 关键词命中密度 + 议论文式句法加成
+    topic_score = min(100.0, (t_weight - 1) / 3 * 70
+                      + min(t_hits, 12) * 1.2 + (10 if expository else 0))
+
+    overall = round(vocab_score * 0.4 + grammar_score * 0.45 + topic_score * 0.15, 1)
+    level = 1 + (overall >= 30) + (overall >= 42) + (overall >= 55) + (overall >= 68)
+    return {
+        "score": overall,
+        "level": level,
+        "level_label": _LEVEL_LABELS[level - 1],
+        "dims": {
+            "vocab": {
+                "score": round(vocab_score, 1),
+                "avg_level": round(avg_lv, 2),
+                "off_pct": round(off_pct, 1),
+                "hard_pct": round(hard_pct, 1),
+                "content": len(content), "matched": len(levels),
+                "dist": dist,
+                "offlist": sorted(offlist.items(), key=lambda x: -x[1])[:20],
+                "hard_words": sorted(hard_words.items(), key=lambda x: -x[1])[:20],
+            },
+            "grammar": {
+                "score": round(grammar_score, 1),
+                "avg_sent": round(avg_sent, 1), "max_sent": max_sent,
+                "structures": sorted(structures, key=lambda s: -s["weight"] * s["count"]),
+            },
+            "topic": {
+                "score": round(topic_score, 1),
+                "label": t_label, "weight": t_weight, "desc": t_desc,
+                "keywords": t_kws, "expository": expository,
+            },
+        },
+    }

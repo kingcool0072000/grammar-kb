@@ -162,6 +162,108 @@ def test_dict_lookup_student_ok(reading_env):
     assert "消遣" in r.json()["data"]["gloss"]
 
 
+HARD_TEXT = (
+    "Tardigrades, which scientists have studied for decades, are microscopic "
+    "animals. They could survive on the moon or in space, and researchers "
+    "believe that this ability might one day protect astronauts on Mars, "
+    "although the technology is still being developed."
+)
+
+
+def test_difficulty_report_dimensions(monkeypatch, tmp_path):
+    """三维报告：科普文比日常文难；结构检出含讲次映射；题材分类正确。"""
+    import grammar_kb.reading as rd
+
+    monkeypatch.setenv("GRAMMAR_KB_DB", str(tmp_path / "grammar.db"))
+    rd._vocab_map_cache.clear()
+    try:
+        easy = rd.difficulty_report(
+            "Tom and his friends played football at school on Saturday. "
+            "They were happy because their team won the game. After the match, "
+            "his mum made pizza for everyone in the kitchen."
+        )
+        hard = rd.difficulty_report(HARD_TEXT)
+
+        assert hard["score"] > easy["score"]
+        assert 1 <= hard["level"] <= 5 and hard["level_label"]
+        for key in ("vocab", "grammar", "topic"):
+            assert 0 <= hard["dims"][key]["score"] <= 100
+
+        # 语法结构检出带哈1讲次映射
+        names = {s["name"] for s in hard["dims"]["grammar"]["structures"]}
+        assert "定语从句" in names or "宾语从句" in names
+        assert all(s["lessons"].startswith("第") for s in hard["dims"]["grammar"]["structures"])
+
+        # 题材：hard 命中太空/科学前沿
+        assert hard["dims"]["topic"]["label"] == "太空与科学前沿"
+        assert easy["dims"]["topic"]["label"] in ("日常生活", "运动与冒险")
+    finally:
+        rd._vocab_map_cache.clear()
+
+
+def test_difficulty_vocab_lemmatization(monkeypatch, tmp_path):
+    """词形还原：vocab_word 只存原形，bears/conditions 应按 bear/condition 命中。"""
+    import grammar_kb.reading as rd
+
+    db = tmp_path / "grammar.db"
+    con = sqlite3.connect(str(db))
+    con.execute("CREATE TABLE vocab_word (word TEXT PRIMARY KEY, level INTEGER NOT NULL,"
+                " pos TEXT DEFAULT '[]', gloss TEXT DEFAULT '', meanings TEXT DEFAULT '[]',"
+                " example TEXT DEFAULT '{}', extra TEXT DEFAULT '{}')")
+    con.executemany("INSERT INTO vocab_word (word, level) VALUES (?, ?)",
+                    [("bear", 0), ("can", 0), ("survive", 1), ("microscopic", 6),
+                     ("tardigrade", 7), ("condition", 2), ("develop", 2)])
+    con.commit()
+    con.close()
+    monkeypatch.setenv("GRAMMAR_KB_DB", str(db))
+    rd._vocab_map_cache.clear()
+    try:
+        # can 是功能词；frozen 未入库 → off-list；其余 4 词均按原形/变形命中
+        rep = rd.difficulty_report(
+            "Bears can survive frozen conditions because they are microscopic.")
+        v = rep["dims"]["vocab"]
+        assert v["content"] == 5, v
+        assert v["matched"] == 4, v
+        assert dict(v["offlist"]) == {"frozen": 1}
+        # L5+ 高阶词按原形归并展示
+        assert dict(v["hard_words"]) == {"microscopic": 1}
+        assert v["dist"]["0"] == 1 and v["dist"]["1"] == 1 and v["dist"]["2"] == 1 \
+            and v["dist"]["6"] == 1
+    finally:
+        rd._vocab_map_cache.clear()
+
+
+def test_difficulty_endpoint(reading_env, monkeypatch):
+    """端点：教师可查、学生 403；新增派生文后出现在难度列表。"""
+    import grammar_kb.reading as rd
+
+    # 隔离词库（空 grammar.db → 词汇维度降级为全 off-list，不报错）
+    monkeypatch.setenv("GRAMMAR_KB_DB", str(reading_env / "grammar.db"))
+    rd._vocab_map_cache.clear()
+    try:
+        c = _client(reading_env)
+        t, s = _login(c, "teacher"), _login(c, "malin")
+        assert c.get("/reading/difficulty", headers=s).status_code == 403
+
+        r = c.post("/reading/articles", headers=t, json={
+            "base_key": "T1P1", "title": "Emma 的面包房周六工",
+            "text": DERIVED_TEXT, "source": "测试样例"})
+        art = r.json()["data"]
+
+        data = c.get("/reading/difficulty", headers=t).json()["data"]
+        assert [d["id"] for d in data] == [art["id"]]
+        d = data[0]
+        assert d["title"] == "Emma 的面包房周六工"
+        assert set(d["dims"]) == {"vocab", "grammar", "topic"}
+        assert 0 <= d["score"] <= 100
+
+        # ids 过滤：不存在 id → 空
+        assert c.get("/reading/difficulty", headers=t, params={"ids": "99999"}).json()["data"] == []
+        assert c.get("/reading/difficulty", headers=t, params={"ids": "x"}).status_code == 400
+    finally:
+        rd._vocab_map_cache.clear()
+
+
 def test_fce_submission_teacher_delete(reading_env):
     """教师可删除 FCE 练习提交；学生不能删。"""
     c = _client(reading_env)
