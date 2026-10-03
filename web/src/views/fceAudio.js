@@ -1,10 +1,27 @@
-// FCE 听力播放器：长进度条（点击/拖拽跳转）+ 实时频谱（空白段一眼可见）。
-// WebAudio AnalyserSource 驱动 canvas 频谱；教师练习页与学生听力题共用。
-// 音源走 <audio> + MediaElementSource（流式加载，不做全量解码）。
+// FCE 听力播放器：长进度条（点击/拖拽跳转）+ 完整静态频谱。
+// 频谱 = 整段音频逐桶能量分布一次画出（平坦段 = 空白时间，扫一眼即可
+// 定位停顿/读题位置）；不用实时 Analyser——按需点开看不到后面的空白。
+// 音源 <audio> 流式播放；频谱数据 fetch 全量解码一次（模块级缓存，
+// 播放台反复切换不重复解码）。
 // 注意：<audio> 标签无法带 Authorization 头，token 走查询参数（后端
-// 对 /audio 结尾端点开放 query token 通道）。
+// 对 /audio 路径开放 query token 通道）。
 
 import { getAuth } from '../api.js'
+
+const FCE_PREF_KEY = 'gkb-fce-pref-v1'
+
+/** 学生练习页是否显示听力播放器（默认隐藏；#/config 配置）。 */
+export function getFceAudioPref() {
+  try {
+    return JSON.parse(localStorage.getItem(FCE_PREF_KEY) || '{}').audioPlayer === true
+  } catch { return false }
+}
+
+export function setFceAudioPref(on) {
+  try {
+    localStorage.setItem(FCE_PREF_KEY, JSON.stringify({ audioPlayer: !!on }))
+  } catch { /* ignore */ }
+}
 
 function withToken(src) {
   try {
@@ -16,6 +33,51 @@ function withToken(src) {
     }
   } catch { /* ignore */ }
   return src
+}
+
+// 频谱缓存：src → Float32Array 桶能量（0-1）。cap 24 段（LRU 简化为清最早）。
+const _specCache = new Map()
+function cacheGet(k) { return _specCache.get(k) }
+function cachePut(k, v) {
+  if (_specCache.size >= 24) _specCache.delete(_specCache.keys().next().value)
+  _specCache.set(k, v)
+}
+
+const SPEC_BARS = 160 // 频谱柱数（固定数量，画布横向自适应拉伸）
+
+async function computeSpectrum(url) {
+  const cached = cacheGet(url)
+  if (cached) return cached
+  const r = await fetch(url)
+  if (!r.ok) throw new Error(`音频拉取失败 ${r.status}`)
+  const ab = await r.arrayBuffer()
+  const ctx = new (window.AudioContext || window.webkitAudioContext)()
+  let buf
+  try {
+    buf = await ctx.decodeAudioData(ab)
+  } finally {
+    ctx.close().catch(() => {})
+  }
+  const ch = buf.getChannelData(0)
+  const per = Math.max(1, Math.floor(ch.length / SPEC_BARS))
+  const out = new Float32Array(SPEC_BARS)
+  let max = 0
+  for (let i = 0; i < SPEC_BARS; i++) {
+    let sum = 0
+    let n = 0
+    const start = i * per
+    const end = Math.min(ch.length, start + per)
+    for (let j = start; j < end; j += 4) { // 1/4 采样足够刻画能量包络
+      sum += ch[j] * ch[j]
+      n++
+    }
+    const rms = n ? Math.sqrt(sum / n) : 0
+    out[i] = rms
+    if (rms > max) max = rms
+  }
+  if (max > 0) for (let i = 0; i < SPEC_BARS; i++) out[i] /= max
+  cachePut(url, out)
+  return out
 }
 
 /**
@@ -44,7 +106,7 @@ export function createSpectrumPlayer(hostEl, src, opts = {}) {
       <div class="fsp-progress" role="slider" aria-label="播放进度">
         <div class="fsp-fill"><i class="fsp-knob"></i></div>
       </div>
-      <div class="fsp-hint">点击/拖动进度条跳转 · 频谱平坦段 = 空白时间</div>
+      <div class="fsp-hint">完整频谱 · 平坦段 = 空白时间 · 点击/拖动进度条跳转</div>
     </div>
   `
   hostEl.appendChild(wrap)
@@ -61,48 +123,55 @@ export function createSpectrumPlayer(hostEl, src, opts = {}) {
   const durEl = wrap.querySelector('.fsp-dur')
   const playBtn = wrap.querySelector('[data-act="play"]')
 
-  // ---- WebAudio 频谱 ----
-  let actx = null
-  let analyser = null
-  let freqData = null
-  let raf = 0
   let destroyed = false
+  let specData = null
 
-  function ensureGraph() {
-    if (actx || destroyed) return
-    try {
-      actx = new (window.AudioContext || window.webkitAudioContext)()
-      const source = actx.createMediaElementSource(audio)
-      analyser = actx.createAnalyser()
-      analyser.fftSize = 256
-      analyser.smoothingTimeConstant = 0.75
-      source.connect(analyser)
-      analyser.connect(actx.destination)
-      freqData = new Uint8Array(analyser.frequencyBinCount)
-      drawLoop()
-    } catch {
-      analyser = null // 跨域/autoplay 限制下降级：无频谱只放进度
-    }
-  }
-
-  function drawLoop() {
-    if (destroyed) return
-    raf = requestAnimationFrame(drawLoop)
-    const w = (canvas.width = canvas.clientWidth * (window.devicePixelRatio || 1))
+  // ---- 静态完整频谱 ----
+  function drawSpectrum() {
+    const dpr = window.devicePixelRatio || 1
+    const w = (canvas.width = Math.max(1, Math.floor(canvas.clientWidth * dpr)))
     const h = canvas.height
     ctx2d.clearRect(0, 0, w, h)
-    if (!analyser) return
-    analyser.getByteFrequencyData(freqData)
-    const BARS = Math.floor(w / 6)
-    const step = Math.floor(freqData.length / BARS) || 1
-    for (let i = 0; i < BARS; i++) {
-      let v = 0
-      for (let j = 0; j < step; j++) v = Math.max(v, freqData[i * step + j] || 0)
-      const barH = Math.max(2, (v / 255) * (h - 4))
-      ctx2d.fillStyle = v > 12 ? '#0e7490' : '#d7dee7'
-      ctx2d.fillRect(i * 6, h - barH, 4, barH)
+    if (!specData) {
+      ctx2d.fillStyle = '#9aa8b8'
+      ctx2d.font = `${11 * dpr}px system-ui`
+      ctx2d.textAlign = 'center'
+      ctx2d.fillText('生成完整频谱…', w / 2, h / 2 + 4 * dpr)
+      return
+    }
+    const bw = w / SPEC_BARS
+    for (let i = 0; i < SPEC_BARS; i++) {
+      const v = specData[i]
+      const barH = Math.max(1.5 * dpr, v * (h - 4 * dpr))
+      ctx2d.fillStyle = v > 0.035 ? '#0e7490' : '#d7dee7'
+      ctx2d.fillRect(i * bw + bw * 0.15, h - barH, Math.max(1, bw * 0.7), barH)
     }
   }
+  drawSpectrum()
+
+  const specUrl = withToken(src)
+  computeSpectrum(specUrl)
+    .then((data) => {
+      if (destroyed) return
+      specData = data
+      drawSpectrum()
+    })
+    .catch(() => {
+      if (destroyed) return
+      ctx2d.clearRect(0, 0, canvas.width, canvas.height)
+      ctx2d.fillStyle = '#b42318'
+      ctx2d.font = `${11 * (window.devicePixelRatio || 1)}px system-ui`
+      ctx2d.textAlign = 'center'
+      ctx2d.fillText('频谱生成失败（音频仍可播放）', canvas.width / 2, canvas.height / 2 + 4)
+    })
+
+  // 窗口宽度变化：重画（桶数据不变，只是柱宽拉伸）
+  let resizeTimer = null
+  const onResize = () => {
+    if (resizeTimer) clearTimeout(resizeTimer)
+    resizeTimer = setTimeout(() => { if (!destroyed) drawSpectrum() }, 200)
+  }
+  window.addEventListener('resize', onResize)
 
   const fmt = (s) => {
     if (!isFinite(s)) return '--:--'
@@ -130,8 +199,6 @@ export function createSpectrumPlayer(hostEl, src, opts = {}) {
     if (!btn) return
     const act = btn.dataset.act
     if (act === 'play') {
-      ensureGraph()
-      if (actx && actx.state === 'suspended') actx.resume()
       audio.paused ? audio.play().catch(() => {}) : audio.pause()
     } else if (act === 'back') {
       audio.currentTime = Math.max(0, audio.currentTime - 5)
@@ -163,9 +230,9 @@ export function createSpectrumPlayer(hostEl, src, opts = {}) {
 
   function destroy() {
     destroyed = true
-    cancelAnimationFrame(raf)
+    if (resizeTimer) clearTimeout(resizeTimer)
+    window.removeEventListener('resize', onResize)
     try { audio.pause(); audio.src = '' } catch { /* ignore */ }
-    if (actx) actx.close().catch(() => {})
     wrap.remove()
   }
   renderTime()

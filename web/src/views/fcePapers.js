@@ -1,6 +1,6 @@
 import { api, getAuth } from '../api.js'
 import { escapeHtml, escAttr } from '../render.js'
-import { createSpectrumPlayer } from './fceAudio.js'
+import { createSpectrumPlayer, getFceAudioPref } from './fceAudio.js'
 
 // FCE 真题练习（青少版模拟卷，data/fce.db）：按「一个大题（Part）」为练习单位。
 // 流程：选 Test → 选大题（带历史成绩）→ 做题（阅读原文优化排版）→ 提交自动批改；
@@ -34,20 +34,30 @@ export async function mountFcePapers(el, { role } = {}) {
     return
   }
 
-  // 学生版：只显示本周计划配置的 Test（教师先在周计划里布置；其余隐藏）
-  let allowedTests = null
+  // 学生版：只显示本周计划配置的大题（label "Test 1 · List P1"：
+  // List=听力 / RUE=读写 / Writ=写作；Test+Paper+Part 三元组都要匹配）
+  let allowedParts = null
   if (myRole !== 'teacher' && weekTodo) {
     const labels = (weekTodo.goals && weekTodo.goals.fce) || []
-    allowedTests = new Set(
-      labels.map((l) => (String(l).match(/Test\s*(\d+)/i) || [])[1]).filter(Boolean).map(Number),
-    )
-    papers = papers.filter((t) => allowedTests.has(t.test_id))
+    // paper 前缀 → 后端 paper 全名（fce_section.paper）
+    const PAPER_BY_CODE = { List: 'Listening', RUE: 'Reading and Use of English', Writ: 'Writing' }
+    allowedParts = new Map() // testId → Set("paper|part")
+    for (const l of labels) {
+      const m = String(l).match(/Test\s*(\d+)\s*·\s*(RUE|List|Writ)\s*P(\d+)/i)
+      if (!m) continue
+      const tid = Number(m[1])
+      const paper = PAPER_BY_CODE[m[2]]
+      if (!paper) continue
+      if (!allowedParts.has(tid)) allowedParts.set(tid, new Set())
+      allowedParts.get(tid).add(`${paper}|${Number(m[3])}`)
+    }
+    papers = papers.filter((t) => (allowedParts.get(t.test_id) || new Set()).size > 0)
   }
 
   const pending = history.filter((s) => s.status === 'pending')
   const totalQ = (t) => Object.values(t.papers).flat().reduce((s, p) => s + p.questions, 0)
 
-  const emptyPlan = myRole !== 'teacher' && allowedTests !== null && allowedTests.size === 0
+  const emptyPlan = myRole !== 'teacher' && allowedParts !== null && !papers.length
   el.innerHTML = `
     <div class="view-head">
       <h1>FCE 真题</h1>
@@ -82,7 +92,7 @@ export async function mountFcePapers(el, { role } = {}) {
   `
 
   el.querySelectorAll('.fce-paper-card').forEach((card) => {
-    card.addEventListener('click', () => renderPartList(el, Number(card.dataset.test), myRole, history))
+    card.addEventListener('click', () => renderPartList(el, Number(card.dataset.test), myRole, history, allowedParts))
   })
   const reviewBtn = el.querySelector('#essay-review')
   if (reviewBtn) reviewBtn.addEventListener('click', () => renderEssayReview(el, pending, myRole))
@@ -188,7 +198,7 @@ async function showSubmissionDetail(subId) {
 }
 
 // ---------- 大题列表（每次练一个大题） ----------
-async function renderPartList(el, testId, role, history) {
+async function renderPartList(el, testId, role, history, allowedParts = null) {
   el.innerHTML = '<div class="view-head"><h1>FCE 真题</h1><p>加载中…</p></div>'
   let data
   try {
@@ -197,8 +207,12 @@ async function renderPartList(el, testId, role, history) {
     el.querySelector('p').innerHTML = `<span style="color:#b42318">加载失败：${escapeHtml(e.message)}</span>`
     return
   }
-  // 练习单位：每个 Part（口语跳过）。学生视角后端已剥离答案。
-  const parts = data.sections.filter((s) => s.paper !== 'Speaking' && s.questions.length)
+  // 练习单位：每个 Part（口语跳过）。学生视角后端已剥离答案；
+  // 学生额外只看周计划开放的大题（allowedParts），其余 Part 隐藏。
+  const openSet = role !== 'teacher' && allowedParts ? allowedParts.get(testId) : null
+  const parts = data.sections.filter((s) =>
+    s.paper !== 'Speaking' && s.questions.length
+    && (!openSet || openSet.has(`${s.paper}|${s.part}`)))
   const hisFor = (paper, part) =>
     history.filter((s) => s.test_id === testId && s.paper === paper && s.part === part)
   const best = (paper, part) => {
@@ -211,7 +225,9 @@ async function renderPartList(el, testId, role, history) {
     <div class="view-head">
       <button class="fce-back-btn" id="fce-back">← 返回试卷列表</button>
       <h1>Test ${testId} · 选一个大题练习</h1>
-      <p>每个大题独立练习：读写 7 个 Part、写作 2 个 Part、听力 4 个 Part。</p>
+      <p>${openSet
+        ? '老师本周开放的大题在这里（其余大题未开放）。'
+        : '每个大题独立练习：读写 7 个 Part、写作 2 个 Part、听力 4 个 Part。'}</p>
     </div>
     <div class="fce-part-list">
       ${parts.map((s) => {
@@ -298,7 +314,8 @@ async function renderPractice(el, testId, sec, role) {
   const isChoice = qs.every((q) => ['mcq3', 'mcq4', 'matchSentence', 'matchPerson', 'matchOpinion'].includes(q.type))
   const hasPassage = section.passage && section.passage.trim()
 
-  // 听力部分：频谱播放器（音频文件到位即生效，.m4a/.mp3 均可）
+  // 听力部分：频谱播放器（音频文件到位即生效，.m4a/.mp3 均可）。
+  // 学生默认隐藏（考试模式；#/config 可开），教师始终显示。
   const audioKey = `listening_p${section.part}`
   let audioHtml = ''
   let audioReady = false
@@ -308,9 +325,10 @@ async function renderPractice(el, testId, sec, role) {
       avail = (await api.fceAudioStatus(testId)).available || []
     } catch { avail = [] }
     audioReady = avail.includes(audioKey)
-    audioHtml = audioReady
+    const show = audioReady && (myRoleNow() === 'teacher' || getFceAudioPref())
+    audioHtml = show
       ? `<div class="fce-audio"><span class="fce-audio-label">🎧 听力音频</span><div id="fce-audio-host"></div></div>`
-      : `<div class="fce-audio fce-audio-missing"><span>🎧 本部分听力音频暂未就绪（音频放置后自动出现播放器）</span></div>`
+      : ''
   }
 
   el.innerHTML = `

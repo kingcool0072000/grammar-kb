@@ -3,6 +3,7 @@
 // 旧 hash 由 main.js 路由重定向到本页，不留独立页面。
 import { speak, speakWithVoice, getTtsPref, setTtsPref, waitForVoices, ttsDiagnostics } from '../tts.js'
 import { getReadPref, setReadPref, resetReadPref } from '../readpref.js'
+import { getFceAudioPref, setFceAudioPref } from './fceAudio.js'
 import { escapeHtml, escAttr } from '../render.js'
 
 const LS_LIB_PREF = 'gkb-lib-pref-v1'
@@ -49,6 +50,7 @@ export async function mountConfig(el) {
   const tts = getTtsPref()
   const rd = getReadPref()
   const lib = getLibPref()
+  const fceAudioPref = getFceAudioPref()
   el.innerHTML = `
   <div class="ttsconf-page">
     <button class="fce-back-btn" id="cfg-back">← 返回</button>
@@ -97,6 +99,19 @@ export async function mountConfig(el) {
       <button class="tts-mini-btn" id="cfg-rd-reset" type="button">恢复默认</button>
     </div>
 
+    <!-- ====== FCE 真题 ====== -->
+    <h2 class="cfg-section">🎧 FCE 真题</h2>
+    <div class="tts-box">
+      <div class="rdc-row">
+        <label>听力播放器</label>
+        <div class="lib-seg" id="cfg-fce-audio">
+          <button type="button" data-v="off" class="${!fceAudioPref ? 'active' : ''}">隐藏（考试模式）</button>
+          <button type="button" data-v="on" class="${fceAudioPref ? 'active' : ''}">显示</button>
+        </div>
+        <span class="tts-vtag">做题时是否显示听力音频播放器；老师端始终显示</span>
+      </div>
+    </div>
+
     <!-- ====== 发音 ====== -->
     <h2 class="cfg-section">🗣️ 发音</h2>
     <div class="tts-box" id="cfg-tts-status">正在读取本设备的音色列表…</div>
@@ -126,6 +141,16 @@ export async function mountConfig(el) {
     if (!b) return
     setLibPref({ libWidth: b.dataset.v })
     el.querySelectorAll('#cfg-libwidth button').forEach((x) =>
+      x.classList.toggle('active', x === b),
+    )
+  })
+
+  // ---- FCE 听力播放器显隐 ----
+  el.querySelector('#cfg-fce-audio').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]')
+    if (!b) return
+    setFceAudioPref(b.dataset.v === 'on')
+    el.querySelectorAll('#cfg-fce-audio button').forEach((x) =>
       x.classList.toggle('active', x === b),
     )
   })
