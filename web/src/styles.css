@@ -3080,6 +3080,8 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 .tt-task-text { flex: 1; min-width: 0; word-break: break-word; }
 .tt-task.ok { color: var(--ink-faint); text-decoration: line-through; text-decoration-color: rgba(107,114,128,.5); }
 .tt-task-check { color: #3b8a3b; font-weight: 700; }
+.tt-acts { display: flex; flex-direction: column; gap: 2px; margin-top: 5px; padding-top: 5px; border-top: 1px dashed var(--line, #eef2f7); }
+.tt-acts span { font-size: 11.5px; color: var(--ink-soft); line-height: 1.5; }
 .tt-day-empty { font-size: 11.5px; color: var(--ink-faint); margin: 4px 0; }
 .tt-notes { padding: 12px 14px; margin-top: 14px; }
 .tt-notes h3 { font-size: 14px; color: var(--ink); margin: 0 0 6px; }

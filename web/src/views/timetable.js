@@ -46,7 +46,8 @@ export async function mountTimetable(el) {
 
   const dayCell = (day, i) => {
     const isToday = day.date === today
-    // 只展示已完成的学习任务（课程表=学习记录视角；未完成的不列在日格里）
+    // 只展示已完成的学习（课程表=学习记录视角）：完成计划任务 +
+    // 计划外朗读 + 泛读/背单词实录统计（与教师计划看板日卡同口径）
     const doneTasks = (day.tasks || []).filter((t) => t.done)
     const items = doneTasks.map((t) => `
       <div class="tt-task ok">
@@ -54,6 +55,22 @@ export async function mountTimetable(el) {
         <span class="tt-task-text">${escapeHtml(t.text || t.key)}</span>
         <span class="tt-task-check">✓</span>
       </div>`).join('')
+    const acts = day.acts || {}
+    const extraRows = (acts.extra_speaks || []).map((x) => `
+      <div class="tt-task ok">
+        <span class="tt-task-ic">${TYPE_ICON.speak}</span>
+        <span class="tt-task-text">${escapeHtml(x.text || '计划外朗读')}</span>
+        <span class="tt-task-check">✓</span>
+      </div>`).join('')
+    const statRows = []
+    for (const r of acts.readings || []) {
+      const ch = r.from != null ? ` 第${r.from}${r.to !== r.from ? `–${r.to}` : ''}章` : ''
+      statRows.push(`📖 泛读 ${String(r.book).slice(0, 14)}${ch} ${r.min} 分钟${r.words ? `（${r.words} 词）` : ''}`)
+    }
+    if (acts.vocab_n) statRows.push(`🔤 背单词 ${acts.vocab_n} 个${acts.vocab_min ? `（${acts.vocab_min} 分钟）` : ''}`)
+    const statHtml = statRows.length
+      ? `<div class="tt-acts">${statRows.map((s) => `<span>${escapeHtml(s)}</span>`).join('')}</div>` : ''
+    const live = items || extraRows || statRows.length
     return `
       <section class="tt-day ${isToday ? 'today' : ''} ${day.future ? 'future' : ''}">
         <header>
@@ -62,7 +79,7 @@ export async function mountTimetable(el) {
           ${isToday ? '<i class="tt-today-tag">今天</i>' : ''}
           <span class="tt-day-count">${day.future ? '' : `${day.done}/${day.total}`}</span>
         </header>
-        ${items || `<p class="tt-day-empty">${day.future ? '未开始' : '还没有完成的学习'}</p>`}
+        ${live ? items + extraRows + statHtml : `<p class="tt-day-empty">${day.future ? '未开始' : '还没有完成的学习'}</p>`}
       </section>`
   }
 
