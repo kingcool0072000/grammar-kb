@@ -315,7 +315,10 @@ function focusRow(s) {
     `<i class="${modCls}">${mod}</i>`,
     ...(rw
       ? [
-          `<i class="gd-focus-chip">${rw.words} 词</i>`,
+          // words=本次新学词数（基线=该书历史有效阅读最远水位）；
+          // 重合=水位以下已读过部分，只展示不重复计数
+          ...(rw.words > 0 || !(rw.overlap > 0) ? [`<i class="gd-focus-chip">${rw.words} 词</i>`] : []),
+          ...(rw.overlap > 0 ? [`<i class="gd-focus-chip dup">重合 ${rw.overlap} 词</i>`] : []),
           `<i class="gd-focus-chip">${rw.s_pct}%→${rw.e_pct}%</i>`,
           linkChip,
           ...(rw.flags || []).map((f) => `<i class="gd-focus-chip warn">⚠ ${escapeHtml(f)}</i>`),

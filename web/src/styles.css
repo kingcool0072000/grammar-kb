@@ -1890,6 +1890,8 @@ mark[data-lib-anchor] {
 /* 泛读行：衔接（正常）/ 异常标记（回读·跳读·异常快·进度反向·无有效阅读） */
 .gd-focus-chip.ok { color: #067647; background: #e9f7ee; border-color: #bfe5cd; }
 .gd-focus-chip.warn { color: #b42318; background: #fdeeea; border-color: #f5c6c0; }
+/* 重合词数（本次读到的内容此前已学过——只提示，不重复计数） */
+.gd-focus-chip.dup { color: #3538cd; background: #eef0ff; border-color: #c7cdf8; }
 
 /* ---------- 详情弹窗（z-index 120：高于抽屉 50 / 其他弹窗 95 / 全屏 overlay 100） ---------- */
 .gd-focus-detail { position: fixed; inset: 0; z-index: 120; }

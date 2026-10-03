@@ -1691,7 +1691,13 @@ class PlanStore:
     def focus_words(self, ids: list) -> dict[int, dict]:
         """学习日志逐会话泛读词数 + 连续性/异常标记（教师端行内展示）。
 
-        - words：有效词数（与计划表日卡片同一公式：轨迹剔跳章 ∩ 必读章）。
+        词数口径（防重复记录）：每本书维护「已读水位」=该生此前**带位置
+        轨迹**的有效会话之有效区段最远终点（_valid_track_segments 口径，
+        已剔跳章；无轨迹存量会话不推进水位——其限速折算终点只是记分
+        口径不是真实读到的证据，会把大片区域误标「已读过」）。本次会话
+        有效区段中，水位以下计入 overlap（重合，展示不计入学习词数），
+        水位以上才是本次新学词数 words。回读整段在水位下 → words=0
+        只显示重合；跳读空档不在会话区段内自然不计。
         - link：与同书上一会话（按开始时间）的衔接关系——
           next=顺延（|开头−上会话结尾|≤2%）、first=该书首个会话、
           back=回读（开头落后）、skip=跳读（开头超前，中间有断档）。
@@ -1700,13 +1706,13 @@ class PlanStore:
         - flags 异常标记：异常快=整段位移超 400 词/分物理读速（≥100 词才判，
           避免短会话小位移误报；含恢复瞬态的会话不判）；进度反向=结束位置
           低于开头 >1%；无有效阅读=闪进闪出/纯翻章会话（词数为 0）。
-        返回 {会话id: {words, s_pct, e_pct, link, link_note, flags[]}}。
+        返回 {会话id: {words, overlap, s_pct, e_pct, link, link_note, flags[]}}。
         """
         out: dict[int, dict] = {}
         if not ids:
             return out
         rows: list = []
-        prev_end: dict[int, float] = {}
+        hist: dict[tuple, list] = {}
         try:
             with self._connect() as conn:
                 ph = ",".join("?" * len(ids))
@@ -1717,18 +1723,21 @@ class PlanStore:
                     f" FROM focus_sessions WHERE id IN ({ph})"
                     " AND module = 'library'",
                     list(ids)).fetchall()
+                # 每本书全历史时间线（水位/衔接基线要跨会话累计，批内 5-6 条
+                # 不够）；只取批内涉及的书，通常 1-2 本。
                 for r in rows:
                     if r["book_id"] is None:
                         continue
-                    p = conn.execute(
-                        "SELECT percent_end FROM focus_sessions"
-                        " WHERE user = ? AND module = 'library' AND book_id = ?"
-                        " AND (started_at, id) < (?, ?)"
-                        " ORDER BY started_at DESC, id DESC LIMIT 1",
-                        (r["user"], r["book_id"],
-                         r["started_at"], r["id"])).fetchone()
-                    if p is not None and p[0] is not None:
-                        prev_end[r["id"]] = p[0]
+                    key = (r["user"], r["book_id"])
+                    if key not in hist:
+                        hist[key] = conn.execute(
+                            "SELECT id, started_at, percent_start,"
+                            " percent_end, active_sec, lookups, plays,"
+                            " scroll_count, chapter_navs, percent_track"
+                            " FROM focus_sessions"
+                            " WHERE user = ? AND module = 'library'"
+                            " AND book_id = ?"
+                            " ORDER BY started_at, id", key).fetchall()
         except sqlite3.Error:
             return out
         rows = [r for r in rows if r["book_id"] is not None]
@@ -1740,6 +1749,28 @@ class PlanStore:
                     meta = self._book_meta(lib, {r["book_id"] for r in rows})
             except sqlite3.Error:
                 meta = {}
+        # 时间线预演：逐会话两个基线（进入该会话前的状态）——
+        #   prev_end=上一会话结束位置（衔接展示）；watermark=有效区段最远
+        #   终点（词位置）。水位只由**带位置轨迹**的会话推进：无轨迹存量
+        #   会话的限速折算终点只是记分口径、不是真实读到的证据（快滚会话
+        #   折算终点会把大片区域误标「已读过」），宁可不判重。
+        base: dict[int, dict] = {}
+        for (user, bid), hs in hist.items():
+            info = meta.get(bid)
+            total = sum(w for _, w in info["chs"]) if info else 0
+            prev_end = None
+            watermark = 0.0
+            for h in hs:
+                base[h["id"]] = {"prev_end": prev_end, "watermark": watermark}
+                if info and total > 0 and self._reading_session_valid(h):
+                    tr = self._session_track(h)
+                    if tr:
+                        segs = self._valid_track_segments(
+                            tr, total, h["active_sec"] or 0)
+                        eff_end = max((e for _, e in segs), default=0.0)
+                        watermark = max(watermark, eff_end)
+                if h["percent_end"] is not None:
+                    prev_end = h["percent_end"]
         for r in rows:
             info = meta.get(r["book_id"])
             total = sum(w for _, w in info["chs"]) if info else 0
@@ -1761,11 +1792,24 @@ class PlanStore:
                         transient = True
                         s0 = max(s0, pt["p"])
                     prev = pt["p"]
+            b = base.get(r["id"]) or {"prev_end": None, "watermark": 0.0}
             if valid and info and total > 0:
-                words = self._segs_words(self._row_segs(r, total),
-                                         info["chs"], info["required"])[0]
+                segs = self._row_segs(r, total)
+                wm = b["watermark"]
+                lo: list = []
+                hi: list = []
+                for s_pos, e_pos in segs:
+                    if e_pos <= wm:
+                        lo.append((s_pos, e_pos))
+                    elif s_pos >= wm:
+                        hi.append((s_pos, e_pos))
+                    else:
+                        lo.append((s_pos, wm))
+                        hi.append((wm, e_pos))
+                overlap = self._segs_words(lo, info["chs"], info["required"])[0]
+                words = self._segs_words(hi, info["chs"], info["required"])[0]
             else:
-                words = 0
+                words = overlap = 0
             flags: list[str] = []
             if not valid:
                 # 纯翻章/闪进闪出：词数 0 已说明问题，不再叠加速度标记
@@ -1783,7 +1827,7 @@ class PlanStore:
             if e0 < s0 - 1:
                 flags.append(f"进度反向 {round(s0 - e0)}%")
             link, note = "first", ""
-            pe = prev_end.get(r["id"])
+            pe = b["prev_end"]
             if pe is not None:
                 gap = s0 - pe
                 if gap > 2:
@@ -1792,9 +1836,9 @@ class PlanStore:
                     link, note = "back", f"回读 {round(-gap)}%"
                 else:
                     link, note = "next", ""
-            out[r["id"]] = {"words": words, "s_pct": round(s0),
-                            "e_pct": round(e0), "link": link,
-                            "link_note": note, "flags": flags}
+            out[r["id"]] = {"words": words, "overlap": overlap,
+                            "s_pct": round(s0), "e_pct": round(e0),
+                            "link": link, "link_note": note, "flags": flags}
         return out
 
     # 阅读限速（词/分钟）：会话级封顶用（跳章剔除见 _valid_track_segments）
