@@ -616,18 +616,22 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
     // 后长到章高），此刻 within 会被钳到 1，把恢复位置误报成帧尾
     // （实测：恢复在第5章27%被报成全书19.44%=章内98.5%）。
     if (precisePct != null && restoreSettled) {
-      const rounded = atTop
-        ? Math.max(0, Math.round(precisePct))
-        : Math.round(precisePct)
-      if (rounded !== lastPrecisePct) {
-        lastPrecisePct = rounded
+      // 1 位小数（0.1 全书% ≈ 0.5% 章内）：整数粒度会把跨界章吞掉——
+      // 第5→6章边界只差 0.5 个全书点，整数化后终点仍落第5章（用户实测
+      // 「读到第6章10%但详情只有第5章」）。onReloc/track 全链吃小数。
+      const dec = Math.max(0, Math.round(precisePct * 10) / 10)
+      if (dec !== lastPrecisePct
+          || chapterWithinPct !== lastChapterWithinPct) {
+        lastPrecisePct = dec
+        lastChapterWithinPct = chapterWithinPct
         if (callbacks.onPrecisePercent) {
-          callbacks.onPrecisePercent(rounded, chapterWithinPct)
+          callbacks.onPrecisePercent(dec, chapterWithinPct)
         }
       }
     }
   }
   let lastPrecisePct = -1
+  let lastChapterWithinPct = -1
 
   function injectChapterLinksNow() {
     if (!rendition || !rendition.getContents || !injectHandler) return

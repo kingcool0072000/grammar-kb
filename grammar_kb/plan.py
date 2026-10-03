@@ -1912,19 +1912,20 @@ class PlanStore:
     READ_WPM_CAP = 400.0
     # 百分比口径失真期：前端精确百分比曾用滚动流高度当全书分母
     # （scrolled 大书懒渲染滚动流≈单章高，章内 % 被记成全书 %）。
-    # 该窗口内带轨迹的会话标失真：词数照算（限速封顶仍有意义）但
-    # 不推进去重水位、不判衔接/异常。修复上线（8a378cf 后端 505f9c6
-    # 同批）之后的新会话不受影响。
-    DISTORTED_UNTIL = "2026-10-04"
+    # 窗口收窄到「词位锚插值」实际部署时刻（2026-10-03T08:33Z，
+    # add197b）——此后会话（含整数粒度的 944/945）数据已可信，
+    # 不再标失真；窗口内带轨迹会话标失真：词数照算（限速封顶仍有
+    # 意义）但不推进去重水位、不判衔接/异常。
+    DISTORTED_UNTIL = "2026-10-03T08:33"
 
     @staticmethod
     def _track_distorted(track: list, r) -> bool:
-        """会话是否落在百分比口径失真期（created_at 早于修复上线日）。"""
+        """会话是否落在百分比口径失真期（created_at 早于词位锚部署）。"""
         if not track:
             return False
         created = (r["created_at"] if "created_at" in r.keys()
                    else r["started_at"]) or ""
-        return bool(created) and created[:10] < "2026-10-04"
+        return bool(created) and created < "2026-10-03T08:33"
 
     @staticmethod
     def _session_track(r) -> list[dict]:
