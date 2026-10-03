@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import re
 import sqlite3
 from datetime import date, datetime, timedelta, timezone as _tz
 from pathlib import Path
@@ -1622,12 +1623,12 @@ class PlanStore:
 
     @staticmethod
     def _book_meta(lib, ids) -> dict[int, dict]:
-        """书目元数据批量取：章词数 + 必读章配置 + 书名。
+        """书目元数据批量取：章词数 + 必读章配置 + 章标题 + 书名。
         缺章节数据的书不出现（调用方按缺元数据兜底）。"""
         meta: dict[int, dict] = {}
         for bid in ids:
             chs = lib.execute(
-                "SELECT idx, word_count FROM chapters"
+                "SELECT idx, word_count, title FROM chapters"
                 " WHERE book_id = ? ORDER BY idx", (bid,)).fetchall()
             if not chs:
                 continue
@@ -1639,7 +1640,8 @@ class PlanStore:
             except (ValueError, TypeError):
                 req = None
             meta[bid] = {"chs": [(c[0], c[1] or 0) for c in chs],
-                         "required": req}
+                         "required": req,
+                         "titles": {c[0]: (c[2] or "") for c in chs}}
         # 书名（书已删时缺行，调用方用会话里的 book_title 兜底）
         for bid in list(meta):
             r = lib.execute("SELECT title FROM books WHERE id = ?", (bid,)).fetchone()
@@ -1783,14 +1785,26 @@ class PlanStore:
         for r in rows:
             info = meta.get(r["book_id"])
             total = sum(w for _, w in info["chs"]) if info else 0
-            # 人类章号起点：纯结构判定——首个词数 ≥200 的内容章。
-            # 必读配置只管计词范围，绝不参与章号编号（改配置不漂移编号）。
+            # 章号统一口径：优先取章节标题的字面数字（书自己印刷的
+            # 「5 I Play Pinochle…」→ 第5章，与孩子看到的目录一致）；
+            # 标题无数字（封面/目录/标题改造过的书）回落结构号——首个
+            # 词数 ≥200 的内容章起算第 1 章。必读配置只管计词范围，
+            # 绝不参与章号编号（改配置不漂移编号）。
+            title_num: dict[int, int] = {}
+            if info:
+                for idx, t in (info.get("titles") or {}).items():
+                    m = re.match(r"\s*(\d+)", str(t or ""))
+                    if m:
+                        title_num[idx] = int(m.group(1))
             first_content = 0
             if info:
                 for idx, wc in info["chs"]:
                     if wc >= 200:
                         first_content = idx
                         break
+
+            def disp_ch(idx: int) -> int:
+                return title_num.get(idx) or max(1, idx - first_content + 1)
             valid = self._reading_session_valid(r)
             track = self._session_track(r)
             # 恢复瞬态净化：开局 3 秒内出现的大幅正向跳变（>4%/步）是
@@ -1874,7 +1888,7 @@ class PlanStore:
                     if is_req and wc > 0 and c1 > s_pos and cum < e_pos:
                         a, b = max(cum, s_pos), min(c1, e_pos)
                         ch_rows.append({
-                            "ch": idx - first_content + 1,
+                            "ch": disp_ch(idx),
                             "s_in": round((a - cum) / wc * 100),
                             "e_in": round((b - cum) / wc * 100),
                             "words": self._span_words(hi, cum, c1),
