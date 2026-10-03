@@ -288,7 +288,9 @@ class TestBooksApi:
         lst = teacher.get("/library/books").json()["data"]
         assert len(lst["books"]) == 1
         assert lst["books"][0]["id"] == book["id"]
-        assert lst["stats"] == {"reading": 0, "finished": 0, "totalSeconds": 0}
+        # 教师视角返回书目管理统计（不做教师个人阅读统计）
+        assert lst["stats"]["manage"] is True
+        assert lst["stats"]["books"] == 1
 
     def test_upload_rejects_non_epub(self, teacher):
         r = teacher.post(
@@ -359,9 +361,9 @@ class TestBooksApi:
         bid2 = r.json()["data"]["id"]
         assert teacher.get(f"/library/books/{bid2}/progress").json()["data"] is None
 
-        # stats：reading 一本
+        # stats：教师视角=管理统计（书数增长）；阅读统计已不采教师
         stats = teacher.get("/library/books").json()["data"]["stats"]
-        assert stats["reading"] == 1 and stats["finished"] == 0 and stats["totalSeconds"] == 120
+        assert stats["manage"] is True and stats["books"] == 2
 
     def test_progress_clamped_and_accumulates(self, teacher, book_id):
         r = teacher.put(
@@ -374,9 +376,10 @@ class TestBooksApi:
             json={"cfi": "y", "chapterIndex": 2, "percent": -3, "readingSecondsDelta": 30},
         ).json()["data"]
         assert r2["percent"] == 0 and r2["readingSeconds"] == 3630
-        # 最终 percent=0：既不在读（0<p<100）也非读完
+        # 最终 percent=0：教师视角管理统计不再带阅读态（进度数据本身仍在
+        # progress 端点返回，clamp 语义由上方断言覆盖）
         stats = teacher.get("/library/books").json()["data"]["stats"]
-        assert stats["finished"] == 0 and stats["reading"] == 0 and stats["totalSeconds"] == 3630
+        assert stats["manage"] is True
 
     def test_delete_book(self, teacher, book_id, tmp_path):
         lib_dir = Path(os.environ["GRAMMAR_KB_LIBRARY_DIR"])
@@ -716,8 +719,8 @@ class TestStudentPermissions:
         sp = student.get(f"/library/books/{book_id}/progress").json()["data"]
         assert tp["readingSeconds"] == 60 and sp["readingSeconds"] == 30
         assert tp["percent"] == 10 and sp["percent"] == 80
-        # 各自的 stats 互不串
+        # 各自的 stats 互不串（教师视角=管理统计 manage；学生=阅读统计）
         tstats = teacher.get("/library/books").json()["data"]["stats"]
         sstats = student.get("/library/books").json()["data"]["stats"]
-        assert tstats["reading"] == 1 and tstats["totalSeconds"] == 60
+        assert tstats.get("manage") is True
         assert sstats["reading"] == 1 and sstats["totalSeconds"] == 30

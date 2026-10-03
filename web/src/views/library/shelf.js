@@ -44,18 +44,17 @@ export async function mountLibraryShelf(viewEl, { role } = {}) {
   root.innerHTML = `
     <header class="lib-head">
       <div class="lib-titlebar">
-        <h1 class="lib-title">${ICONS.books(24)} 泛读馆</h1>
+        <h1 class="lib-title">${ICONS.books(24)} ${isTeacher ? '书籍管理' : '泛读馆'}</h1>
         <span class="lib-stats" data-stats hidden></span>
         <span class="lib-flex"></span>
         ${isTeacher ? '<button class="lib-btn" data-upload-btn></button>' : ''}
       </div>
       <div class="lib-toolbar">
         <div class="lib-search">
-          <input class="lib-input" type="search" placeholder="搜索书名或作者…" data-search autocomplete="off">
+          <input class="lib-input" type="search" placeholder="${isTeacher ? '搜索书名…' : '搜索书名或作者…'}" data-search autocomplete="off">
         </div>
         <select class="lib-input lib-sort" data-sort aria-label="排序方式">
-          <option value="recent">最近阅读</option>
-          <option value="added">添加时间</option>
+          ${isTeacher ? '<option value="added">添加时间</option><option value="recent">ID</option>' : '<option value="recent">最近阅读</option><option value="added">添加时间</option>'}
         </select>
       </div>
     </header>
@@ -124,8 +123,15 @@ export async function mountLibraryShelf(viewEl, { role } = {}) {
   // ---------- 渲染 ----------
   function renderStats() {
     if (!data) { statsEl.hidden = true; return }
-    const s = data.stats || { reading: 0, finished: 0, totalSeconds: 0 }
-    const hours = (s.totalSeconds / 3600).toFixed(1)
+    const s = data.stats || {}
+    if (isTeacher || s.manage) {
+      // 教师版=书目资产概览（无教师个人阅读统计）
+      const fmtW = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n || 0))
+      statsEl.hidden = false
+      statsEl.innerHTML = `共 <b>${s.books || 0}</b> 书 · <b>${s.chapters || 0}</b> 章 · <b>${fmtW(s.words)}</b> 词 · 预习覆盖 <b>${s.prepped || 0}</b> 章`
+      return
+    }
+    const hours = ((s.totalSeconds || 0) / 3600).toFixed(1)
     statsEl.hidden = false
     statsEl.innerHTML = `在读 <b>${s.reading}</b> · 累计 <b>${hours} 小时</b> · 读完 <b>${s.finished}</b>`
   }
@@ -159,11 +165,33 @@ export async function mountLibraryShelf(viewEl, { role } = {}) {
   }
 
   function bookCardHtml(b) {
-    // 章节进度口径：显示当前读到第几章+章内%（不显示全书百分比——
-    // 长章书上全书% 几乎不动，观感是"没进度"）。共 N 章 · 共 M 词。
     const nCh = b.validChapters || b.chapterCount || 0
     const nW = b.validWords || 0
     const fmtW = nW >= 1000 ? `${(nW / 1000).toFixed(1)}k` : String(nW)
+    if (isTeacher) {
+      // 教师版书卡=管理信息：章数/词数/预习覆盖；无个人阅读进度（教师
+      // 的泛读阅读统计不采集不展示）
+      const prepped = Math.min(b.preppedCount || 0, nCh)
+      return `
+      <article class="lib-book" data-id="${b.id}" title="${escAttr(b.title)}">
+        <div class="lib-cover">
+          <span class="lib-cover-fb">${ICONS.book(38)}</span>
+          ${b.hasCover ? `<img alt="${escAttr(b.title)}" data-cover="${b.id}" style="opacity:0;transition:opacity .25s">` : ''}
+        </div>
+        <div class="lib-book-info">
+          <p class="lib-book-title">${escapeHtml(b.title)}</p>
+          <div class="lib-book-author">${escapeHtml(b.author || '未知作者')}</div>
+          <div class="lib-book-meta">${nCh} 章 · ${fmtW} 词</div>
+          <div class="lib-book-meta lib-book-meta-sub">预习 ${prepped}/${nCh} 章</div>
+        </div>
+        <button class="lib-book-menu-btn" data-menu="${b.id}" aria-label="管理菜单">⋯</button>
+        <div class="lib-book-menu" hidden data-menu-panel="${b.id}">
+          <button data-go-manage="${b.id}">章节预习管理</button>
+          <button class="danger" data-del="${b.id}">删除本书</button>
+        </div>
+      </article>`
+    }
+    // 学生书卡：章节进度口径——读到第几章+章内%（不显示全书%）
     const finished = (b.percent != null && b.percent >= 99.9)
       || (b.curChapterNo != null && nCh && b.curChapterNo >= nCh
           && (b.curChapterIn ?? 0) >= 99)
@@ -187,12 +215,6 @@ export async function mountLibraryShelf(viewEl, { role } = {}) {
           ${prog}
           <div class="lib-book-meta lib-book-meta-sub">共 ${nCh} 章 · ${fmtW} 词</div>
         </div>
-        ${isTeacher ? `
-          <button class="lib-book-menu-btn" data-menu="${b.id}" aria-label="管理菜单">⋯</button>
-          <div class="lib-book-menu" hidden data-menu-panel="${b.id}">
-            <button data-go-manage="${b.id}">章节预习管理</button>
-            <button class="danger" data-del="${b.id}">删除本书</button>
-          </div>` : ''}
       </article>`
   }
 
@@ -357,9 +379,13 @@ export async function mountLibraryShelf(viewEl, { role } = {}) {
       load()
       return
     }
-    // 点整卡进阅读器（以上控件均已提前返回）
+    // 点整卡：教师进章节管理页（教师不做泛读阅读）；学生进阅读器
     const card = e.target.closest('.lib-book')
-    if (card) location.hash = `/libraryReader/${card.dataset.id}`
+    if (card) {
+      location.hash = isTeacher
+        ? `/libraryManage/${card.dataset.id}`
+        : `/libraryReader/${card.dataset.id}`
+    }
   })
 
   root.querySelector('[data-search]').addEventListener('input', (e) => {

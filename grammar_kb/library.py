@@ -301,6 +301,17 @@ class LibraryStore:
                 if gate is not None and r["id"] not in gate and not in_progress:
                     continue
                 books.append(b)
+        if role == "teacher":
+            # 教师视角=书籍管理台：不做教师个人的阅读统计，返回书目资产概览
+            total_ch = sum(b["validChapters"] or b["chapterCount"] or 0 for b in books)
+            total_w = sum(b["validWords"] or 0 for b in books)
+            prepped = sum(min(b["preppedCount"] or 0,
+                              b["validChapters"] or b["chapterCount"] or 0)
+                          for b in books)
+            return {"books": books, "stats": {
+                "manage": True, "books": len(books), "chapters": total_ch,
+                "words": total_w, "prepped": prepped,
+            }}
         reading = sum(1 for b in books if b["percent"] is not None and 0 < b["percent"] < 100)
         finished = sum(1 for b in books if b["percent"] is not None and b["percent"] >= 100)
         total_seconds = sum(b["readingSeconds"] or 0 for b in books)
