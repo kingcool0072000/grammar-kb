@@ -481,6 +481,19 @@ export function mountLibraryReader(viewEl, ctx) {
       if (cleaned) return
       chapters = (r && r.chapters) || []
       sortedChapters = [...chapters].sort((a, b) => a.spineIndex - b.spineIndex)
+      // 章词位锚（插值百分比用，与后端统计同源）：每章 spineIndex →
+      // 该章在全书词位中的起止百分比（前置章词数少，词位≈位置）
+      const totalWords = chapters.reduce((a, c) => a + (c.wordCount || 0), 0)
+      if (renderer && renderer.setChapterAnchors && totalWords > 0) {
+        let cum = 0
+        const anchors = {}
+        for (const c of sortedChapters) {
+          const startPct = cum / totalWords
+          cum += c.wordCount || 0
+          anchors[c.spineIndex] = { startPct, endPct: cum / totalWords }
+        }
+        renderer.setChapterAnchors(anchors)
+      }
       // 书名补报：专注力上报的 book_title 此前恒为空（批改中心标题成 #id）
       if (r && r.bookTitle) focusTracker.setBookTitle(r.bookTitle)
       setTimeout(() => {

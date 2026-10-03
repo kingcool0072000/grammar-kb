@@ -253,8 +253,19 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
     }
   }
 
+  /** 当前帧对应的 spine 项（rendered 事件的 section；插值帧锚点用，
+   * 不靠 iframe src 匹配——epubjs 用 srcdoc 注入 iframe，src 恒 null） */
+  let currentSection = null
+  /** 章词位锚（外部注入）：{spineIndex: {startPct, endPct}}——由 reader
+   * 从 /library/chapters 词数表算出（章前累计词/总词 → 章尾）。插值锚
+   * 用它而非 locations.percentageFromCfi：后者对无 charOffset 的
+   * cfiBase 恒返回 0（实测），对完整 cfi 的粗值在大书上亦失真。 */
+  let chapterAnchors = null
+  function setChapterAnchors(anchors) { chapterAnchors = anchors || null }
+
   /** rendered 事件：epubjs 签名 (section, view)，view.contents 才挂在真实 iframe 文档上 */
-  function renderedHandler(_section, view) {
+  function renderedHandler(section, view) {
+    currentSection = section || null
     const contents = view && view.contents ? view.contents : null
     if (contents && callbacks.onRendered) callbacks.onRendered(contents)
     injectChapterLinks(contents)
@@ -541,30 +552,20 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
           break
         }
       }
-      if (best && book.locations && book.locations.length()) {
-        const href = best.frameEl.getAttribute('src') || ''
-        const base = href.split('/').pop()
-        // 帧头/帧尾的书内百分比（locations 按 spine 项头尾取）
-        const item = book.spine && book.spine.get
-          ? [...Array(book.spine.length || 0).keys()].map((i) => book.spine.get(i)).find((s) => {
-              const h = String((s && s.href) || '').split('/').pop()
-              return h === base || base.includes(h) || h.includes(base)
-            })
-          : null
-        if (item && item.cfiBase) {
-          const headPct = book.locations.percentageFromCfi(item.cfiBase) || 0
-          const tailPct = book.locations.percentageFromCfi(
-            `${item.cfiBase}/99999:0`) || 0
-          // 帧尾 cfi 越界时回落：用下一 spine 项头部（帧≈章边界）
-          const idx2 = item.index != null ? item.index + 1 : null
-          const nxt = idx2 != null && book.spine.get ? book.spine.get(idx2) : null
-          const endPct = tailPct > headPct ? tailPct
-            : (nxt && nxt.cfiBase && book.locations.percentageFromCfi(nxt.cfiBase)) || headPct
-          const within = Math.max(0, Math.min(1,
-            (gazeLine - best.frameTop) / (best.fH || 1)))
-          precisePct = Math.max(0, Math.min(100,
-            (headPct + (endPct - headPct) * within) * 100))
-        }
+      // 帧锚点：当前帧的 spine 项（rendered 记录的 currentSection——
+      // epubjs 用 srcdoc 注入 iframe，src 恒 null，按 src 匹配必失败）。
+      // 帧区间 = 章词位锚（外部注入的 startPct/endPct，与后端统计同源）；
+      // locations.percentageFromCfi 不可用（对 cfiBase 恒 0）。
+      const item = currentSection
+      const anchor = chapterAnchors && item
+        ? chapterAnchors[item.index] : null
+      if (best && anchor) {
+        const headPct = anchor.startPct
+        const endPct = anchor.endPct > headPct ? anchor.endPct : headPct + 0.001
+        const within = Math.max(0, Math.min(1,
+          (gazeLine - best.frameTop) / (best.fH || 1)))
+        precisePct = Math.max(0, Math.min(100,
+          (headPct + (endPct - headPct) * within) * 100))
       }
     } catch {
       precisePct = null
@@ -663,6 +664,7 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
     updateReadMask,
     applyTheme,
     restored: Promise.all([restored, locationsReady]).then(() => {}),
+    setChapterAnchors,
     destroy,
   }
 }
