@@ -217,27 +217,69 @@ class PlanStore:
         except Exception:
             return None
 
-    def _vocab_actuals(self, lo: str, hi: str, user: str) -> int:
-        """周内新掌握词数（mastered_at 落在窗口内）。"""
+    def _vocab_level_words(self, level: Optional[int]) -> Optional[set[str]]:
+        """目标词集（grammar.db vocab_word；level=None=不过滤）。
+
+        周计划 vocab_goal = cum_words(L{lv})×pct% 是【累计】目标（学到
+        L1 的 100% = L0+L1 共 N 词），所以词集取 level ≤ lv；其他更高级
+        别的掌握记录不进分子分母（否则背了高级词会虚增进度、基线里
+        混入的高级词会虚大分母——两处都会让「还差」与「LX 100% 剩余」
+        对不上）。词库不可用时返回 None（降级为全词口径，旧行为）。
+        """
+        if level is None:
+            return None
+        path = self.grammar_db_path or str(
+            Path(__file__).resolve().parent.parent / "data" / "grammar.db")
+        if not Path(path).exists():
+            return None
+        try:
+            with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
+                return {r[0] for r in conn.execute(
+                    "SELECT word FROM vocab_word WHERE level <= ?", (int(level),))}
+        except sqlite3.Error:
+            return None
+
+    def _vocab_actuals(self, lo: str, hi: str, user: str,
+                       words: Optional[set[str]] = None) -> int:
+        """周内新掌握词数（mastered_at 落在窗口内；words 限定词集）。"""
         try:
             with self._connect() as conn:
-                row = conn.execute(
-                    "SELECT COUNT(*) n FROM recite_word_progress"
-                    " WHERE user = ? AND mastered_at >= ? AND mastered_at < ?",
-                    (user, lo, hi),
-                ).fetchone()
+                if words is None:
+                    row = conn.execute(
+                        "SELECT COUNT(*) n FROM recite_word_progress"
+                        " WHERE user = ? AND mastered_at >= ? AND mastered_at < ?",
+                        (user, lo, hi),
+                    ).fetchone()
+                else:
+                    ph = ",".join("?" * len(words)) or "NULL"
+                    row = conn.execute(
+                        "SELECT COUNT(*) n FROM recite_word_progress"
+                        f" WHERE user = ? AND mastered_at >= ? AND mastered_at < ?"
+                        f" AND word IN ({ph})",
+                        (user, lo, hi, *words),
+                    ).fetchone()
                 return row["n"]
         except sqlite3.Error:
             return 0
 
-    def _vocab_mastered_before(self, day: str, user: str) -> int:
+    def _vocab_mastered_before(self, day: str, user: str,
+                               words: Optional[set[str]] = None) -> int:
         """某日 00:00 前已掌握的词数（周词汇差额口径的基线）。"""
         try:
             with self._connect() as conn:
-                row = conn.execute(
-                    "SELECT COUNT(*) n FROM recite_word_progress"
-                    " WHERE user = ? AND mastered_at IS NOT NULL AND mastered_at < ?",
-                    (user, day)).fetchone()
+                if words is None:
+                    row = conn.execute(
+                        "SELECT COUNT(*) n FROM recite_word_progress"
+                        " WHERE user = ? AND mastered_at IS NOT NULL AND mastered_at < ?",
+                        (user, day)).fetchone()
+                else:
+                    ph = ",".join("?" * len(words)) or "NULL"
+                    row = conn.execute(
+                        "SELECT COUNT(*) n FROM recite_word_progress"
+                        f" WHERE user = ? AND mastered_at IS NOT NULL AND mastered_at < ?"
+                        f" AND word IN ({ph})",
+                        (user, day, *words),
+                    ).fetchone()
                 return row["n"] if row else 0
         except sqlite3.Error:
             return 0
@@ -1064,12 +1106,14 @@ class PlanStore:
                 done_lec = 0
             dim("📚", "语法课程", done_lec, len(lecs))
 
-        # 词汇差额口径：分母 = 目标词数 − 周初已掌握词数（学生从本周起点
-        # 还需新学的量）；分子 = 周内新掌握。基线取「周一 00:00 前已掌握」。
+        # 词汇差额口径：分母 = 目标词数 − 周初已掌握【≤目标级别】词数；分子 =
+        # 周内新掌握【≤目标级别】词数。与「学到 LX 还差几词」严格对齐
+        #（背更高级别的词不进分子，基线不混入高级词）。
         vg = t.get("vocab_goal")
         if vg:
-            gained = self._vocab_actuals(week_start, add_days(week_start, 7), user)
-            base = self._vocab_mastered_before(week_start, user)
+            lv_words = self._vocab_level_words(t.get("vocab_lv"))
+            gained = self._vocab_actuals(week_start, add_days(week_start, 7), user, lv_words)
+            base = self._vocab_mastered_before(week_start, user, lv_words)
             denom = max(1, vg - base)
             dim("🔤", "词汇", min(gained, denom), denom)
 
