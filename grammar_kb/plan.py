@@ -1726,7 +1726,7 @@ class PlanStore:
                 rows = conn.execute(
                     "SELECT id, user, started_at, book_id, active_sec,"
                     " percent_start, percent_end, lookups, plays,"
-                    " scroll_count, chapter_navs, percent_track"
+                    " scroll_count, chapter_navs, percent_track, created_at"
                     f" FROM focus_sessions WHERE id IN ({ph})"
                     " AND module = 'library'",
                     list(ids)).fetchall()
@@ -1740,7 +1740,8 @@ class PlanStore:
                         hist[key] = conn.execute(
                             "SELECT id, started_at, percent_start,"
                             " percent_end, active_sec, lookups, plays,"
-                            " scroll_count, chapter_navs, percent_track"
+                            " scroll_count, chapter_navs, percent_track,"
+                            " created_at"
                             " FROM focus_sessions"
                             " WHERE user = ? AND module = 'library'"
                             " AND book_id = ?"
@@ -1758,9 +1759,10 @@ class PlanStore:
                 meta = {}
         # 时间线预演：逐会话两个基线（进入该会话前的状态）——
         #   prev_end=上一会话结束位置（衔接展示）；watermark=有效区段最远
-        #   终点（词位置）。水位只由**带位置轨迹**的会话推进：无轨迹存量
-        #   会话的限速折算终点只是记分口径、不是真实读到的证据（快滚会话
-        #   折算终点会把大片区域误标「已读过」），宁可不判重。
+        #   终点（词位置）。水位只由**带位置轨迹且口径未失真**的会话推进：
+        #   无轨迹存量会话的限速折算终点只是记分口径、不是真实读到的证据；
+        #   10-02~10-03 的「百分比口径失真」会话（前端分母 bug 期，详见
+        #   _track_distorted）的 % 是章内值被当全书值，词位整体虚高。
         base: dict[int, dict] = {}
         for (user, bid), hs in hist.items():
             info = meta.get(bid)
@@ -1771,7 +1773,7 @@ class PlanStore:
                 base[h["id"]] = {"prev_end": prev_end, "watermark": watermark}
                 if info and total > 0 and self._reading_session_valid(h):
                     tr = self._session_track(h)
-                    if tr:
+                    if tr and not self._track_distorted(tr, h):
                         segs = self._valid_track_segments(
                             tr, total, h["active_sec"] or 0)
                         eff_end = max((e for _, e in segs), default=0.0)
@@ -1826,6 +1828,8 @@ class PlanStore:
             else:
                 words = overlap = 0
             flags: list[str] = []
+            if track and self._track_distorted(track, r):
+                flags.append("百分比口径失真（旧版分母bug，词数为封顶估算）")
             if not valid:
                 # 纯翻章/闪进闪出：词数 0 已说明问题，不再叠加速度标记
                 # （这类会话 active_sec 极小，raw 速度会是荒谬大数）。
@@ -1891,6 +1895,21 @@ class PlanStore:
 
     # 阅读限速（词/分钟）：会话级封顶用（跳章剔除见 _valid_track_segments）
     READ_WPM_CAP = 400.0
+    # 百分比口径失真期：前端精确百分比曾用滚动流高度当全书分母
+    # （scrolled 大书懒渲染滚动流≈单章高，章内 % 被记成全书 %）。
+    # 该窗口内带轨迹的会话标失真：词数照算（限速封顶仍有意义）但
+    # 不推进去重水位、不判衔接/异常。修复上线（8a378cf 后端 505f9c6
+    # 同批）之后的新会话不受影响。
+    DISTORTED_UNTIL = "2026-10-04"
+
+    @staticmethod
+    def _track_distorted(track: list, r) -> bool:
+        """会话是否落在百分比口径失真期（created_at 早于修复上线日）。"""
+        if not track:
+            return False
+        created = (r["created_at"] if "created_at" in r.keys()
+                   else r["started_at"]) or ""
+        return bool(created) and created[:10] < "2026-10-04"
 
     @staticmethod
     def _session_track(r) -> list[dict]:

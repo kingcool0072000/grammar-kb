@@ -225,10 +225,10 @@ def test_focus_words_watermark_dedup(plan_env):
     _seed_watermark_bookcase(plan_env)
     fce = sqlite3.connect(plan_env / "fce.db")
     # 会话1：10s 内 5%→10%（慢速有效推进，5%≈500 词），水位推到 ~1000 词位
-    _add_session(fce, 1, "2026-10-01T10:00:00Z",
+    _add_session(fce, 1, "2026-10-05T10:00:00Z",
                  [(2, 5), (6, 6), (10, 7), (200, 10)], 300)
     # 会话2：从 8% 顺延读到 15%——8-10% 重合（~200 词），10-15% 新学（~500 词）
-    _add_session(fce, 2, "2026-10-02T10:00:00Z",
+    _add_session(fce, 2, "2026-10-06T10:00:00Z",
                  [(2, 8), (100, 9), (300, 12), (500, 15)], 500)
     fce.commit()
     fce.close()

@@ -508,12 +508,63 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
     } catch {
       return
     }
-    // 精确百分比（视线引导带下缘口径）：带下缘 = scrollTop + 30% 视口高，
-    // 该线在滚动流中的位置 / 滚动流总高。比 epubjs 的 1024 字符粒度 location
-    // 精确得多，且随滚动实时刷新（走查反馈：% 变化不灵敏）。
+    // 精确百分比（视线引导带下缘口径）——**全书口径**，分母绝不能是
+    // 滚动流高度：epubjs scrolled 大书懒渲染，滚动流只含已渲染帧
+    // （单章时 scrollHeight≈本章高，「章内 60%」会被当「全书 60%」——
+    // Percy 单章 4472 词曾虚记上万词）。改用「帧锚点插值」：
+    // 当前 gazeLine 所在帧的 iframe，其书内百分比区间 [fStart%, fEnd%]
+    // 由 locations 按帧头/帧尾 cfi 算出（帧≈一章，区间稳定），帧内按
+    // 像素线性插值。locations 未就绪时不上报（relocated 的粗值兜底）。
     const scrollStreamH = maskScrollEl.scrollHeight || 1
     const gazeLine = Math.min(scrollStreamH, scrollTop + viewH * 0.3)
-    const precisePct = Math.max(0, Math.min(100, (gazeLine / scrollStreamH) * 100))
+    let precisePct = null
+    try {
+      let best = null
+      for (const contents of contentsList) {
+        const doc = contents && contents.document
+        if (!doc || !doc.body) continue
+        const frameEl = doc.defaultView && doc.defaultView.frameElement
+        if (!frameEl) continue
+        let frameTop = 0
+        let el = frameEl
+        while (el && el !== maskScrollEl) {
+          frameTop += el.offsetTop || 0
+          el = el.offsetParent
+        }
+        const fH = frameEl.offsetHeight || 1
+        if (gazeLine >= frameTop && gazeLine <= frameTop + fH + 2) {
+          best = { frameEl, frameTop, fH, doc }
+          break
+        }
+      }
+      if (best && book.locations && book.locations.length()) {
+        const href = best.frameEl.getAttribute('src') || ''
+        const base = href.split('/').pop()
+        // 帧头/帧尾的书内百分比（locations 按 spine 项头尾取）
+        const item = book.spine && book.spine.get
+          ? [...Array(book.spine.length || 0).keys()].map((i) => book.spine.get(i)).find((s) => {
+              const h = String((s && s.href) || '').split('/').pop()
+              return h === base || base.includes(h) || h.includes(base)
+            })
+          : null
+        if (item && item.cfiBase) {
+          const headPct = book.locations.percentageFromCfi(item.cfiBase) || 0
+          const tailPct = book.locations.percentageFromCfi(
+            `${item.cfiBase}/99999:0`) || 0
+          // 帧尾 cfi 越界时回落：用下一 spine 项头部（帧≈章边界）
+          const idx2 = item.index != null ? item.index + 1 : null
+          const nxt = idx2 != null && book.spine.get ? book.spine.get(idx2) : null
+          const endPct = tailPct > headPct ? tailPct
+            : (nxt && nxt.cfiBase && book.locations.percentageFromCfi(nxt.cfiBase)) || headPct
+          const within = Math.max(0, Math.min(1,
+            (gazeLine - best.frameTop) / (best.fH || 1)))
+          precisePct = Math.max(0, Math.min(100,
+            (headPct + (endPct - headPct) * within) * 100))
+        }
+      }
+    } catch {
+      precisePct = null
+    }
     for (const contents of contentsList) {
       const doc = contents && contents.document
       if (!doc || !doc.body) continue
@@ -544,12 +595,17 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
       mask.style.height = `${h}%`
       mask.style.background = `linear-gradient(to bottom, rgba(60,50,35,0.6) 0%, rgba(60,50,35,0.6) ${Math.max(0, h - 6)}%, rgba(60,50,35,0) ${h}%)`
     }
-    // 回调精确百分比（整数变化才发，避免每像素刷顶栏）
-    const shownPct = atTop ? Math.max(0, Math.round((scrollTop + viewH * 0.3) / scrollStreamH * 100)) : Math.round(precisePct)
-    const rounded = shownPct
-    if (rounded !== lastPrecisePct) {
-      lastPrecisePct = rounded
-      if (callbacks.onPrecisePercent) callbacks.onPrecisePercent(rounded)
+    // 回调精确百分比（整数变化才发，避免每像素刷顶栏）。
+    // 插值失败（locations 未就绪/找不到帧）不发——relocated 的粗值兜底，
+    // 绝不退回滚动流分母（那是本 bug 的根源）。
+    if (precisePct != null) {
+      const rounded = atTop
+        ? Math.max(0, Math.round(precisePct))
+        : Math.round(precisePct)
+      if (rounded !== lastPrecisePct) {
+        lastPrecisePct = rounded
+        if (callbacks.onPrecisePercent) callbacks.onPrecisePercent(rounded)
+      }
     }
   }
   let lastPrecisePct = -1
