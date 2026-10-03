@@ -46,11 +46,13 @@ export async function mountTimetable(el) {
 
   const dayCell = (day, i) => {
     const isToday = day.date === today
-    const items = (day.tasks || []).map((t) => `
-      <div class="tt-task ${t.done ? 'ok' : ''}">
+    // 只展示已完成的学习任务（课程表=学习记录视角；未完成的不列在日格里）
+    const doneTasks = (day.tasks || []).filter((t) => t.done)
+    const items = doneTasks.map((t) => `
+      <div class="tt-task ok">
         <span class="tt-task-ic">${TYPE_ICON[t.type] || '•'}</span>
         <span class="tt-task-text">${escapeHtml(t.text || t.key)}</span>
-        ${t.done ? '<span class="tt-task-check">✓</span>' : ''}
+        <span class="tt-task-check">✓</span>
       </div>`).join('')
     return `
       <section class="tt-day ${isToday ? 'today' : ''} ${day.future ? 'future' : ''}">
@@ -60,14 +62,14 @@ export async function mountTimetable(el) {
           ${isToday ? '<i class="tt-today-tag">今天</i>' : ''}
           <span class="tt-day-count">${day.future ? '' : `${day.done}/${day.total}`}</span>
         </header>
-        ${items || '<p class="tt-day-empty">无任务</p>'}
+        ${items || `<p class="tt-day-empty">${day.future ? '未开始' : '还没有完成的学习'}</p>`}
       </section>`
   }
 
   el.innerHTML = `
     <div class="view-head">
       <h1>课程表</h1>
-      <p>本周（${d.week_start || ''} 起）的学习安排 · 完成状态自动同步</p>
+      <p>本周（${d.week_start || ''} 起）已完成的学习记录 · 每天做了什么一目了然</p>
     </div>
     ${summary.length ? `<div class="tt-summary">${summary.map((s) => `<span>${s}</span>`).join('')}</div>` : ''}
     ${dims.length ? `

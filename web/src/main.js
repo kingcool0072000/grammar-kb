@@ -48,9 +48,9 @@ const VIEWS = [
   // 学情分析并入计划表（#/plan?tab=analytics）；旧 hash 重定向
   { key: 'plan', label: '计划表', teacher: true },
   { key: 'grading', label: '批改中心', teacher: true },
-  { key: 'recite', label: '背单词', studentOnly: true },
-  // 学生课程表：教师周计划的只读镜像（仅看自己本周）
+  // 学生课程表排第一位：教师周计划的只读镜像（仅看自己本周）
   { key: 'timetable', label: '课程表', studentOnly: true },
+  { key: 'recite', label: '背单词', studentOnly: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
   // 专题学习：学生 Tab；教师从备课中心大卡片进入（hiddenTab=教师不进顶部 Tab）
   { key: 'topics', label: '专题学习', studentOnly: true, hiddenTab: true },
