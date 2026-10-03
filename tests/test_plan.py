@@ -242,3 +242,18 @@ def test_focus_words_watermark_dedup(plan_env):
     # 重合+新学 ≈ 本次区段词数（10000 词/10%≈1000 词/1%，7% 段≈700 词）
     total2 = wm[2]["words"] + wm[2]["overlap"]
     assert 500 < total2 < 900
+
+
+def test_my_week_student_only(plan_env):
+    """学生课程表端点：学生只读自己本周；教师 403（教师走 /plan/week-view）。"""
+    c = _client(plan_env)
+    s = _login(c, "malin", "123456")
+    r = c.get("/plan/my-week", headers=s)
+    assert r.status_code == 200, r.text
+    d = r.json()["data"]
+    assert d["week_start"]  # 本周周一
+    assert "days" in d and len(d["days"]) == 7
+    assert "goal_progress" in d
+    # 教师 403
+    t = _login(c, "teacher", "123456")
+    assert c.get("/plan/my-week", headers=t).status_code == 403

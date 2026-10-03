@@ -305,6 +305,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         # 内循环（双循环教学）：学生今日任务/周清单/打卡（user 口径在端点内收窄）
         ("GET", "/plan/today"),
         ("GET", "/plan/week-todo"),
+        ("GET", "/plan/my-week"),  # 学生课程表（只读自己本周计划）
         ("POST", "/plan/day-check"),
         ("POST", "/focus/sessions"),
         ("GET", "/focus/sessions"),  # /{id} 详情学生仍被端点内 _require_teacher 拦 403
@@ -1293,6 +1294,18 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             return _ok(plan.week_view(week_start, user=user))
         except ValueError:
             raise HTTPException(status_code=422, detail="week_start 须为 YYYY-MM-DD")
+
+    @app.get("/plan/my-week")
+    def plan_my_week(request: "fastapi.Request"):
+        """学生课程表：自己本周的周计划只读视图（week_view 同源数据）。
+
+        学生只能看自己（教师身份给 403，教师看学生走 /plan/week-view）。
+        """
+        if getattr(request.state, "role", "student") != "student":
+            raise HTTPException(status_code=403, detail="课程表仅学生账号使用")
+        from datetime import date as _date, timedelta as _td
+        week_start = (_date.today() - _td(days=_date.today().weekday())).isoformat()
+        return _ok(plan.week_view(week_start, user=request.state.user))
 
     # ---- 作业卷管理（教师）：题目 + 答案（爱问云已批改测验的逐题对错） ----
 

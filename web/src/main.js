@@ -11,6 +11,7 @@ import { mountReading } from './views/reading.js'
 import { mountReadingAdmin } from './views/readingAdmin.js'
 import { mountReadingList } from './views/readingList.js'
 import { mountFceListen } from './views/fceListen.js'
+import { mountTimetable } from './views/timetable.js'
 import { mountLibraryShelf } from './views/library/shelf.js'
 import { mountLibraryReader } from './views/library/reader.js'
 import { mountLibraryManage } from './views/library/manage.js'
@@ -48,6 +49,8 @@ const VIEWS = [
   { key: 'plan', label: '计划表', teacher: true },
   { key: 'grading', label: '批改中心', teacher: true },
   { key: 'recite', label: '背单词', studentOnly: true },
+  // 学生课程表：教师周计划的只读镜像（仅看自己本周）
+  { key: 'timetable', label: '课程表', studentOnly: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
   // 专题学习：学生 Tab；教师从备课中心大卡片进入（hiddenTab=教师不进顶部 Tab）
   { key: 'topics', label: '专题学习', studentOnly: true, hiddenTab: true },
@@ -309,6 +312,9 @@ async function bootstrap() {
       mounted = mountVocabulary(container, { vocab: state.vocab, openWord: (e) => drawer.showWord(e) })
     } else if (route === 'recite') {
       mounted = mountRecite(container, { vocab: state.vocab, role })
+    } else if (route === 'timetable') {
+      // 学生课程表：教师周计划只读镜像
+      mounted = mountTimetable(container)
     } else if (route === 'topics') {
       // 专题学习（大静态手册独立 chunk）：#/topics 列表 / #/topics/{id} 详情
       mounted = import('./views/topics.js').then(({ mountTopics }) =>

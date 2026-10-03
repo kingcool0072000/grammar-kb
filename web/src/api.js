@@ -239,6 +239,7 @@ export const api = {
   planDiagnosis: ({ weeksBack } = {}) =>
     req('/plan/diagnosis', { searchParams: weeksBack ? { weeks_back: weeksBack } : {} }),
   planWeekTodo: () => req('/plan/week-todo'),
+  planMyWeek: () => req('/plan/my-week'),
   planReview: () => req('/plan/review'),
   planDailyPreview: () => req('/plan/daily-preview'),
 
