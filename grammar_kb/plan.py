@@ -1875,9 +1875,10 @@ class PlanStore:
             # 的章内 %」呈现：新章开启=第N章 0%，续读=上次退出的章内位置。
             # 逐有效章一行：章内起止% + 该章新学/重合词数（非必读章不列
             # 行——计词范围由配置定义，与章号编号相互独立）。前置页
-            # （封面/目录）位置钳到第 1 章 0% 起。
+            # （封面/目录）位置钳到第 1 章 0% 起。零位移（打开即退）也
+            # 列位置行——教师能看到"停在第N章 X%"，词数自然为 0。
             ch_rows: list[dict] = []
-            if info and total > 0 and e0 > s0:
+            if info and total > 0 and e0 >= s0:
                 first_pos = sum(w for i, w in info["chs"] if i < first_content)
                 s_pos = max(s0 / 100 * total, first_pos)
                 e_pos = max(e0 / 100 * total, s_pos)

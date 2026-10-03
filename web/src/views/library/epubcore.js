@@ -51,13 +51,17 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
   })
 
   let restoreResolve
+  let restoreSettled = false // 落位稳定前插值 within 不可信（帧高未展开）
   /** 初始恢复落位完成时 resolve。两个条件：
    * ①display 完成 + 自愈滚动窗口过后（620ms）；
    * ②locations 就绪（或 3s 超时兜底）——locations 未生成时 relocated 用
    *   spine 比例兜底公式（(idx+0.5)/spine数），大书首章会算出 ~15% 的假
    *   百分比，落位前不开放采集以免假起点入档。 */
   const restored = new Promise((res) => {
-    restoreResolve = res
+    restoreResolve = () => {
+      restoreSettled = true
+      res()
+    }
   })
   let locationsReadyResolve
   const locationsReady = new Promise((res) => {
@@ -598,7 +602,10 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
     // 回调精确百分比（整数变化才发，避免每像素刷顶栏）。
     // 插值失败（locations 未就绪/找不到帧）不发——relocated 的粗值兜底，
     // 绝不退回滚动流分母（那是本 bug 的根源）。
-    if (precisePct != null) {
+    // 恢复落位窗口内也不发：display 后 iframe 高度是渐进展开的（先≈视口高
+    // 后长到章高），此刻 within 会被钳到 1，把恢复位置误报成帧尾
+    // （实测：恢复在第5章27%被报成全书19.44%=章内98.5%）。
+    if (precisePct != null && restoreSettled) {
       const rounded = atTop
         ? Math.max(0, Math.round(precisePct))
         : Math.round(precisePct)

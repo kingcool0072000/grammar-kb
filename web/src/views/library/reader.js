@@ -157,6 +157,9 @@ export function mountLibraryReader(viewEl, ctx) {
     if (!progress.cfi) return
     // 节流键用 percent：滚动中 cfi 不变但精确百分比在变，旧键会漏报新位置
     if (!force && progress.percent === reported.pct && now - reported.time < 5000) return
+    // percent=0 的「无定位」假值不上云（恢复 display 完成前的瞬态），
+    // 否则会把真实退出位置覆盖成书头（实测 2 秒快进出会话把 27% 顶成 0）
+    if (!Number.isFinite(progress.percent) || progress.percent <= 0) return
     reported.cfi = progress.cfi
     reported.pct = progress.percent
     reported.time = now
