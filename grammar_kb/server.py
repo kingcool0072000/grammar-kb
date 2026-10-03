@@ -795,6 +795,16 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         data["has_audio"] = (audio_dir / f"{article_id}.wav").is_file()
         return _ok(data)
 
+    @app.get("/reading/articles/{article_id}/tokens")
+    def reading_article_tokens(article_id: int, request: "fastapi.Request"):
+        """单篇逐词标注（学生端精读辅助：句首/连词/动词/词层级）。"""
+        data = reading.get_article(article_id)
+        if data is None:
+            raise HTTPException(status_code=404, detail=f"文章 id={article_id} 不存在")
+        if data["kind"] == "base" and getattr(request.state, "role", "teacher") != "teacher":
+            raise HTTPException(status_code=403, detail="原文段落仅教师可读")
+        return _ok(reading.annotate(article_id))
+
     @app.get("/reading/difficulty")
     def reading_difficulty(request: "fastapi.Request", ids: Optional[str] = None):
         """精读难度评价（教师备课用）：LX 词汇分布 / 语法结构（映射哈1讲次）/ 题材。

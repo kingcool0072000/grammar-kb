@@ -103,6 +103,16 @@ class ReadingStore:
             ).fetchone()
         return _art_out(row, with_text=True) if row else None
 
+    def annotate(self, article_id: int) -> Optional[list[dict]]:
+        """单篇逐词标注（学生端精读辅助：句首/连词/动词/L3+ 高亮）。"""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT text FROM reading_article WHERE id = ?", (article_id,)
+            ).fetchone()
+        if row is None:
+            return None
+        return annotate_tokens(row["text"] or "")
+
     def difficulty(self, article_ids: Optional[list[int]] = None) -> list[dict]:
         """批量难度报告（教师备课用）。ids 为空 = 全部派生文。"""
         with self._connect() as conn:
@@ -599,6 +609,147 @@ def _proper_nouns(text: str) -> set[str]:
             continue  # 句首/段首/引语开头的大写不是专名
         out.add(m.group(0).lower())
     return out
+
+
+_CONJUNCTIONS = frozenset("""
+and or but so yet for nor because although though while whereas if unless since
+until before after when whenever where wherever whether than as once even
+however therefore moreover besides instead otherwise meanwhile furthermore
+""".split())
+
+_SUBORD_CONJ_PHRASES = (
+    "even though", "as soon as", "in order that", "so that", "as if",
+    "in case", "by the time", "no matter",
+)
+
+_VERB_POS = frozenset({"v"})
+# 判动词用：情态/助/系动词 + 高频实义动词原形（vocab_word pos 命中优先）
+_AUX_VERBS = frozenset("""
+is am are was were be been being do does did done have has had having
+will would shall should can could may might must ought
+""".split())
+
+# 名动兼类词（词库 pos 同时含 n+v）：正文中多作名词，无形态线索时不标红。
+# 屈折形态（-ed/-ing/-s）出现时仍按动词处理（_word_pos 的形态分支）。
+_NOUN_DOMINANT = frozenset("""
+water earth end book play work food light time hand eye head face back
+place home room house door window phone game team park garden market
+shop store farm plant animal fish bird dog cat horse hand hand watch
+watch cover cook exchange charge change point stage level mark dress
+ suit number group side part field ground floor wall roof walk drive
+ride climb jump call sound voice smile laugh cry dream rest sleep
+jump start move watch answer question exercise practice study research
+test check record report journey trip travel race match champion prize
+win loss cost price pay rent bill tax fine reward gift present label
+sign board key chain lock guard police rescue crash accident injury
+""".split())
+
+
+def _word_pos(w: str, vm: dict, tok: Optional[str] = None,
+              next_tok: Optional[str] = None) -> Optional[str]:
+    """粗粒度词性：v=动词（形态+词库双线索），c=连词，n=名词，其余 None。
+
+    词库 pos 的 n+v 兼类太多（water/body/like…四分之一），单靠 pos 会把
+    名词用法标红。判 v 只走三条高置信路径：
+    ① 助动词/情态动词表（is/could/must…）
+    ② 明确动词屈折形态：原文形 ≠ 还原出的原形，且形尾 -ed/-ing/-s
+    ③ 词库 v-only 实义动词（pos 只含 v，无 n/a 兼类）
+    名动兼类原形（water/man…）不标红——正文里多数是名词用法。
+    """
+    if w in _CONJUNCTIONS:
+        return "c"
+    lv, lemma = _lookup_level(vm, w)
+    if lemma in _AUX_VERBS:
+        return "v"
+    pos_raw = _vocab_pos_map().get(lemma, "") if lemma in vm else ""
+    tl = (tok or w).lower()
+    inflected = tl != lemma and (
+        tl.endswith("ed") or tl.endswith("ing")
+        or (tl.endswith("s") and not tl.endswith("ss") and not lemma.endswith("s"))
+    )
+    if inflected and "v" in pos_raw:
+        return "v"
+    if pos_raw == "v":
+        return "v"
+    if "n" in pos_raw:
+        return "n"
+    return None
+
+
+_pos_map_cache: dict = {}
+
+
+def _vocab_pos_map() -> dict[str, str]:
+    """vocab_word 的 pos JSON 串 → 压缩成 'vna' 式字母串（进程内缓存）。"""
+    if _pos_map_cache:
+        return _pos_map_cache
+    try:
+        import json as _json
+
+        from .ingest import default_db_path as _grammar_db
+        path = _grammar_db()
+        if not Path(path).exists():
+            return _pos_map_cache
+        with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
+            for word, pos in conn.execute("SELECT word, pos FROM vocab_word"):
+                try:
+                    letters = "".join(sorted({p.strip()[0] for p in _json.loads(pos or "[]")
+                                               if p and p.strip()}))
+                except Exception:  # noqa: BLE001
+                    letters = ""
+                _pos_map_cache[word] = letters
+    except Exception:  # noqa: BLE001
+        pass
+    return _pos_map_cache
+
+
+def annotate_tokens(text: str) -> list[dict]:
+    """精读辅助标注：逐 token 输出 {t, lv, pos, sent_start}。
+
+    - lv：词层级（词形还原后查 vocab_word；库外 None）
+    - pos：v/c（动词/连词；其余不标，前端只上这两色）
+    - sent_start：句子首词（前端高亮句首）
+    token 边界 = 段落内 [A-Za-z''-]+ 与非词字符交替，段落数组下标 p。
+    """
+    vm = _vocab_level_map()
+    tokens: list[dict] = []
+    for p, para in enumerate((text or "").split("\n")):
+        sent_start = True
+        for m in re.finditer(r"[A-Za-z''-]+|[^A-Za-z''-]+", para):
+            tok = m.group(0)
+            is_word = bool(re.match(r"[A-Za-z]", tok))
+            if is_word:
+                lw = tok.lower().replace("’", "'")
+                lv, lemma = _lookup_level(vm, lw)
+                tokens.append({
+                    "t": tok, "p": p, "lv": lv,
+                    "pos": _word_pos(lw, vm, tok),
+                    "ss": sent_start,
+                })
+                sent_start = False
+                # 不定式补语：to/never 后接 v-only 动词原形（want to go）
+                # → 把前一个词的 to 保留原样，只在此处给下一词标 v 的钩子
+                # （在下面第二遍里处理，避免状态机复杂化）
+            else:
+                # 句末标点 → 下一个词是句首；段内换行/空格不动
+                if any(ch in tok for ch in ".!?"):
+                    sent_start = True
+                # 从属连词短语整体标 c：下一 token 若是连词词组第二词也标
+                tokens.append({"t": tok, "p": p, "lv": None, "pos": None, "ss": False})
+    # 从属连词短语修正（even though / as soon as / so that …）
+    for i in range(len(tokens) - 1):
+        if tokens[i]["pos"] != "c":
+            continue
+        nxt = tokens[i + 1]
+        if not re.match(r"[A-Za-z]", nxt["t"]):
+            continue
+        for phrase in _SUBORD_CONJ_PHRASES:
+            parts = phrase.split()
+            first = parts[0]
+            if tokens[i]["t"].lower() == first and len(parts) > 1 \
+                    and nxt["t"].lower() == parts[1]:
+                nxt["pos"] = "c"
+    return tokens
 
 
 def difficulty_report(text: str) -> dict:

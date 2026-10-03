@@ -288,6 +288,7 @@ export function mountLibraryReader(viewEl, ctx) {
     onLookup: focusTracker.hooks.onLookup,
     onSpeak: focusTracker.hooks.onSpeak,
     onSelect: focusTracker.hooks.onSelect,
+    directLookupOnDouble: true, // 双击单词：跳过工具条，直接查词+发音一次
   })
   // 点击阅读主体空白处清浮层（浮层自身 stopPropagation）
   bodyEl.addEventListener('click', () => lookup.hideAll())

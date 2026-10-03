@@ -233,6 +233,72 @@ def test_difficulty_vocab_lemmatization(monkeypatch, tmp_path):
         rd._vocab_map_cache.clear()
 
 
+def test_annotate_tokens(monkeypatch, tmp_path):
+    """逐词标注：句首/连词/动词/词层级 + tokens 端点权限。"""
+    import grammar_kb.reading as rd
+
+    db = tmp_path / "grammar.db"
+    con = sqlite3.connect(str(db))
+    con.execute("CREATE TABLE vocab_word (word TEXT PRIMARY KEY, level INTEGER NOT NULL,"
+                " pos TEXT DEFAULT '[]', gloss TEXT DEFAULT '', meanings TEXT DEFAULT '[]',"
+                " example TEXT DEFAULT '{}', extra TEXT DEFAULT '{}')")
+    con.executemany("INSERT INTO vocab_word (word, level, pos) VALUES (?, ?, ?)",
+                    [("study", 2, '["n", "v"]'), ("survive", 4, '["v"]'),
+                     ("known", 0, '["v"]'), ("water", 0, '["n", "v"]'),
+                     ("bears", None, None) if False else ("bear", 0, '["v", "n"]'),
+                     ("microscopic", 6, '["adj"]')])
+    con.commit()
+    con.close()
+    monkeypatch.setenv("GRAMMAR_KB_DB", str(db))
+    rd._vocab_map_cache.clear()
+    rd._pos_map_cache.clear()
+    try:
+        text = "A study shows bears survive. Water is known to be scarce, but bears can live."
+        toks = rd.annotate_tokens(text)
+        words = [t for t in toks if t["t"][0].isalpha()]
+        # 句首：A / Water（第一句 A、第二句 Water）
+        ss = [t["t"] for t in words if t["ss"]]
+        assert ss[:2] == ["A", "Water"], ss
+        # 连词：but
+        assert any(t["t"].lower() == "but" and t["pos"] == "c" for t in words)
+        # 动词：survive(v-only) / is / known(-ed 形态) / can / live？live 不在库 → null
+        verbs = {t["t"].lower() for t in words if t["pos"] == "v"}
+        assert {"survive", "is", "known", "can"} <= verbs, verbs
+        # 名动兼类 water（原形无线索）不标 v
+        assert "water" not in verbs
+        # bears 是 bear 的屈折形态（-s）且 bear 含 v → 标 v；层级按 bear=L0
+        bear_tok = [t for t in words if t["t"] == "bears"][0]
+        assert bear_tok["pos"] == "v" and bear_tok["lv"] == 0
+        # L3+：survive=L4、microscopic 不在文本但 survive 在
+        assert [t for t in words if t["lv"] is not None and t["lv"] >= 3][0]["t"] == "survive"
+    finally:
+        rd._vocab_map_cache.clear()
+        rd._pos_map_cache.clear()
+
+
+def test_tokens_endpoint(reading_env, monkeypatch):
+    """tokens 端点：学生可读派生文；不存在 404。"""
+    import grammar_kb.reading as rd
+
+    monkeypatch.setenv("GRAMMAR_KB_DB", str(reading_env / "grammar.db"))
+    rd._vocab_map_cache.clear()
+    rd._pos_map_cache.clear()
+    try:
+        c = _client(reading_env)
+        t, s = _login(c, "teacher"), _login(c, "malin")
+        art = c.post("/reading/articles", headers=t, json={
+            "base_key": "T1P1", "title": "标注测试", "text": DERIVED_TEXT}).json()["data"]
+        r = c.get(f"/reading/articles/{art['id']}/tokens", headers=s)
+        assert r.status_code == 200
+        toks = r.json()["data"]
+        assert toks and all("t" in x and "lv" in x and "pos" in x and "ss" in x for x in toks)
+        assert any(x["ss"] for x in toks)  # 有句首
+        assert c.get("/reading/articles/99999/tokens", headers=s).status_code == 404
+    finally:
+        rd._vocab_map_cache.clear()
+        rd._pos_map_cache.clear()
+
+
 def test_difficulty_endpoint(reading_env, monkeypatch):
     """端点：教师可查、学生 403；新增派生文后出现在难度列表。"""
     import grammar_kb.reading as rd

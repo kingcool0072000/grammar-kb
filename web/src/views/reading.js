@@ -4,6 +4,24 @@ import { createLookupLayer } from './library/lookup.js'
 import { applyReadPref } from '../readpref.js'
 import { createFocusTracker } from './library/focus.js'
 
+// 精读辅助标注开关（学生本地记忆；教师默认关）：句首/连词蓝/动词红/L3+ 词
+const RD_AID_KEY = 'gkb-reading-aid-v1'
+function loadAidPrefs() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RD_AID_KEY) || '{}')
+    return {
+      sentStart: raw.sentStart !== false,
+      conj: raw.conj !== false,
+      verb: raw.verb !== false,
+      hard: raw.hard !== false,
+      on: raw.on !== false,
+    }
+  } catch { return { sentStart: true, conj: true, verb: true, hard: true, on: true } }
+}
+function saveAidPrefs(p) {
+  try { localStorage.setItem(RD_AID_KEY, JSON.stringify(p)) } catch { /* ignore */ }
+}
+
 // 阅读练习：派生文章列表 → 详情（阅读 + 选段录音提交 + 点词查词典）。
 // 学生视角：列表只见派生文（后端已过滤），显示字数；
 // 详情页可朗读录音（一段 ≤300 词、≤5 分钟），提交后待教师 10 分制批改。
@@ -133,11 +151,12 @@ function keyLabel(key) {
 // ---------- 详情 ----------
 async function renderDetail(el, id, role) {
   el.innerHTML = '<div class="view-head"><h1>阅读练习</h1><p>加载中…</p></div>'
-  let art, myRecs
+  let art, myRecs, tokens
   try {
-    ;[art, myRecs] = await Promise.all([
+    ;[art, myRecs, tokens] = await Promise.all([
       api.readingArticle(id),
       api.readingRecordings(),
+      api.readingTokens(id).catch(() => null), // 标注失败不阻塞正文
     ])
   } catch (e) {
     el.querySelector('p').innerHTML = `<span style="color:#b42318">加载失败：${escapeHtml(e.message)}</span>`
@@ -147,6 +166,9 @@ async function renderDetail(el, id, role) {
   const recsForArt = myRecs.filter((r) => r.article_id === id)
   const gradedHist = recsForArt.filter((r) => r.status === 'graded')
   const pendingN = recsForArt.length - gradedHist.length
+  // ---- 辅助标注状态 ----
+  const aid = loadAidPrefs()
+  const cls = (k) => (aid[k] && aid.on ? 'active' : '')
   el.innerHTML = `
     <div class="view-head">
       <button class="fce-back-btn" id="rd-back">← 返回列表</button>
@@ -166,6 +188,14 @@ async function renderDetail(el, id, role) {
         </div>`).join('')}
       ${pendingN > 0 ? `<div class="fce-his-row"><span class="fce-his-what">最新一次录音</span><b class="fce-his-score pend">待批改</b></div>` : ''}
     </section>` : ''}
+    <div class="reading-aid-bar" id="rd-aid-bar">
+      <span class="reading-aid-label">辅助标注</span>
+      <button class="reading-aid-chip ${aid.on ? 'active' : ''}" data-aid="on">全部${aid.on ? '开' : '关'}</button>
+      <button class="reading-aid-chip ss ${cls('sentStart')}" data-aid="sentStart">句首</button>
+      <button class="reading-aid-chip cj ${cls('conj')}" data-aid="conj">连词</button>
+      <button class="reading-aid-chip vb ${cls('verb')}" data-aid="verb">动词</button>
+      <button class="reading-aid-chip hd ${cls('hard')}" data-aid="hard">难词 L3+</button>
+    </div>
     <div class="reading-article" id="rd-text">${renderText(art.text)}</div>
     <div class="reading-toolbar">
       ${art.has_audio ? `
@@ -195,6 +225,31 @@ async function renderDetail(el, id, role) {
   // ---- 划词查词（完全复刻泛读馆：selectionchange 式取词 → 塌缩 → 工具条） ----
   const articleEl = el.querySelector('.reading-article')
 
+  // ---- 辅助标注：token 序列包 span（句首/连词/动词/L3+），开关实时切换 ----
+  if (tokens && tokens.length) {
+    applyAid(articleEl, tokens, aid)
+    const bar = el.querySelector('#rd-aid-bar')
+    if (bar) {
+      bar.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-aid]')
+        if (!btn) return
+        const k = btn.dataset.aid
+        if (k === 'on') aid.on = !aid.on
+        else aid[k] = !aid[k]
+        if (aid.on && k !== 'on') aid.on = true // 点单项时自动开总开关
+        saveAidPrefs(aid)
+        bar.querySelectorAll('[data-aid]').forEach((b) => {
+          const bk = b.dataset.aid
+          b.classList.toggle('active', bk === 'on' ? aid.on : aid[bk] && aid.on)
+        })
+        applyAid(articleEl, tokens, aid)
+      })
+    }
+  } else {
+    const bar = el.querySelector('#rd-aid-bar')
+    if (bar) bar.hidden = true
+  }
+
   // ---- 专注力采集（精读场景：module=reading，范围=本篇文章） ----
   const focusTracker = createFocusTracker({
     readerRoot: articleEl, viewerEl: articleEl, bookId: id, bookTitle: art.title || '',
@@ -208,6 +263,7 @@ async function renderDetail(el, id, role) {
     onLookup: focusTracker.hooks.onLookup,
     onSpeak: focusTracker.hooks.onSpeak,
     onSelect: focusTracker.hooks.onSelect,
+    directLookupOnDouble: true, // 双击单词：跳过工具条，直接查词+发音一次
   })
   // 教师开关：student.focus=false 时静默停采（与泛读馆同一开关）
   if (role !== 'teacher') {
@@ -323,6 +379,49 @@ function renderText(text) {
       return `<p data-pidx="${i}">${html}</p>`
     })
     .join('')
+}
+
+/**
+ * 辅助标注渲染：token 流（后端含词与非词 token，按段落下标 p 分组）直接
+ * 重建各段 innerHTML——不对齐、不猜位置，后端给什么拼什么，天然不会错位。
+ * 注意重建后 **加粗** 标记失效（标注模式下纯文本展示），关掉全部开关时恢复
+ * 原始 innerHTML（renderText 的产物，含 strong）。
+ */
+function applyAid(articleEl, tokens, aid) {
+  const paras = [...articleEl.querySelectorAll('p')]
+  if (!paras.length) return
+  // 原始 HTML 留底：全部关闭时还原（保留 **bold** 与原结构）
+  if (!articleEl.dataset.origHtml) {
+    articleEl.dataset.origHtml = JSON.stringify(paras.map((p) => p.innerHTML))
+  }
+  const anyOn = aid.on && (aid.sentStart || aid.conj || aid.verb || aid.hard)
+  if (!anyOn) {
+    const orig = JSON.parse(articleEl.dataset.origHtml)
+    paras.forEach((p, i) => { p.innerHTML = orig[i] ?? p.innerHTML })
+    return
+  }
+  // 按 p 分组重建
+  const groups = new Map()
+  for (const tk of tokens) {
+    if (!groups.has(tk.p)) groups.set(tk.p, [])
+    groups.get(tk.p).push(tk)
+  }
+  const usedGroups = [...groups.keys()].sort((a, b) => a - b)
+  paras.forEach((pEl, i) => {
+    const tks = groups.get(usedGroups[i]) || []
+    if (!tks.length) return
+    pEl.innerHTML = tks.map((tk) => {
+      let cls = ''
+      if (aid.on) {
+        if (aid.sentStart && tk.ss) cls = 'ss'
+        if (aid.conj && tk.pos === 'c') cls = cls ? `${cls} cj` : 'cj'
+        if (aid.verb && tk.pos === 'v') cls = cls ? `${cls} vb` : 'vb'
+        if (aid.hard && tk.lv !== null && tk.lv >= 3) cls = cls ? `${cls} hd` : 'hd'
+      }
+      const esc = escapeHtml(tk.t)
+      return cls ? `<span class="rd-aid ${cls}">${esc}</span>` : esc
+    }).join('')
+  })
 }
 
 // ---------- 范读播放器（播放/暂停/停止） ----------

@@ -25,6 +25,12 @@ export function createLookupLayer(bodyEl, opts = {}) {
   const onLookupCb = typeof opts.onLookup === 'function' ? opts.onLookup : null
   const onSelectCb = typeof opts.onSelect === 'function' ? opts.onSelect : null
   const onSpeakCb = typeof opts.onSpeak === 'function' ? opts.onSpeak : null
+  // 双击单词：不弹工具条，直接开查词浮层并自动发音一次。
+  // 拖选多词仍走工具条（发音/查词两钮），泛读馆与阅读练习行为一致。
+  // 实现挂 dblclick（主文档 + iframe 文档）：selectionchange 防抖后
+  // showSelection 只触发一次，靠「重复选择」检测双击不可行。
+  const directLookupOnDouble = opts.directLookupOnDouble === true
+  let suppressSelectionUntil = 0
   let currentSel = null
   let dictTimer = null
   let dictSeq = 0
@@ -43,7 +49,48 @@ export function createLookupLayer(bodyEl, opts = {}) {
   }
   /** 泛读馆阅读器：把 epub iframe 的 window 传进来，选区塌缩才能作用到正文选区。 */
   function setSelectionWindow(w) {
-    if (w) selectionWindow = w
+    if (w) {
+      selectionWindow = w
+      // iframe 内双击不冒泡到主文档：把 dblclick 也挂进 iframe 文档
+      try {
+        w.document.addEventListener('dblclick', dblclickHandler)
+        iframeCleanups.push(() => {
+          try { w.document.removeEventListener('dblclick', dblclickHandler) } catch { /* ignore */ }
+        })
+      } catch { /* 跨域或已卸载，忽略 */ }
+    }
+  }
+  const iframeCleanups = []
+
+  /** 双击直达查词：读当前选区（双击已选中单词）→ 塌缩 → 查词浮层 + 发音一次。 */
+  function dblclickHandler(e) {
+    if (!directLookupOnDouble) return
+    // 浮层自身内的双击不处理
+    if (e && (popEl.contains(e.target) || dictEl.contains(e.target))) return
+    try {
+      const w = selectionWindow || window
+      const sel = w.getSelection && w.getSelection()
+      const text = (sel && sel.toString().trim()) || ''
+      if (!sel || !sel.rangeCount || !text || text.length > 80) return
+      const word = text.replace(/[^A-Za-z'’-]/g, '')
+      if (!word) return
+      const range = sel.getRangeAt(0)
+      const rect = range.getBoundingClientRect()
+      const host = bodyEl.getBoundingClientRect()
+      suppressSelectionUntil = Date.now() + 900 // 压掉随后的 selectionchange 工具条
+      collapseSelection()
+      showDict({
+        word,
+        context: text.replace(/\s+/g, ' ').slice(0, 200),
+        x: rect.left - host.left + rect.width / 2,
+        y: rect.top - host.top,
+      })
+      speak(word)
+      if (onSpeakCb) onSpeakCb(word)
+    } catch { /* ignore */ }
+  }
+  if (directLookupOnDouble) {
+    bodyEl.addEventListener('dblclick', dblclickHandler)
   }
 
   // ---- 划词工具条（深色；仅发音 + 查词）----
@@ -130,6 +177,8 @@ export function createLookupLayer(bodyEl, opts = {}) {
 
   function showSelection(payload) {
     hideDict()
+    // 双击直达查词后 900ms 内：selectionchange 的余波不再弹工具条
+    if (directLookupOnDouble && Date.now() < suppressSelectionUntil) return
     currentSel = payload
     if (onSelectCb && payload && payload.word) onSelectCb(payload.word)
     collapseSelection()
@@ -232,12 +281,17 @@ export function createLookupLayer(bodyEl, opts = {}) {
   }
 
   function hideAll() {
+    // 双击直达查词后的保护窗内不响应「选区塌缩→hideAll」余波
+    //（否则刚开的查词浮层会被 250ms 后的 selectionchange 处理器关掉）
+    if (directLookupOnDouble && Date.now() < suppressSelectionUntil) return
     hideSelection()
     hideDict()
   }
 
   function destroy() {
     hideAll()
+    if (directLookupOnDouble) bodyEl.removeEventListener('dblclick', dblclickHandler)
+    iframeCleanups.forEach((fn) => fn())
     popEl.remove()
     dictEl.remove()
   }
