@@ -1706,7 +1706,14 @@ class PlanStore:
         - flags 异常标记：异常快=整段位移超 400 词/分物理读速（≥100 词才判，
           避免短会话小位移误报；含恢复瞬态的会话不判）；进度反向=结束位置
           低于开头 >1%；无有效阅读=闪进闪出/纯翻章会话（词数为 0）。
-        返回 {会话id: {words, overlap, s_pct, e_pct, link, link_note, flags[]}}。
+        位置口径（概念严格三分）：全书 % 仅是词位换算的内部中间量（s_pct/
+        e_pct，前端仅兜底显示）；对外统计一律「当前阅读章节的章内 %」——
+        chapters=[{ch 书内章号, s_in/e_in 章内起止%, words/overlap 该章
+        新学/重合词数}]，新章开启=第N章 0%、续读=上次退出的章内位置。
+        章号纯结构判定（首个 ≥200 词内容章起算第 1 章）；必读配置只定义
+        计词范围（非必读章不列行不计词），不参与编号。
+        返回 {会话id: {words, overlap, s_pct, e_pct, chapters[], link,
+        link_note, flags[]}}。
         """
         out: dict[int, dict] = {}
         if not ids:
@@ -1774,16 +1781,14 @@ class PlanStore:
         for r in rows:
             info = meta.get(r["book_id"])
             total = sum(w for _, w in info["chs"]) if info else 0
-            # 人类章号起点：必读配置首章，无配置则首个词数 ≥200 的内容章
+            # 人类章号起点：纯结构判定——首个词数 ≥200 的内容章。
+            # 必读配置只管计词范围，绝不参与章号编号（改配置不漂移编号）。
             first_content = 0
             if info:
-                if info["required"]:
-                    first_content = min(info["required"])
-                else:
-                    for idx, wc in info["chs"]:
-                        if wc >= 200:
-                            first_content = idx
-                            break
+                for idx, wc in info["chs"]:
+                    if wc >= 200:
+                        first_content = idx
+                        break
             valid = self._reading_session_valid(r)
             track = self._session_track(r)
             # 恢复瞬态净化：开局 3 秒内出现的大幅正向跳变（>4%/步）是
@@ -1847,36 +1852,42 @@ class PlanStore:
                 else:
                     link, note = "next", ""
 
-            # 章相对显示：全书 % →（人类章号, 章内 %）。新章开启=第N章 0%，
-            # 续读=上次退出的章内位置——全书 % 含封面/目录等前置页偏移
-            # （本书真实第 1 章起点 0.4%、第 2 章 4.2%，直接展示全书 %
-            # 会把「从第 2 章起读」误读成「只读了 4-5%」）。章号从首个
-            # 内容章起算：必读配置的起点；无配置则首个词数 ≥200 的章。
-            def ch_disp(pct: float):
-                if not info or total <= 0:
-                    return None
-                pos = pct / 100 * total
+            # ---- 分章统计（统计口径=章内百分比）----
+            # 全书 % 只是内部词位换算的中间量，对外一律按「当前阅读章节
+            # 的章内 %」呈现：新章开启=第N章 0%，续读=上次退出的章内位置。
+            # 逐有效章一行：章内起止% + 该章新学/重合词数（非必读章不列
+            # 行——计词范围由配置定义，与章号编号相互独立）。前置页
+            # （封面/目录）位置钳到第 1 章 0% 起。
+            ch_rows: list[dict] = []
+            if info and total > 0 and e0 > s0:
+                first_pos = sum(w for i, w in info["chs"] if i < first_content)
+                s_pos = max(s0 / 100 * total, first_pos)
+                e_pos = max(e0 / 100 * total, s_pos)
                 cum = 0
-                chs = info["chs"]
-                for i, (idx, wc) in enumerate(chs):
+                for idx, wc in info["chs"]:
                     c1 = cum + wc
-                    if pos < c1 or i == len(chs) - 1:
-                        within = (round(max(0.0, min(100.0,
-                                (pos - cum) / wc * 100))) if wc > 0 else 0)
-                        return (max(1, idx - first_content + 1), within)
+                    is_req = info["required"] is None or idx in info["required"]
+                    if is_req and wc > 0 and c1 > s_pos and cum < e_pos:
+                        a, b = max(cum, s_pos), min(c1, e_pos)
+                        ch_rows.append({
+                            "ch": idx - first_content + 1,
+                            "s_in": round((a - cum) / wc * 100),
+                            "e_in": round((b - cum) / wc * 100),
+                            "words": self._span_words(hi, cum, c1),
+                            "overlap": self._span_words(lo, cum, c1),
+                        })
                     cum = c1
-                return None
-
-            sd = ch_disp(s0)
-            ed = ch_disp(e0)
             out[r["id"]] = {"words": words, "overlap": overlap,
                             "s_pct": round(s0), "e_pct": round(e0),
-                            "s_ch": sd[0] if sd else None,
-                            "s_in": sd[1] if sd else None,
-                            "e_ch": ed[0] if ed else None,
-                            "e_in": ed[1] if ed else None,
+                            "chapters": ch_rows,
                             "link": link, "link_note": note, "flags": flags}
         return out
+
+    @staticmethod
+    def _span_words(segs: list, a: float, b: float) -> int:
+        """词位区段集合与区间 [a,b) 的重叠词数（纯几何求和，不过滤章）。"""
+        return int(round(sum(max(0.0, min(e, b) - max(s, a))
+                             for s, e in segs)))
 
     # 阅读限速（词/分钟）：会话级封顶用（跳章剔除见 _valid_track_segments）
     READ_WPM_CAP = 400.0

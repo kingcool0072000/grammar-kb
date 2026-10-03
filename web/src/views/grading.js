@@ -298,11 +298,20 @@ function focusTitle(s) {
   return title ? `泛读-${title}` : '泛读'
 }
 
-/** 位置区间文案：优先「第N章 X% → 第N章 Y%」（新章开启=第N章 0%、
- * 续读=上次退出的章内位置；全书 % 含封面/目录前置偏移易误读），
- * 后端缺章节数据时回落全书 %。 */
+/** 位置区间文案（统计口径=当前阅读章节的章内百分比）：
+ * 单章 →「第N章 X% → Y%」；跨章 →「第N章 X% → 第M章 Z%」；
+ * 后端缺章节数据时才回落全书 %。 */
 function posRangeText(rw) {
-  if (rw.s_ch != null) return `第${rw.s_ch}章 ${rw.s_in}% → 第${rw.e_ch}章 ${rw.e_in}%`
+  const chs = Array.isArray(rw.chapters) ? rw.chapters : []
+  if (chs.length === 1) {
+    const c = chs[0]
+    return `第${c.ch}章 ${c.s_in}% → ${c.e_in}%`
+  }
+  if (chs.length > 1) {
+    const a = chs[0]
+    const z = chs[chs.length - 1]
+    return `第${a.ch}章 ${a.s_in}% → 第${z.ch}章 ${z.e_in}%`
+  }
   return `${rw.s_pct}% → ${rw.e_pct}%`
 }
 
@@ -357,10 +366,10 @@ function reciteLogRow(x) {
     </div>`
 }
 
-/** 学习范围卡：模块徽标 + 范围标签 + 本段进度条。
- * 泛读会话升级为「水位切分」视图：拉 /focus/words 数据，把本段范围条
- * 按该书历史已读水位切成两截——水位下（重合，蓝）+ 水位上（新学，绿），
- * 上会话结尾位置画一条基线刻度；数据未返回时回落纯范围条。 */
+/** 学习范围卡：模块徽标 + 范围标签 + 位置区间。
+ * 泛读会话=逐章统计（每章一行：章内起止% 进度条 + 该章新学/重合词数）
+ * ——统计口径是「当前阅读章节的章内百分比」，新章开启=第N章 0%、
+ * 续读=上次退出的章内位置；全书 % 不对外。rw 缺失时回落纯范围条。 */
 function focusRangeCard(s) {
   const mod = s.module === 'reading' ? '精读' : '泛读'
   const modCls = s.module === 'reading' ? 'gd-focus-mod reading' : 'gd-focus-mod'
@@ -370,20 +379,29 @@ function focusRangeCard(s) {
   const left = Math.min(100, Math.max(0, rs))
   const width = Math.max(0, Math.min(100 - left, re - left))
   const rw = s.rw
-  let track = `<div class="gd-focus-range-track"><i style="left:${left}%;width:${width}%"></i></div>`
+  const chs = rw && Array.isArray(rw.chapters) ? rw.chapters : []
+  const posText = rw
+    ? posRangeText(rw)
+    : `${left.toFixed(0)}% → ${re.toFixed(0)}%`
+  let body = `<div class="gd-focus-range-track"><i style="left:${left}%;width:${width}%"></i></div>`
   let stats = ''
-  if (s.module !== 'reading' && rw) {
-    // 水位在全书刻度上的位置：s_pct 是净化后起点，水位≈起点（若开头
-    // 落在水位下）或起点本身（顺延/跳读）。用 overlap/words 占本段宽度
-    // 的比例切条——比绝对水位更直观（绿=本次新学，蓝=重合）。
-    const total = Math.max(1, (rw.words || 0) + (rw.overlap || 0))
-    const ovlW = width * (rw.overlap || 0) / total
-    const newW = width - ovlW
-    track = `
-  <div class="gd-focus-range-track gd-focus-range-split">
-    <i class="dup" style="left:${left}%;width:${ovlW.toFixed(2)}%"></i>
-    <i class="new" style="left:${(left + ovlW).toFixed(2)}%;width:${newW.toFixed(2)}%"></i>
-  </div>`
+  if (rw) {
+    // 只展示有词数的章（限速折算产生的 0 词虚区段不列行）
+    const realChs = chs.filter((c) => (c.words || 0) + (c.overlap || 0) > 0)
+    if (realChs.length) {
+      body = realChs.map((c) => {
+        const w = Math.max(0, Math.min(100 - c.s_in, c.e_in - c.s_in))
+        return `
+      <div class="gd-focus-chrow">
+        <span class="gd-focus-chrow-name">第${c.ch}章</span>
+        <span class="gd-focus-chrow-track"><i style="left:${Math.min(100, c.s_in)}%;width:${w}%"></i></span>
+        <span class="gd-focus-chrow-nums">
+          ${(c.words > 0 || !(c.overlap > 0)) ? `<b class="new">${c.words} 词</b>` : ''}
+          ${c.overlap > 0 ? `<b class="dup">重合 ${c.overlap}</b>` : ''}
+        </span>
+      </div>`
+      }).join('')
+    }
     const linkTxt = rw.link === 'next' ? '↪ 与上会话衔接'
       : rw.link === 'first' ? '首读'
         : rw.link_note ? `⚠ ${rw.link_note}` : ''
@@ -400,9 +418,9 @@ function focusRangeCard(s) {
     <div class="gd-focus-range-head">
       <i class="${modCls}">${mod}</i>
       <span class="gd-focus-range-label">${escapeHtml(label)}</span>
-      <span class="gd-focus-range-pct">${rw ? posRangeText(rw) : `${left.toFixed(0)}% → ${re.toFixed(0)}%`}</span>
+      <span class="gd-focus-range-pct">${posText}</span>
     </div>
-    ${track}
+    ${body}
     ${stats}
   </div>`
 }
