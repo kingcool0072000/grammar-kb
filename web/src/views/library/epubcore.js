@@ -51,11 +51,17 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
   })
 
   let restoreResolve
-  /** 初始恢复落位完成时 resolve（display 完成 + 自愈滚动窗口过后）。
-   * 落位前的 relocated 是瞬态位置（初始渲染开头→自愈滚到上次结尾），
-   * 调用方据此区分瞬态与真实阅读起点（曾表现为「每次都从 5% 起读」）。 */
+  /** 初始恢复落位完成时 resolve。两个条件：
+   * ①display 完成 + 自愈滚动窗口过后（620ms）；
+   * ②locations 就绪（或 3s 超时兜底）——locations 未生成时 relocated 用
+   *   spine 比例兜底公式（(idx+0.5)/spine数），大书首章会算出 ~15% 的假
+   *   百分比，落位前不开放采集以免假起点入档。 */
   const restored = new Promise((res) => {
     restoreResolve = res
+  })
+  let locationsReadyResolve
+  const locationsReady = new Promise((res) => {
+    locationsReadyResolve = res
   })
 
   /** 序列化所有 display/next/prev：按调用顺序生效；单步 20s 超时防死锁 */
@@ -254,12 +260,23 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
   }
 
   // locations 生成（异步一次性；完成后用当前位置刷新百分比）
+  let locTimeout = null
   function generateLocations() {
     if (!book) return
-    if (book.locations.length()) return
+    if (book.locations.length()) {
+      try { locationsReadyResolve() } catch { /* 已 resolve */ }
+      return
+    }
+    locTimeout = setTimeout(() => {
+      // 兜底：生成卡死 3s 也放行——假百分比风险换可用性（采集已另有
+      // 恢复瞬态净化与限速层兜底）
+      try { locationsReadyResolve() } catch { /* 已 resolve */ }
+    }, 3000)
     book.locations
       .generate(1024)
       .then(() => {
+        clearTimeout(locTimeout)
+        try { locationsReadyResolve() } catch { /* 已 resolve */ }
         if (destroyed || !book || !rendition) return
         const loc = rendition.currentLocation()
         if (loc && loc.start) {
@@ -300,7 +317,8 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
       const p = stored
         ? rendition.display(stored).catch(() => rendition.display())
         : rendition.display()
-      // 恢复落位窗口：display 完成 + 自愈滚动 350ms + 重报 120ms 后视为稳定
+    // 恢复落位窗口：display 完成 + 自愈滚动 350ms + 重报 120ms 后视为稳定；
+    // 同时等 locations 就绪（未就绪时 relocated 是 spine 兜底假百分比）
       p.then(() => {
         setTimeout(() => {
           if (!destroyed) restoreResolve()
@@ -581,7 +599,7 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
     injectChapterLinksNow,
     updateReadMask,
     applyTheme,
-    restored,
+    restored: Promise.all([restored, locationsReady]).then(() => {}),
     destroy,
   }
 }

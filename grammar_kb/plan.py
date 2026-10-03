@@ -1774,6 +1774,16 @@ class PlanStore:
         for r in rows:
             info = meta.get(r["book_id"])
             total = sum(w for _, w in info["chs"]) if info else 0
+            # 人类章号起点：必读配置首章，无配置则首个词数 ≥200 的内容章
+            first_content = 0
+            if info:
+                if info["required"]:
+                    first_content = min(info["required"])
+                else:
+                    for idx, wc in info["chs"]:
+                        if wc >= 200:
+                            first_content = idx
+                            break
             valid = self._reading_session_valid(r)
             track = self._session_track(r)
             # 恢复瞬态净化：开局 3 秒内出现的大幅正向跳变（>4%/步）是
@@ -1836,8 +1846,35 @@ class PlanStore:
                     link, note = "back", f"回读 {round(-gap)}%"
                 else:
                     link, note = "next", ""
+
+            # 章相对显示：全书 % →（人类章号, 章内 %）。新章开启=第N章 0%，
+            # 续读=上次退出的章内位置——全书 % 含封面/目录等前置页偏移
+            # （本书真实第 1 章起点 0.4%、第 2 章 4.2%，直接展示全书 %
+            # 会把「从第 2 章起读」误读成「只读了 4-5%」）。章号从首个
+            # 内容章起算：必读配置的起点；无配置则首个词数 ≥200 的章。
+            def ch_disp(pct: float):
+                if not info or total <= 0:
+                    return None
+                pos = pct / 100 * total
+                cum = 0
+                chs = info["chs"]
+                for i, (idx, wc) in enumerate(chs):
+                    c1 = cum + wc
+                    if pos < c1 or i == len(chs) - 1:
+                        within = (round(max(0.0, min(100.0,
+                                (pos - cum) / wc * 100))) if wc > 0 else 0)
+                        return (max(1, idx - first_content + 1), within)
+                    cum = c1
+                return None
+
+            sd = ch_disp(s0)
+            ed = ch_disp(e0)
             out[r["id"]] = {"words": words, "overlap": overlap,
                             "s_pct": round(s0), "e_pct": round(e0),
+                            "s_ch": sd[0] if sd else None,
+                            "s_in": sd[1] if sd else None,
+                            "e_ch": ed[0] if ed else None,
+                            "e_in": ed[1] if ed else None,
                             "link": link, "link_note": note, "flags": flags}
         return out
 

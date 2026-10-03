@@ -298,6 +298,14 @@ function focusTitle(s) {
   return title ? `泛读-${title}` : '泛读'
 }
 
+/** 位置区间文案：优先「第N章 X% → 第N章 Y%」（新章开启=第N章 0%、
+ * 续读=上次退出的章内位置；全书 % 含封面/目录前置偏移易误读），
+ * 后端缺章节数据时回落全书 %。 */
+function posRangeText(rw) {
+  if (rw.s_ch != null) return `第${rw.s_ch}章 ${rw.s_in}% → 第${rw.e_ch}章 ${rw.e_in}%`
+  return `${rw.s_pct}% → ${rw.e_pct}%`
+}
+
 // 学习日志-泛读/精读/专题会话行（带学生名；泛读附精确词数+位置区间+
 // 与上会话衔接/异常标记，rw 来自后端 /focus/words）
 function focusRow(s) {
@@ -319,7 +327,7 @@ function focusRow(s) {
           // 重合=水位以下已读过部分，只展示不重复计数
           ...(rw.words > 0 || !(rw.overlap > 0) ? [`<i class="gd-focus-chip">${rw.words} 词</i>`] : []),
           ...(rw.overlap > 0 ? [`<i class="gd-focus-chip dup">重合 ${rw.overlap} 词</i>`] : []),
-          `<i class="gd-focus-chip">${rw.s_pct}%→${rw.e_pct}%</i>`,
+          `<i class="gd-focus-chip">${posRangeText(rw)}</i>`,
           linkChip,
           ...(rw.flags || []).map((f) => `<i class="gd-focus-chip warn">⚠ ${escapeHtml(f)}</i>`),
         ]
@@ -392,7 +400,7 @@ function focusRangeCard(s) {
     <div class="gd-focus-range-head">
       <i class="${modCls}">${mod}</i>
       <span class="gd-focus-range-label">${escapeHtml(label)}</span>
-      <span class="gd-focus-range-pct">${left.toFixed(0)}% → ${re.toFixed(0)}%</span>
+      <span class="gd-focus-range-pct">${rw ? posRangeText(rw) : `${left.toFixed(0)}% → ${re.toFixed(0)}%`}</span>
     </div>
     ${track}
     ${stats}
