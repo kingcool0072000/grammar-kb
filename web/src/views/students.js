@@ -170,14 +170,18 @@ export async function mountStudents(el, { bare = false } = {}) {
             <button type="button" class="pe-part" data-sg-art="${a.id}">${escapeHtml(a.title.slice(0, 20))}<i>${a.words}</i></button>`).join('') || '<p class="muted">暂无派生文章</p>'}</div>
         </div>
 
-        <div class="pe-sec"><h4>📚 泛读书-章节目标 <i>按必读章配置口径显示词数</i><button type="button" class="chip sg-all" data-all="bk">全选</button></h4>
+        <div class="pe-sec"><h4>📚 泛读书-章节目标 <i>按章勾选；点书名展开/收起章节</i><button type="button" class="chip sg-all" data-all="bk">全选书</button></h4>
           ${books.map((b) => `
-            <div class="sg-book-row">
+            <div class="sg-book-row" data-sg-bkrow="${b.id}">
               <label class="sg-book-main"><input type="checkbox" data-sg-bk="${b.id}"/>
                 <b>${escapeHtml(b.title.slice(0, 30))}</b>
-                <i>${b.configured_chapters?.length ? `必读 ${b.configured_chapters.length} 章 · ${b.goal_words} 词` : `全书 ${b.chapters} 章 · ${b.total_words} 词`}</i>
+                <i>${b.valid_chapters || b.chapters} 章 · ${b.goal_words} 词</i>
                 <em>已读 ${b.percent}%</em>
               </label>
+              <div class="pe-chchips sg-chchips" data-sg-chips="${b.id}">
+                ${(b.chapter_opts || []).map((c) =>
+                  `<button type="button" class="chip pe-chchip" data-sg-ch="${b.id}:${c.idx}" title="${escapeHtml(c.title)}">第${c.no}章 ${c.words}词</button>`).join('')}
+              </div>
             </div>`).join('') || '<p class="muted">书架暂无书目</p>'}
         </div>
 
@@ -203,6 +207,7 @@ export async function mountStudents(el, { bare = false } = {}) {
     const sel = {
       lectures: new Set(), vocab_levels: new Set(), fce_parts: new Set(),
       articles: new Set(), books: new Set(), vocab_papers: new Set(),
+      reading_chapters: new Map(), // bookId(str) -> Set(章idx)
     }
     // ---- 回填当前配置（按钮 on / checkbox checked 与 sel 同步）----
     const prefill = () => {
@@ -230,6 +235,15 @@ export async function mountStudents(el, { bare = false } = {}) {
         sel.books.add(String(id))
         const c = dlg.querySelector(`[data-sg-bk="${id}"]`)
         if (c) c.checked = true
+      }
+      // 章选回填：reading_chapters={bookId:[idx]}；未配置的书勾选时全选
+      for (const [bid, idxs] of Object.entries(cur.reading_chapters || {})) {
+        const set = new Set(idxs.map(Number))
+        sel.reading_chapters.set(String(bid), set)
+        for (const i of set) {
+          const chip = dlg.querySelector(`[data-sg-ch="${bid}:${i}"]`)
+          if (chip) chip.classList.add('primary')
+        }
       }
       for (const pid of cur.vocab_papers || []) {
         sel.vocab_papers.add(pid)
@@ -296,6 +310,28 @@ export async function mountStudents(el, { bare = false } = {}) {
       c.addEventListener('change', () => {
         const v = c.dataset.sgBk
         if (c.checked) sel.books.add(v); else sel.books.delete(v)
+        // 勾书默认全选该书章；取消书清空该书章选
+        const chips = dlg.querySelectorAll(`[data-sg-ch="${v}:"], [data-sg-ch^="${v}:"]`)
+        const on = c.checked
+        const set = sel.reading_chapters.get(v) || new Set()
+        chips.forEach((chip) => {
+          const idx = Number(chip.dataset.sgCh.split(':')[1])
+          if (on) { set.add(idx); chip.classList.add('primary') }
+          else { set.delete(idx); chip.classList.remove('primary') }
+        })
+        if (set.size) sel.reading_chapters.set(v, set)
+        else sel.reading_chapters.delete(v)
+      }))
+    // 章 chip 点选切换（不影响书勾选态）
+    dlg.querySelectorAll('[data-sg-ch]').forEach((chip) =>
+      chip.addEventListener('click', () => {
+        const [bid, idxS] = chip.dataset.sgCh.split(':')
+        const idx = Number(idxS)
+        const set = sel.reading_chapters.get(bid) || new Set()
+        if (set.has(idx)) { set.delete(idx); chip.classList.remove('primary') }
+        else { set.add(idx); chip.classList.add('primary') }
+        if (set.size) sel.reading_chapters.set(bid, set)
+        else sel.reading_chapters.delete(bid)
       }))
 
     dlg.querySelector('#sg-save').addEventListener('click', async () => {
@@ -307,6 +343,12 @@ export async function mountStudents(el, { bare = false } = {}) {
       if (sel.fce_parts.size) ng.fce_parts = [...sel.fce_parts]
       if (sel.articles.size) ng.articles = [...sel.articles].map(Number)
       if (sel.books.size) ng.reading = [...sel.books].map(Number)
+      // 章选目标（新口径）：{bookId: [章idx...]}；勾了书但没细选章的书
+      // 不写章表（总目标泛读按整书词数计）
+      if (sel.reading_chapters.size) {
+        ng.reading_chapters = Object.fromEntries(
+          [...sel.reading_chapters.entries()].map(([k, s]) => [Number(k), [...s].sort((a, b) => a - b)]))
+      }
       if (sel.vocab_papers.size) ng.vocab_papers = [...sel.vocab_papers]
       const dl = dlg.querySelector('#sg-deadline').value
       if (dl) ng.deadline = dl

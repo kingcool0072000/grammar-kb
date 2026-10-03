@@ -221,12 +221,55 @@ class LibraryStore:
         prepped = conn.execute(
             "SELECT COUNT(*) AS c FROM chapter_preps WHERE book_id = ?", (row["id"],)
         ).fetchone()["c"]
+        # 章维度信息（书架章节进度展示）：
+        # valid_chapters=有效章数（必读配置，未配置=词数≥200 内容章）、
+        # total_words=有效章词数和（全书词数口径=有效章之和）、
+        # cur_no/cur_in=当前读到的章号（标题字面数字）与章内%。
+        chs = conn.execute(
+            "SELECT idx, title, word_count FROM chapters"
+            " WHERE book_id = ? ORDER BY idx", (row["id"],),
+        ).fetchall()
+        cfg_row = conn.execute(
+            "SELECT chapters FROM book_reading_config WHERE book_id = ?",
+            (row["id"],)).fetchone()
+        try:
+            cfg = sorted({int(x) for x in json.loads(cfg_row["chapters"] or "[]")}) \
+                if cfg_row and cfg_row["chapters"] else None
+        except (ValueError, TypeError):
+            cfg = None
+        valid = set(cfg) if cfg else {c["idx"] for c in chs
+                                      if (c["word_count"] or 0) >= 200}
+        valid_words = sum(c["word_count"] or 0 for c in chs if c["idx"] in valid)
+        cur_no = cur_in = None
+        pct = (prog["percent"] if prog else 0.0) or 0.0
+        if chs and valid_words > 0:
+            pos = pct / 100 * sum(c["word_count"] or 0 for c in chs)
+            cum = 0
+            first_content = 0
+            for c in chs:
+                if (c["word_count"] or 0) >= 200:
+                    first_content = c["idx"]
+                    break
+            for i, c in enumerate(chs):
+                c1 = cum + (c["word_count"] or 0)
+                if pos < c1 or i == len(chs) - 1:
+                    m = re.match(r"\s*(\d+)", str(c["title"] or ""))
+                    cur_no = (int(m.group(1)) if m
+                              else max(1, c["idx"] - first_content + 1))
+                    wc = c["word_count"] or 1
+                    cur_in = round(max(0.0, min(100.0, (pos - cum) / wc * 100)))
+                    break
+                cum = c1
         return {
             "id": row["id"],
             "title": row["title"],
             "author": row["author"] or "",
             "hasCover": bool(row["cover_path"]),
             "chapterCount": row["chapter_count"] or 0,
+            "validChapters": len(valid),
+            "validWords": valid_words,
+            "curChapterNo": cur_no,
+            "curChapterIn": cur_in,
             "preppedCount": prepped,
             "fileSize": row["file_size"] or 0,
             "addedAt": row["added_at"],

@@ -703,17 +703,44 @@ class PlanStore:
             "reading_seconds": (prog["reading_seconds"] or 0) if prog else 0,
         }
 
-    def _reading_task(self, book_key: str, goal_pct: float, user: str,
+    def _reading_task(self, book_key: str, goal_val, user: str,
                       days_left: int) -> dict:
-        """泛读任务行：精确到章 + 词数（匹配不到书则回退百分比口径）。"""
+        """泛读任务行。goal_val 两种格式：
+        - list（新）：选章 idx 列表 → 目标=读完这些章（词数=章和）
+        - number（旧）：全书目标 % → 按必读配置/全书口径
+        匹配不到书则回退百分比文案。"""
         row = self._match_book(book_key, user)
         short = (row["title"][:14] if row else str(book_key)[:14])
+        if isinstance(goal_val, list) and row:
+            # 新章选格式：目标词数=选章词数和；已读=该生全书有效阅读
+            # 区段 ∩ 选章的词数（水位区段跨会话去重，且只数选章内）
+            goal_words = self._chapters_words_sum({str(row["id"]): goal_val})
+            done_w = self._read_words_in_chapters(user, row["id"], goal_val)
+            nos = self._chapter_nos(row["id"], goal_val)
+            rng = (f"第{nos[0]}–{nos[-1]}章" if len(nos) > 1
+                   else f"第{nos[0]}章") if nos else f"{len(goal_val)} 章"
+            if done_w >= goal_words and goal_words > 0:
+                return {
+                    "type": "reading", "book": book_key,
+                    "key": f"reading:{book_key}",
+                    "text": f"泛读《{short}》{rng}已读完 🎉",
+                    "detail": f"累计 {fmt_w(done_w)}/{fmt_w(goal_words)} 词",
+                }
+            per_day = max(1, round(max(0, goal_words - done_w) / max(1, days_left)))
+            return {
+                "type": "reading", "book": book_key,
+                "key": f"reading:{book_key}",
+                "text": f"泛读《{short}》{rng}",
+                "detail": (f"已读 {fmt_w(done_w)}/{fmt_w(goal_words)} 词"
+                           f" · 今日 +{fmt_w(per_day)} 词"),
+            }
+        goal_pct = float(goal_val or 100)
         if row:
             st = self._book_reading_state(row["id"], goal_pct, user)
             if st:
                 cfg_txt = (f"必读 {st['configured_chapters']} 章"
                            if st.get("configured_chapters") else f"目标 {goal_pct}%")
-                reached = st["percent"] >= (st.get("goal_percent") or float(goal_pct)) - 0.05
+                reached = st["percent"] >= (st.get("goal_percent") or goal_pct) - 0.05
                 if reached:
                     return {
                         "type": "reading", "book": book_key,
@@ -736,6 +763,57 @@ class PlanStore:
             "type": "reading", "book": book_key, "key": f"reading:{book_key}",
             "text": f"泛读《{short}》目标 {goal_pct}%", "detail": "每天 ≥15 分钟",
         }
+
+    def _read_words_in_chapters(self, user: str, book_id: int, idxs: list) -> int:
+        """该生在某书选章范围内的已读词数（跨会话区段去重 ∩ 选章）。"""
+        lib = self._lib_connect()
+        if lib is None or not idxs:
+            return 0
+        try:
+            with contextlib.closing(lib):
+                meta = self._book_meta(lib, {book_id})
+        except sqlite3.Error:
+            return 0
+        info = meta.get(book_id)
+        if not info:
+            return 0
+        total = sum(w for _, w in info["chs"])
+        if total <= 0:
+            return 0
+        segs: list = []
+        for r in self._library_sessions_all(user, book_id):
+            if self._reading_session_valid(r):
+                segs.extend(self._row_segs(r, total))
+        ch_set = set(idxs)
+        return self._segs_words(segs, info["chs"], ch_set)[0]
+
+    def _chapter_nos(self, book_id: int, idxs: list) -> list[int]:
+        """章 idx 列表 → 排序后的展示章号（标题字面数字，兜底结构号）。"""
+        lib = self._lib_connect()
+        if lib is None or not idxs:
+            return []
+        try:
+            with contextlib.closing(lib):
+                ph = ",".join("?" * len(idxs))
+                rows = lib.execute(
+                    "SELECT idx, title, word_count FROM chapters"
+                    f" WHERE book_id = ? AND idx IN ({ph}) ORDER BY idx",
+                    [book_id] + [int(x) for x in idxs]).fetchall()
+        except (sqlite3.Error, ValueError, TypeError):
+            return []
+        if not rows:
+            return []
+        first_content = 0
+        for r in rows:
+            if (r["word_count"] or 0) >= 200:
+                first_content = r["idx"]
+                break
+        out = []
+        for r in rows:
+            m = re.match(r"\s*(\d+)", str(r["title"] or ""))
+            out.append(int(m.group(1)) if m
+                       else max(1, r["idx"] - first_content + 1))
+        return sorted(out)
 
     # ---- 内循环：学生今日任务 / 周清单（自动检测 + 手动打卡） ----
 
@@ -1015,24 +1093,33 @@ class PlanStore:
         if reading_map:
             acts_w = sum((r.get("words") or 0)
                          for d in days for r in (d.get("acts") or {}).get("readings") or [])
-            # 目标词数：各书配置目标% × 该书总词数（周维度 total）；
-            # 进度 = 周内实录词数/目标词数封顶
+            # 目标词数（新口径=选章词数和；旧 pct 格式按全书×% 换算兼容）；
+            # 进度 = 周内实录词数/目标词数，**不封顶**（超读显示 >100%）
             total_w = 0
-            ids = [k for k in reading_map if str(k).isdigit()]
-            if ids:
-                lib = self._lib_connect()
+            lib = self._lib_connect()
+            try:
                 if lib is not None:
-                    try:
-                        with contextlib.closing(lib):
-                            for bid in ids:
+                    with contextlib.closing(lib):
+                        for k, v in reading_map.items():
+                            if not str(k).isdigit():
+                                continue
+                            if isinstance(v, list):
+                                # 新格式：选章列表 → 词数和
+                                ph = ",".join("?" * len(v)) or "NULL"
                                 row = lib.execute(
                                     "SELECT COALESCE(SUM(word_count),0) FROM chapters"
-                                    " WHERE book_id = ?", (int(bid),)).fetchone()
-                                total_w += int((row[0] or 0) * reading_map[bid] / 100)
-                    except sqlite3.Error:
-                        pass
+                                    f" WHERE book_id = ? AND idx IN ({ph})",
+                                    [int(k)] + [int(x) for x in v]).fetchone()
+                                total_w += int(row[0] or 0)
+                            else:
+                                row = lib.execute(
+                                    "SELECT COALESCE(SUM(word_count),0) FROM chapters"
+                                    " WHERE book_id = ?", (int(k),)).fetchone()
+                                total_w += int((row[0] or 0) * float(v) / 100)
+            except (sqlite3.Error, TypeError, ValueError):
+                pass
             if total_w:
-                dim("📖", "泛读", min(acts_w, total_w), total_w,
+                dim("📖", "泛读", acts_w, total_w,
                     extra=f"周内实录 {acts_w} 词")
 
         arts = t.get("articles") or []
@@ -1062,7 +1149,10 @@ class PlanStore:
             dim("📝", "试卷", done_p, len(papers))
 
         total_items = sum(d["total"] for d in dims)
-        done_items = sum(min(d["done"], d["total"]) for d in dims)
+        # 泛读维度按实际计数（可超 100%）；其余维度封顶（完成即满）
+        done_items = sum(
+            d["done"] if d["name"] == "泛读" else min(d["done"], d["total"])
+            for d in dims)
         pct = round(done_items / total_items * 100) if total_items else None
         return {"dims": dims, "percent": pct,
                 "done_items": round(done_items), "total_items": total_items,
@@ -1135,6 +1225,9 @@ class PlanStore:
         except sqlite3.Error:
             pass
         # 泛读馆书目（library.db：词数 + 必读章配置 + 该生进度）
+        # 每章明细供编辑器选章：有效章=有词数的内容章（word_count≥200
+        # 或必读配置内），其他章（封面/目录）不进选项不计词——全书词数
+        # =有效章词数之和（用户定案的模型）。
         books = []
         conn = self._lib_connect()
         if conn is not None:
@@ -1145,8 +1238,8 @@ class PlanStore:
                     ).fetchall()
                     for b in brows:
                         chs = conn.execute(
-                            "SELECT idx, word_count FROM chapters WHERE book_id = ?"
-                            " ORDER BY idx", (b["id"],),
+                            "SELECT idx, title, word_count FROM chapters"
+                            " WHERE book_id = ? ORDER BY idx", (b["id"],),
                         ).fetchall()
                         total_words = sum(c["word_count"] or 0 for c in chs)
                         cfg_row = conn.execute(
@@ -1160,10 +1253,29 @@ class PlanStore:
                                 cfg = sorted({int(x) for x in v}) if v else None
                             except (ValueError, TypeError):
                                 cfg = None
-                        goal_words = total_words
-                        if cfg:
-                            wc = {c["idx"]: c["word_count"] or 0 for c in chs}
-                            goal_words = sum(wc.get(i, 0) for i in cfg)
+                        # 章号统一口径：标题字面数字（书印刷章号），无数字
+                        # 回落结构号（首个 ≥200 词内容章起算）
+                        title_num = {}
+                        for c in chs:
+                            m = re.match(r"\s*(\d+)", str(c["title"] or ""))
+                            if m:
+                                title_num[c["idx"]] = int(m.group(1))
+                        first_content = 0
+                        for c in chs:
+                            if (c["word_count"] or 0) >= 200:
+                                first_content = c["idx"]
+                                break
+                        # 有效章：必读配置优先；未配置=词数 ≥200 的内容章
+                        valid = set(cfg) if cfg else {
+                            c["idx"] for c in chs if (c["word_count"] or 0) >= 200}
+                        chapter_opts = [
+                            {"idx": c["idx"],
+                             "no": title_num.get(c["idx"])
+                             or max(1, c["idx"] - first_content + 1),
+                             "title": (c["title"] or "")[:24],
+                             "words": c["word_count"] or 0}
+                            for c in chs if c["idx"] in valid]
+                        goal_words = sum(o["words"] for o in chapter_opts)
                         prog = conn.execute(
                             "SELECT percent FROM reading_progress"
                             " WHERE book_id = ? AND user = ?", (b["id"], user),
@@ -1171,8 +1283,10 @@ class PlanStore:
                         books.append({
                             "id": b["id"], "title": b["title"],
                             "chapters": b["chapter_count"] or len(chs),
+                            "valid_chapters": len(chapter_opts),
                             "total_words": total_words,
                             "configured_chapters": cfg,
+                            "chapter_opts": chapter_opts,
                             "goal_words": goal_words,
                             "percent": round(prog["percent"] or 0.0, 1) if prog else 0.0,
                         })
@@ -1264,15 +1378,18 @@ class PlanStore:
             dim("🎤", "精读朗读", d, len(ga_))
 
         gr = g.get("reading") or []
-        if gr:
-            # 泛读 = 统计周期内（总目标=所有时间）实录词数总和 vs 目标书目
-            # 词数总和——会话级口径，与周目标/日卡片同一公式（有效性过滤 +
-            # 轨迹剔跳章 + 必读章重叠），跨会话重叠段去重不重复计。
+        gr_ch = g.get("reading_chapters") or {}
+        if gr or gr_ch:
+            # 泛读 = 统计周期内（总目标=所有时间）实录词数总和 vs 目标
+            # 词数总和（新口径=选章词数和 reading_chapters；旧口径=整书）。
+            # 会话级口径，与周目标/日卡片同一公式（有效性过滤+轨迹剔跳章
+            # +必读章重叠），跨会话重叠段去重不重复计。不封顶（可超100%）。
             done_w = sum(e["words"] for e in self._reading_day_detail(
                 self._library_sessions_all(user)))
             total_w = self._goal_reading_words(gr)
+            total_w += self._chapters_words_sum(gr_ch)
             if total_w:
-                dim("📖", "泛读", min(done_w, total_w), total_w,
+                dim("📖", "泛读", done_w, total_w,
                     extra=f"所有时间累计 {done_w} 词")
 
         gp = g.get("vocab_papers") or []
@@ -1287,7 +1404,10 @@ class PlanStore:
                 extra="按对应级别考试通过计")
 
         total_items = sum(d["total"] for d in dims)
-        done_items = sum(min(d["done"], d["total"]) for d in dims)
+        # 泛读按实际计数（可超 100%）；其余维度封顶
+        done_items = sum(
+            d["done"] if d["name"] == "泛读" else min(d["done"], d["total"])
+            for d in dims)
         pct = round(done_items / total_items * 100) if total_items else None
         return {"user": user, "dims": dims, "percent": pct,
                 "done_items": done_items, "total_items": total_items,
@@ -1345,17 +1465,25 @@ class PlanStore:
                 pass
         return done
 
-    def _library_sessions_all(self, user: str) -> list:
-        """该生全部泛读会话（library 模块，不限日期；总目标词数口径数据源）。"""
+    def _library_sessions_all(self, user: str, book_id: Optional[int] = None) -> list:
+        """该生全部泛读会话（library 模块，不限日期；总目标/章任务词数口径）。"""
         try:
             with self._connect() as conn:
+                if book_id is None:
+                    return conn.execute(
+                        "SELECT module, book_title, book_id, active_sec,"
+                        " percent_start, percent_end, lookups, plays,"
+                        " scroll_count, chapter_navs, percent_track"
+                        " FROM focus_sessions"
+                        " WHERE user = ? AND module = 'library'"
+                        " AND book_id IS NOT NULL", (user,)).fetchall()
                 return conn.execute(
                     "SELECT module, book_title, book_id, active_sec,"
                     " percent_start, percent_end, lookups, plays,"
                     " scroll_count, chapter_navs, percent_track"
                     " FROM focus_sessions"
                     " WHERE user = ? AND module = 'library'"
-                    " AND book_id IS NOT NULL", (user,)).fetchall()
+                    " AND book_id = ?", (user, int(book_id))).fetchall()
         except sqlite3.Error:
             return []
 
@@ -1372,6 +1500,30 @@ class PlanStore:
             return 0
         return sum(w for info in meta.values() for i, w in info["chs"]
                    if info["required"] is None or i in info["required"])
+
+    def _chapters_words_sum(self, reading_chapters: dict) -> int:
+        """reading_chapters={bookId:[章idx]} 的词数总和（新章选口径）。"""
+        if not reading_chapters:
+            return 0
+        lib = self._lib_connect()
+        if lib is None:
+            return 0
+        total = 0
+        try:
+            with contextlib.closing(lib):
+                for bid, idxs in reading_chapters.items():
+                    if not str(bid).isdigit() or not isinstance(idxs, list) or not idxs:
+                        continue
+                    ph = ",".join("?" * len(idxs))
+                    row = lib.execute(
+                        "SELECT COALESCE(SUM(word_count),0) FROM chapters"
+                        f" WHERE book_id = ? AND idx IN ({ph})",
+                        [int(bid)] + [int(x) for x in idxs if str(x).lstrip('-').isdigit()]
+                    ).fetchone()
+                    total += int(row[0] or 0)
+        except (sqlite3.Error, TypeError, ValueError):
+            return total
+        return total
 
     def goal_assets(self, lectures: list, fce_parts: list, books: list,
                     articles: list, user: str = "malin") -> dict:

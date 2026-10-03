@@ -159,20 +159,33 @@ export async function mountLibraryShelf(viewEl, { role } = {}) {
   }
 
   function bookCardHtml(b) {
-    const percent = b.percent == null ? 0 : Math.round(b.percent)
-    const finished = percent >= 100
+    // 章节进度口径：显示当前读到第几章+章内%（不显示全书百分比——
+    // 长章书上全书% 几乎不动，观感是"没进度"）。共 N 章 · 共 M 词。
+    const nCh = b.validChapters || b.chapterCount || 0
+    const nW = b.validWords || 0
+    const fmtW = nW >= 1000 ? `${(nW / 1000).toFixed(1)}k` : String(nW)
+    const finished = (b.percent != null && b.percent >= 99.9)
+      || (b.curChapterNo != null && nCh && b.curChapterNo >= nCh
+          && (b.curChapterIn ?? 0) >= 99)
+    const prog = finished
+      ? '<div class="lib-book-meta">已读完</div>'
+      : b.curChapterNo != null
+        ? `<div class="lib-book-meta">读至第${b.curChapterNo}章 ${b.curChapterIn ?? 0}%</div>`
+        : '<div class="lib-book-meta">未读</div>'
+    const chIn = finished ? 100 : Math.min(100, b.curChapterIn ?? 0)
     return `
       <article class="lib-book" data-id="${b.id}" title="${escAttr(b.title)}">
         <div class="lib-cover">
           <span class="lib-cover-fb">${ICONS.book(38)}</span>
           ${b.hasCover ? `<img alt="${escAttr(b.title)}" data-cover="${b.id}" style="opacity:0;transition:opacity .25s">` : ''}
           ${finished ? '<span class="lib-done-flag">✓ 读完</span>' : ''}
-          ${percent > 0 && !finished ? `<div class="lib-card-prog"><i style="width:${percent}%"></i></div>` : ''}
+          ${!finished && b.curChapterNo != null ? `<div class="lib-card-prog"><i style="width:${chIn}%"></i></div>` : ''}
         </div>
         <div class="lib-book-info">
           <p class="lib-book-title">${escapeHtml(b.title)}</p>
           <div class="lib-book-author">${escapeHtml(b.author || '未知作者')}</div>
-          <div class="lib-book-meta">${finished ? '已完成' : percent > 0 ? `${percent}%` : '未读'}</div>
+          ${prog}
+          <div class="lib-book-meta lib-book-meta-sub">共 ${nCh} 章 · ${fmtW} 词</div>
         </div>
         ${isTeacher ? `
           <button class="lib-book-menu-btn" data-menu="${b.id}" aria-label="管理菜单">⋯</button>

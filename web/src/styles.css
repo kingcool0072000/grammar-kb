@@ -2728,6 +2728,14 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 .pe-book-row label { font-size: 11.5px; color: var(--ink-soft); display: flex; align-items: center; gap: 3px; }
 .pe-add-book { display: flex; align-items: center; gap: 8px; }
 .pe-add-book select { flex: 1; min-width: 0; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); font-size: 12.5px; }
+/* 泛读章选（新口径：按章选目标，chips 带每章词数） */
+.pe-book-chrow { flex-direction: column; align-items: stretch; }
+.pe-book-chhead { display: flex; align-items: center; gap: 8px; }
+.pe-book-chhead .pe-book-title { flex: 1; }
+.pe-book-sum { font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.pe-chchips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.pe-chchip { font-size: 11px; padding: 2px 8px; }
+.pe-chchip.primary { background: #f3e3d7; border-color: #d65124; color: #a33d17; }
 .pe-speak { font-size: 13px; color: var(--ink-soft); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
 @media (max-width: 860px) {
@@ -2903,6 +2911,9 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 .sg-vocab-n { margin-left: auto; font-size: 12.5px; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 4px; }
 .sg-vocab-n input { width: 80px; padding: 4px 7px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg-soft); }
 .sg-book-row { padding: 6px 0; border-bottom: 1px dashed var(--line); }
+/* 目标弹窗：书行下的章选 chips（默认收起，点书名展开） */
+.sg-chchips { margin-top: 6px; }
+.sg-chchips .pe-chchip { font-size: 10.5px; padding: 1px 7px; }
 .sg-book-main { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 13px; cursor: pointer; }
 .sg-book-main input { margin: 0; }
 .sg-book-main b { color: var(--ink); font-size: 13px; }

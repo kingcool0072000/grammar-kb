@@ -292,11 +292,17 @@ export async function mountPlan(el) {
       }
       if (t.fce?.length) chips.push(`🎧 FCE ${t.fce.join('+')}`)
       const books = ed?.books || []
-      for (const [k, pct] of Object.entries(t.reading || {})) {
+      for (const [k, v] of Object.entries(t.reading || {})) {
         const b = /^\d+$/.test(k)
           ? books.find((x) => String(x.id) === k)
           : books.find((x) => x.title.toLowerCase().includes(k.toLowerCase()))
-        chips.push(`📖 泛读 ${(b ? b.title : k).slice(0, 14)} → ${pct}%`)
+        if (Array.isArray(v)) {
+          const optMap = new Map((b?.chapter_opts || []).map((c) => [c.idx, c]))
+          const nos = v.map((i) => optMap.get(i)?.no).filter(Boolean)
+          chips.push(`📖 泛读 ${(b ? b.title : k).slice(0, 14)} ${nos.length > 2 ? `第${Math.min(...nos)}–${Math.max(...nos)}章` : nos.map((n) => `第${n}章`).join('、')}`)
+        } else {
+          chips.push(`📖 泛读 ${(b ? b.title : k).slice(0, 14)} → ${v}%`)
+        }
       }
       if (t.articles?.length) chips.push(`📄 精读 ${t.articles.length} 篇`)
       if (t.vocab_papers?.length) chips.push(`📝 试卷 ${t.vocab_papers.length} 卷`)
@@ -466,10 +472,10 @@ export async function mountPlan(el) {
 
       const lecSel = new Set(t.lectures || [])
       const fceSel = new Set(t.fce || [])
-      // reading: {bookId: pct}
+      // reading: {bookId: [章idx...]（新章选格式） | pct 数字（旧格式）}
       const readSel = new Map()
       for (const [k, v] of Object.entries(t.reading || {})) {
-        readSel.set(normalizeReadingKey(k, books), Number(v))
+        readSel.set(normalizeReadingKey(k, books), v)
       }
       let speakOn = Boolean(t.speak), speakN = t.speak || 2
       // 词汇目标（级别百分比口径）：累计词数表来自 goal_assets.vocab_levels
@@ -523,15 +529,26 @@ export async function mountPlan(el) {
         </div>`
       }).join('')
 
-      const bookRows = () => [...readSel.entries()].map(([id, pct]) => {
+      const bookRows = () => [...readSel.entries()].map(([id, v]) => {
         const b = books.find((x) => String(x.id) === String(id))
-        const cfgTxt = b?.configured_chapters?.length
-          ? `必读 ${b.configured_chapters.length} 章 · ${fmtK(b.goal_words)} 词`
-          : (b ? `全书 ${b.chapters} 章 · ${fmtK(b.total_words)} 词` : '')
-        return `<div class="pe-book-row" data-bk="${id}">
-          <span class="pe-book-title">${escapeHtml(b ? b.title.slice(0, 34) : id)}${cfgTxt ? `<i>${cfgTxt}</i>` : ''}</span>
-          <label>目标 <input type="number" min="1" max="100" value="${pct}" data-bk-pct="${id}" style="width:56px"/>%</label>
-          <button type="button" class="chip" data-bk-del="${id}">✕</button>
+        const opts = b?.chapter_opts || []
+        const optMap = new Map(opts.map((c) => [String(c.idx), c]))
+        // 旧 pct 格式也渲染章 chips（点任意章即升级为章选，旧%丢弃）
+        const selArr = Array.isArray(v) ? v : []
+        const legacy = Array.isArray(v) ? '' : `<i>旧格式 · 目标${Number(v) || 100}%（点章转为按章选择）</i>`
+        const selW = selArr.reduce((a, i) => a + (optMap.get(String(i))?.words || 0), 0)
+        const nos = selArr.map((i) => optMap.get(String(i))?.no).filter(Boolean)
+        const rng = nos.length > 2 ? `第${Math.min(...nos)}–${Math.max(...nos)}章`
+          : nos.map((n) => `第${n}章`).join('、')
+        return `<div class="pe-book-row pe-book-chrow" data-bk="${id}">
+          <div class="pe-book-chhead">
+            <span class="pe-book-title">${escapeHtml(b ? b.title.slice(0, 30) : id)}${legacy}</span>
+            ${selArr.length ? `<span class="pe-book-sum">${rng} · ${selW} 词</span>` : ''}
+            <button type="button" class="chip" data-bk-del="${id}">✕</button>
+          </div>
+          <div class="pe-chchips">
+            ${opts.map((c) => `<button type="button" class="chip pe-chchip ${selArr.includes(c.idx) ? 'primary' : ''}" data-bk="${id}" data-ch="${c.idx}" title="${escapeHtml(c.title)}">第${c.no}章 ${fmtK(c.words)}词</button>`).join('')}
+          </div>
         </div>`
       }).join('')
 
@@ -567,15 +584,14 @@ export async function mountPlan(el) {
               <div class="pe-fce-parts" id="pe-articles">${artChipsPool(goalArts) || '<p class="muted">总目标未选精读文章</p>'}</div>
             </div>
             <div class="pe-sec">
-              <h4>📖 泛读 <i>按必读章配置算词数</i></h4>
+              <h4>📖 泛读 <i>按章选择；chips 显示每章词数，点选/再点取消</i></h4>
               <div id="pe-books">${bookRows()}</div>
               <div class="pe-add-book">
                 <select id="pe-book-sel">
                   <option value="">＋ 添加书目…</option>
-                  ${goalBooks.filter((b) => !readSel.has(String(b.id))).map((b) =>
-                    `<option value="${b.id}">🎯 ${escapeHtml(b.title.slice(0, 34))}${b.configured_chapters?.length ? `（必读${b.configured_chapters.length}章/${fmtK(b.goal_words)}词）` : ''}</option>`).join('')}
+                  ${goalBooks.concat(extraBooks).filter((b) => !readSel.has(String(b.id))).map((b) =>
+                    `<option value="${b.id}">${escapeHtml(b.title.slice(0, 34))}（${b.valid_chapters || b.chapters} 章 / ${fmtK(b.goal_words)} 词）</option>`).join('')}
                 </select>
-                <label>目标 <input id="pe-book-pct" type="number" min="1" max="100" value="100" style="width:56px"/>%</label>
               </div>
             </div>
             <div class="pe-sec">
@@ -681,8 +697,21 @@ export async function mountPlan(el) {
         dlg.querySelector('#pe-books').innerHTML = bookRows()
         dlg.querySelectorAll('[data-bk-del]').forEach((b) =>
           b.addEventListener('click', () => { readSel.delete(b.dataset.bkDel); rerenderBooks() }))
-        dlg.querySelectorAll('[data-bk-pct]').forEach((i) =>
-          i.addEventListener('change', () => readSel.set(i.dataset.bkPct, Number(i.value) || 100)))
+        // 章选格式：chip 点选切换（数组维护）；旧数字格式行不变（改选章即升级）
+        dlg.querySelectorAll('.pe-chchip').forEach((chip) =>
+          chip.addEventListener('click', () => {
+            const { bk, ch } = chip.dataset
+            const b = books.find((x) => String(x.id) === String(bk))
+            const cur = readSel.get(bk)
+            let arr = Array.isArray(cur) ? [...cur]
+              : (b?.chapter_opts || []).map((c) => c.idx) // 旧 pct → 默认全选有效章
+            const i = arr.indexOf(Number(ch))
+            if (i >= 0) arr.splice(i, 1)
+            else arr.push(Number(ch))
+            arr.sort((x, y) => x - y)
+            readSel.set(bk, arr)
+            rerenderBooks()
+          }))
         // 下拉里去掉已选书
         const sel = dlg.querySelector('#pe-book-sel')
         sel.value = ''
@@ -691,13 +720,16 @@ export async function mountPlan(el) {
       rerenderBooks()
       dlg.querySelector('#pe-book-sel').addEventListener('change', (e) => {
         if (!e.target.value) return
-        readSel.set(e.target.value, Number(dlg.querySelector('#pe-book-pct').value) || 100)
+        const b = books.find((x) => String(x.id) === e.target.value)
+        // 新增书默认全选有效章
+        readSel.set(e.target.value, (b?.chapter_opts || []).map((c) => c.idx))
         rerenderBooks()
       })
       const extraSel = dlg.querySelector('#pe-extra-book-sel')
       if (extraSel) extraSel.addEventListener('change', (e) => {
         if (!e.target.value) return
-        readSel.set(e.target.value, 100)
+        const b = books.find((x) => String(x.id) === e.target.value)
+        readSel.set(e.target.value, (b?.chapter_opts || []).map((c) => c.idx))
         rerenderBooks()
         extraSel.value = ''
       })
