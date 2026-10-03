@@ -1071,8 +1071,7 @@ class PlanStore:
             gained = self._vocab_actuals(week_start, add_days(week_start, 7), user)
             base = self._vocab_mastered_before(week_start, user)
             denom = max(1, vg - base)
-            dim("🔤", "词汇", min(gained, denom), denom,
-                extra=f"周初 {base} → 目标 {vg}（还差 {denom}）")
+            dim("🔤", "词汇", min(gained, denom), denom)
 
         fce = t.get("fce") or []
         if fce:
@@ -1087,7 +1086,7 @@ class PlanStore:
                 done_fce = sum(1 for x in fce if x in got)
             except sqlite3.Error:
                 done_fce = 0
-            dim("🎧", "FCE", done_fce, len(fce))
+            dim("🎧", "FCE真题", done_fce, len(fce))
 
         reading_map = t.get("reading") or {}
         if reading_map:
@@ -1156,9 +1155,7 @@ class PlanStore:
                 pass
             if goal_ch_count:
                 done100 = done_pct / goal_ch_count * 100
-                dim("📖", "泛读", round(min(done100, 999), 1), 100,
-                    extra=f"章节进度 {round(done100, 1)}%"
-                          f"（{int(round(done_pct, 1))}/{goal_ch_count} 章）")
+                dim("📖", "泛读", round(min(done100, 999), 1), 100)
 
         arts = t.get("articles") or []
         # 周内全部朗读提交（含计划外）：精读朗读 = 提交过录音才算完成。
