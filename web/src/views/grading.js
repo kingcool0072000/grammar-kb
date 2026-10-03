@@ -8,9 +8,12 @@ import { renderReadingReview } from './readingReview.js'
 //   专注力 · 泛读阅读（泛读馆阅读器行为采集，点会话行看详情弹窗）
 // 每个分区：待办数字 + 最近动态 + 一键跳到对应工具。
 export async function mountGrading(el) {
-  // 双子 Tab：批改看板（默认）/ 学情分析（原计划表子 Tab 迁入）
+  // 三子 Tab：批改看板（默认）/ 学习日志 / 学情分析（原计划表子 Tab 迁入）
   const subTab = new URLSearchParams(location.hash.split('?')[1] || '').get('tab') || 'board'
-  const state = { tab: subTab === 'analytics' ? 'analytics' : 'board', student: '' }
+  const state = {
+    tab: subTab === 'analytics' ? 'analytics' : subTab === 'log' ? 'log' : 'board',
+    student: '',
+  }
   // 批改视图返回看板时复用最近一次已加载数据，避免再次等待 5 个接口（按学生分键）。
   const boardSnapshots = new Map()
   let students = []
@@ -36,6 +39,7 @@ export async function mountGrading(el) {
       </div>` : ''}
       <div class="ana-tabs plan-subtabs">
         <button class="reading-btn ${state.tab === 'board' ? 'primary' : ''}" data-gtab="board">📋 批改看板</button>
+        <button class="reading-btn ${state.tab === 'log' ? 'primary' : ''}" data-gtab="log">📚 学习日志</button>
         <button class="reading-btn ${state.tab === 'analytics' ? 'primary' : ''}" data-gtab="analytics">📊 学情分析</button>
       </div>
       <div id="gd-body"></div>
@@ -56,7 +60,108 @@ export async function mountGrading(el) {
       })
       return
     }
+    if (state.tab === 'log') {
+      mountLog(body)
+      return
+    }
     mountBoard(body)
+  }
+
+  // ---- 学习日志（独立子 Tab）：近 7 天汇总 + 全量会话列表 ----
+  async function mountLog(el) {
+    const student = state.student
+    el.innerHTML = '<p class="muted">加载中…</p>'
+    const timed = (p, ms = 8000) => Promise.race([
+      p, new Promise((resolve) => setTimeout(() => resolve([]), ms)),
+    ]).catch(() => [])
+    let focus = [], recite = []
+    ;[focus, recite] = await Promise.all([
+      timed(api.focusSessions({ limit: 100, offset: 0, user: student })),
+      timed(api.reciteSessions({ limit: 100, user: student })),
+    ])
+    focus = Array.isArray(focus) ? focus : []
+
+    const weekMs = 7 * 24 * 3600 * 1000
+    const nowMs = Date.now()
+    const inWeek = (t) => new Date(t || 0).getTime() >= nowMs - weekMs
+    const focusWeek = focus.filter((s) => inWeek(s.started_at || s.created_at))
+    const libW = focus.filter((s) => s.module === 'library' && inWeek(s.started_at || s.created_at))
+    const rdW = focus.filter((s) => s.module === 'reading' && inWeek(s.started_at || s.created_at))
+    const vocabW = recite.filter((s) => inWeek(s.created_at))
+    const scores = focusWeek.filter((s) => typeof s.score === 'number')
+    const parts = []
+    if (libW.length) parts.push(`📖 泛读 ${Math.round(libW.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)} 分钟`)
+    if (rdW.length) parts.push(`📄 精读 ${Math.round(rdW.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)} 分钟`)
+    if (vocabW.length) parts.push(`🔤 背词 ${vocabW.reduce((a, s) => a + (s.total || 0), 0)} 词 · ${Math.round(vocabW.reduce((a, s) => a + (s.duration_sec || 0), 0) / 60)} 分钟`)
+    if (scores.length) parts.push(`👁 专注 ${Math.round(scores.reduce((a, s) => a + s.score, 0) / scores.length)} 分`)
+
+    el.innerHTML = `
+      <section class="gcard" data-card="focus" style="margin-bottom:14px">
+        <header class="gcard-head">
+          <h2>📚 学习日志</h2>
+          <b class="gcard-n">${focus.length + recite.length}</b>
+        </header>
+        <p class="reading-hint">${parts.length ? `近 7 天：${parts.join(' · ')}` : '近 7 天暂无学习记录'}</p>
+        <div id="gd-focus-list"><p class="reading-hint">加载中…</p></div>
+      </section>
+    `
+    const host = el.querySelector('#gd-focus-list')
+    if (!host) return
+
+    // 会话列表：focus（泛读/精读/专题）+ recite（背词）混排分页
+    const FOCUS_PAGE = 12
+    let focusPage = 0
+    async function renderFocusPage(page) {
+      host.innerHTML = '<p class="reading-hint">加载中…</p>'
+      let items = focus.map((s) => ({
+        kind: 'focus', id: s.id, user: s.user, module: s.module,
+        t: s.started_at || s.created_at, raw: s,
+      }))
+      // 背单词会话并入学习日志（正确率即质量指标，无专注分）
+      for (const r of recite) {
+        items.push({ kind: 'recite', id: `r${r.id}`, user: r.user, module: 'vocab', t: r.created_at, raw: r })
+      }
+      items.sort((a, b) => (b.t || '') < (a.t || '') ? -1 : 1)
+      focusPage = page
+      const pageItems = items.slice(page * FOCUS_PAGE, (page + 1) * FOCUS_PAGE)
+      const hasNext = items.length > (page + 1) * FOCUS_PAGE
+      // 泛读行逐会话词数+连续性/异常标记（与计划表日卡同一公式）
+      const libIds = pageItems.filter((s) => s.kind === 'focus' && s.raw.module === 'library').map((s) => s.raw.id)
+      if (libIds.length) {
+        try {
+          const wm = await api.focusWords(libIds)
+          pageItems.forEach((s) => { if (s.kind === 'focus' && wm[s.raw.id]) s.raw.rw = wm[s.raw.id] })
+        } catch { /* 词数接口失败时跳过 */ }
+      }
+      if (!pageItems.length) {
+        host.innerHTML = page === 0
+          ? '<p class="reading-hint">暂无学习记录——学生在泛读馆读书/背单词后自动生成</p>'
+          : '<p class="reading-hint">没有更多记录了</p>'
+      } else {
+        host.innerHTML = pageItems.map((s) => s.kind === 'recite' ? reciteLogRow(s.raw) : focusRow(s.raw)).join('')
+        host.querySelectorAll('[data-focus-id]').forEach((row) => {
+          row.addEventListener('click', () => openFocusDetail(Number(row.dataset.focusId)))
+        })
+      }
+      if (items.length > FOCUS_PAGE || page > 0) {
+        const pager = document.createElement('div')
+        pager.className = 'gd-focus-pager'
+        pager.innerHTML = `
+          <button class="reading-btn small" data-fp="prev" ${page === 0 ? 'disabled' : ''}>‹ 上一页</button>
+          <span class="gd-focus-page-no">第 ${page + 1} 页 / 共 ${Math.max(1, Math.ceil(items.length / FOCUS_PAGE))} 页</span>
+          <button class="reading-btn small" data-fp="next" ${hasNext ? '' : 'disabled'}>下一页 ›</button>`
+        pager.querySelectorAll('[data-fp]').forEach((b) =>
+          b.addEventListener('click', () => {
+            const dir = b.dataset.fp === 'next' ? 1 : -1
+            const next = focusPage + dir
+            if (next < 0) return
+            renderFocusPage(next)
+          }),
+        )
+        host.appendChild(pager)
+      }
+    }
+    renderFocusPage(0)
   }
 
   async function mountBoard(el) {
@@ -108,23 +213,6 @@ export async function mountGrading(el) {
   // ---- 待办汇总 ----
   const pendRec = recs.filter((r) => r.status === 'pending')
   const pendEssay = fceSubs.filter((s) => s.status === 'pending')
-  const today = new Date().toISOString().slice(0, 10)
-  const reciteToday = recite.filter((s) => (s.created_at || '').slice(0, 10) === today)
-  const latestExam = exams[0]
-  const totalPend = pendRec.length + pendEssay.length
-
-  // ---- 专注力 · 近 7 天汇总（统计卡 + 板块汇总行共用）----
-  const weekMs = 7 * 24 * 3600 * 1000
-  const nowMs = Date.now()
-  focus = Array.isArray(focus) ? focus : []
-  const focusWeek = focus.filter(
-    (s) => s && new Date(s.started_at || s.created_at || 0).getTime() >= nowMs - weekMs,
-  )
-  const weekScores = focusWeek.filter((s) => typeof s.score === 'number')
-  const focusWeekAvg = weekScores.length
-    ? Math.round(weekScores.reduce((a, s) => a + s.score, 0) / weekScores.length)
-    : null
-  const focusWeekMin = Math.round(focusWeek.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)
 
   // ---- 按作业类型的独立卡片（每卡 Top5 + 查看全部进全量列表） ----
   const cards = [
@@ -166,16 +254,6 @@ export async function mountGrading(el) {
           </div>
           <button class="gcard-more" data-all="${c.key}">查看全部（${c.list.length}）→</button>
         </section>`).join('')}
-      <section class="gcard" data-card="focus">
-        <header class="gcard-head">
-          <h2>📚 学习日志</h2>
-          <b class="gcard-n">${focus.length + recite.length}</b>
-        </header>
-        <div class="gcard-list">
-          ${logSummaryHtml()}
-          <div id="gd-focus-list"><p class="reading-hint">加载中…</p></div>
-        </div>
-      </section>
     </div>
   `
 
@@ -200,91 +278,6 @@ export async function mountGrading(el) {
     sessionStorage.removeItem('gkb-open-review')
     openRecordingReview()
   }
-
-  // 学习日志汇总行：近 7 天分类时长/词数/专注度/背词（全部当前筛选学生的）
-  function logSummaryHtml() {
-    const weekMs = 7 * 24 * 3600 * 1000
-    const nowMs = Date.now()
-    const inWeek = (t) => new Date(t || 0).getTime() >= nowMs - weekMs
-    const libW = focus.filter((s) => s.module === 'library' && inWeek(s.started_at || s.created_at))
-    const rdW = focus.filter((s) => s.module === 'reading' && inWeek(s.started_at || s.created_at))
-    const vocabW = recite.filter((s) => inWeek(s.created_at))
-    const scores = focusWeek.filter((s) => typeof s.score === 'number')
-    const parts = []
-    if (libW.length) parts.push(`📖 泛读 ${Math.round(libW.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)} 分钟`)
-    if (rdW.length) parts.push(`📄 精读 ${Math.round(rdW.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)} 分钟`)
-    if (vocabW.length) parts.push(`🔤 背词 ${vocabW.reduce((a, s) => a + (s.total || 0), 0)} 词 · ${Math.round(vocabW.reduce((a, s) => a + (s.duration_sec || 0), 0) / 60)} 分钟`)
-    if (scores.length) parts.push(`👁 专注 ${Math.round(scores.reduce((a, s) => a + s.score, 0) / scores.length)} 分`)
-    return parts.length
-      ? `<p class="reading-hint">近 7 天：${parts.join(' · ')}</p>`
-      : '<p class="reading-hint">近 7 天暂无学习记录</p>'
-  }
-
-  // 学习日志列表：focus_sessions（泛读/精读/专题）+ recite_sessions（背词）
-  // 按时间倒序混排、分页展示；行内带学生名。
-  const FOCUS_PAGE = 5
-  let focusPage = 0
-  async function renderFocusPage(page) {
-    const host = el.querySelector('#gd-focus-list')
-    if (!host) return
-    host.innerHTML = '<p class="reading-hint">加载中…</p>'
-    let items = []
-    try {
-      const got = await api.focusSessions({ limit: 100, offset: 0, user: student })
-      items = (Array.isArray(got) ? got : []).map((s) => ({
-        kind: 'focus', id: s.id, user: s.user, module: s.module,
-        t: s.started_at || s.created_at, raw: s,
-      }))
-    } catch { items = [] }
-    // 背单词会话并入学习日志（正确率即质量指标，无专注分）
-    for (const r of recite) {
-      items.push({
-        kind: 'recite', id: `r${r.id}`, user: r.user, module: 'vocab',
-        t: r.created_at, raw: r,
-      })
-    }
-    items.sort((a, b) => (b.t || '') < (a.t || '') ? -1 : 1)
-    focusPage = page
-    const pageItems = items.slice(page * FOCUS_PAGE, (page + 1) * FOCUS_PAGE)
-    const hasNext = items.length > (page + 1) * FOCUS_PAGE
-    // 泛读行逐会话词数+连续性/异常标记：后端与计划表日卡片同一公式
-    // （剔跳章+必读章口径）+ 与同书上一会话的衔接关系，接口失败不阻塞列表
-    const libIds = pageItems.filter((s) => s.kind === 'focus' && s.raw.module === 'library').map((s) => s.raw.id)
-    if (libIds.length) {
-      try {
-        const wm = await api.focusWords(libIds)
-        pageItems.forEach((s) => { if (s.kind === 'focus' && wm[s.raw.id]) s.raw.rw = wm[s.raw.id] })
-      } catch { /* 词数接口失败时跳过 */ }
-    }
-    if (!pageItems.length) {
-      host.innerHTML = page === 0
-        ? '<p class="reading-hint">暂无学习记录——学生在泛读馆读书/背单词后自动生成</p>'
-        : '<p class="reading-hint">没有更多记录了</p>'
-    } else {
-      host.innerHTML = pageItems.map((s) => s.kind === 'recite' ? reciteLogRow(s.raw) : focusRow(s.raw)).join('')
-      host.querySelectorAll('[data-focus-id]').forEach((row) => {
-        row.addEventListener('click', () => openFocusDetail(Number(row.dataset.focusId)))
-      })
-    }
-    if (items.length > FOCUS_PAGE || page > 0) {
-      const pager = document.createElement('div')
-      pager.className = 'gd-focus-pager'
-      pager.innerHTML = `
-        <button class="reading-btn small" data-fp="prev" ${page === 0 ? 'disabled' : ''}>‹ 上一页</button>
-        <span class="gd-focus-page-no">第 ${page + 1} 页 / 共 ${Math.max(1, Math.ceil(items.length / FOCUS_PAGE))} 页</span>
-        <button class="reading-btn small" data-fp="next" ${hasNext ? '' : 'disabled'}>下一页 ›</button>`
-      pager.querySelectorAll('[data-fp]').forEach((b) =>
-        b.addEventListener('click', () => {
-          const dir = b.dataset.fp === 'next' ? 1 : -1
-          const next = focusPage + dir
-          if (next < 0) return
-          renderFocusPage(next)
-        }),
-      )
-      host.appendChild(pager)
-    }
-  }
-  renderFocusPage(0)
 }
 
 // 专注会话标题：泛读 = 「泛读-书名-章节」；精读/专题=内容名（后端已按
