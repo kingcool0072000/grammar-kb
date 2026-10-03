@@ -1091,36 +1091,74 @@ class PlanStore:
 
         reading_map = t.get("reading") or {}
         if reading_map:
-            acts_w = sum((r.get("words") or 0)
-                         for d in days for r in (d.get("acts") or {}).get("readings") or [])
-            # 目标词数（新口径=选章词数和；旧 pct 格式按全书×% 换算兼容）；
-            # 进度 = 周内实录词数/目标词数，**不封顶**（超读显示 >100%）
-            total_w = 0
+            # 泛读周目标=「目标章节完成百分比」（用户口径）：
+            # 目标=选章序列（按书内顺序）；当前读位（云端进度词位）在
+            # 序列内的均摊位置 / 序列总长。例：目标第5章，读到第5章5%
+            # → 5%；目标第5-8章，读到第5章50% → (0.5章)/4章=12.5%。
+            # 旧 pct 格式换算为等效章序列（全书前 N% 覆盖的章）。
             lib = self._lib_connect()
+            done_pct = 0.0
+            goal_pct_sum = 0.0   # 各书完成度 × 该书章数权重（多书均摊）
+            goal_ch_count = 0
             try:
                 if lib is not None:
                     with contextlib.closing(lib):
                         for k, v in reading_map.items():
                             if not str(k).isdigit():
                                 continue
-                            if isinstance(v, list):
-                                # 新格式：选章列表 → 词数和
-                                ph = ",".join("?" * len(v)) or "NULL"
-                                row = lib.execute(
-                                    "SELECT COALESCE(SUM(word_count),0) FROM chapters"
-                                    f" WHERE book_id = ? AND idx IN ({ph})",
-                                    [int(k)] + [int(x) for x in v]).fetchone()
-                                total_w += int(row[0] or 0)
+                            bid = int(k)
+                            chs = lib.execute(
+                                "SELECT idx, word_count FROM chapters"
+                                " WHERE book_id = ? ORDER BY idx", (bid,)
+                            ).fetchall()
+                            total = sum(c["word_count"] or 0 for c in chs)
+                            if not chs or total <= 0:
+                                continue
+                            if isinstance(v, list) and v:
+                                sel = [c for c in chs if c["idx"] in
+                                       {int(x) for x in v}]
                             else:
-                                row = lib.execute(
-                                    "SELECT COALESCE(SUM(word_count),0) FROM chapters"
-                                    " WHERE book_id = ?", (int(k),)).fetchone()
-                                total_w += int((row[0] or 0) * float(v) / 100)
+                                # 旧 pct：全书前 N% 覆盖的章序列
+                                cut = (float(v) if not isinstance(v, list)
+                                       else 100.0) / 100 * total
+                                cum = 0
+                                sel = []
+                                for c in chs:
+                                    cum += c["word_count"] or 0
+                                    if cum <= cut:
+                                        sel.append(c)
+                                    elif (cum - (c["word_count"] or 0)) < cut:
+                                        sel.append(c)  # 边界章算入
+                            if not sel:
+                                continue
+                            sel_w = sum(c["word_count"] or 0 for c in sel)
+                            prog = lib.execute(
+                                "SELECT percent FROM reading_progress"
+                                " WHERE book_id = ? AND user = ?",
+                                (bid, user)).fetchone()
+                            pos = ((prog[0] if prog else 0) or 0) / 100 * total
+                            # 当前读位在选章序列内的均摊章进度：
+                            # 读完的整章各计 1，当前章按章内比例计
+                            prog_ch = 0.0
+                            cum = 0
+                            for c in chs:
+                                c1 = cum + (c["word_count"] or 0)
+                                if c in sel:
+                                    if pos >= c1:
+                                        prog_ch += 1.0
+                                    elif pos > cum:
+                                        prog_ch += (pos - cum) / max(1, c["word_count"] or 1)
+                                cum = c1
+                            done_pct += prog_ch
+                            goal_pct_sum += len(sel)
+                            goal_ch_count += len(sel)
             except (sqlite3.Error, TypeError, ValueError):
                 pass
-            if total_w:
-                dim("📖", "泛读", acts_w, total_w,
-                    extra=f"周内实录 {acts_w} 词")
+            if goal_ch_count:
+                done100 = done_pct / goal_ch_count * 100
+                dim("📖", "泛读", round(min(done100, 999), 1), 100,
+                    extra=f"章节进度 {round(done100, 1)}%"
+                          f"（{int(round(done_pct, 1))}/{goal_ch_count} 章）")
 
         arts = t.get("articles") or []
         # 周内全部朗读提交（含计划外）：精读朗读 = 提交过录音才算完成

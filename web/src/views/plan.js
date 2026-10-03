@@ -455,10 +455,9 @@ export async function mountPlan(el) {
       const extraFce = (ed.fce_parts || []).filter(
         (x) => !(goals.fce_parts || []).includes(x.label))
       const doneArt = new Set(done.articles || [])
+      // 精读目标池=全部精读文章（主区直选；总目标已选的仅作视觉参考）
       const goalArts = (ed.articles || []).filter(
         (a) => (goals.articles || []).includes(a.id) && !doneArt.has(a.id))
-      const extraArts = (ed.articles || []).filter(
-        (a) => !(goals.articles || []).includes(a.id))
       const doneBk = new Set(done.books || [])
       const goalBooks = books.filter(
         (b) => (goals.reading || []).includes(b.id) && !doneBk.has(b.id))
@@ -580,8 +579,8 @@ export async function mountPlan(el) {
               <div class="pe-fce-parts">${fcePartsPool((ed.fce_parts || []).filter((x) => goalFce.includes(x.label))) || '<p class="muted">总目标未选 FCE Part</p>'}</div>
             </div>
             <div class="pe-sec">
-              <h4>📄 精读课文 <i>做完录音自动勾</i></h4>
-              <div class="pe-fce-parts" id="pe-articles">${artChipsPool(goalArts) || '<p class="muted">总目标未选精读文章</p>'}</div>
+              <h4>📄 精读课文 <i>全部精读文章可选；做完录音自动勾</i></h4>
+              <div class="pe-fce-parts" id="pe-articles">${artChipsPool((ed.articles || [])) || '<p class="muted">暂无精读文章</p>'}</div>
             </div>
             <div class="pe-sec">
               <h4>📖 泛读 <i>按章选择；chips 显示每章词数，点选/再点取消</i></h4>
@@ -608,10 +607,6 @@ export async function mountPlan(el) {
             <div class="pe-sec">
               <h4>🎧 FCE 补充练习</h4>
               <div class="pe-fce-parts">${fcePartsPool(extraFce) || '<p class="muted">无</p>'}</div>
-            </div>
-            <div class="pe-sec">
-              <h4>📄 精读补充</h4>
-              <div class="pe-fce-parts">${artChipsPool(extraArts) || '<p class="muted">无</p>'}</div>
             </div>
             <div class="pe-sec">
               <h4>📖 泛读补充</h4>
