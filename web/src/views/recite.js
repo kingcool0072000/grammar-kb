@@ -429,10 +429,10 @@ export async function mountRecite(el, { vocab, role }) {
       return `${Number(iso.slice(8, 10))}日·周${wk}`
     }
     const todayIso = today.toISOString().slice(0, 10)
-    let overdue = 0
-    for (const w of inCycle) {
-      if (w.next_review && w.next_review < todayIso) overdue++
-    }
+    // 「今日到期」= 后端 due_today（next_review ≤ 今天，已含逾期未复习
+    // 顺延进来的词）——前端不要再把 next_review<今天的词加一遍，会双计
+    //（malin 曾显示 101 实际 53）
+    const dueNow = dueToday.length
     // 14 天日历之外的排期（>13 天后）合并展示
     let beyond = 0
     for (const [iso, n] of dueByDay) {
@@ -465,19 +465,19 @@ export async function mountRecite(el, { vocab, role }) {
     }
     host.innerHTML = `
       <section class="fce-group">
-        <div class="fce-group-title">📕 错题本 · 艾宾浩斯复习（在记 ${inCycle.length} 词 · 今日到期 <b class="rc-due-n">${dueToday.length + overdue}</b>）</div>
+        <div class="fce-group-title">📕 错题本 · 艾宾浩斯复习（在记 ${inCycle.length} 词 · 今日到期 <b class="rc-due-n">${dueNow}</b>）</div>
         <div class="rc-eb-stages">
           ${stages.map((d, i) => `<span class="rc-eb-stage ${stageDist[i] ? 'has' : ''}"><i>D+${d}</i><b>${stageDist[i] || 0}</b></span>`).join('')}
         </div>
         <div class="rc-eb-cal">
           ${horizon.map((iso) => {
-            const n = iso === todayIso ? dueToday.length + overdue : (dueByDay.get(iso) || 0)
+            const n = iso === todayIso ? dueNow : (dueByDay.get(iso) || 0)
             return `<div class="rc-eb-day ${n ? 'has' : ''} ${iso === todayIso ? 'today' : ''}">${n ? `<b>${n}</b>` : ''}<span>${fmtDay(iso)}</span></div>`
           }).join('')}
           ${beyond ? `<div class="rc-eb-day more" title="14 天以后的复习">${beyond}+<span>更远</span></div>` : ''}
         </div>
         <div class="chip-row" style="margin-top:10px">
-          ${dueToday.length + overdue ? `<button class="btn-primary" id="rc-wb-due">复习今日到期（${Math.min(20, dueToday.length + overdue)} 词）</button>` : ''}
+          ${dueNow ? `<button class="btn-primary" id="rc-wb-due">复习今日到期（${Math.min(20, dueNow)} 词）</button>` : ''}
           ${inCycle.length ? `<button class="btn-primary ghost" id="rc-wb-drill">全部错词轮一遍（${Math.min(20, inCycle.length)} 词）</button>` : ''}
           ${conquered.length ? `<button class="chip" id="rc-wb-cq">✅ 已攻克题本（${conquered.length} 词）›</button>` : ''}
         </div>
