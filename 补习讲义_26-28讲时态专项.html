@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>时态补习讲义 · 26~28 讲错题歼灭</title>
+<style>
+:root{
+  --paper:#f6f2e9;
+  --dot:#e8e0cf;
+  --card:#fffdf9;
+  --ink:#33302a;
+  --muted:#84796a;
+  --line:#e9e1d0;
+  --line-soft:#f1ebdc;
+  --good:#2f7d54;--good-soft:#e8f4ec;
+  --warn:#b3541e;--warn-soft:#fdf1e6;
+  --gold:#8a6d1a;--gold-soft:#faf3dd;
+  --radius:16px;
+  --shadow:0 1px 2px rgba(70,58,30,.05),0 6px 18px rgba(70,58,30,.06);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;color:var(--ink);
+  background:
+    radial-gradient(circle at 1px 1px,var(--dot) 1px,transparent 1.4px) 0 0/28px 28px,
+    var(--paper);
+  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  font-size:17px;line-height:1.85;
+}
+.en{font-family:Georgia,"Times New Roman",serif}
+
+/* ===== 顶部横幅 ===== */
+.hero{
+  position:relative;overflow:hidden;color:#fff;padding:46px 20px 42px;
+  background:linear-gradient(140deg,#31465e 0%,#3c5a82 48%,#49709f 100%);
+}
+.hero::before,.hero::after{content:"";position:absolute;border-radius:50%;pointer-events:none}
+.hero::before{width:440px;height:440px;right:-150px;top:-190px;background:radial-gradient(circle,rgba(255,255,255,.14),transparent 65%)}
+.hero::after{width:320px;height:320px;left:-130px;bottom:-170px;background:radial-gradient(circle,rgba(255,255,255,.10),transparent 65%)}
+.hero-inner{max-width:880px;margin:0 auto;position:relative;z-index:1}
+.hero .eyebrow{font-size:13px;letter-spacing:3px;opacity:.85;margin:0 0 10px}
+.hero h1{margin:0 0 10px;font-size:30px;letter-spacing:1px}
+.hero .sub{opacity:.92;font-size:15.5px;margin:0;max-width:620px}
+.hero .stats{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}
+.hero .stat{
+  display:inline-flex;align-items:center;gap:9px;
+  background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);
+  border-radius:14px;padding:8px 16px;font-size:14px;backdrop-filter:blur(3px);
+}
+.hero .stat .ico{font-size:19px}
+.hero .stat b{font-size:20px;font-weight:700}
+
+/* ===== 方法条 ===== */
+.method{max-width:880px;margin:22px auto 0;padding:0 20px}
+.method .inner{
+  background:var(--card);border:1px solid var(--line);border-left:5px solid var(--gold);
+  border-radius:var(--radius);padding:15px 20px;font-size:15px;box-shadow:var(--shadow);
+}
+.method .steps{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;align-items:center}
+.method .step{
+  display:inline-flex;align-items:center;background:var(--gold-soft);
+  border:1px solid #ecdfb2;border-radius:999px;padding:4px 15px;
+  font-weight:600;color:var(--gold);font-size:14px;
+}
+
+/* ===== 吸顶导航 ===== */
+.toc-wrap{
+  position:sticky;top:0;z-index:50;background:rgba(246,242,233,.9);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--line);margin-top:26px;
+}
+.toc{
+  max-width:880px;margin:0 auto;padding:10px 20px;
+  display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+}
+.toc::-webkit-scrollbar{display:none}
+.toc a{
+  flex:none;display:inline-flex;align-items:center;gap:7px;text-decoration:none;color:var(--ink);
+  font-size:14px;background:var(--card);border:1px solid var(--line);border-radius:999px;
+  padding:6px 14px;transition:border-color .15s,color .15s,transform .15s;
+}
+.toc a:hover{border-color:var(--tc,var(--gold));color:var(--tc,var(--gold));transform:translateY(-1px)}
+.toc a .dot{width:8px;height:8px;border-radius:50%;background:var(--tc,var(--gold))}
+.toc a.done-all{background:var(--good-soft);border-color:#bfe0cc;color:var(--good)}
+
+/* ===== 主体 ===== */
+main{max-width:880px;margin:0 auto;padding:10px 20px 70px}
+section.theme{margin-top:48px;scroll-margin-top:74px}
+.theme-head{
+  display:flex;align-items:baseline;gap:12px;
+  padding-bottom:10px;margin-bottom:6px;border-bottom:2px solid var(--tc);
+}
+.theme-no{
+  flex:none;font-size:13px;font-weight:700;color:#fff;background:var(--tc);
+  border-radius:9px;padding:3px 12px;letter-spacing:2px;transform:translateY(-1px);
+}
+.theme-head h2{margin:0;font-size:22px}
+.theme-head .score{
+  margin-left:auto;flex:none;font-size:13px;color:var(--warn);
+  background:var(--warn-soft);border:1px solid #f3ddc9;border-radius:999px;
+  padding:3px 12px;white-space:nowrap;
+}
+.theme-lead{color:var(--muted);font-size:15px;margin:12px 2px 4px}
+h3.sub{font-size:16.5px;margin:28px 0 12px;color:var(--tc);display:flex;align-items:center;gap:9px}
+h3.sub::before{content:"";width:5px;height:19px;background:var(--tc);border-radius:3px}
+
+/* ===== 卡片与表格 ===== */
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px 22px;margin:12px 0;box-shadow:var(--shadow);
+}
+table{width:100%;border-collapse:collapse;font-size:15px;margin:6px 0}
+th,td{border:none;border-bottom:1px solid var(--line-soft);padding:10px 12px;text-align:left;vertical-align:top}
+tr:last-child td{border-bottom:none}
+th{color:var(--tc,var(--gold));font-weight:700;font-size:14px;white-space:nowrap}
+.blank{
+  display:inline-block;min-width:90px;border-bottom:2px solid #c9c2b4;
+  color:transparent;user-select:none;line-height:1.4;
+}
+.blank::before{content:"______";color:#c9c2b4}
+code.formula{
+  display:block;background:#faf7ee;border:1px solid var(--line);border-left:4px solid var(--tc,var(--gold));
+  border-radius:12px;padding:12px 18px;font-family:"SF Mono",Consolas,Menlo,monospace;
+  font-size:14.5px;white-space:pre-wrap;margin:12px 0;color:#4c463b;
+}
+.callout{
+  border-left:4px solid var(--tc,var(--gold));background:var(--tcs,var(--gold-soft));
+  border-radius:4px 14px 14px 4px;padding:13px 18px;margin:12px 0;font-size:15.5px;
+}
+.callout.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.callout.good{border-left-color:var(--good);background:var(--good-soft)}
+.callout b.tag{display:block;margin-bottom:4px}
+
+/* ===== 错题回放 / 变式练习 ===== */
+ul.replay,ul.drill{list-style:none;margin:0;padding:0}
+ul.replay li{
+  background:var(--card);border:1px solid var(--line);border-left:4px solid var(--tc);
+  border-radius:var(--radius);padding:15px 19px;margin:11px 0;box-shadow:var(--shadow);
+  transition:box-shadow .2s;
+}
+ul.replay li:hover{box-shadow:0 2px 4px rgba(70,58,30,.06),0 10px 26px rgba(70,58,30,.10)}
+ul.drill li{
+  background:#fbf8f0;border:1px dashed #d8cfb8;border-left:4px solid var(--tc);
+  border-radius:var(--radius);padding:14px 19px;margin:11px 0;
+}
+.qtag{
+  display:inline-block;font-size:12px;font-weight:700;color:var(--tc);
+  background:var(--tcs,#f0ecf0);border-radius:7px;padding:2px 10px;margin-bottom:8px;letter-spacing:.5px;
+}
+.qtext{margin:2px 0 12px}
+.qtext .zh{color:var(--muted);font-size:14px}
+
+/* ===== 答案揭示 ===== */
+.reveal-btn{
+  appearance:none;border:1.5px solid var(--tc);background:var(--card);color:var(--tc);
+  border-radius:999px;padding:5px 20px;font-size:14px;font-weight:600;cursor:pointer;
+  font-family:inherit;transition:background .15s,color .15s;
+}
+.reveal-btn:hover{background:var(--tc);color:#fff}
+.answer{
+  display:none;margin-top:12px;padding:11px 15px;
+  background:var(--good-soft);border:1px solid #c8e2d2;border-radius:12px;font-size:15px;
+}
+.answer .key{color:var(--good);font-weight:700;font-size:16px}
+.answer .why{color:#48705c;font-size:14px;margin-top:3px}
+li.open .answer, .answer.force{display:block;animation:fadeUp .28s ease}
+li.open .reveal-btn{display:none}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* ===== 打卡表 ===== */
+.progress-card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px 22px;margin:16px 0;box-shadow:var(--shadow);
+}
+.progress-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.ring{width:64px;height:64px;flex:none;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:7;stroke-linecap:round}
+.ring-bg{stroke:#ece5d4}
+.ring-fg{stroke:var(--good);stroke-dasharray:188.5;stroke-dashoffset:188.5;transition:stroke-dashoffset .4s ease}
+.progress-num{font-size:22px;font-weight:700;color:var(--good);white-space:nowrap}
+.progress-num small{font-size:14px;color:var(--muted);font-weight:400}
+.bar{flex:1;min-width:150px;height:12px;background:#ece5d4;border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#57a07c,#2f7d54);border-radius:999px;transition:width .4s ease}
+.btn-ghost{
+  appearance:none;border:1px solid var(--line);background:var(--card);color:var(--muted);
+  border-radius:999px;padding:5px 15px;font-size:13px;cursor:pointer;font-family:inherit;
+}
+.btn-ghost:hover{border-color:var(--warn);color:var(--warn)}
+.checklist-group{margin-top:18px}
+.checklist-group h4{margin:0 0 8px;font-size:15px;display:flex;align-items:center;gap:8px}
+.checklist-group h4::before{content:"";width:11px;height:11px;border-radius:3.5px;background:var(--tc)}
+.checklist-group h4 .cnt{color:var(--muted);font-weight:400;font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:9px}
+.chip{
+  display:inline-flex;align-items:center;gap:7px;background:var(--card);
+  border:1px solid var(--line);border-radius:999px;padding:5px 14px 5px 10px;
+  font-size:14px;cursor:pointer;user-select:none;
+  transition:border-color .15s,background .15s,color .15s;
+}
+.chip:hover{border-color:var(--tc)}
+.chip input{accent-color:var(--good);width:16px;height:16px;margin:0;cursor:pointer}
+.chip.checked{background:var(--good-soft);border-color:#bfe0cc;color:var(--good);text-decoration:line-through}
+.note-dad{
+  margin-top:28px;font-size:14px;color:var(--muted);
+  border-top:1px dashed var(--line);padding-top:16px;
+}
+footer{text-align:center;color:var(--muted);font-size:13px;padding:26px 20px 44px}
+
+/* ===== 移动端 ===== */
+@media (max-width:640px){
+  body{font-size:16px}
+  .hero{padding:32px 16px 30px}
+  .hero h1{font-size:23px}
+  .hero .eyebrow{letter-spacing:2px}
+  main{padding:10px 14px 56px}
+  .method{padding:0 14px}
+  .card{padding:14px 15px}
+  ul.replay li,ul.drill li{padding:13px 14px}
+  .theme-head{flex-wrap:wrap;gap:6px 10px}
+  .theme-head .score{margin-left:0}
+  td,th{padding:8px 9px;font-size:14px}
+  th{white-space:normal}
+  .toc{padding:9px 14px}
+  .ring{width:54px;height:54px}
+}
+
+/* ===== 打印：答案全部展开 ===== */
+@media print{
+  body{background:#fff;font-size:12.5pt}
+  .toc-wrap,.reveal-btn,.btn-ghost,.progress-card,.ring{display:none!important}
+  .answer{display:block!important;animation:none}
+  .hero{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  section.theme{page-break-inside:avoid}
+  ul.replay li,ul.drill li,.card{page-break-inside:avoid;box-shadow:none}
+  .chip input{display:none}
+  .chip{border:none;padding:2px 6px}
+  .chip.checked{background:none}
+}
+
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">和爸学 · 第 26~28 讲 · 时态专项</p>
+    <h1>⏰ 错题歼灭手册</h1>
+    <p class="sub">三张卷子的 49 道错题，按「坑」归类——同样的坑只练一次，练到全对。</p>
+    <div class="stats">
+      <span class="stat"><span class="ico">📄</span><b>49</b> 道错题</span>
+      <span class="stat"><span class="ico">🧭</span><b>6</b> 大主题</span>
+      <span class="stat"><span class="ico">✏️</span><b>30</b> 道变式练习</span>
+      <span class="stat"><span class="ico">📅</span><b>4</b> 天歼灭计划</span>
+    </div>
+  </div>
+</div>
+
+<div class="method">
+  <div class="inner">
+    <b>做题永远四步走：</b>先看结构（句子怎么搭的）→ 找<b>锚点</b>（时间信号词）→ 查约束（单复数、拼写）→ 出答案。<u>锚点认对了，时态就不会错。</u>
+    <div class="steps">
+      <span class="step">① 结构</span><span class="step">② 锚点</span><span class="step">③ 约束</span><span class="step">④ 答案</span>
+      <span style="align-self:center;color:var(--muted);font-size:13px">↓ 先自己想，再点「看答案」↓</span>
+    </div>
+  </div>
+</div>
+
+<nav class="toc-wrap">
+  <div class="toc">
+    <a href="#t1" style="--tc:#3a7ca5"><i class="dot"></i>完成时锚点</a>
+    <a href="#t2" style="--tc:#3f8f6b"><i class="dot"></i>延续性转换</a>
+    <a href="#t3" style="--tc:#7c62c0"><i class="dot"></i>过去完成时</a>
+    <a href="#t4" style="--tc:#d8842d"><i class="dot"></i>过去进行时</a>
+    <a href="#t5" style="--tc:#c25a72"><i class="dot"></i>if &amp; 宾从</a>
+    <a href="#t6" style="--tc:#55688a"><i class="dot"></i>易混杀手词</a>
+    <a href="#checklist" id="toc-checklist">🎯 打卡表</a>
+  </div>
+</nav>
+
+<main>
+
+<!-- ================= 主题一 ================= -->
+<section class="theme" id="t1" style="--tc:#3a7ca5;--tcs:#e9f1f7">
+  <div class="theme-head">
+    <span class="theme-no">主题一</span>
+    <h2>现在完成时——「过去和现在的桥梁」</h2>
+    <span class="score">15 错 · 头号敌人</span>
+  </div>
+  <p class="theme-lead">现在完成时 <span class="en">have/has + done</span> 不是「过去的事」，而是<b>站在现在，回头看过去</b>：要么影响到现在，要么持续到现在，要么算到现在的总账。</p>
+
+  <h3 class="sub">公式卡 · 锚点速查表（背这个）</h3>
+  <div class="card">
+    <table>
+      <tr><th>句中看到这些信号</th><th>用</th><th>例句锚点</th></tr>
+      <tr><td>since + 过去时间点 / since 从句</td><td class="en">have/has done</td><td class="en">Since we <b>began</b>..., our lives <b>have changed</b></td></tr>
+      <tr><td>for + 时间段（至今还在算）</td><td class="en">have/has done</td><td class="en">I <b>have been</b> here since five months ago</td></tr>
+      <tr><td>twice / three times（经历次数）</td><td class="en">have/has done</td><td class="en">I <b>have seen</b> it twice</td></tr>
+      <tr><td>ever / never / yet / already / so far</td><td class="en">have/has done</td><td class="en"><b>Have</b> you <b>ever</b> visited...?</td></tr>
+      <tr><td>in recent years / these days</td><td class="en">have/has done</td><td class="en">Online shopping <b>has become</b> popular</td></tr>
+      <tr><td>后半句是<b>现在的结果</b>：so... / now... / Can you...? / You can...</td><td class="en">have/has done</td><td class="en">I <b>have lost</b> my pen. <b>Can</b> you lend me yours?</td></tr>
+      <tr><td class="en">It is the first / second time (that)...</td><td class="en">从句 have/has done</td><td class="en">It is the first time he <b>has written</b> a book</td></tr>
+      <tr><td>since 从句<b>里面</b>的动词</td><td class="en">一般过去时</td><td class="en">It is two years since I <b>became</b> a doctor</td></tr>
+    </table>
+    <div class="callout warn">
+      <b class="tag">⚠️ 最后一行最容易反</b>
+      since <b>前半句</b>用完成时，since <b>从句里</b>的起点动作用过去时——「自从我成为医生（那一刻）已经两年了」，“成为”是过去的一瞬间。
+    </div>
+  </div>
+
+  <h3 class="sub">高危辨析 · 完成时 vs 一般过去</h3>
+  <div class="callout">
+    <b class="tag">一句话判断</b>
+    问「做没做 / 影响到现在」（<b>现在算账</b>）→ 完成时；问「过去某时做了什么、做了几件」（<b>过去档案</b>）→ 一般过去。
+  </div>
+  <div class="card">
+    <p class="en">—How many books ______ they ______? —Five. But they haven't finished reading even one.</p>
+    <p>问「（当时）借了几本」——借书是<b>已经翻篇的过去动作</b>，Five 只是在报当时的数量 → <b class="en">did, borrow</b>。下句 haven't finished 是完成时？没错，但那是<b>另一句话</b>（读没读完影响现在），别让它把问句带偏。</p>
+    <p class="en">—______ you ______ your book to the library? —Yes. I returned it <b>yesterday</b>.</p>
+    <p>问「还了没」——影响<b>现在</b>（现在不欠书了）→ <b class="en">Have, returned</b>；答句补充「昨天还的」，有 yesterday 这个过去点 → returned。</p>
+    <div class="callout good">看到 <b class="en">yesterday / in 2015 / two days ago</b> → 过去时；看到 <b class="en">yet / ever / since / twice</b> 或<b>现在的结果</b> → 完成时。</div>
+  </div>
+
+  <h3 class="sub">错题回放（先想再点开）</h3>
+  <ul class="replay">
+    <li><span class="qtag">26·T1</span>
+      <p class="qtext en">I <span class="blank"></span> here since five months ago. <span class="zh">(be)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">have been</span><div class="why">since 锚点 → 完成时；here 是副词，be 动词直接用</div></div>
+    </li>
+    <li><span class="qtag">26·T5</span>
+      <p class="qtext en">Her niece <span class="blank"></span> here for a long time. <span class="zh">(sit)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has sat</span><div class="why">for + 时间段锚点；niece 三单 → has</div></div>
+    </li>
+    <li><span class="qtag">26·T6</span>
+      <p class="qtext en">It is two years since I <span class="blank"></span> a doctor. <span class="zh">(become)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">became</span><div class="why">since 从句里的起点动作用<b>过去时</b>——成为医生是过去的一瞬间</div></div>
+    </li>
+    <li><span class="qtag">26·T12</span>
+      <p class="qtext en">Andy doesn't want to see the film Coco because he <span class="blank"></span> it twice. <span class="zh">(see)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has seen</span><div class="why">twice 经历 + 影响现在（所以不想再看）</div></div>
+    </li>
+    <li><span class="qtag">26·T14</span>
+      <p class="qtext en">What a mess! Who <span class="blank"></span> rubbish everywhere! <span class="zh">(leave)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has left</span><div class="why">现在的乱＝过去动作的结果</div></div>
+    </li>
+    <li><span class="qtag">26·T32</span>
+      <p class="qtext en">He <span class="blank"></span> his bike so he has to walk there. <span class="zh">(lose)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has lost</span><div class="why">so 后面是现在的结果（现在得走路）</div></div>
+    </li>
+    <li><span class="qtag">26·T33</span>
+      <p class="qtext en">—How many books ______ they ______? —Five. But they haven't finished reading even one.</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">A. did, borrow</span><div class="why">问当时借了几本＝过去档案 → 过去时（辨析题，见上方高危辨析）</div></div>
+    </li>
+    <li><span class="qtag">26·T35</span>
+      <p class="qtext en">—______ you ______ your book to the library? —Yes. I returned it yesterday.</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">B. Have, returned</span><div class="why">问「还了没」影响现在 → 完成时；答句 yesterday 部分才用过去时</div></div>
+    </li>
+    <li><span class="qtag">27·T5</span>
+      <p class="qtext en">Harry Potter is a very nice film. I <span class="blank"></span> it twice. <span class="zh">(see)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">have seen</span><div class="why">twice 经历锚点</div></div>
+    </li>
+    <li><span class="qtag">27·T11</span>
+      <p class="qtext en">I <span class="blank"></span> my pen. Can you lend me yours? <span class="zh">(lose)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">have lost</span><div class="why">下一句是现在的请求 → 丢了笔影响现在</div></div>
+    </li>
+    <li><span class="qtag">27·T31</span>
+      <p class="qtext en">—______ you ever ______ Hong Kong-Zhuhai-Macao Bridge? —Not yet.</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">C. Have, visited</span><div class="why">ever + yet 双锚点 → 完成时</div></div>
+    </li>
+    <li><span class="qtag">28·T2</span>
+      <p class="qtext en">I <span class="blank"></span> your computer. You can work on it now. <span class="zh">(fix)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">have fixed</span><div class="why">第二句是证据句：现在的结果 ← 过去的动作</div></div>
+    </li>
+    <li><span class="qtag">28·T4</span>
+      <p class="qtext en">Since we began to use the Internet, our lives <span class="blank"></span> a lot. <span class="zh">(change)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">have changed</span><div class="why">since 从句过去时 → 主句完成时；注意 lives 复数 → have</div></div>
+    </li>
+    <li><span class="qtag">28·T7</span>
+      <p class="qtext en">It is the first time he <span class="blank"></span> a book about his childhood memories. <span class="zh">(write)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has written</span><div class="why">固定句型：主句 is → 从句完成时（主句 was 才回退 had done）</div></div>
+    </li>
+    <li><span class="qtag">28·T8</span>
+      <p class="qtext en">In recent years, online shopping <span class="blank"></span> increasingly popular. <span class="zh">(become)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has become</span><div class="why">in recent years 锚点；shopping 单数 → has</div></div>
+    </li>
+  </ul>
+
+  <h3 class="sub">变式练习一（换马甲的同款题）</h3>
+  <ul class="drill">
+    <li><span class="qtag">练 1-1</span>
+      <p class="qtext en">Mr. Wang <span class="blank"></span> in this school since 2018. <span class="zh">(teach)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has taught</span><div class="why">since 2018 锚点；三单 → has</div></div>
+    </li>
+    <li><span class="qtag">练 1-2</span>
+      <p class="qtext en">—________ you ever ________ Sichuan food? —Yes, twice.</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">Have; tried</span><div class="why">ever + twice 双锚点</div></div>
+    </li>
+    <li><span class="qtag">练 1-3</span>
+      <p class="qtext en">Look! Somebody <span class="blank"></span> the window. The glass is everywhere. <span class="zh">(break)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has broken</span><div class="why">现在的结果：玻璃满地</div></div>
+    </li>
+    <li><span class="qtag">练 1-4</span>
+      <p class="qtext en">It is the third time she <span class="blank"></span> the first prize. <span class="zh">(win)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has won</span><div class="why">It is the ... time 句型 → 从句完成时</div></div>
+    </li>
+    <li><span class="qtag">练 1-5</span>
+      <p class="qtext en">—How many books ________ you ________ during the summer holiday? —Three.</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">did; read</span><div class="why">during the summer holiday 是过去的档期 → 过去档案用过去时（同 26·T33）</div></div>
+    </li>
+  </ul>
+</section>
+
+<!-- ================= 主题二 ================= -->
+<section class="theme" id="t2" style="--tc:#3f8f6b;--tcs:#e9f4ee">
+  <div class="theme-head">
+    <span class="theme-no">主题二</span>
+    <h2>瞬间动词不能牵手 for——延续性转换</h2>
+    <span class="score">6 错 · 三连错元凶</span>
+  </div>
+  <div class="callout">
+    <b class="tag">核心规则（一句话背下来）</b>
+    完成时 + for/since 时间段 ⇒ 谓语必须能<b>一直持续</b>。borrow、leave、die、buy 这类「一秒就完成」的动词撑不起一段时间，必须换成对应的<b>状态表达</b>。
+  </div>
+
+  <h3 class="sub">公式卡 · 瞬间 → 延续 转换表（必背）</h3>
+  <div class="card">
+    <table>
+      <tr><th>瞬间动词（× for 时间段）</th><th>延续表达（✓）</th><th>中文</th></tr>
+      <tr><td class="en">borrow 借</td><td class="en"><b>keep</b></td><td>借了 → 一直留着</td></tr>
+      <tr><td class="en">buy 买</td><td class="en"><b>have</b></td><td>买了 → 一直拥有</td></tr>
+      <tr><td class="en">leave 离开</td><td class="en"><b>be away (from)</b></td><td>离开了 → 一直不在</td></tr>
+      <tr><td class="en">die 死</td><td class="en"><b>be dead</b></td><td>去世了 → 一直是故去状态</td></tr>
+      <tr><td class="en">begin / start</td><td class="en"><b>be on</b></td><td>开演了 → 一直进行</td></tr>
+      <tr><td class="en">finish / end</td><td class="en"><b>be over</b></td><td>结束了 → 一直是结束状态</td></tr>
+      <tr><td class="en">join 加入</td><td class="en"><b>be in / be a member of</b></td><td>加入了 → 一直是成员</td></tr>
+      <tr><td class="en">make / become friends</td><td class="en"><b>be friends</b></td><td>交了朋友 → 一直是朋友</td></tr>
+      <tr><td class="en">open</td><td class="en"><b>be open</b></td><td>开门了 → 一直营业</td></tr>
+      <tr><td class="en">close</td><td class="en"><b>be closed</b></td><td>关门了 → 一直关着</td></tr>
+      <tr><td class="en">fall asleep</td><td class="en"><b>be asleep</b></td><td>睡着了 → 一直睡着</td></tr>
+      <tr><td class="en">catch a cold</td><td class="en"><b>have a cold</b></td><td>感冒了 → 一直感冒</td></tr>
+    </table>
+    <p style="margin-bottom:4px;font-weight:600">同义句转换套路：</p>
+    <code class="formula">主语 + 瞬间动词 + ... + ago（过去一次性动作）
+⟹ 主语 + have/has + 延续表达 + ... + for + 时间段</code>
+  </div>
+
+  <h3 class="sub">错题回放</h3>
+  <ul class="replay">
+    <li><span class="qtag">28·T12/13</span>
+      <p class="qtext en">Tim borrowed the dictionary two days ago. → Tim <span class="blank"></span> <span class="blank"></span> the dictionary for two days.</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has; kept</span><div class="why">borrow 是瞬间动词 → 换 keep；Tim 三单 → has</div></div>
+    </li>
+    <li><span class="qtag">28·T14</span>
+      <p class="qtext en">Tom left Paris a week ago. → Tom <span class="blank"></span> <span class="blank"></span> <span class="blank"></span> <span class="blank"></span> Paris for a week.</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has; been; away; from</span><div class="why">leave → be away from，注意 from 不能丢</div></div>
+    </li>
+    <li><span class="qtag">28·T15</span>
+      <p class="qtext en">His grandpa died 10 years ago. → His grandpa <span class="blank"></span> <span class="blank"></span> <span class="blank"></span> for 10 years.</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has; been; dead</span><div class="why">die → be dead（状态）</div></div>
+    </li>
+    <li><span class="qtag">26·T30</span>
+      <p class="qtext en">The teachers ________ the office for a few minutes when we arrived. We didn't meet them.<br>A. had been away from　B. had left　C. have been away from　D. have left</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">A. had been away from</span><div class="why">when we arrived 是过去参照点 → 过去完成；<b>过去完成也要延续</b>！B 死在 left 瞬间动词 × for a few minutes</div></div>
+    </li>
+    <li><span class="qtag">26·T31</span>
+      <p class="qtext en">They ________ friends since they met in Shanghai.<br>A. have made　B. have become　C. have been　D. have turned</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">C. have been</span><div class="why">A/B 死在 made/became 是瞬间动词 × since</div></div>
+    </li>
+  </ul>
+
+  <h3 class="sub">变式练习二</h3>
+  <ul class="drill">
+    <li><span class="qtag">练 2-1</span>
+      <p class="qtext">His father died five years ago.（同义句）His father <span class="blank"></span> <span class="blank"></span> <span class="blank"></span> for five years.</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has been dead</span><div class="why">die → be dead</div></div>
+    </li>
+    <li><span class="qtag">练 2-2</span>
+      <p class="qtext">Lily bought the bike two weeks ago.（同义句）Lily <span class="blank"></span> <span class="blank"></span> the bike for two weeks.</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has had</span><div class="why">buy → have</div></div>
+    </li>
+    <li><span class="qtag">练 2-3</span>
+      <p class="qtext">They joined the club in 2023.（同义句）They <span class="blank"></span> <span class="blank"></span> <span class="blank"></span> the club for about three years.</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">have been in</span><div class="why">join → be in</div></div>
+    </li>
+    <li><span class="qtag">练 2-4</span>
+      <p class="qtext">The film began ten minutes ago.（同义句）The film <span class="blank"></span> <span class="blank"></span> <span class="blank"></span> for ten minutes.</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has been on</span><div class="why">begin → be on</div></div>
+    </li>
+    <li><span class="qtag">练 2-5</span>
+      <p class="qtext">Mr. Li left Tianjin three days ago.（同义句）Mr. Li <span class="blank"></span> <span class="blank"></span> <span class="blank"></span> <span class="blank"></span> Tianjin for three days.</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">has been away from</span><div class="why">leave → be away from</div></div>
+    </li>
+  </ul>
+</section>
+
+<!-- ================= 主题三 ================= -->
+<section class="theme" id="t3" style="--tc:#7c62c0;--tcs:#f0ecf9">
+  <div class="theme-head">
+    <span class="theme-no">主题三</span>
+    <h2>过去完成时——「过去的过去」</h2>
+    <span class="score">5 错</span>
+  </div>
+  <code class="formula">had + 过去分词
+用法：句中已有一个「过去的时间参照物」，某动作发生在它【更早】之前。
+时间轴：[had done 更早] ────── [did 过去参照点] ────── 现在</code>
+
+  <h3 class="sub">锚点三兄弟（看到就选 had done）</h3>
+  <div class="card">
+    <table>
+      <tr><th>锚点</th><th>例</th></tr>
+      <tr><td class="en"><b>By the time</b> + 过去时从句</td><td class="en">By the time I got up, Mum <b>had cooked</b> breakfast</td></tr>
+      <tr><td class="en"><b>by the end of</b> + 过去时间</td><td class="en">by the end of <b>last term</b> → <b>had studied</b></td></tr>
+      <tr><td class="en"><b>Before</b> + 过去动作</td><td class="en">Before she came to China, she <b>had heard</b> about the Great Wall</td></tr>
+    </table>
+    <div class="callout">判断口诀：句中两个过去动作，<b>先发生的那个用 had done</b>。</div>
+    <div class="callout warn">
+      <b class="tag">近亲提醒 · 过去将来时 would do</b>
+      主句是 said / told 等过去动词，内容指将来 → He said he <b class="en">would call</b> me as soon as he got home.
+    </div>
+  </div>
+
+  <h3 class="sub">错题回放</h3>
+  <ul class="replay">
+    <li><span class="qtag">26·T8</span>
+      <p class="qtext en">Jerry <span class="blank"></span> 3 short novels by the end of last term. <span class="zh">(study)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">had studied</span><div class="why">by the end of + 过去时间 → had done</div></div>
+    </li>
+    <li><span class="qtag">26·T10</span>
+      <p class="qtext en">By the time I got up, my mother <span class="blank"></span> the breakfast well. <span class="zh">(cook)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">had cooked</span><div class="why">起床（过去）之前就做完了 → 过去的过去</div></div>
+    </li>
+    <li><span class="qtag">27·T9</span>
+      <p class="qtext en">By the time I was five, I <span class="blank"></span> over a hundred books. <span class="zh">(read)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">had read</span><div class="why">By the time + 过去 → had done</div></div>
+    </li>
+    <li><span class="qtag">27·T12</span>
+      <p class="qtext en">Before she came to China, she <span class="blank"></span> about the Great Wall through movies. <span class="zh">(hear)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">had heard</span><div class="why">hear 发生在 came（过去）之前 → 过去的过去</div></div>
+    </li>
+    <li><span class="qtag">26·T7</span>
+      <p class="qtext en">He said he <span class="blank"></span> me as soon as he got home. <span class="zh">(call)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">would call</span><div class="why">said（过去）+ 内容指将来 → 过去将来时</div></div>
+    </li>
+  </ul>
+
+  <h3 class="sub">变式练习三</h3>
+  <ul class="drill">
+    <li><span class="qtag">练 3-1</span>
+      <p class="qtext en">By the time the police arrived, the thief <span class="blank"></span> away. <span class="zh">(run)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">had run</span><div class="why">By the time 锚点</div></div>
+    </li>
+    <li><span class="qtag">练 3-2</span>
+      <p class="qtext en">When I got to the station, the train <span class="blank"></span>. <span class="zh">(leave)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">had left</span><div class="why">到站之前车已走 → 过去的过去</div></div>
+    </li>
+    <li><span class="qtag">练 3-3</span>
+      <p class="qtext en">She <span class="blank"></span> 2,000 English words by the end of last year. <span class="zh">(learn)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">had learned</span><div class="why">by the end of + 过去</div></div>
+    </li>
+    <li><span class="qtag">练 3-4</span>
+      <p class="qtext en">He told me he <span class="blank"></span> the film before. <span class="zh">(see)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">had seen</span><div class="why">看过在 told 之前 → had done</div></div>
+    </li>
+    <li><span class="qtag">练 3-5</span>
+      <p class="qtext en">Before we arrived at the cinema, the film <span class="blank"></span>. <span class="zh">(begin)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">had begun</span><div class="why">Before 锚点</div></div>
+    </li>
+  </ul>
+</section>
+
+<!-- ================= 主题四 ================= -->
+<section class="theme" id="t4" style="--tc:#d8842d;--tcs:#fbf1e4">
+  <div class="theme-head">
+    <span class="theme-no">主题四</span>
+    <h2>过去进行时——「过去正在放的电影」</h2>
+    <span class="score">5 错</span>
+  </div>
+  <code class="formula">was / were + doing
+锚点① when 模型：长动作（was doing）＋ when ＋ 瞬间动作（did）
+        ——「正……着，突然……」：I was taking a walk when I met him.
+锚点② 过去某段/某点正进行：from 4:00 to 6:00 yesterday / at eight last night
+锚点③ 语境暗示「此刻」：Hold on! She is fixing...（现在 → is fixing）
+
+时间轴画法：was doing 是一条横线，when 后的 did 是线上扎下的一根针。</code>
+
+  <h3 class="sub">错题回放</h3>
+  <ul class="replay">
+    <li><span class="qtag">26·T3</span>
+      <p class="qtext en">I met him when I <span class="blank"></span> a walk in the park. <span class="zh">(take)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">was taking</span><div class="why">met 是针，散步是线</div></div>
+    </li>
+    <li><span class="qtag">26·T29</span>
+      <p class="qtext en">I ________ along the street looking for a place to park when the accident ________.<br>A. went, was occurring　B. have gone, occurred　C. was going, occurred　D. was going, had occurred</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">C. was going, occurred</span><div class="why">长动作 was going ＋ when ＋ 瞬间动作 occurred</div></div>
+    </li>
+    <li><span class="qtag">28·T5</span>
+      <p class="qtext en">Mum <span class="blank"></span> in the garden when I got home yesterday. <span class="zh">(sit)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">was sitting</span><div class="why">got home 是针；sit 双写 t → sitting</div></div>
+    </li>
+    <li><span class="qtag">27·T28</span>
+      <p class="qtext en">Tom ________ basketball with his classmates from 4:00 to 6:00 yesterday afternoon.<br>A. is played　B. was playing　C. plays　D. had played</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">B. was playing</span><div class="why">过去某时段正在进行的动作</div></div>
+    </li>
+    <li><span class="qtag">26·T13</span>
+      <p class="qtext en">—May I speak to Mary? —Hold on, please. She <span class="blank"></span> the dripping tap in the kitchen. <span class="zh">(fix)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">is fixing</span><div class="why">Hold on 暗示此刻 → 现在<b>进行</b>（近亲题：别和过去进行混）</div></div>
+    </li>
+  </ul>
+
+  <h3 class="sub">变式练习四</h3>
+  <ul class="drill">
+    <li><span class="qtag">练 4-1</span>
+      <p class="qtext en">I <span class="blank"></span> my homework when the lights went out. <span class="zh">(do)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">was doing</span><div class="why">went out 是针</div></div>
+    </li>
+    <li><span class="qtag">练 4-2</span>
+      <p class="qtext en">They <span class="blank"></span> football from 3:00 to 5:00 yesterday afternoon. <span class="zh">(play)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">were playing</span><div class="why">过去某时段正在进行；they 复数 → were</div></div>
+    </li>
+    <li><span class="qtag">练 4-3</span>
+      <p class="qtext en">What ________ you ________ at eight last night? <span class="zh">(do)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">were; doing</span><div class="why">at eight last night 过去时点</div></div>
+    </li>
+    <li><span class="qtag">练 4-4</span>
+      <p class="qtext en">Mary <span class="blank"></span> for the bus when it began to rain. <span class="zh">(wait)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">was waiting</span><div class="why">began to rain 是针</div></div>
+    </li>
+    <li><span class="qtag">练 4-5</span>
+      <p class="qtext en">—Where is Mum? —She <span class="blank"></span> the flowers in the garden. <span class="zh">(water)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">is watering</span><div class="why">问此刻 → 现在进行（近亲题）</div></div>
+    </li>
+  </ul>
+</section>
+
+<!-- ================= 主题五 ================= -->
+<section class="theme" id="t5" style="--tc:#c25a72;--tcs:#faeef1">
+  <div class="theme-head">
+    <span class="theme-no">主题五</span>
+    <h2>if 的两张面孔 &amp; 宾语从句三律</h2>
+    <span class="score">4 错</span>
+  </div>
+
+  <h3 class="sub">卡 1 · if 双身份</h3>
+  <div class="card">
+    <table>
+      <tr><th>if 是谁</th><th>长什么样</th><th>从句时态</th></tr>
+      <tr><td><b>如果</b>（条件状语从句）</td><td>谈假设：If it is fine, we'll go</td><td><b>主将从现</b>：从句用一般现在表将来，<b>禁 will</b></td></tr>
+      <tr><td><b>是否</b>（宾语从句）</td><td>跟在 wonder / know / ask 后</td><td>正常时态：该将来就 <b class="en">will</b></td></tr>
+    </table>
+    <div class="callout">
+      27·T25 和 28·T22 是同一道题的两张皮：<br>
+      <span class="en">We wonder <b>if</b> our parents <b>will come</b>...（wonder 后的 if＝是否 → 宾从，用 will）<br>
+      <b>If</b> they <b>come</b>, we'll be glad.（这里的 if＝如果 → 条件句，用 come）</span>
+    </div>
+  </div>
+
+  <h3 class="sub">卡 2 · 宾语从句三律</h3>
+  <div class="card">
+    <table>
+      <tr><th>律</th><th>内容</th></tr>
+      <tr><td>① 陈述语序</td><td class="en">主语在动词前 → Could you tell me <b>when you will leave</b>（✗ when will you leave）</td></tr>
+      <tr><td>② 时态呼应</td><td>主句过去 → 从句回移一级（will→would）；但<b>客观真理永远一般现在</b>：<span class="en">The sun <b>rises</b> in the east</span>（哪怕在 told us 后面）</td></tr>
+      <tr><td>③ Could 是礼貌</td><td class="en">Could you tell me...? 的从句<b>不回移</b>，该将来就 will</td></tr>
+    </table>
+  </div>
+
+  <h3 class="sub">错题回放</h3>
+  <ul class="replay">
+    <li><span class="qtag">27·T25</span>
+      <p class="qtext en">We wonder if our parents will come to our graduating party next weekend. If they _______, we'll be very glad.<br>A. come　B. comes　C. are coming　D. will come</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">A. come</span><div class="why">第二个 if＝如果 → 条件从句主将从现，禁 will</div></div>
+    </li>
+    <li><span class="qtag">28·T22</span>
+      <p class="qtext en">—Let's go hiking if it __________ fine tomorrow. —But nobody knows if it __________.<br>A. is; rains　B. will be; rains　C. is; will rain　D. will be; will rain</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">C. is; will rain</span><div class="why">第一个 if＝如果 → 主将从现；第二个 if＝是否 → 宾从正常将来</div></div>
+    </li>
+    <li><span class="qtag">28·T26</span>
+      <p class="qtext en">Could you tell me ________?<br>A. when you will leave for Beijing　B. when will you leave for Beijing　C. when you would leave for Beijing　D. when would you leave for Beijing</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">A</span><div class="why">陈述语序 + Could 是礼貌不是过去 → 该将来就 will</div></div>
+    </li>
+    <li><span class="qtag">26·T15</span>
+      <p class="qtext en">Miss Li told us the sun <span class="blank"></span> in the east. <span class="zh">(rise)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">rises</span><div class="why">宾从里的客观真理 → 永远一般现在</div></div>
+    </li>
+  </ul>
+
+  <h3 class="sub">变式练习五</h3>
+  <ul class="drill">
+    <li><span class="qtag">练 5-1</span>
+      <p class="qtext en">If it <span class="blank"></span> tomorrow, we will go camping. <span class="zh">(not rain)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">doesn't rain</span><div class="why">条件从句主将从现</div></div>
+    </li>
+    <li><span class="qtag">练 5-2</span>
+      <p class="qtext en">I don't know if it <span class="blank"></span> tomorrow. <span class="zh">(rain)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">will rain</span><div class="why">know 后的 if＝是否 → 宾从正常将来</div></div>
+    </li>
+    <li><span class="qtag">练 5-3</span>
+      <p class="qtext en">Could you tell me where ________?　A. does he live　B. he lives</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">B. he lives</span><div class="why">陈述语序</div></div>
+    </li>
+    <li><span class="qtag">练 5-4</span>
+      <p class="qtext en">The teacher said light <span class="blank"></span> faster than sound. <span class="zh">(travel)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">travels</span><div class="why">客观真理不回移</div></div>
+    </li>
+    <li><span class="qtag">练 5-5</span>
+      <p class="qtext en">I hear that they <span class="blank"></span> back next week. <span class="zh">(come)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">will come</span><div class="why">主句现在时 → 从句正常将来</div></div>
+    </li>
+  </ul>
+</section>
+
+<!-- ================= 主题六 ================= -->
+<section class="theme" id="t6" style="--tc:#55688a;--tcs:#edeff4">
+  <div class="theme-head">
+    <span class="theme-no">主题六</span>
+    <h2>易混词杀手组</h2>
+    <span class="score">13 错 · 选择题送命题</span>
+  </div>
+
+  <h3 class="sub">卡 1 · raise vs rise（三讲都考了）</h3>
+  <div class="card">
+    <table>
+      <tr><th>词</th><th>及物？</th><th>意思</th><th>记法</th></tr>
+      <tr><td class="en"><b>raise</b> raised–raised</td><td>✓ 及物（必须带宾语）</td><td>举起；筹款；饲养；提高</td><td><b>raise 有手</b>（要作用于别的东西）</td></tr>
+      <tr><td class="en"><b>rise</b> rose–risen</td><td>✗ 不及物（自己升）</td><td>升起；上升；上涨</td><td><b>rise 自己飞</b>（太阳升、物价涨）</td></tr>
+    </table>
+    <div class="callout good">判断一步走：句里有<b>宾语</b>（钱、手、帽子）→ raise；没宾语、主语自己升 → rise。</div>
+    <div class="callout warn"><b class="tag">连带规则：不及物动词没有被动式</b>rise / appear / happen / take place 都不能说 was risen / was appeared / was taken place。</div>
+  </div>
+
+  <h3 class="sub">卡 2 · has been to / in / gone to</h3>
+  <div class="card">
+    <table>
+      <tr><th>短语</th><th>意思</th><th>人现在在哪</th></tr>
+      <tr><td class="en">has been <b>to</b></td><td>去过（已回来）</td><td>回来了</td></tr>
+      <tr><td class="en">has been <b>in</b></td><td>一直在（常接 for 时长）</td><td>还在那儿</td></tr>
+      <tr><td class="en">has <b>gone</b> to</td><td>去了（还没回）</td><td>在路上/在那儿</td></tr>
+    </table>
+  </div>
+
+  <h3 class="sub">卡 3 · used to do vs be used to doing</h3>
+  <div class="card">
+    <table>
+      <tr><th>短语</th><th>to 是什么</th><th>意思</th></tr>
+      <tr><td class="en"><b>used to do</b></td><td>不定式 → 接<b>原形</b></td><td>过去常常（现在不了）</td></tr>
+      <tr><td class="en"><b>be used to doing</b></td><td>介词 → 接<b>doing</b></td><td>习惯于</td></tr>
+    </table>
+  </div>
+
+  <h3 class="sub">卡 4 · open 与 close 的词性陷阱</h3>
+  <div class="card">
+    <p style="margin:6px 0">· <b class="en">open</b> 可作形容词：<span class="en">be open</span>＝营业中/开着（状态，可接 for 12 hours）<br>
+    · <b class="en">close</b> 作动词：<span class="en">closes</span>＝关门这个动作（每天规律 → 三单）；<span class="en">is close</span>＝「亲近」，不是关门</p>
+  </div>
+
+  <h3 class="sub">错题回放</h3>
+  <ul class="replay">
+    <li><span class="qtag">27·T35</span>
+      <p class="qtext en">The number of Tik Tok users _______ sharply since Tik Tok _______ in 2016.<br>A. has risen; appeared　B. have been risen; appeared　C. have raised; was appeared　D. has been raised; was appeared</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">A. has risen; appeared</span><div class="why">since → 完成时；the number of 三单 → has；rise 不及物<b>无被动</b>；appear 也无被动</div></div>
+    </li>
+    <li><span class="qtag">28·T33</span>
+      <p class="qtext en">A British girl ________ over $30,000 for a children's hospital several months ago.<br>A. raised　B. has raised　C. rose　D. has risen</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">A. raised</span><div class="why">有宾语 $30,000 → raise；ago → 过去式 raised</div></div>
+    </li>
+    <li><span class="qtag">26·T17</span>
+      <p class="qtext en">The 1st National Youth Games ________ in Fuzhou in 2015.<br>A. takes place　B. took place　C. is taken place　D. was taken place</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">B. took place</span><div class="why">in 2015 → 过去时；take place 不及物<b>无被动</b></div></div>
+    </li>
+    <li><span class="qtag">27·T29</span>
+      <p class="qtext en">As an exchange student, Alan _______ England for one and a half years.<br>A. has been to　B. has been in　C. has gone to　D. has been away</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">B. has been in</span><div class="why">for 时长 + 人还在 → been in</div></div>
+    </li>
+    <li><span class="qtag">28·T17</span>
+      <p class="qtext en">—There ________ a noisy factory here, but now it has changed into a beautiful park.<br>A. used to have　B. used to be　C. was used to have　D. was used to be</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">B. used to be</span><div class="why">There be 存在句不配 have；used to 无被动式</div></div>
+    </li>
+    <li><span class="qtag">28·T21</span>
+      <p class="qtext en">—How does Jack usually go to school? —He ________ ride a bike, but now he ________ there to lose weight.<br>A. used to; is used to walk　B. was used to; is used to walking　C. used to; is used to walking　D. was used to; used to walk</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">C. used to; is used to walking</span><div class="why">今昔对比：过去常常 used to + 原形；now + 习惯于 be used to + doing</div></div>
+    </li>
+    <li><span class="qtag">28·T27</span>
+      <p class="qtext en">The bookstore ________ for 12 hours a day. It ________ at 10:00 p.m.<br>A. opens; closes　B. opens; is closed　C. is open; is close　D. is open; closes</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">D. is open; closes</span><div class="why">状态接时长 be open；每天规律动作三单 closes</div></div>
+    </li>
+  </ul>
+
+  <h3 class="sub">基础锚点热身（另外 7 道：单纯的过去 / 将来锚点）</h3>
+  <ul class="replay">
+    <li><span class="qtag">26·T4</span>
+      <p class="qtext en">He <span class="blank"></span> coffee to tea when he was young. <span class="zh">(prefer)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">preferred</span><div class="why">when he was young → 过去的习惯 → 一般过去时</div></div>
+    </li>
+    <li><span class="qtag">27·T3</span>
+      <p class="qtext en">Today is a sunny day. We <span class="blank"></span> a picnic this afternoon. <span class="zh">(have)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">will have</span><div class="why">this afternoon → 一般将来时</div></div>
+    </li>
+    <li><span class="qtag">27·T8</span>
+      <p class="qtext en">Lily turned off the lights and then <span class="blank"></span> the classroom. <span class="zh">(leave)</span></p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">left</span><div class="why">and 并列，前面 turned 是过去时 → 后面也用过去时</div></div>
+    </li>
+    <li><span class="qtag">27·T21</span>
+      <p class="qtext en">Susan and her sister _______ some photos in the park the day after tomorrow.<br>A. take　B. took　C. will take　D. is going to take</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">C. will take</span><div class="why">the day after tomorrow → 将来时；主语两人复数，D 单数 is 错</div></div>
+    </li>
+    <li><span class="qtag">27·T24</span>
+      <p class="qtext en">—My car _______ yesterday. Could you give me a ride tomorrow? —Sorry I can't, I'm _______ Dalian tomorrow morning.<br>A. breaks down; flying at　B. has broken down; flying at　C. broke down; flying to　D. had broken down; flying to</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">C. broke down; flying to</span><div class="why">yesterday → 过去时；进行时表已定的将来计划；fly to 搭配 to</div></div>
+    </li>
+    <li><span class="qtag">27·T33</span>
+      <p class="qtext en">—Uncle Sam, I have to leave right now. —What a pity! I _______ you could stay a little longer with us.<br>A. thought　B. think　C. am thinking　D. have thought</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">A. thought</span><div class="why">「我原以为」——现在落空了，想法属于过去 → 过去时</div></div>
+    </li>
+    <li><span class="qtag">28·T11</span>
+      <p class="qtext">I haven't ever spoken to her.（改成同义句）I have <span class="blank"></span> spoken to her.</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">never</span><div class="why">not ... ever ＝ never（一词）</div></div>
+    </li>
+  </ul>
+
+  <h3 class="sub">变式练习六</h3>
+  <ul class="drill">
+    <li><span class="qtag">练 6-1</span>
+      <p class="qtext en">The price of vegetables ________ a lot recently.<br>A. has risen　B. has raised　C. has been risen　D. rose</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">A</span><div class="why">rise 不及物无被动；recently → 完成时</div></div>
+    </li>
+    <li><span class="qtag">练 6-2</span>
+      <p class="qtext en">—Where is Tom? —He ________ the library. He'll be back soon.<br>A. has been to　B. has gone to　C. has been in</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">B</span><div class="why">人还没回（一会儿才回来）</div></div>
+    </li>
+    <li><span class="qtag">练 6-3</span>
+      <p class="qtext en">My uncle ________ Beijing for ten years.<br>A. has been to　B. has gone to　C. has been in</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">C</span><div class="why">for ten years + 人还在</div></div>
+    </li>
+    <li><span class="qtag">练 6-4</span>
+      <p class="qtext en">He ________ smoke, but now he doesn't.<br>A. is used to　B. used to　C. uses to</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">B</span><div class="why">过去常常，接原形 smoke</div></div>
+    </li>
+    <li><span class="qtag">练 6-5</span>
+      <p class="qtext en">There ________ a hospital near our school before.<br>A. used to be　B. used to have　C. was used to be</p>
+      <button class="reveal-btn">看答案</button>
+      <div class="answer"><span class="key en">A</span><div class="why">There be 存在句不配 have</div></div>
+    </li>
+  </ul>
+</section>
+
+<!-- ================= 打卡表 ================= -->
+<section class="theme" id="checklist">
+  <div class="theme-head">
+    <span class="theme-no">🎯</span>
+    <h2>49 题错题歼灭打卡表</h2>
+  </div>
+  <div class="callout">
+    用法：<b>遮住答案重做</b>，全对才打 ✓。同一题错第二次，回到对应主题重学公式卡。<br>
+    节奏：第 1 天主题一＋二 → 第 2 天主题三＋四 → 第 3 天主题五＋六 → 第 4 天全表重做。<br>
+    歼灭标准：连续两轮全 ✓，再约爸爸做一张 26~28 混合重测卷，85 分以上算通关 🏆
+  </div>
+
+  <div class="progress-card">
+    <div class="progress-row">
+      <svg class="ring" viewBox="0 0 72 72" aria-hidden="true"><circle class="ring-bg" cx="36" cy="36" r="30"></circle><circle class="ring-fg" id="done-ring" cx="36" cy="36" r="30"></circle></svg>
+      <span class="progress-num"><span id="done-num">0</span><small> / 49 已歼灭</small></span>
+      <div class="bar"><i id="done-bar"></i></div>
+      <button class="btn-ghost" id="reset-btn">重置进度</button>
+    </div>
+  </div>
+
+  <div class="checklist-group" style="--tc:#3a7ca5"><h4>主题一 · 现在完成时锚点 <span class="cnt">(15)</span></h4>
+    <div class="chips">
+      <label class="chip"><input type="checkbox" data-k="26-T1">26·T1</label>
+      <label class="chip"><input type="checkbox" data-k="26-T5">26·T5</label>
+      <label class="chip"><input type="checkbox" data-k="26-T6">26·T6</label>
+      <label class="chip"><input type="checkbox" data-k="26-T12">26·T12</label>
+      <label class="chip"><input type="checkbox" data-k="26-T14">26·T14</label>
+      <label class="chip"><input type="checkbox" data-k="26-T32">26·T32</label>
+      <label class="chip"><input type="checkbox" data-k="26-T33">26·T33 辨析</label>
+      <label class="chip"><input type="checkbox" data-k="26-T35">26·T35 辨析</label>
+      <label class="chip"><input type="checkbox" data-k="27-T5">27·T5</label>
+      <label class="chip"><input type="checkbox" data-k="27-T11">27·T11</label>
+      <label class="chip"><input type="checkbox" data-k="27-T31">27·T31</label>
+      <label class="chip"><input type="checkbox" data-k="28-T2">28·T2</label>
+      <label class="chip"><input type="checkbox" data-k="28-T4">28·T4</label>
+      <label class="chip"><input type="checkbox" data-k="28-T7">28·T7</label>
+      <label class="chip"><input type="checkbox" data-k="28-T8">28·T8</label>
+    </div>
+  </div>
+  <div class="checklist-group" style="--tc:#3f8f6b"><h4>主题二 · 延续性转换 <span class="cnt">(6)</span></h4>
+    <div class="chips">
+      <label class="chip"><input type="checkbox" data-k="26-T30">26·T30</label>
+      <label class="chip"><input type="checkbox" data-k="26-T31">26·T31</label>
+      <label class="chip"><input type="checkbox" data-k="28-T12">28·T12</label>
+      <label class="chip"><input type="checkbox" data-k="28-T13">28·T13</label>
+      <label class="chip"><input type="checkbox" data-k="28-T14">28·T14</label>
+      <label class="chip"><input type="checkbox" data-k="28-T15">28·T15</label>
+    </div>
+  </div>
+  <div class="checklist-group" style="--tc:#7c62c0"><h4>主题三 · 过去完成时 / 过去将来 <span class="cnt">(5)</span></h4>
+    <div class="chips">
+      <label class="chip"><input type="checkbox" data-k="26-T7">26·T7</label>
+      <label class="chip"><input type="checkbox" data-k="26-T8">26·T8</label>
+      <label class="chip"><input type="checkbox" data-k="26-T10">26·T10</label>
+      <label class="chip"><input type="checkbox" data-k="27-T9">27·T9</label>
+      <label class="chip"><input type="checkbox" data-k="27-T12">27·T12</label>
+    </div>
+  </div>
+  <div class="checklist-group" style="--tc:#d8842d"><h4>主题四 · 过去进行 / 现在进行 <span class="cnt">(5)</span></h4>
+    <div class="chips">
+      <label class="chip"><input type="checkbox" data-k="26-T3">26·T3</label>
+      <label class="chip"><input type="checkbox" data-k="26-T13">26·T13</label>
+      <label class="chip"><input type="checkbox" data-k="26-T29">26·T29</label>
+      <label class="chip"><input type="checkbox" data-k="27-T28">27·T28</label>
+      <label class="chip"><input type="checkbox" data-k="28-T5">28·T5</label>
+    </div>
+  </div>
+  <div class="checklist-group" style="--tc:#c25a72"><h4>主题五 · if 双身份 &amp; 宾语从句 <span class="cnt">(4)</span></h4>
+    <div class="chips">
+      <label class="chip"><input type="checkbox" data-k="26-T15">26·T15</label>
+      <label class="chip"><input type="checkbox" data-k="27-T25">27·T25</label>
+      <label class="chip"><input type="checkbox" data-k="28-T22">28·T22</label>
+      <label class="chip"><input type="checkbox" data-k="28-T26">28·T26</label>
+    </div>
+  </div>
+  <div class="checklist-group" style="--tc:#55688a"><h4>主题六 · 易混词杀手组 <span class="cnt">(14)</span></h4>
+    <div class="chips">
+      <label class="chip"><input type="checkbox" data-k="26-T17">26·T17</label>
+      <label class="chip"><input type="checkbox" data-k="27-T35">27·T35</label>
+      <label class="chip"><input type="checkbox" data-k="28-T33">28·T33</label>
+      <label class="chip"><input type="checkbox" data-k="27-T29">27·T29</label>
+      <label class="chip"><input type="checkbox" data-k="28-T17">28·T17</label>
+      <label class="chip"><input type="checkbox" data-k="28-T21">28·T21</label>
+      <label class="chip"><input type="checkbox" data-k="28-T27">28·T27</label>
+      <label class="chip"><input type="checkbox" data-k="26-T4">26·T4</label>
+      <label class="chip"><input type="checkbox" data-k="27-T3">27·T3</label>
+      <label class="chip"><input type="checkbox" data-k="27-T8">27·T8</label>
+      <label class="chip"><input type="checkbox" data-k="27-T21">27·T21</label>
+      <label class="chip"><input type="checkbox" data-k="27-T24">27·T24</label>
+      <label class="chip"><input type="checkbox" data-k="27-T33">27·T33</label>
+      <label class="chip"><input type="checkbox" data-k="28-T11">28·T11</label>
+    </div>
+  </div>
+
+  <p class="note-dad">
+    📌 <b>给爸爸</b>：孩子错得最重的是主题一（15 错）＋主题二（6 错），合计 21/49。复习优先级：主题二 → 一 → 六 → 三 → 四 → 五。
+    本页可直接打印（答案自动展开）；进度存在这台设备的浏览器里，换设备不同步。
+  </p>
+</section>
+
+<footer>和爸学 · 时态补习讲义 · 第 26~28 讲错题歼灭专刊</footer>
+</main>
+
+<script>
+(function(){
+  // 答案揭示
+  document.querySelectorAll('.reveal-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ btn.closest('li').classList.add('open'); });
+  });
+  // 打卡表：localStorage 记忆
+  var KEY='buxi-26-28-checklist';
+  var boxes=[].slice.call(document.querySelectorAll('.chip input'));
+  function save(){ try{localStorage.setItem(KEY,JSON.stringify(boxes.filter(function(b){return b.checked}).map(function(b){return b.dataset.k})))}catch(e){} }
+  function refresh(){
+    var done=boxes.filter(function(b){return b.checked}).length;
+    document.getElementById('done-num').textContent=done;
+    document.getElementById('done-bar').style.width=(done/boxes.length*100)+'%';
+    document.getElementById('done-ring').style.strokeDashoffset=(188.5*(1-done/boxes.length)).toFixed(1);
+    var toc=document.getElementById('toc-checklist');
+    toc.classList.toggle('done-all',done===boxes.length);
+    toc.textContent = done===boxes.length ? '🏆 全部歼灭！' : '🎯 打卡表 ' + done + '/' + boxes.length;
+  }
+  try{
+    var saved=JSON.parse(localStorage.getItem(KEY)||'[]');
+    boxes.forEach(function(b){ if(saved.indexOf(b.dataset.k)>=0){b.checked=true;} });
+  }catch(e){}
+  boxes.forEach(function(b){
+    b.addEventListener('change', function(){ b.closest('.chip').classList.toggle('checked',b.checked); save(); refresh(); });
+    b.closest('.chip').classList.toggle('checked',b.checked);
+  });
+  document.getElementById('reset-btn').addEventListener('click', function(){
+    if(!confirm('确定清空全部打卡记录吗？'))return;
+    boxes.forEach(function(b){b.checked=false;b.closest('.chip').classList.remove('checked')});
+    save();refresh();
+  });
+  refresh();
+})();
+</script>
+</body>
+</html>
