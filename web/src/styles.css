@@ -2443,8 +2443,15 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 .rc-eb-day.more { justify-content: center; font-size: 13px; color: var(--ink-soft); }
 /* 到期词高亮；已攻克词降饱和 */
 .rc-wb-word.due { border-color: #b3541e; background: rgba(179, 84, 30, .08); }
-.rc-wb-word.done { color: var(--ink-faint); background: var(--bg-soft); }
-.rc-wb-word.done sup { color: var(--ink-faint); font-weight: 400; }
+/* 已攻克题本（#/conquered）：词卡右上「✓」= 从错题周期攻克（曾错过）；
+   一遍过的词无标记 */
+.cq-flag {
+  text-decoration: none;
+  font-size: 10px;
+  color: #10b981;
+  margin-left: 4px;
+  vertical-align: super;
+}
 .rc-due-n { color: #b3541e; }
 @media (max-width: 640px) {
   .rc-eb-cal { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }

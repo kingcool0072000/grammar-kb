@@ -12,6 +12,7 @@ import { mountReadingAdmin } from './views/readingAdmin.js'
 import { mountReadingList } from './views/readingList.js'
 import { mountFceListen } from './views/fceListen.js'
 import { mountTimetable } from './views/timetable.js'
+import { mountConquered } from './views/conquered.js'
 import { mountLibraryShelf } from './views/library/shelf.js'
 import { mountLibraryReader } from './views/library/reader.js'
 import { mountLibraryManage } from './views/library/manage.js'
@@ -50,6 +51,8 @@ const VIEWS = [
   { key: 'grading', label: '批改中心', teacher: true },
   // 学生课程表排第一位：教师周计划的只读镜像（仅看自己本周）
   { key: 'timetable', label: '课程表', studentOnly: true },
+  // 已攻克题本（学生隐藏页：背单词页错题本下方入口进入）
+  { key: 'conquered', hiddenTab: true, studentOnly: true },
   { key: 'recite', label: '背单词', studentOnly: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
   // 专题学习：学生 Tab；教师从备课中心大卡片进入（hiddenTab=教师不进顶部 Tab）
@@ -315,6 +318,9 @@ async function bootstrap() {
     } else if (route === 'timetable') {
       // 学生课程表：教师周计划只读镜像
       mounted = mountTimetable(container)
+    } else if (route === 'conquered') {
+      // 已攻克题本：全部背完掌握的单词（vocabLevel 词表 UI 复用）
+      mounted = mountConquered(container)
     } else if (route === 'topics') {
       // 专题学习（大静态手册独立 chunk）：#/topics 列表 / #/topics/{id} 详情
       mounted = import('./views/topics.js').then(({ mountTopics }) =>

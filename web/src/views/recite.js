@@ -458,22 +458,14 @@ export async function mountRecite(el, { vocab, role }) {
       return e.gloss ? [e.gloss] : []
     }
     const stageLabel = (s) => `D+${stages[Math.min(s, stages.length - 1)]}`
-    const chipHtml = (w, kind) => {
+    const chipHtml = (w) => {
       const e = findEntry(w.word)
-      if (kind === 'done') {
-        // 已攻克 = 背完掌握的词全集：从错题周期走出来的带错次角标
-        // （conquered_at 有值），一遍背会的（wrong_count 0）无角标
-        const tip = w.conquered_at
-          ? `从错题攻克 · ${w.conquered_at.slice(0, 10)}`
-          : `${(w.mastered_at || '').slice(0, 10)} 掌握${w.wrong_count ? ` · 曾错 ${w.wrong_count} 次` : ' · 一遍过'}`
-        return `<span class="rc-wb-word ${kind}" data-word="${escapeHtml(w.word)}" title="${escapeHtml(tip)}｜${e && e.gloss ? escapeHtml(e.gloss.slice(0, 40)) : ''}">${escapeHtml(w.word)}${w.wrong_count ? `<sup>${w.wrong_count}</sup>` : ''}</span>`
-      }
       const tip = `${stageLabel(w.stage || 0)} 轮 · 下次 ${w.next_review || '—'}${w.due ? '（已到期）' : ''}`
-      return `<span class="rc-wb-word ${kind} ${w.due ? 'due' : ''}" data-word="${escapeHtml(w.word)}" title="${escapeHtml(tip)}｜${e && e.gloss ? escapeHtml(e.gloss.slice(0, 40)) : ''}">${escapeHtml(w.word)}<sup>${w.wrong_count || 1}</sup></span>`
+      return `<span class="rc-wb-word ${w.due ? 'due' : ''}" data-word="${escapeHtml(w.word)}" title="${escapeHtml(tip)}｜${e && e.gloss ? escapeHtml(e.gloss.slice(0, 40)) : ''}">${escapeHtml(w.word)}<sup>${w.wrong_count || 1}</sup></span>`
     }
     host.innerHTML = `
       <section class="fce-group">
-        <div class="fce-group-title">📕 错题本 · 艾宾浩斯复习（在记 ${inCycle.length} 词 · 今日到期 <b class="rc-due-n">${dueToday.length + overdue}</b> · 已攻克 ${conquered.length}）</div>
+        <div class="fce-group-title">📕 错题本 · 艾宾浩斯复习（在记 ${inCycle.length} 词 · 今日到期 <b class="rc-due-n">${dueToday.length + overdue}</b>）</div>
         <div class="rc-eb-stages">
           ${stages.map((d, i) => `<span class="rc-eb-stage ${stageDist[i] ? 'has' : ''}"><i>D+${d}</i><b>${stageDist[i] || 0}</b></span>`).join('')}
         </div>
@@ -487,28 +479,19 @@ export async function mountRecite(el, { vocab, role }) {
         <div class="chip-row" style="margin-top:10px">
           ${dueToday.length + overdue ? `<button class="btn-primary" id="rc-wb-due">复习今日到期（${Math.min(20, dueToday.length + overdue)} 词）</button>` : ''}
           ${inCycle.length ? `<button class="btn-primary ghost" id="rc-wb-drill">全部错词轮一遍（${Math.min(20, inCycle.length)} 词）</button>` : ''}
+          ${conquered.length ? `<button class="chip" id="rc-wb-cq">✅ 已攻克题本（${conquered.length} 词）›</button>` : ''}
         </div>
         <div class="rc-wb-words">
-          ${inCycle.slice(0, WB_COLLAPSE_N).map((w) => chipHtml(w, 'in')).join('')}
+          ${inCycle.slice(0, WB_COLLAPSE_N).map((w) => chipHtml(w)).join('')}
           ${inCycle.length > WB_COLLAPSE_N ? `
             <button class="reading-btn small" id="rc-wb-toggle">展开全部（${inCycle.length} 词）⌄</button>
             <div class="rc-wb-rest" hidden>
-              ${inCycle.slice(WB_COLLAPSE_N).map((w) => chipHtml(w, 'in')).join('')}
+              ${inCycle.slice(WB_COLLAPSE_N).map((w) => chipHtml(w)).join('')}
             </div>` : ''}
         </div>
-      </section>
-      ${conquered.length ? `
-      <section class="fce-group" id="rc-wb-cq">
-        <div class="fce-group-title">✅ 已攻克题本（${conquered.length} 词）· 全部背完掌握的单词</div>
-        <div class="rc-wb-words">
-          ${conquered.slice(0, WB_COLLAPSE_N).map((w) => chipHtml(w, 'done')).join('')}
-          ${conquered.length > WB_COLLAPSE_N ? `
-            <button class="reading-btn small" id="rc-wb-toggle2">展开全部（${conquered.length} 词）⌄</button>
-            <div class="rc-wb-rest" hidden>
-              ${conquered.slice(WB_COLLAPSE_N).map((w) => chipHtml(w, 'done')).join('')}
-            </div>` : ''}
-        </div>
-      </section>` : ''}`
+      </section>`
+    const cqBtn = host.querySelector('#rc-wb-cq')
+    if (cqBtn) cqBtn.addEventListener('click', () => { location.hash = '/conquered' })
     const bindToggle = (btnId, sel) => {
       const toggle = host.querySelector(btnId)
       if (!toggle) return
@@ -519,8 +502,7 @@ export async function mountRecite(el, { vocab, role }) {
         toggle.textContent = open ? `展开全部⌄` : '收起 ⌃'
       })
     }
-    bindToggle('#rc-wb-toggle', '.rc-wb-rest:not(#rc-wb-cq .rc-wb-rest)')
-    bindToggle('#rc-wb-toggle2', '#rc-wb-cq .rc-wb-rest')
+    bindToggle('#rc-wb-toggle', '.rc-wb-rest')
     // 点击错词：行内展开中文释义 + 发音（无释义时查 /dict 兜底）
     host.querySelectorAll('.rc-wb-word').forEach((chip) => {
       chip.addEventListener('click', async () => {

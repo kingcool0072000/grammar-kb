@@ -1070,7 +1070,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             try:
                 with kbq.db.conn as conn:
                     rows = conn.execute(
-                        f"SELECT word, gloss, meanings FROM vocab_word"
+                        f"SELECT word, gloss, meanings, pos, example FROM vocab_word"
                         f" WHERE lower(word) IN ({ph})",
                         chunk,
                     ).fetchall()
@@ -1081,14 +1081,26 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
                     meanings = _json.loads(r["meanings"] or "[]")
                 except (ValueError, TypeError):
                     meanings = []
+                try:
+                    pos = _json.loads(r["pos"] or "[]")
+                except (ValueError, TypeError):
+                    pos = []
+                try:
+                    example = _json.loads(r["example"] or "{}")
+                except (ValueError, TypeError):
+                    example = {}
                 gloss_map[str(r["word"]).lower()] = {
                     "gloss": r["gloss"] or "", "meanings": meanings,
+                    "pos": pos if isinstance(pos, list) else [],
+                    "example": example if isinstance(example, dict) else {},
                 }
         for x in items:
             g = gloss_map.get(str(x["word"]).lower())
             if g:
                 x["gloss"] = g["gloss"]
                 x["meanings"] = g["meanings"]
+                x["pos"] = g["pos"]
+                x["example"] = g["example"]
         return _ok(data)
 
     @app.get("/recite/sessions")
