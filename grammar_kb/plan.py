@@ -598,6 +598,13 @@ class PlanStore:
         except sqlite3.Error:
             return None
 
+    @staticmethod
+    def _pid_level(paper_id: str) -> Optional[int]:
+        """paper_id 的 L{n}- 前缀解析级别（生成命名的固定格式；删档卷
+        历史表查不到时的兜底）。"""
+        m = re.match(r"^L(\d)-", str(paper_id or ""))
+        return int(m.group(1)) if m else None
+
     def _article_title(self, article_id: int) -> Optional[str]:
         try:
             with self._connect() as conn:
@@ -2295,6 +2302,40 @@ class PlanStore:
                     ).fetchone()
                     if row and row["n"]:
                         out["fce"] = True
+                if "vocab_exams" in tabs:
+                    # 试卷任务完成：当天有该学生的考试成绩登记（paper_id
+                    # 精确匹配；登记记录没有 paper_id 时按「当天有本级
+                    # 考试」兜底——线下考完卷面即回收，级别口径够用）。
+                    vex_cols = {r[1] for r in conn.execute(
+                        "PRAGMA table_info(vocab_exams)")}
+                    has_pid = "paper_id" in vex_cols
+                    rows = conn.execute(
+                        ("SELECT level, paper_id FROM vocab_exams"
+                         " WHERE user = ? AND exam_date = ?") if has_pid else
+                        ("SELECT level, '' AS paper_id FROM vocab_exams"
+                         " WHERE user = ? AND exam_date = ?"),
+                        (user, day),
+                    ).fetchall()
+                    plv_rows = conn.execute(
+                        "SELECT paper_id, level FROM vocab_paper_history"
+                    ).fetchall() if "vocab_paper_history" in tabs else []
+                    lv_by_pid = {r["paper_id"]: r["level"] for r in plv_rows}
+                    # 本周计划里的试卷（删档卷也包含——级别从 L{n}- 前缀解析）
+                    ws = monday_of(date.fromisoformat(day)).isoformat()
+                    planned_papers = list((self._get_week(ws, user=user)
+                                           .get("tasks") or {}).get("vocab_papers")
+                                          or [])
+                    for r in rows:
+                        pid = r["paper_id"] or ""
+                        if pid:
+                            out[f"paper:{pid}"] = True
+                        # 同级兜底：当天考过该级，视为该级试卷任务完成
+                        lv_match = {p2 for p2, lv2 in lv_by_pid.items()
+                                    if lv2 == r["level"]}
+                        lv_match |= {p2 for p2 in planned_papers
+                                     if self._pid_level(p2) == r["level"]}
+                        for p2 in lv_match:
+                            out[f"paper:{p2}"] = True
                 if "reading_recordings" in tabs:
                     rows = conn.execute(
                         "SELECT article_id FROM reading_recordings"
