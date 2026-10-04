@@ -46,6 +46,11 @@ def _default_db_path() -> str:
 class FcePaperStore:
     """fce.db 只读访问。db 不存在时各方法返回空结果（端点给 404/空列表）。"""
 
+    @staticmethod
+    def _lookup_lemma_in(word: str, lookup) -> str:
+        """lookup(word) → (level, lemma) 的第二返回值（掌握判定用原形）。"""
+        return lookup(word)[1]
+
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or _default_db_path()
 
@@ -71,6 +76,87 @@ class FcePaperStore:
             )
             t["papers"].setdefault(r["paper"], []).append({"part": r["part"], "questions": r["n"]})
         return [tests[k] for k in sorted(tests)]
+
+    def listening_vocab(self, test_id: int, user: str, mastered_getter) -> Optional[list[dict]]:
+        """某 Test 的听力预习词表：按 Part 分组的「学生未掌握词」。
+
+        mastered_getter(user) → 已掌握词集合（recite_word_progress）。
+        每词带词库级别 + 简明释义（vocab_word gloss），按 (级别, 词序) 排序；
+        transcript 未入库的 Part 跳过。返回 [{"part": 1, "words": [...]}, ...]
+        或 None（Test 不存在）。
+        """
+        if not Path(self.db_path).exists():
+            return None
+        with self._connect() as conn:
+            if not conn.execute(
+                    "SELECT 1 FROM fce_test WHERE id = ?", (test_id,)).fetchone():
+                return None
+            cols = {r[1] for r in conn.execute("PRAGMA table_info(fce_section)")}
+            if "transcript" not in cols:
+                return []
+            rows = conn.execute(
+                "SELECT part, transcript FROM fce_section"
+                " WHERE test_id = ? AND paper = 'Listening' AND transcript != ''"
+                " ORDER BY part", (test_id,),
+            ).fetchall()
+        if not rows:
+            return []
+        from .reading import (_FUNCTION_WORDS, _IRREG_FORMS, _lemma_candidates,
+                              _vocab_level_map, _vocab_pos_map, _proper_nouns)
+
+        vm = _vocab_level_map()
+        pm = _vocab_pos_map()
+        mastered = mastered_getter(user) or set()
+
+        def lookup(w: str):
+            if w in vm:
+                return vm[w], w
+            base = _IRREG_FORMS.get(w)
+            if base is not None and base in vm:
+                return vm[base], base
+            for c in _lemma_candidates(w):
+                if c in vm:
+                    return vm[c], c
+            return None, w
+
+        out = []
+        for r in rows:
+            text = r["transcript"] or ""
+            proper = _proper_nouns(text)
+            counts: dict[str, int] = {}
+            for m in _re.finditer(r"[A-Za-z'’-]+", text):
+                lw = m.group(0).lower().replace("’", "'")
+                if lw in _FUNCTION_WORDS or lw in proper or len(lw) < 3:
+                    continue
+                counts[lw] = counts.get(lw, 0) + 1
+            # 词形归并：屈折形（invented/freezers）归到原形（invent/freezer），
+            # 计数累加——展示与词库/错题本口径一致
+            lem: dict[str, dict] = {}
+            for lw, freq in counts.items():
+                lv, lemma = lookup(lw)
+                if lemma in mastered:
+                    continue
+                e = lem.setdefault(lemma, {"level": lv, "freq": 0,
+                                           "pos": (pm.get(lemma) or "") if lemma in vm else ""})
+                e["freq"] += freq
+            words = [{"word": k, **v} for k, v in lem.items()]
+            # 排序分三档：L2+ 生词（预习价值最高）→ 库外词 → L0/L1 未掌握
+            #（多是自己词表里还没背到的，少量提示即可）；档内高频在前
+            def rank(w):
+                lv = w["level"]
+                if lv is None:
+                    return (1, 0, -w["freq"])
+                if lv >= 2:
+                    return (0, lv, -w["freq"])
+                return (2, lv, -w["freq"])
+            words.sort(key=rank)
+            # 预习量可控：高价值档（L2+/库外）全给，L0/L1 只带前 8 个
+            hi = [w for w in words if w["level"] is None or w["level"] >= 2]
+            lo = [w for w in words if w["level"] is not None and w["level"] < 2][:8]
+            out.append({"part": r["part"],
+                        "total": len(counts), "new": len(words),
+                        "words": (hi + lo)[:40]})
+        return out
 
     def get_paper(self, test_id: int) -> Optional[dict]:
         """单套 Test：sections + questions（选项转数组、按 paper/part 排序）。"""

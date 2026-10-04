@@ -2,6 +2,28 @@ import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
 import { createSpectrumPlayer } from './fceAudio.js'
 
+// 词表色带：按登录学生（教师端看的是自己视角的词表——教师多半已掌握，
+// 词表会偏少；以勾选的学生为准的场景后续再加切换）
+async function vocabHtml(testId, part) {
+  try {
+    const parts = await api.fceListeningVocab(testId)
+    const pv = (parts || []).find((x) => x.part === part)
+    if (!pv || !pv.words.length) return ''
+    return `
+      <div class="fce-vocab" style="margin-top:10px">
+        <div class="fce-vocab-head">
+          <b>📖 预习词（${pv.words.length}）</b>
+          <span class="muted">学生未掌握 · L2+ 加粗</span>
+        </div>
+        <div class="fce-vocab-body">
+          <div class="fce-vocab-words">
+            ${pv.words.map((w) => `<span class="fce-vocab-word ${w.level != null && w.level >= 2 ? 'hard' : ''}">${escapeHtml(w.word)}${w.level != null ? `<i>L${w.level}</i>` : '<i>?</i>'}${w.freq > 1 ? `<em>×${w.freq}</em>` : ''}</span>`).join('')}
+          </div>
+        </div>
+      </div>`
+  } catch { return '' }
+}
+
 // 教师版 · FCE 听力播放台（独立页，备课用）：
 // 4 Test × 4 Part 全部音频一处播放——长进度条（点击/拖拽跳转）+ 实时频谱
 //（平坦段 = 空白时间，方便快速定位读题/停顿位置）。
@@ -67,6 +89,12 @@ export async function mountFceListen(el) {
         titleEl.textContent = `Test ${t} · ${PART_CN[p] || 'Part ' + p}`
         player = createSpectrumPlayer(host, `/api/fce-papers/${t}/audio/listening_p${p}`)
         currentKey = key
+        // 播放器下方挂该 Part 预习词表（学生未掌握词）
+        host.querySelector('.flm-vocab-slot')?.remove()
+        const slot = document.createElement('div')
+        slot.className = 'flm-vocab-slot'
+        host.appendChild(slot)
+        vocabHtml(t, p).then((h) => { slot.innerHTML = h })
       }
       stage.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     })

@@ -331,6 +331,31 @@ async function renderPractice(el, testId, sec, role) {
       : ''
   }
 
+  // 听力预习词表：做题前先过一遍未掌握词（默认展开、可收起；教师也显示）。
+  // 只显示当前 Part 的词。
+  let vocabHtml = ''
+  if (section.paper === 'Listening') {
+    try {
+      const parts = await api.fceListeningVocab(testId)
+      const pv = (parts || []).find((x) => x.part === section.part)
+      if (pv && pv.words.length) {
+        vocabHtml = `
+        <div class="fce-vocab" id="fce-vocab">
+          <div class="fce-vocab-head">
+            <b>📖 听力预习词（${pv.words.length} 词 · 本部分原文里你还没背到的）</b>
+            <button type="button" class="reading-btn small" id="fce-vocab-toggle">收起</button>
+          </div>
+          <div class="fce-vocab-body">
+            <p class="fce-vocab-note">先扫一眼这些词再听——L2 以上是重点（加粗）；听的时候别急着听到哪个词选哪个。</p>
+            <div class="fce-vocab-words">
+              ${pv.words.map((w) => `<span class="fce-vocab-word ${w.level != null && w.level >= 2 ? 'hard' : ''}">${escapeHtml(w.word)}${w.level != null ? `<i>L${w.level}</i>` : '<i>?</i>'}${w.freq > 1 ? `<em>×${w.freq}</em>` : ''}</span>`).join('')}
+            </div>
+          </div>
+        </div>`
+      }
+    } catch { /* 词表失败不阻塞做题 */ }
+  }
+
   el.innerHTML = `
     <div class="view-head">
       <button class="fce-back-btn" id="fce-back">← 返回大题列表</button>
@@ -350,6 +375,7 @@ async function renderPractice(el, testId, sec, role) {
       </div>
     </div>
     ${audioHtml}
+    ${vocabHtml}
     ${section.instruction ? `<div class="fce-instruction">${escapeHtml(section.instruction)}</div>` : ''}
     ${hasPassage ? renderPassage(section.passage) : ''}
     <form id="fce-form" class="fce-form">
@@ -371,6 +397,17 @@ async function renderPractice(el, testId, sec, role) {
       })
       cleanups.push(sp.destroy)
     }
+  }
+
+  // ---- 预习词表折叠 ----
+  const vocabBox = el.querySelector('#fce-vocab')
+  if (vocabBox) {
+    vocabBox.querySelector('#fce-vocab-toggle').addEventListener('click', () => {
+      const body = vocabBox.querySelector('.fce-vocab-body')
+      const hidden = body.hidden
+      body.hidden = !hidden
+      vocabBox.querySelector('#fce-vocab-toggle').textContent = hidden ? '收起' : '展开'
+    })
   }
 
   // ---- 字号调节 ----

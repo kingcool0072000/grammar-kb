@@ -3081,6 +3081,28 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 .flm-stage-head b { color: #14707f; font-size: 14.5px; }
 .fce-empty-plan { color: var(--ink-soft); font-size: 13.5px; }
 
+/* ===== FCE 听力预习词表（学生做题前 + 教师播放台） ===== */
+.fce-vocab {
+  border: 1px solid #f5e0b8; border-radius: 12px; background: #fffaeb;
+  padding: 10px 14px; margin: 12px 0;
+}
+.fce-vocab-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.fce-vocab-head b { font-size: 14px; color: #93601a; }
+.fce-vocab-note { font-size: 12.5px; color: var(--ink-soft); margin: 6px 0 8px; }
+.fce-vocab-words { display: flex; flex-wrap: wrap; gap: 6px; }
+.fce-vocab-word {
+  font-size: 13.5px; padding: 2px 9px; border-radius: 9px;
+  background: white; border: 1px solid var(--line, #e8e1d2); color: var(--ink);
+  display: inline-flex; align-items: baseline; gap: 4px;
+}
+.fce-vocab-word i { font-style: normal; font-size: 10px; color: var(--ink-faint); }
+.fce-vocab-word em { font-style: normal; font-size: 10.5px; color: #93601a; }
+.fce-vocab-word.hard {
+  font-weight: 700; border-color: #e9c98a; color: #93601a; background: #fff7e0;
+}
+.flm-vocab-slot { margin-top: 8px; }
+.flm-vocab-slot .fce-vocab { margin: 0; }
+
 /* ===== 学生课程表（教师周计划只读镜像） ===== */
 .tt-summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
 .tt-summary span {

@@ -119,3 +119,62 @@ class TestGapFillNumbered:
         )
         out = parse_gap_fill_numbered(lines, (9, 18))
         assert 14 not in out
+
+
+def test_listening_vocab(tmp_path, monkeypatch):
+    """听力预习词表：transcript 分词 → 未掌握词三档排序（L2+ 优先）。"""
+    import sqlite3 as sq
+    from grammar_kb.fce_query import FcePaperStore
+    from grammar_kb import fce_transcript, reading
+
+    db = tmp_path / "fce.db"
+    con = sq.connect(db)
+    con.executescript("""
+      CREATE TABLE fce_test (id INTEGER PRIMARY KEY, title TEXT);
+      CREATE TABLE fce_section (
+        id INTEGER PRIMARY KEY, test_id INT, paper TEXT, part INT,
+        instruction TEXT DEFAULT '', passage TEXT DEFAULT '',
+        page_start INT, page_end INT, ord INT,
+        transcript TEXT DEFAULT '');
+      CREATE TABLE fce_question (id INTEGER PRIMARY KEY, section_id INT,
+        test_id INT, paper TEXT, part INT, qnum INT, type TEXT,
+        stem TEXT, stem2 TEXT, keyword TEXT, options_json TEXT, answer TEXT);
+      INSERT INTO fce_test VALUES (1, 'Test 1');
+      INSERT INTO fce_section (test_id, paper, part, transcript)
+        VALUES (1, 'Listening', 1, 'The students invented a way to power the freezers.
+        Competitors queued for ice cream in the local park.');
+    """)
+    con.commit()
+    con.close()
+
+    # 迷你 vocab_word（grammar.db）+ 掌握集
+    gdb = tmp_path / "grammar.db"
+    g = sq.connect(gdb)
+    g.execute("CREATE TABLE vocab_word (word TEXT PRIMARY KEY, level INT,"
+              " pos TEXT DEFAULT '[]', gloss TEXT DEFAULT '', meanings TEXT DEFAULT '[]',"
+              " example TEXT DEFAULT '{}', extra TEXT DEFAULT '{}')")
+    g.executemany("INSERT INTO vocab_word (word, level) VALUES (?, ?)",
+                  [("student", 0), ("way", 0), ("power", 2), ("queue", 2),
+                   ("local", 2), ("freezer", 3), ("invent", 2)])
+    g.commit(); g.close()
+    monkeypatch.setenv("GRAMMAR_KB_DB", str(gdb))
+    reading._vocab_map_cache.clear()
+    reading._pos_map_cache.clear()
+    try:
+        store = FcePaperStore(str(db))
+        mastered = {"student", "way"}  # 这两个已掌握
+        out = store.listening_vocab(1, "malin", lambda u: mastered)
+        assert out and out[0]["part"] == 1
+        words = {w["word"]: w for w in out[0]["words"]}
+        # 已掌握的 student/way 不出现
+        assert "student" not in words and "way" not in words
+        # L2+ 生词在表里
+        assert {"power", "queue", "local", "freezer", "invent"} <= set(words)
+        # 屈折还原：invented→invent、queued→queue、creamed 不算
+        assert "invent" in words
+        # 排序：第一个是 L2+（不是库外也不是 L0）
+        lv0 = out[0]["words"][0]["level"]
+        assert lv0 is not None and lv0 >= 2
+    finally:
+        reading._vocab_map_cache.clear()
+        reading._pos_map_cache.clear()

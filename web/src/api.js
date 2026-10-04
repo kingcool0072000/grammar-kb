@@ -141,6 +141,8 @@ export const api = {
     req('/reading/difficulty', { searchParams: ids ? { ids } : {} }),
   // 单篇逐词标注（学生精读辅助：句首/连词/动词/词层级）
   readingTokens: (id) => req(`/reading/articles/${id}/tokens`),
+  // 听力预习词表（按 Part 分组的当前学生未掌握词）
+  fceListeningVocab: (testId) => req(`/fce-papers/${testId}/listening-vocab`),
   readingRecordings: ({ user, status, limit = 100 } = {}) =>
     req('/reading/recordings', { searchParams: { user, status, limit } }),
   readingRecording: (id) => req(`/reading/recordings/${id}`),

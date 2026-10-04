@@ -290,7 +290,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("POST", "/exams"),
         ("GET", "/homework"),
         ("GET", "/fce-papers"),
-        ("GET", "/fce-papers/"),  # 含 /{id}/audio（听力音频，师生可听）
+        ("GET", "/fce-papers/"),  # 含 /{id}/audio、/{id}/listening-vocab（听力音频与预习词表）
         ("POST", "/fce-submissions"),
         ("GET", "/fce-submissions"),
         ("GET", "/reading/articles"),
@@ -853,6 +853,16 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
                 return FileResponse(path, media_type=_AUDIO_MIME[ext],
                                     headers={"Accept-Ranges": "bytes"})
         raise HTTPException(status_code=404, detail="该部分听力音频暂未就绪")
+
+    @app.get("/fce-papers/{test_id}/listening-vocab")
+    def fce_listening_vocab(test_id: int, request: "fastapi.Request"):
+        """听力预习词表：按 Part 分组的「当前学生未掌握词」（做题前看）。"""
+        user = _request_user(request)
+        out = fce_papers.listening_vocab(
+            test_id, user, lambda u: recite.mastered_words(u))
+        if out is None:
+            raise HTTPException(status_code=404, detail=f"Test {test_id} 不存在")
+        return _ok(out)
 
     @app.get("/fce-papers/{test_id}/audio")
     def fce_audio_status(test_id: int):
