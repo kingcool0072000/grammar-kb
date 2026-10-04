@@ -1,12 +1,12 @@
 import { api } from '../api.js'
-import { escapeHtml } from '../render.js'
+import { escapeHtml, todayIso } from '../render.js'
 
 // 学生版 · 课程表：教师计划看板-周计划的只读镜像（/plan/my-week，
 // week_view 同源数据）。只看自己 + 本周；展示周拆解汇总 + 周一至周日
 // 逐日任务（完成态自动勾，来自学习行为的只读同步）。
 const WEEK_CN = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 const TYPE_ICON = {
-  lecture: '📚', fce: '🎧', paper: '📝', article: '📄',
+  lecture: '📚', fce: '🎧', paper: '📝', hw_paper: '🗒', article: '📄',
   reading: '📖', vocab: '🔤', speak: '🎤',
 }
 
@@ -24,11 +24,12 @@ export async function mountTimetable(el) {
   const days = d.days || []
   const gp = d.goal_progress || {}
   const dims = gp.dims || []
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayIso()
 
   // 周拆解摘要（与教师看板同口径）
   const summary = []
   if (tasks.lectures?.length) summary.push(`📚 语法 ${tasks.lectures.length} 讲`)
+  if (tasks.hw_papers?.length) summary.push(`🗒 作业卷 ${tasks.hw_papers.length} 卷`)
   if (tasks.vocab_goal) summary.push(`🔤 词汇目标 ${tasks.vocab_goal} 词`)
   if (tasks.fce?.length) summary.push(`🎧 FCE真题 ${tasks.fce.length} 项`)
   if (tasks.articles?.length) summary.push(`📄 精读 ${tasks.articles.length} 篇`)

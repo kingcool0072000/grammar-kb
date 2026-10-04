@@ -51,8 +51,10 @@ const VIEWS = [
   { key: 'grading', label: '批改中心', teacher: true },
   // 学生课程表排第一位：教师周计划的只读镜像（仅看自己本周）
   { key: 'timetable', label: '课程表', studentOnly: true },
-  // 已攻克题本（学生隐藏页：背单词页错题本下方入口进入）
-  { key: 'conquered', hiddenTab: true, studentOnly: true },
+  // 已攻克题本（学生隐藏页：背单词页错题本下方入口进入；noTab=双角色
+  // 都不进顶部 Tab——hiddenTab 语义是「教师不进、学生仍显示」，会渲染
+  // 出无 label 的 undefined Tab）
+  { key: 'conquered', hiddenTab: true, noTab: true, studentOnly: true },
   { key: 'recite', label: '背单词', studentOnly: true },
   { key: 'reading', label: '阅读练习', studentOnly: true },
   // 专题学习：学生 Tab；教师从备课中心大卡片进入（hiddenTab=教师不进顶部 Tab）

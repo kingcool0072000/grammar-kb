@@ -49,6 +49,12 @@ class ExamStore:
                 con.execute(
                     "ALTER TABLE exam_records ADD COLUMN"
                     " user TEXT NOT NULL DEFAULT 'malin'")
+            # v3：成绩类型（lecture=哈一课程测验 / hw=哈一作业卷）。
+            # 存量行全部归课程测验（此前只有这一种来源）。
+            if "kind" not in cols:
+                con.execute(
+                    "ALTER TABLE exam_records ADD COLUMN"
+                    " kind TEXT NOT NULL DEFAULT 'lecture'")
 
     def _conn(self) -> sqlite3.Connection:
         con = sqlite3.connect(self.path)
@@ -74,6 +80,7 @@ class ExamStore:
             "score": row["score"],
             "wrong": json.loads(row["wrong"]),
             "user": row["user"],
+            "kind": row["kind"],
             "updatedAt": row["updated_at"],
         }
 
@@ -91,13 +98,15 @@ class ExamStore:
         return [self._row_to_dict(r) for r in rows]
 
     def add(self, lecture: int, date: str, score: int = 0,
-            wrong: list[int] | None = None, user: str = "malin") -> dict[str, Any]:
+            wrong: list[int] | None = None, user: str = "malin",
+            kind: str = "lecture") -> dict[str, Any]:
+        kind = kind if kind in ("lecture", "hw") else "lecture"
         with self._tx() as con:
             cur = con.execute(
-                "INSERT INTO exam_records (lecture, date, score, wrong, user)"
-                " VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO exam_records (lecture, date, score, wrong, user, kind)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
                 (lecture, date, score,
-                 json.dumps(sorted(set(wrong or []))), (user or "malin")[:60]),
+                 json.dumps(sorted(set(wrong or []))), (user or "malin")[:60], kind),
             )
             row = con.execute(
                 "SELECT * FROM exam_records WHERE id = ?", (cur.lastrowid,)
@@ -111,13 +120,15 @@ class ExamStore:
         date: str,
         score: int = 0,
         wrong: list[int] | None = None,
+        kind: str = "lecture",
     ) -> Optional[dict[str, Any]]:
         """整条更新；记录不存在返回 None。"""
+        kind = kind if kind in ("lecture", "hw") else "lecture"
         with self._tx() as con:
             cur = con.execute(
                 "UPDATE exam_records SET lecture = ?, date = ?, score = ?, wrong = ?,"
-                " updated_at = datetime('now') WHERE id = ?",
-                (lecture, date, score, json.dumps(sorted(set(wrong or []))), id),
+                " kind = ?, updated_at = datetime('now') WHERE id = ?",
+                (lecture, date, score, json.dumps(sorted(set(wrong or []))), kind, id),
             )
             if cur.rowcount == 0:
                 return None

@@ -1,5 +1,5 @@
 import { api } from '../api.js'
-import { escapeHtml } from '../render.js'
+import { escapeHtml, todayIso } from '../render.js'
 
 // 教师版 · 计划表：周历视图。本周大卡（今日任务）+ 月历式周网格往下排，
 // 学情分析并入为子 Tab（#/plan?tab=analytics / #/plan 切换）。
@@ -48,7 +48,7 @@ export async function mountPlan(el) {
     }
     const { weeks = [], current_week: curWeek } = data
     const byStart = new Map(weeks.map((w) => [w.week_start, w]))
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayIso()
     // 周历视图状态：默认本周，可前后翻；月历当前月
     let viewWeek = curWeek
     let viewMonth = today.slice(0, 7)
@@ -285,6 +285,7 @@ export async function mountPlan(el) {
       const chips = []
       if (t.focus_kps?.length) chips.push(`🎯 攻坚 ${t.focus_kps.map((l) => '第' + l + '讲').join('、')}`)
       if (t.lectures?.length) chips.push(`📚 语法课程 ${[...t.lectures].sort((a, b) => a - b).join('/')}讲`)
+      if (t.hw_papers?.length) chips.push(`📝 作业卷 ${[...t.hw_papers].sort((a, b) => a - b).join('/')}卷`)
       if (t.vocab_goal != null) {
         chips.push(t.vocab_lv != null
           ? `🔤 词汇 学到L${t.vocab_lv}的${t.vocab_pct ?? 100}%（${t.vocab_goal}词）`
@@ -470,6 +471,7 @@ export async function mountPlan(el) {
       const paperSel = new Set(t.vocab_papers || [])
 
       const lecSel = new Set(t.lectures || [])
+      const hwSel = new Set(t.hw_papers || [])
       const fceSel = new Set(t.fce || [])
       // reading: {bookId: [章idx...]（新章选格式） | pct 数字（旧格式）}
       const readSel = new Map()
@@ -507,6 +509,16 @@ export async function mountPlan(el) {
       const lecChipsPool = (pool, selSet, attr) => pool.map((l) => `
         <button type="button" class="pe-lec ${selSet.has(l.number) ? 'on' : ''}" data-${attr}="${l.number}" title="${escapeHtml(l.category || '')}">
           <b>${l.number}</b>${escapeHtml(l.title)}${doneLec.has(l.number) ? '<i>✓</i>' : ''}
+        </button>`).join('')
+      // 作业卷 chips：只列有卷讲次（homework_question 有题）；✓=卷已考
+      // （kind=hw 成绩）。与课程区互不干扰：同一讲可以既学课程又做卷。
+      // 选项源用 goal_assets.lectures（带 has_paper/questions/hw_done），
+      // ed.lectures 顶层是裸讲次行。
+      const doneHw = new Set(done.hw_papers || [])
+      const hwPapers = (ed.goal_assets?.lectures || []).filter((l) => l.has_paper)
+      const hwChipsPool = (pool, selSet, attr) => pool.map((l) => `
+        <button type="button" class="pe-lec ${selSet.has(l.number) ? 'on' : ''}" data-${attr}="${l.number}" title="${escapeHtml(l.category || '')} · ${l.questions} 题">
+          <b>卷${l.number}</b>${escapeHtml(l.title)}${doneHw.has(l.number) ? '<i>✓</i>' : ''}
         </button>`).join('')
       const fcePartsPool = (pool) => pool.map((x) => `
         <button type="button" class="pe-part ${fceSel.has(x.label) ? 'on' : ''}" data-fce="${escapeHtml(x.label)}" title="${escapeHtml(x.label)}">${escapeHtml(x.label.split(' · ').slice(1).join('·'))}<i>${x.questions}</i></button>`).join('')
@@ -564,6 +576,10 @@ export async function mountPlan(el) {
               <div class="pe-lec-grid" id="pe-lec-grid">${lecChipsPool(goalLecs, lecSel, 'lc') || '<p class="muted">总目标未选讲次，去学生管理配置</p>'}</div>
             </div>
             <div class="pe-sec">
+              <h4>📝 哈一作业卷 <i>按讲次配套试卷；线下完成后登记成绩（计入考试）</i></h4>
+              <div class="pe-lec-grid" id="pe-hw-grid">${hwChipsPool(hwPapers.filter((l) => !doneHw.has(l.number)), hwSel, 'hwc') || '<p class="muted">全部作业卷已完成</p>'}</div>
+            </div>
+            <div class="pe-sec">
               <h4>🔤 词汇目标 <i>学到 L几 的百分比；已掌握 ${ed.vocab_mastered || 0} 词</i></h4>
               <div class="pe-vocab-row">
                 <select id="pe-vocab-lv">
@@ -603,6 +619,10 @@ export async function mountPlan(el) {
             <div class="pe-sec">
               <h4>📚 旧课复习 <i>✓ = 已完成，可复习巩固</i></h4>
               <div class="pe-lec-grid" id="pe-extra-lec">${lecChipsPool(extraLecs, lecSel, 'lx') || '<p class="muted">无</p>'}</div>
+            </div>
+            <div class="pe-sec">
+              <h4>📝 作业卷重做/补做 <i>✓ = 卷已考过</i></h4>
+              <div class="pe-lec-grid" id="pe-extra-hw">${hwChipsPool(hwPapers.filter((l) => doneHw.has(l.number)), hwSel, 'hwx') || '<p class="muted">无已考卷</p>'}</div>
             </div>
             <div class="pe-sec">
               <h4>🎧 FCE 补充练习</h4>
@@ -649,6 +669,9 @@ export async function mountPlan(el) {
       bindToggle(dlg.querySelector('#pe-lec-grid'), 'lc', lecSel)
       const extraGrid = dlg.querySelector('#pe-extra-lec')
       if (extraGrid) bindToggle(extraGrid, 'lx', lecSel)
+      bindToggle(dlg.querySelector('#pe-hw-grid'), 'hwc', hwSel)
+      const extraHw = dlg.querySelector('#pe-extra-hw')
+      if (extraHw) bindToggle(extraHw, 'hwx', hwSel)
       // 试卷勾选（两区共用）
       dlg.querySelectorAll('[data-paper]').forEach((b) =>
         b.addEventListener('click', () => {
@@ -735,6 +758,8 @@ export async function mountPlan(el) {
         const tasks = {}
         const lec = [...lecSel]
         if (lec.length) tasks.lectures = lec
+        const hw = [...hwSel]
+        if (hw.length) tasks.hw_papers = hw
         // 词汇目标：级别百分比口径（vocab_lv/vocab_pct），兼容字段 vocab_goal
         // 由后端按 cum_words 折算；两者都存便于旧端点/周目标区显示
         const lv = Number(dlg.querySelector('#pe-vocab-lv').value)

@@ -1,10 +1,10 @@
 import { api } from '../api.js'
-import { escapeHtml } from '../render.js'
+import { escapeHtml, todayIso } from '../render.js'
 
 // 教师版 · 词汇级别考试（原计划表功能块迁入备课中心）：
 // 登记线下考试成绩（≥80 分自动解锁下一级词库）+ 打印考卷。
 export async function mountVocabExam(el) {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayIso()
   el.innerHTML = `
     <div class="view-head">
       <button class="chip" data-back>← 返回备课中心</button>

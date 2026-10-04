@@ -52,6 +52,7 @@ try:
         date: str = Field(description="作答日期 YYYY-MM-DD")
         score: int = Field(default=0, ge=0, le=100)
         wrong: list[int] = Field(default_factory=list, description="错题题号")
+        kind: str = Field(default="lecture", description="类型：lecture=课程测验 / hw=作业卷")
 
     class LoginIn(BaseModel):
         """登录请求体。"""

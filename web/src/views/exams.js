@@ -1,4 +1,4 @@
-import { escapeHtml } from '../render.js'
+import { escapeHtml, todayIso } from '../render.js'
 import { api } from '../api.js'
 
 // 哈一作业成绩记录：每讲一份作业卷（35 题，1~5 每题 2 分、6~35 每题 3 分，满分 100）。
@@ -56,6 +56,12 @@ export function mountExams(el, { lectures }) {
                 .join('')}
             </select>
           </label>
+          <label>类型
+            <select id="ex-kind">
+              <option value="hw">📝 作业卷</option>
+              <option value="lecture">📚 课程测验</option>
+            </select>
+          </label>
           <label>日期 <input type="date" id="ex-date" /></label>
           <label>得分 <input type="number" id="ex-score" min="0" max="100" step="1" /></label>
           <div class="ex-live" id="ex-live"></div>
@@ -90,7 +96,7 @@ export function mountExams(el, { lectures }) {
   const $grid = el.querySelector('#ex-grid')
   const $live = el.querySelector('#ex-live')
   const $score = el.querySelector('#ex-score')
-  $date.value = new Date().toISOString().slice(0, 10)
+  $date.value = todayIso()
 
   // 35 题按钮
   $grid.innerHTML = Array.from({ length: TOTAL }, (_, i) => i + 1)
@@ -112,7 +118,7 @@ export function mountExams(el, { lectures }) {
     wrong.clear()
     manualScore = null
     $lec.value = $lec.querySelector('option')?.value
-    $date.value = new Date().toISOString().slice(0, 10)
+    $date.value = todayIso()
     paintQ()
     paintLive()
     paintEditState()
@@ -162,9 +168,10 @@ export function mountExams(el, { lectures }) {
     const lost = [...wrong].reduce((s, q) => s + scoreOf(q), 0)
     const rec = {
       lecture: Number($lec.value),
-      date: $date.value || new Date().toISOString().slice(0, 10),
+      date: $date.value || todayIso(),
       score: manualScore ?? (fullScore - lost),
       wrong: [...wrong].sort((a, b) => a - b),
+      kind: el.querySelector('#ex-kind')?.value || 'hw',
     }
     const btn = el.querySelector('#ex-save')
     btn.disabled = true

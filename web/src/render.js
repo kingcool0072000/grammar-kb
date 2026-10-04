@@ -25,3 +25,10 @@ export function escapeHtml(s) {
 
 // 属性上下文转义：escapeHtml 不处理引号，attr="..." 里含 " 会截断属性甚至注入新属性
 export const escAttr = (s) => escapeHtml(s).replace(/"/g, '&#34;').replace(/'/g, '&#39;')
+
+// 本地日期 YYYY-MM-DD。new Date().toISOString() 是 UTC——中国时区每天
+// 0-8 点会得到「昨天」，成绩登记/今日任务高亮全错位（时区坑统一出口）。
+export function todayIso() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}

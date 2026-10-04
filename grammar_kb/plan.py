@@ -566,6 +566,15 @@ class PlanStore:
                 "type": "lecture", "text": f"讲次学/测 每天约 {per} 讲",
                 "detail": f"本周计划 {len(lectures)} 讲，剩余 {days_left} 天",
             })
+        # 哈一作业卷（按讲次考卷，完成=登记 kind=hw 的考试成绩）。
+        # 逐卷出任务行（key=hw:{讲次} 与当天成绩信号对齐），全部考过即整组完成。
+        hw_papers = t.get("hw_papers") or []
+        for h in hw_papers:
+            tasks.append({
+                "type": "hw_paper", "key": f"hw:{h}",
+                "text": f"🗒 作业卷（第{h}讲卷）",
+                "detail": "线下完成考卷，成绩登记类型选「作业卷」后自动勾",
+            })
         if t.get("fce"):
             tasks.append({
                 "type": "fce", "text": f"FCE {t['fce'][0]} 起步",
@@ -981,6 +990,7 @@ class PlanStore:
             "week_start": ws,
             "goals": {
                 "lectures": t.get("lectures") or [],
+                "hw_papers": t.get("hw_papers") or [],
                 "vocab_goal": t.get("vocab_goal"),
                 "fce": t.get("fce") or [],
                 "reading": t.get("reading") or {},
@@ -1026,6 +1036,8 @@ class PlanStore:
             drill_types.add("微练习")
         if t.get("lectures"):
             drill_types.add("讲次测验")
+        if t.get("hw_papers"):
+            drill_types.add("作业卷")
         if t.get("fce"):
             drill_types.add("FCE 真题")
         breakdown = {
@@ -1037,6 +1049,7 @@ class PlanStore:
             "drill_count": len(t.get("focus_kps") or []) * 5 * days_left
                            if t.get("focus_kps") else 0,
             "lecture_count": len(t.get("lectures") or []),
+            "hw_paper_count": len(t.get("hw_papers") or []),
             "fce_count": len(t.get("fce") or []),
         }
 
@@ -1111,16 +1124,41 @@ class PlanStore:
             try:
                 with sqlite3.connect(
                         f"file:{self._exam_db()}?mode=ro", uri=True) as conn:
+                    cols = {r[1] for r in conn.execute(
+                        "PRAGMA table_info(exam_records)")}
+                    kind_col = ("COALESCE(kind, 'lecture')" if "kind" in cols
+                                else "'lecture'")
                     ph = ",".join("?" * len(lecs))
                     n = conn.execute(
                         f"SELECT COUNT(DISTINCT lecture) n FROM exam_records"
-                        f" WHERE lecture IN ({ph})"
+                        f" WHERE lecture IN ({ph}) AND {kind_col} != 'hw'"
                         f" AND date >= ? AND date <= ?",
                         [*lecs, week_start, add_days(week_start, 6)]).fetchone()
                     done_lec = n[0] if n else 0
             except sqlite3.Error:
                 done_lec = 0
             dim("📚", "语法课程", done_lec, len(lecs))
+
+        hw_papers = t.get("hw_papers") or []
+        if hw_papers:
+            try:
+                with sqlite3.connect(
+                        f"file:{self._exam_db()}?mode=ro", uri=True) as conn:
+                    cols = {r[1] for r in conn.execute(
+                        "PRAGMA table_info(exam_records)")}
+                    if "kind" in cols:
+                        ph = ",".join("?" * len(hw_papers))
+                        n = conn.execute(
+                            f"SELECT COUNT(DISTINCT lecture) n FROM exam_records"
+                            f" WHERE lecture IN ({ph}) AND kind = 'hw'"
+                            f" AND date >= ? AND date <= ?",
+                            [*hw_papers, week_start, add_days(week_start, 6)]).fetchone()
+                        done_hw = n[0] if n else 0
+                    else:
+                        done_hw = 0
+            except sqlite3.Error:
+                done_hw = 0
+            dim("📝", "作业卷", done_hw, len(hw_papers))
 
         # 词汇差额口径：分母 = 目标词数 − 周初已掌握【≤目标级别】词数；分子 =
         # 周内新掌握【≤目标级别】词数。与「学到 LX 还差几词」严格对齐
@@ -1524,13 +1562,23 @@ class PlanStore:
         """
         done: dict[str, list] = {"lectures": [], "fce_parts": [],
                                  "articles": [], "vocab_levels": [],
-                                 "books": []}
+                                 "books": [], "hw_papers": []}
         exam_path = self._exam_db()
         if exam_path and Path(exam_path).exists():
             try:
                 with sqlite3.connect(f"file:{exam_path}?mode=ro", uri=True) as conn:
-                    done["lectures"] = [r[0] for r in conn.execute(
-                        "SELECT DISTINCT lecture FROM exam_records")]
+                    conn.row_factory = sqlite3.Row
+                    cols = {r[1] for r in conn.execute(
+                        "PRAGMA table_info(exam_records)")}
+                    kind_col = ("COALESCE(kind, 'lecture')" if "kind" in cols
+                                else "'lecture'")
+                    for r in conn.execute(
+                            "SELECT DISTINCT lecture, " + kind_col + " AS kind"
+                            " FROM exam_records"):
+                        if r["kind"] == "hw":
+                            done["hw_papers"].append(r["lecture"])
+                        else:
+                            done["lectures"].append(r["lecture"])
             except sqlite3.Error:
                 pass
         try:
@@ -1634,7 +1682,8 @@ class PlanStore:
         4.1 哈一课程（带考卷存在标记）4.2 单词级别+词数 4.3 FCE Part
         4.4 精读文章 4.5 泛读书-章节（必读章配置+增量词数）4.6 单词考试试卷资产。
         """
-        # 4.1 讲次 → 考卷（homework_question 里有题即有卷）
+        # 4.1 讲次 → 考卷（homework_question 里有题即有卷）；作业卷完成态
+        # （kind=hw 成绩）供编辑器过滤
         hw: dict[int, int] = {}
         gp = self.grammar_db_path or str(
             Path(__file__).resolve().parent.parent / "data" / "grammar.db")
@@ -1647,11 +1696,13 @@ class PlanStore:
                         hw[r[0]] = r[1]
             except sqlite3.Error:
                 pass
+        hw_done = set(self._completion_status(user).get("hw_papers") or [])
         lecture_opts = [{
             "number": l["number"], "title": l["title"],
             "category": l.get("category"),
             "has_paper": hw.get(l["number"], 0) > 0,
             "questions": hw.get(l["number"], 0),
+            "hw_done": l["number"] in hw_done,
         } for l in lectures]
 
         # 4.2 单词级别 + 词数（词表在 grammar.db）；cum_words=到该级止累计词数
@@ -2268,13 +2319,22 @@ class PlanStore:
         if exam_path and Path(exam_path).exists():
             try:
                 with sqlite3.connect(f"file:{exam_path}?mode=ro", uri=True) as conn:
+                    conn.row_factory = sqlite3.Row
+                    # kind 区分：lecture=课程测验 / hw=作业卷（老库无 kind 列
+                    # 视为 lecture——ExamStore 初始化已补列，这里双保险）
+                    cols = {r[1] for r in conn.execute(
+                        "PRAGMA table_info(exam_records)")}
+                    kind_col = "COALESCE(kind, 'lecture')" if "kind" in cols else "'lecture'"
                     rows = conn.execute(
-                        "SELECT lecture FROM exam_records"
+                        f"SELECT lecture, {kind_col} AS kind FROM exam_records"
                         " WHERE date = ?", (day,),
                     ).fetchall()
                 for r in rows:
-                    out[f"micro:{r[0]}"] = True
-                    out[f"lecture:{r[0]}"] = True
+                    out[f"micro:{r['lecture']}"] = True
+                    if r["kind"] == "hw":
+                        out[f"hw:{r['lecture']}"] = True
+                    else:
+                        out[f"lecture:{r['lecture']}"] = True
                 if rows:
                     out["lecture"] = True
             except sqlite3.Error:

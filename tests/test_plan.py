@@ -257,3 +257,55 @@ def test_my_week_student_only(plan_env):
     # 教师 403
     t = _login(c, "teacher", "123456")
     assert c.get("/plan/my-week", headers=t).status_code == 403
+
+
+def test_hw_paper_dimension_split(plan_env):
+    """课程/作业卷拆分：hw_papers 独立维度；kind=hw 成绩只点亮作业卷，
+    kind=lecture 成绩只点亮语法课程；两维度互不串。"""
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    ht = _login(c, "teacher", "123456")
+    today = date.today().isoformat()
+    # 一份作业卷成绩（第 26 讲）+ 一份课程测验成绩（第 25 讲）
+    c.post("/exams", headers=hs, json={"lecture": 26, "date": today,
+                                       "score": 88, "wrong": [], "kind": "hw"})
+    c.post("/exams", headers=hs, json={"lecture": 25, "date": today,
+                                       "score": 65, "wrong": [], "kind": "lecture"})
+    tasks = {"lectures": [25, 26], "hw_papers": [26, 27]}
+    c.put(f"/plan/weeks/{MON}", headers=ht, json={"tasks": tasks})
+    d = c.get(f"/plan/week-view?week_start={MON}&user=malin",
+              headers=ht).json()["data"]
+    dims = {x["name"]: x for x in d["goal_progress"]["dims"]}
+    assert dims["语法课程"]["done"] == 1 and dims["语法课程"]["total"] == 2
+    assert dims["作业卷"]["done"] == 1 and dims["作业卷"]["total"] == 2
+    # 完成态判定也按 kind 分流：26 讲只算卷考过、不算课程考过
+    ed = c.get("/plan/editor-data?user=malin", headers=ht).json()["data"]
+    assert 26 in ed["done"]["hw_papers"] and 26 not in ed["done"]["lectures"]
+    assert 25 in ed["done"]["lectures"] and 25 not in ed["done"]["hw_papers"]
+    # 学生任务派生：作业卷任务行出现（逐卷行，key=hw:{讲次}）
+    td = c.get("/plan/today", headers=hs).json()["data"]
+    hw_tasks = [t for t in td["tasks"] if t["type"] == "hw_paper"]
+    assert len(hw_tasks) == 2
+    # 作业卷任务行已点亮（kind=hw 成绩在今天）；未考的卷不点亮
+    by_key = {t["key"]: t for t in hw_tasks}
+    assert by_key["hw:26"]["done"] is True
+    assert by_key["hw:27"]["done"] is False
+    # my-week（week_view 同源）：tasks 透传 hw_papers + 周拆解含作业卷
+    mw = c.get("/plan/my-week", headers=hs).json()["data"]
+    assert mw["tasks"]["hw_papers"] == [26, 27]
+    assert mw["breakdown"]["hw_paper_count"] == 2
+
+
+def test_exam_kind_field_roundtrip(plan_env):
+    """成绩 kind 字段：默认 lecture（兼容旧客户端）；hw 透传；非法值归一 lecture。"""
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    r1 = c.post("/exams", headers=hs, json={"lecture": 1, "date": "2026-10-05",
+                                            "score": 90, "wrong": []})
+    assert r1.json()["data"]["kind"] == "lecture"
+    r2 = c.post("/exams", headers=hs, json={"lecture": 2, "date": "2026-10-05",
+                                            "score": 80, "wrong": [], "kind": "hw"})
+    assert r2.json()["data"]["kind"] == "hw"
+    r3 = c.post("/exams", headers=hs, json={"lecture": 3, "date": "2026-10-05",
+                                            "score": 70, "wrong": [], "kind": "bogus"})
+    assert r3.json()["data"]["kind"] == "lecture"

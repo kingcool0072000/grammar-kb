@@ -1,5 +1,5 @@
 import { api, getAuth } from '../api.js'
-import { escapeHtml } from '../render.js'
+import { escapeHtml, todayIso } from '../render.js'
 import { renderReadingReview } from './readingReview.js'
 
 // 教师版 · 批改中心（首页）：学生提交的作业按三大板块归类——
@@ -317,7 +317,7 @@ async function mountExamGrading(host, students) {
     return
   }
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayIso()
   const rowHtml = (p) => {
     const graded = (p.exams || [])
     return `
