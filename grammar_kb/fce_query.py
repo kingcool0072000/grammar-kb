@@ -106,6 +106,20 @@ class FcePaperStore:
 
         vm = _vocab_level_map()
         pm = _vocab_pos_map()
+        # 释义（点击词时前端展示）：vocab_word gloss 第一义项
+        gm: dict[str, str] = {}
+        try:
+            from .ingest import default_db_path as _gdb
+            gpath = _gdb()
+            if Path(gpath).exists():
+                with sqlite3.connect(f"file:{gpath}?mode=ro", uri=True) as gconn:
+                    for wd, gl in gconn.execute(
+                            "SELECT word, gloss FROM vocab_word"):
+                        g = (gl or "").split(",")[0].strip()
+                        if g:
+                            gm[wd] = g
+        except sqlite3.Error:
+            pass
         mastered = mastered_getter(user) or set()
 
         def lookup(w: str):
@@ -137,7 +151,8 @@ class FcePaperStore:
                 if lemma in mastered:
                     continue
                 e = lem.setdefault(lemma, {"level": lv, "freq": 0,
-                                           "pos": (pm.get(lemma) or "") if lemma in vm else ""})
+                                           "pos": (pm.get(lemma) or "") if lemma in vm else "",
+                                           "gloss": gm.get(lemma, "")})
                 e["freq"] += freq
             words = [{"word": k, **v} for k, v in lem.items()]
             # 排序分三档：L2+ 生词（预习价值最高）→ 库外词 → L0/L1 未掌握

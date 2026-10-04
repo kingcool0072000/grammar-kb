@@ -3094,12 +3094,20 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
   font-size: 13.5px; padding: 2px 9px; border-radius: 9px;
   background: white; border: 1px solid var(--line, #e8e1d2); color: var(--ink);
   display: inline-flex; align-items: baseline; gap: 4px;
+  cursor: pointer; min-height: 0; font-family: inherit;
 }
+.fce-vocab-word:hover { border-color: #c9a35a; }
 .fce-vocab-word i { font-style: normal; font-size: 10px; color: var(--ink-faint); }
 .fce-vocab-word em { font-style: normal; font-size: 10.5px; color: #93601a; }
 .fce-vocab-word.hard {
   font-weight: 700; border-color: #e9c98a; color: #93601a; background: #fff7e0;
 }
+.fce-vocab-detail {
+  margin-top: 8px; padding: 8px 12px; border-radius: 10px;
+  background: white; border: 1px solid var(--line, #e8e1d2);
+}
+.fce-vocab-detail b { color: #93601a; font-size: 14px; }
+.fce-vocab-detail p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.6; color: var(--ink); }
 .flm-vocab-slot { margin-top: 8px; }
 .flm-vocab-slot .fce-vocab { margin: 0; }
 

@@ -53,6 +53,7 @@ export async function mountFcePapers(el, { role } = {}) {
     }
     papers = papers.filter((t) => (allowedParts.get(t.test_id) || new Set()).size > 0)
   }
+  allowedPartsCache = allowedParts // 练习页返回路径共用（见 renderPartList 定义处注释）
 
   const pending = history.filter((s) => s.status === 'pending')
   const totalQ = (t) => Object.values(t.papers).flat().reduce((s, p) => s + p.questions, 0)
@@ -198,6 +199,11 @@ async function showSubmissionDetail(subId) {
 }
 
 // ---------- 大题列表（每次练一个大题） ----------
+// 学生周计划开放的 Test/Part（mountFcePapers 设置；练习页「返回大题列表」
+// renderPartListById 等跳转路径都要用——之前返回时传空数组导致过滤失效，
+// 全部非授权大题重现）。
+let allowedPartsCache = null
+
 async function renderPartList(el, testId, role, history, allowedParts = null) {
   el.innerHTML = '<div class="view-head"><h1>FCE 真题</h1><p>加载中…</p></div>'
   let data
@@ -331,14 +337,16 @@ async function renderPractice(el, testId, sec, role) {
       : ''
   }
 
-  // 听力预习词表：做题前先过一遍未掌握词（默认展开、可收起；教师也显示）。
-  // 只显示当前 Part 的词。
+  // 听力预习词表：做题前先过一遍未掌握词（默认展开、可收起；点词看释义；
+  // 教师也显示）。只显示当前 Part 的词。
   let vocabHtml = ''
+  let vocabWords = []
   if (section.paper === 'Listening') {
     try {
       const parts = await api.fceListeningVocab(testId)
       const pv = (parts || []).find((x) => x.part === section.part)
       if (pv && pv.words.length) {
+        vocabWords = pv.words
         vocabHtml = `
         <div class="fce-vocab" id="fce-vocab">
           <div class="fce-vocab-head">
@@ -346,10 +354,11 @@ async function renderPractice(el, testId, sec, role) {
             <button type="button" class="reading-btn small" id="fce-vocab-toggle">收起</button>
           </div>
           <div class="fce-vocab-body">
-            <p class="fce-vocab-note">先扫一眼这些词再听——L2 以上是重点（加粗）；听的时候别急着听到哪个词选哪个。</p>
-            <div class="fce-vocab-words">
-              ${pv.words.map((w) => `<span class="fce-vocab-word ${w.level != null && w.level >= 2 ? 'hard' : ''}">${escapeHtml(w.word)}${w.level != null ? `<i>L${w.level}</i>` : '<i>?</i>'}${w.freq > 1 ? `<em>×${w.freq}</em>` : ''}</span>`).join('')}
+            <p class="fce-vocab-note">先扫一眼这些词再听——L2 以上是重点（加粗），点词看释义；听的时候别急着听到哪个词选哪个。</p>
+            <div class="fce-vocab-words" id="fce-vocab-words">
+              ${pv.words.map((w) => `<button type="button" class="fce-vocab-word ${w.level != null && w.level >= 2 ? 'hard' : ''}" data-vw="${escapeHtml(w.word)}">${escapeHtml(w.word)}${w.level != null ? `<i>L${w.level}</i>` : '<i>?</i>'}${w.freq > 1 ? `<em>×${w.freq}</em>` : ''}</button>`).join('')}
             </div>
+            <div class="fce-vocab-detail" id="fce-vocab-detail" hidden></div>
           </div>
         </div>`
       }
@@ -399,7 +408,7 @@ async function renderPractice(el, testId, sec, role) {
     }
   }
 
-  // ---- 预习词表折叠 ----
+  // ---- 预习词表折叠 + 点词看释义 ----
   const vocabBox = el.querySelector('#fce-vocab')
   if (vocabBox) {
     vocabBox.querySelector('#fce-vocab-toggle').addEventListener('click', () => {
@@ -407,6 +416,32 @@ async function renderPractice(el, testId, sec, role) {
       const hidden = body.hidden
       body.hidden = !hidden
       vocabBox.querySelector('#fce-vocab-toggle').textContent = hidden ? '收起' : '展开'
+    })
+    const detail = vocabBox.querySelector('#fce-vocab-detail')
+    vocabBox.querySelector('#fce-vocab-words').addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-vw]')
+      if (!btn) return
+      const word = btn.dataset.vw
+      const show = (lines, note) => {
+        detail.hidden = false
+        detail.innerHTML = `<b>${escapeHtml(word)}</b>` +
+          (lines.length ? `<p>${lines.map((l) => escapeHtml(String(l))).join('<br/>')}</p>` : '') +
+          (note ? `<span class="muted">${escapeHtml(note)}</span>` : '')
+      }
+      // 内置 gloss 优先；没有再查 /dict 兜底
+      const w = vocabWords.find((x) => x.word === word)
+      if (w && w.gloss) return show([w.gloss])
+      show([], '查询释义…')
+      try {
+        const d = await api.dict(word)
+        const gl = (d && d.gloss_lines) || []
+        const got = gl.length
+          ? gl.map((g) => [g.pos, g.text].filter(Boolean).join('. '))
+          : (d && d.gloss ? [d.gloss] : [])
+        show(got, got.length ? '' : '词典未收录该词')
+      } catch {
+        show([], '词典未收录该词')
+      }
     })
   }
 
@@ -439,9 +474,13 @@ async function renderPractice(el, testId, sec, role) {
   }, 1000)
   const elapsed = () => Math.round((Date.now() - startAt) / 1000)
 
-  el.querySelector('#fce-back').addEventListener('click', () => {
+  el.querySelector('#fce-back').addEventListener('click', async () => {
     stopPracticeMode()
-    renderPartList(el, testId, role, [])
+    // 返回大题列表：重拉练习记录 + 传周计划开放表（学生只见授权大题——
+    // 曾传空数组导致过滤失效、全部大题重现）
+    let history = []
+    try { history = await api.fceSubmissions() } catch { history = [] }
+    renderPartList(el, testId, role, history, allowedPartsCache)
   })
   const $form = el.querySelector('#fce-form')
 
