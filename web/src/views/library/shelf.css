@@ -125,6 +125,8 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .lib-shelf .lib-book-meta { margin-top: 6px; font-size: 11.5px; color: var(--lib-text-secondary); }
+/* 章/词总数副行（比主进度行更弱） */
+.lib-shelf .lib-book-meta.lib-book-meta-sub { margin-top: 2px; font-size: 10.5px; color: rgba(60,50,35,.45); }
 
 /* ---- 教师书卡菜单 ---- */
 .lib-shelf .lib-book-menu-btn {
