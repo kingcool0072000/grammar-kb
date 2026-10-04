@@ -460,9 +460,15 @@ export async function mountRecite(el, { vocab, role }) {
     const stageLabel = (s) => `D+${stages[Math.min(s, stages.length - 1)]}`
     const chipHtml = (w, kind) => {
       const e = findEntry(w.word)
-      const tip = kind === 'done'
-        ? `${(w.conquered_at || '').slice(0, 10)} 攻克`
-        : `${stageLabel(w.stage || 0)} 轮 · 下次 ${w.next_review || '—'}${w.due ? '（已到期）' : ''}`
+      if (kind === 'done') {
+        // 已攻克 = 背完掌握的词全集：从错题周期走出来的带错次角标
+        // （conquered_at 有值），一遍背会的（wrong_count 0）无角标
+        const tip = w.conquered_at
+          ? `从错题攻克 · ${w.conquered_at.slice(0, 10)}`
+          : `${(w.mastered_at || '').slice(0, 10)} 掌握${w.wrong_count ? ` · 曾错 ${w.wrong_count} 次` : ' · 一遍过'}`
+        return `<span class="rc-wb-word ${kind}" data-word="${escapeHtml(w.word)}" title="${escapeHtml(tip)}｜${e && e.gloss ? escapeHtml(e.gloss.slice(0, 40)) : ''}">${escapeHtml(w.word)}${w.wrong_count ? `<sup>${w.wrong_count}</sup>` : ''}</span>`
+      }
+      const tip = `${stageLabel(w.stage || 0)} 轮 · 下次 ${w.next_review || '—'}${w.due ? '（已到期）' : ''}`
       return `<span class="rc-wb-word ${kind} ${w.due ? 'due' : ''}" data-word="${escapeHtml(w.word)}" title="${escapeHtml(tip)}｜${e && e.gloss ? escapeHtml(e.gloss.slice(0, 40)) : ''}">${escapeHtml(w.word)}<sup>${w.wrong_count || 1}</sup></span>`
     }
     host.innerHTML = `
@@ -493,7 +499,7 @@ export async function mountRecite(el, { vocab, role }) {
       </section>
       ${conquered.length ? `
       <section class="fce-group" id="rc-wb-cq">
-        <div class="fce-group-title">✅ 已攻克（${conquered.length} 词）· 六轮复习全过</div>
+        <div class="fce-group-title">✅ 已攻克题本（${conquered.length} 词）· 全部背完掌握的单词</div>
         <div class="rc-wb-words">
           ${conquered.slice(0, WB_COLLAPSE_N).map((w) => chipHtml(w, 'done')).join('')}
           ${conquered.length > WB_COLLAPSE_N ? `

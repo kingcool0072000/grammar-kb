@@ -157,8 +157,9 @@ def _wb(c, h):
 
 
 def test_ebbinghaus_cycle(recite_env):
-    """艾宾浩斯周期：错→进周期；复习答对逐节点推进；六节点全过→攻克；
-    再答错→回炉 stage 清零。普通会话答对不推进。"""
+    """艾宾浩斯周期：错→进周期；复习答对逐节点推进；六节点全过→攻克
+    （词入已攻克表，带 conquered_at 来源标注）；再答错→回炉 stage 清零。
+    普通会话答对不推进。"""
     from grammar_kb.recite import EB_STAGES
 
     c = _client(recite_env)
@@ -189,15 +190,33 @@ def test_ebbinghaus_cycle(recite_env):
     d = _wb(c, h)
     assert d["stats"]["total"] == 0 and d["stats"]["conquered_n"] == 1
     cq = d["conquered"][0]
-    assert cq["wrong_count"] == 1 and cq["stage"] == len(EB_STAGES)
+    assert cq["word"] == "bad" and cq["wrong_count"] == 1
+    assert cq["conquered_at"]  # 从错题周期攻克的来源标注
 
-    # 攻克后再答错：回炉（stage=0、wrong_count 累加、conquered_at 清空）
+    # 攻克后再答错：回炉（stage=0、wrong_count 累加、conquered_at 清空、
+    # 重占复习位）；「已攻克表」口径=背完掌握的全集，不因回炉立刻掉出
     _submit(c, h, [{"word": "bad", "correct": False}])
     d = _wb(c, h)
-    assert d["stats"]["total"] == 1 and d["stats"]["conquered_n"] == 0
+    assert d["stats"]["total"] == 1
     w = d["in_cycle"][0]
     assert w["stage"] == 0 and w["wrong_count"] == 2
+    assert d["stats"]["conquered_n"] == 1  # right(6) >= wrong(2) 仍掌握
+    assert not d["conquered"][0]["conquered_at"]  # 但来源标注已清（回炉中）
     con.close()
+
+
+def test_conquered_is_full_mastered_list(recite_env):
+    """已攻克题本 = 全部背完掌握的词（含一遍背会、从未进错题本的）。"""
+    c = _client(recite_env)
+    h = _login(c, "malin", "123456")
+    _submit(c, h, [{"word": "easy", "correct": True},   # 一遍背会
+                   {"word": "hard", "correct": False}])  # 只进错题周期
+    d = _wb(c, h)
+    words = {x["word"]: x for x in d["conquered"]}
+    assert "easy" in words  # 没进过错题本的掌握词也在已攻克表
+    assert words["easy"]["wrong_count"] == 0 and not words["easy"]["conquered_at"]
+    assert "hard" not in words
+    assert d["stats"]["total"] == 1 and d["stats"]["conquered_n"] == 1
 
 
 def test_review_backfill_from_history(recite_env):

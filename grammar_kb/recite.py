@@ -424,25 +424,50 @@ class ReciteStore:
                 " last_review_at, conquered_at FROM recite_review WHERE user = ?",
                 (user,),
             ).fetchall()
+            # 已攻克 = 全部已掌握词（right >= max(wrong,1)，含一遍背会、
+            # 从未进错题本的）；错题周期走完的词带 conquered_at 标注来源。
+            mp_rows = conn.execute(
+                "SELECT word, level, right, wrong, mastered_at, last_seen"
+                " FROM recite_word_progress WHERE user = ?"
+                " AND right >= max(wrong, 1)",
+                (user,),
+            ).fetchall()
+            rr_wc = {r["word"]: r["wrong_count"] for r in rr}
+            rr_cq = {r["word"]: r["conquered_at"] for r in rr if r["conquered_at"]}
         in_cycle: list[dict] = []
-        conquered: list[dict] = []
         for r in rr:
-            base = {
+            if r["conquered_at"]:
+                continue  # 已攻克的词不再占复习位（列表由 mastered 全集出）
+            in_cycle.append({
                 "word": r["word"], "level": r["level"],
                 "wrong_count": r["wrong_count"], "stage": r["stage"],
                 "first_wrong_at": r["first_wrong_at"],
                 "next_review": r["next_review"],
                 "last_review_at": r["last_review_at"],
+                "due": bool(r["next_review"] and r["next_review"] <= today),
+            })
+        conquered = [
+            {
+                "word": r["word"], "level": r["level"],
+                "right": r["right"], "wrong": r["wrong"],
+                "wrong_count": rr_wc.get(r["word"], 0),
+                "mastered_at": r["mastered_at"], "last_seen": r["last_seen"],
+                "conquered_at": rr_cq.get(r["word"]),
             }
-            if r["conquered_at"]:
-                conquered.append({**base, "conquered_at": r["conquered_at"]})
-            else:
-                base["due"] = bool(r["next_review"] and r["next_review"] <= today)
-                in_cycle.append(base)
+            for r in mp_rows
+        ]
+        have = {x["word"] for x in conquered}
+        for w, cq in rr_cq.items():
+            if w not in have:  # 周期攻克但计数未过掌握线（罕见）也归入
+                conquered.append({
+                    "word": w, "level": None, "right": 0, "wrong": 0,
+                    "wrong_count": rr_wc.get(w, 0), "mastered_at": cq,
+                    "last_seen": None, "conquered_at": cq,
+                })
         # 到期在前；同期按错次降序（错得多的先见）
         in_cycle.sort(key=lambda x: (x["next_review"] or "9999-12-31",
                                      -x["wrong_count"]))
-        conquered.sort(key=lambda x: x["conquered_at"] or "", reverse=True)
+        conquered.sort(key=lambda x: x["mastered_at"] or "", reverse=True)
         due_today = [x for x in in_cycle if x["due"]]
         stage_dist = [0] * len(EB_STAGES)
         for x in in_cycle:

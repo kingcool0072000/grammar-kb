@@ -239,6 +239,11 @@ class PlanStore:
         except sqlite3.Error:
             return None
 
+    # mastered_at 是 UTC isoformat（2026-10-04T16:13:52+00:00），而周窗口
+    # lo/hi 是本地日期——中国时区每天 0-8 点（UTC 前一天 16-24 点）字符串
+    # 比较会晚一天，把本周新掌握词算进上周。按 UTC+8 取日期再比。
+    _MP_DATE = "date(julianday(mastered_at) + 8.0/24)"
+
     def _vocab_actuals(self, lo: str, hi: str, user: str,
                        words: Optional[set[str]] = None) -> int:
         """周内新掌握词数（mastered_at 落在窗口内；words 限定词集）。"""
@@ -246,15 +251,17 @@ class PlanStore:
             with self._connect() as conn:
                 if words is None:
                     row = conn.execute(
-                        "SELECT COUNT(*) n FROM recite_word_progress"
-                        " WHERE user = ? AND mastered_at >= ? AND mastered_at < ?",
+                        f"SELECT COUNT(*) n FROM recite_word_progress"
+                        f" WHERE user = ? AND {self._MP_DATE} >= ?"
+                        f" AND {self._MP_DATE} < ?",
                         (user, lo, hi),
                     ).fetchone()
                 else:
                     ph = ",".join("?" * len(words)) or "NULL"
                     row = conn.execute(
-                        "SELECT COUNT(*) n FROM recite_word_progress"
-                        f" WHERE user = ? AND mastered_at >= ? AND mastered_at < ?"
+                        f"SELECT COUNT(*) n FROM recite_word_progress"
+                        f" WHERE user = ? AND {self._MP_DATE} >= ?"
+                        f" AND {self._MP_DATE} < ?"
                         f" AND word IN ({ph})",
                         (user, lo, hi, *words),
                     ).fetchone()
@@ -270,13 +277,15 @@ class PlanStore:
                 if words is None:
                     row = conn.execute(
                         "SELECT COUNT(*) n FROM recite_word_progress"
-                        " WHERE user = ? AND mastered_at IS NOT NULL AND mastered_at < ?",
+                        f" WHERE user = ? AND mastered_at IS NOT NULL"
+                        f" AND {self._MP_DATE} < ?",
                         (user, day)).fetchone()
                 else:
                     ph = ",".join("?" * len(words)) or "NULL"
                     row = conn.execute(
                         "SELECT COUNT(*) n FROM recite_word_progress"
-                        f" WHERE user = ? AND mastered_at IS NOT NULL AND mastered_at < ?"
+                        f" WHERE user = ? AND mastered_at IS NOT NULL"
+                        f" AND {self._MP_DATE} < ?"
                         f" AND word IN ({ph})",
                         (user, day, *words),
                     ).fetchone()
