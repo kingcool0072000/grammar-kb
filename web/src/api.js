@@ -273,6 +273,8 @@ export const api = {
   // 词汇级别考试（成绩登记驱动解锁；≥80 解锁下一级）
   vocabPaperGenerate: (level, save = true) =>
     reqJson('/vocab-papers/generate', 'POST', { level, save }),
+  vocabPaperSave: (paper) =>
+    reqJson('/vocab-papers/save', 'POST', paper),
   vocabPaperDelete: (paperId) =>
     reqJson(`/vocab-papers/${encodeURIComponent(paperId)}`, 'DELETE'),
   vocabPaperPreview: (paperId) =>

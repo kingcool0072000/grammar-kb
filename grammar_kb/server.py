@@ -591,6 +591,16 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         return _ok({"paper": paper,
                     "html": render_new_paper_html(paper)})
 
+    @app.post("/vocab-papers/save")
+    def vocab_paper_save(rec: dict, request: "fastapi.Request"):
+        """保存一份预览过的试卷（生成→预览→保存 的第三步）。教师专属。"""
+        _require_teacher(request)
+        from .vocab_paper import save_paper
+        try:
+            return _ok(save_paper(rec if isinstance(rec, dict) else {}))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+
     @app.delete("/vocab-papers/{paper_id}")
     def vocab_paper_delete(paper_id: str, request: "fastapi.Request"):
         """删除一份试卷资产。教师专属。"""

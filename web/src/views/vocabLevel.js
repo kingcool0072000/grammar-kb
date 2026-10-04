@@ -63,10 +63,9 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
           <h3>📝 单词考试 · 试卷生成</h3>
           <div class="vl-tools">
             <button class="btn-primary" id="vl-gen">🎲 生成试卷</button>
-            <button class="chip" id="vl-gen-preview">生成（仅预览不存档）</button>
           </div>
         </header>
-        <p class="muted">随机选词（不同首字母/词性）· 中译英 20 + 英译中 20 + 拼写挖空 10 · 与历史试卷重复 ≤10 词。生成后自动存档为考试资产，可打印线下使用。</p>
+        <p class="muted">随机选词（不同首字母/词性，自动规避人名/地名）· 中译英 20 + 英译中 20 + 拼写挖空 10 · 每题带词性提示 · 与历史试卷重复 ≤10 词。流程：生成 → 预览 → 满意后保存存档。</p>
         <div id="vl-paper-out"></div>
         <div id="vl-paper-history"></div>
       </section>
@@ -151,50 +150,64 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
       dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
       dlg.querySelector('#vl-dlg-close').addEventListener('click', close)
     }
-    // 试卷生成
-    async function genPaper(save) {
+    // 试卷生成：三步流程 生成（未存档）→ 预览 → 保存
+    async function genPaper() {
       const out = body.querySelector('#vl-paper-out')
       out.innerHTML = '<p class="muted">生成中…</p>'
       try {
-        const r = await api.vocabPaperGenerate(lv, save)
+        const r = await api.vocabPaperGenerate(lv, false) // 先不存档
         const p = r.paper
+        let saved = false
         out.innerHTML = `
           <div class="vl-paper-card">
             <div class="vl-paper-meta">
               <b>卷号 ${escapeHtml(p.paper_id)}</b>
               <span>中译英 ${p.zh2en.length} · 英译中 ${p.en2zh.length} · 拼写 ${p.spell.length} · 与历史重复 ${p.overlap_with_history} 词</span>
+              <i class="vl-paper-state">${saved ? '已存档' : '未存档（预览态）'}</i>
             </div>
             <details class="vl-paper-preview">
               <summary>预览试卷内容</summary>
-              <div class="vl-pv-sec"><b>一、中译英</b>${p.zh2en.slice(0, 5).map((w, i) => `<p>${i + 1}. ${escapeHtml(w.gloss)} → ______</p>`).join('')}<p class="muted">…共 ${p.zh2en.length} 题</p></div>
-              <div class="vl-pv-sec"><b>二、英译中</b>${p.en2zh.slice(0, 5).map((w, i) => `<p>${i + 1}. ${escapeHtml(w.word)} → ______</p>`).join('')}<p class="muted">…共 ${p.en2zh.length} 题</p></div>
-              <div class="vl-pv-sec"><b>三、拼写</b>${p.spell.map((w, i) => `<p>${i + 1}. ${escapeHtml(w.gloss.slice(0, 16))}： <code>${escapeHtml(w.blanked)}</code></p>`).join('')}</div>
+              <div class="vl-pv-sec"><b>一、中译英</b>${p.zh2en.slice(0, 5).map((w, i) => `<p>${i + 1}. ${escapeHtml(w.pos_cn || '')} ${escapeHtml(w.gloss)} → ______</p>`).join('')}<p class="muted">…共 ${p.zh2en.length} 题</p></div>
+              <div class="vl-pv-sec"><b>二、英译中</b>${p.en2zh.slice(0, 5).map((w, i) => `<p>${i + 1}. ${escapeHtml(w.word)}（${escapeHtml(w.pos_cn || '')}）→ ______</p>`).join('')}<p class="muted">…共 ${p.en2zh.length} 题</p></div>
+              <div class="vl-pv-sec"><b>三、拼写</b>${p.spell.map((w, i) => `<p>${i + 1}. ${escapeHtml(w.pos_cn || '')} ${escapeHtml(w.gloss.slice(0, 16))}： <code>${escapeHtml(w.blanked)}</code></p>`).join('')}</div>
             </details>
             <div class="vl-paper-ops">
-              <button class="btn-primary" id="vl-print">🖨 打印试卷（含答案页）</button>
               <button class="chip" id="vl-preview">👁 预览试卷</button>
+              <button class="btn-primary" id="vl-save">💾 保存存档</button>
+              <button class="chip" id="vl-print">🖨 打印</button>
             </div>
           </div>`
-        // 打印：新窗口写 HTML
+        const stateEl = out.querySelector('.vl-paper-state')
+        // 预览：新标签页看完整卷
+        out.querySelector('#vl-preview').addEventListener('click', () => {
+          const w = window.open('', '_blank')
+          w.document.write(r.html)
+          w.document.close()
+        })
+        // 保存：调存档端点 → 状态变已存档 + 刷新历史
+        out.querySelector('#vl-save').addEventListener('click', async () => {
+          try {
+            await api.vocabPaperSave(p)
+            saved = true
+            stateEl.textContent = '已存档 ✓'
+            out.querySelector('#vl-save').disabled = true
+            out.querySelector('#vl-save').textContent = '已保存'
+            toast(`✅ 试卷 ${p.paper_id} 已存档`)
+            loadHistory()
+          } catch (e) { alert('保存失败：' + e.message) }
+        })
+        // 打印：新窗口写 HTML 直接打印
         out.querySelector('#vl-print').addEventListener('click', () => {
           const w = window.open('', '_blank')
           w.document.write(r.html)
           w.document.close()
           setTimeout(() => w.print(), 400)
         })
-        // 预览：新标签页只看不打印
-        out.querySelector('#vl-preview').addEventListener('click', () => {
-          const w = window.open('', '_blank')
-          w.document.write(r.html)
-          w.document.close()
-        })
-        if (save) loadHistory()
       } catch (e) {
         out.innerHTML = `<p style="color:#b42318">生成失败：${escapeHtml(e.message)}</p>`
       }
     }
-    body.querySelector('#vl-gen').addEventListener('click', () => genPaper(true))
-    body.querySelector('#vl-gen-preview').addEventListener('click', () => genPaper(false))
+    body.querySelector('#vl-gen').addEventListener('click', () => genPaper())
 
     async function loadHistory() {
       const host = body.querySelector('#vl-paper-history')

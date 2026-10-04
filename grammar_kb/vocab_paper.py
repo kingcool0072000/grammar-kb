@@ -11,6 +11,7 @@ from __future__ import annotations
 import html
 import json
 import random
+import re
 import sqlite3
 from collections import defaultdict
 from datetime import datetime, timezone as _tz
@@ -28,6 +29,52 @@ def _pos_list(pos: str) -> list[str]:
         return []
 
 
+# 词性中文（试卷展示用）：给考生「词性提示」，也用于选词多样性
+POS_CN = {"n": "n. 名词", "v": "v. 动词", "adj": "adj. 形容词", "adv": "adv. 副词",
+          "prep": "prep. 介词", "conj": "conj. 连词", "pron": "pron. 代词",
+          "num": "num. 数词", "interj": "interj. 感叹词", "aux": "aux. 助动词"}
+
+
+def _pos_cn(pos: str) -> str:
+    """词性串 → 中文提示（如 '["v","n"]' → 'v. 动词 / n. 名词'）。"""
+    tags = [t for t in _pos_list(pos) if t in POS_CN]
+    return " / ".join(POS_CN[t] for t in tags)
+
+
+_GLOSS_POS_PREFIX = None
+
+
+def _strip_gloss_pos(gloss: str) -> str:
+    """词库部分 gloss 自带词性前缀（如 'prep. 为，为了…'）——词性已有
+    专门列展示，题目里剥掉开头前缀避免重复。"""
+    global _GLOSS_POS_PREFIX
+    if _GLOSS_POS_PREFIX is None:
+        import re as _re
+        _GLOSS_POS_PREFIX = _re.compile(
+            r"^(?:n|v|adj|adv|prep|conj|pron|num|interj|aux)\.\s*/?\s*"
+            r"(?:(?:n|v|adj|adv|prep|conj|pron|num|interj)\.\s*/?\s*)*")
+    return _GLOSS_POS_PREFIX.sub("", gloss or "", count=1)
+
+
+_NAME_GLOSS_RE = None  # 延迟编译
+
+
+def _is_name_word(pos: str, gloss: str) -> bool:
+    """人名/地名/专名判定：pos=proper，或 gloss 明确标注（男子名/女子名/
+    人名/…名）。这类词不适合做考题（答案发散、考察意义弱），全局规避。"""
+    tags = set(_pos_list(pos))
+    if "proper" in tags:
+        return True
+    gl = gloss or ""
+    if "男子名" in gl or "女子名" in gl or "人名" in gl:
+        return True
+    global _NAME_GLOSS_RE
+    if _NAME_GLOSS_RE is None:
+        import re as _re
+        _NAME_GLOSS_RE = _re.compile(r"[（(][^)）]*名[)）]")
+    return bool(_NAME_GLOSS_RE.search(gl))
+
+
 def _skip_for_en2zh(pos: str) -> bool:
     """英译中规避：凡 pos 含 prep（介词）或 proper（人名/地名）即跳过。
 
@@ -39,7 +86,12 @@ def _skip_for_en2zh(pos: str) -> bool:
 
 
 def _load_words_rich(level: int) -> list[dict]:
-    """本级词条：word/pos/gloss（pos 解析为列表）。"""
+    """本级词条：word/pos/gloss（pos 解析为列表）。
+
+    人名/地名/专名全局规避（pos=proper 或 gloss 标注 男子名/女子名/
+    人名）：这类词进考题没有考察意义（tom→汤姆、beijing→北京），
+    且中译英答案发散。各级合计约 161 词被滤除。
+    """
     path = _grammar_db_path()
     if not path or not Path(path).exists():
         return []
@@ -48,9 +100,17 @@ def _load_words_rich(level: int) -> list[dict]:
         rows = conn.execute(
             "SELECT word, pos, gloss FROM vocab_word WHERE level = ?",
             (int(level),)).fetchall()
-    return [{"word": r["word"], "pos": (r["pos"] or "").strip(),
-             "pos_list": _pos_list(r["pos"]),
-             "gloss": (r["gloss"] or "").strip()} for r in rows]
+    out = []
+    for r in rows:
+        pos = (r["pos"] or "").strip()
+        gloss = (r["gloss"] or "").strip()
+        if _is_name_word(pos, gloss):
+            continue
+        out.append({"word": r["word"], "pos": pos,
+                    "pos_list": _pos_list(pos),
+                    "pos_cn": _pos_cn(pos),
+                    "gloss": gloss, "gloss_clean": _strip_gloss_pos(gloss)})
+    return out
 
 
 def _pick_diverse(words: list[dict], n: int, rng: random.Random) -> list[dict]:
@@ -185,7 +245,8 @@ def generate_paper(level: int, save: bool = True) -> dict:
     spell = []
     for w in spell_pool:
         blanked, answer = _spell_blank(w["word"], rng)
-        spell.append({**w, "blanked": blanked, "spell_answer": answer})
+        spell.append({**w, "gloss": w["gloss_clean"], "pos_cn": w["pos_cn"],
+                      "blanked": blanked, "spell_answer": answer})
 
     overlap = sum(1 for w in picked if w["word"] in hist_words)
     if overlap > 10:
@@ -200,9 +261,13 @@ def generate_paper(level: int, save: bool = True) -> dict:
         "level": int(level),
         "created_at": datetime.now(_tz.utc).isoformat(timespec="seconds"),
         "overlap_with_history": overlap,
-        "zh2en": [{"word": w["word"], "gloss": w["gloss"]} for w in zh2en],
-        "en2zh": [{"word": w["word"], "gloss": w["gloss"]} for w in en2zh],
-        "spell": spell,
+        "zh2en": [{"word": w["word"], "gloss": w["gloss_clean"],
+                   "pos_cn": w["pos_cn"]}
+                  for w in zh2en],
+        "en2zh": [{"word": w["word"], "gloss": w["gloss"],
+                   "pos_cn": w["pos_cn"]}
+                  for w in en2zh],
+        "spell": [{**s} for s in spell],
         "words": all_words,
     }
     if save:
@@ -216,6 +281,31 @@ def generate_paper(level: int, save: bool = True) -> dict:
                  paper["created_at"]),
             )
     return paper
+
+
+def save_paper(paper: dict) -> dict:
+    """存档一份「预览态」生成的卷（生成→预览→保存 流程的第三步）。
+
+    校验 paper_id 形如 L{n}-...，词表取 paper['words']（50 词）；
+    幂等（INSERT OR REPLACE）。
+    """
+    pid = str((paper or {}).get("paper_id") or "")[:64]
+    level = (paper or {}).get("level")
+    ws = (paper or {}).get("words") or []
+    m = re.match(r"^L(\d)-", pid)
+    if not m or not isinstance(level, int) or not ws:
+        raise ValueError("试卷数据不完整（paper_id/level/words）")
+    level = int(m.group(1))
+    created = str(paper.get("created_at") or "")[:40] or datetime.now(
+        _tz.utc).isoformat(timespec="seconds")
+    store = VocabExamStore()
+    with store._connect() as conn:
+        conn.execute(_HISTORY_TABLE_SQL)
+        conn.execute(
+            "INSERT OR REPLACE INTO vocab_paper_history"
+            " (level, paper_id, words, created_at) VALUES (?,?,?,?)",
+            (level, pid, json.dumps(ws, ensure_ascii=False), created))
+    return {"paper_id": pid, "level": level, "count": len(ws)}
 
 
 def delete_paper(paper_id: str) -> bool:
@@ -244,24 +334,22 @@ def get_paper(paper_id: str) -> Optional[dict]:
         ws = json.loads(row["words"] or "[]")
     except (ValueError, TypeError):
         ws = []
-    # 从词库回填词条渲染试卷（历史卷可完整重建）
+    # 从词库回填词条渲染试卷（历史卷可完整重建；词性一并带上）
     words_rich = {w["word"]: w for w in _load_words_rich(row["level"])}
-    zh2en, en2zh, spell = [], [], []
-    spell_map = {}
-    for w in ws:
+    spell = []
+
+    def _entry(w):
         rich = words_rich.get(w) or {}
-        zh2en.append({"word": w, "gloss": rich.get("gloss", "")})
+        return {"word": w, "gloss": rich.get("gloss_clean") or rich.get("gloss", ""),
+                "pos_cn": rich.get("pos_cn", "")}
     # 历史卷只存词序：前 20 中译英，次 20 英译中，末 10 拼写（生成时的段序）
-    zh2en, en2zh, spell_ws = ws[:20] and [
-        {"word": w, "gloss": (words_rich.get(w) or {}).get("gloss", "")}
-        for w in ws[:20]], [
-        {"word": w, "gloss": (words_rich.get(w) or {}).get("gloss", "")}
-        for w in ws[20:40]], ws[40:50]
+    zh2en = [_entry(w) for w in ws[:20]]
+    en2zh = [_entry(w) for w in ws[20:40]]
+    spell_ws = ws[40:50]
     rng = random.Random(paper_id)
     for w in spell_ws:
         blanked, answer = _spell_blank(w, rng)
-        spell.append({"word": w, "gloss": (words_rich.get(w) or {}).get("gloss", ""),
-                      "blanked": blanked, "spell_answer": answer})
+        spell.append({**_entry(w), "blanked": blanked, "spell_answer": answer})
     paper = {
         "paper_id": row["paper_id"], "level": row["level"],
         "created_at": row["created_at"], "overlap_with_history": 0,
@@ -279,19 +367,22 @@ def render_new_paper_html(paper: dict, title: str = "") -> str:
 
     zh2en = "".join(
         f'<div class="q"><span class="n">{i}</span>'
+        f'<span class="pos">{e(w.get("pos_cn") or "")}</span>'
         f'<span class="zh">{e(w["gloss"])}</span><span class="line"></span></div>'
         for i, w in enumerate(paper["zh2en"], 1))
     en2zh = "".join(
         f'<div class="q"><span class="n">{i}</span>'
         f'<span class="en">{e(w["word"])}</span>'
+        f'<span class="pos">{e(w.get("pos_cn") or "")}</span>'
         f'<span class="line short"></span></div>'
         for i, w in enumerate(paper["en2zh"], 1))
     spell = "".join(
         f'<div class="q"><span class="n">{i}</span>'
+        f'<span class="pos">{e(w.get("pos_cn") or "")}</span>'
         f'<span class="zh">{e(w["gloss"])}</span>'
         f'<span class="blanked">{e(w["blanked"])}</span></div>'
         for i, w in enumerate(paper["spell"], 1))
-    a1 = "　".join(f'{i}.{e(w["word"])}'
+    a1 = "　".join(f'{i}.{e(w["word"])}（{e(w.get("pos_cn") or "")}）'
                    for i, w in enumerate(paper["zh2en"], 1))
     a2 = "　".join(f'{i}.{e(w["gloss"][:14])}'
                    for i, w in enumerate(paper["en2zh"], 1))
@@ -307,6 +398,7 @@ def render_new_paper_html(paper: dict, title: str = "") -> str:
   h2 {{ font-size: 15px; margin: 14px 0 8px; }}
   .q {{ display: flex; align-items: baseline; gap: 8px; margin-bottom: 9px; }}
   .n {{ width: 22px; font-weight: 700; }}
+  .pos {{ font-size: 11px; color: #666; white-space: nowrap; min-width: 72px; }}
   .zh {{ font-size: 14px; }}
   .en {{ font-size: 14px; font-family: Georgia,serif; }}
   .line {{ flex: 1; border-bottom: 1px solid #999; height: 14px; }}
