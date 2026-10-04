@@ -221,7 +221,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     focus = FocusStore(fce_db_path)
     topics = TopicStore(fce_db_path)
     # 计划表（教师周计划）：fce.db 同库存 tasks/notes，完成度实时聚合多库
-    plan = PlanStore(fce_db_path, exam_db_path=exam_db_path)
+    plan = PlanStore(fce_db_path, exam_db_path=exam_db_path,
+                   grammar_db_path=db_path)
     # 作业卷管理（grammar.db：题库 answer 列 + 历次逐题对错）
     from .homework_admin import HomeworkAdmin
     homework_admin = HomeworkAdmin()

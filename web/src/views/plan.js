@@ -288,8 +288,8 @@ export async function mountPlan(el) {
       if (t.hw_papers?.length) chips.push(`📝 作业卷 ${[...t.hw_papers].sort((a, b) => a - b).join('/')}卷`)
       if (t.vocab_goal != null) {
         chips.push(t.vocab_lv != null
-          ? `🔤 词汇 学到L${t.vocab_lv}的${t.vocab_pct ?? 100}%（${t.vocab_goal}词）`
-          : `🔤 词汇 累计${t.vocab_goal}词`)
+          ? `🔤 词汇 L${t.vocab_lv}内${t.vocab_pct ?? 100}%（${t.vocab_goal}词）`
+          : `🔤 词汇 ${t.vocab_goal}词`)
       }
       if (t.fce?.length) chips.push(`🎧 FCE ${t.fce.join('+')}`)
       const books = ed?.books || []
@@ -479,22 +479,27 @@ export async function mountPlan(el) {
         readSel.set(normalizeReadingKey(k, books), v)
       }
       let speakOn = Boolean(t.speak), speakN = t.speak || 2
-      // 词汇目标（级别百分比口径）：累计词数表来自 goal_assets.vocab_levels
-      // （cum_words 由后端算好）；旧数据 vocab_goal=绝对词数 → 反推最近的
-      // (级别, 百分比) 组合作为初值。
+      // 词汇目标（级别内增量口径）：目标 = L几 词库数 × pct%，与低级别
+      // 无关；goal_assets.vocab_levels 带 words（级内词数）+ mastered（该
+      // 生该级已掌握）。旧数据 vocab_goal 可能是累计口径的绝对词数——
+      // 打开编辑器时按当前口径重算显示，保存时按新口径落库。
       const vLevels = ed.goal_assets?.vocab_levels || []
       const mastered = ed.vocab_mastered || 0
       let vocabLv = vLevels.length ? vLevels[vLevels.length - 1].level : 5
-      let vocabPct = 100
+      let vocabPct = 10
       {
         const goal = t.vocab_goal
         if (goal != null && vLevels.length) {
+          // 先按级别内口径反推（新语义）；推不出再退累计口径（旧语义，
+          // 仅供初值展示，保存即转新口径）
           let best = null
           for (const v of vLevels) {
-            for (const pct of [100, 90, 80, 70, 60, 50, 40, 30, 20, 10]) {
-              const n = Math.round((v.cum_words || 0) * pct / 100)
-              if (n <= goal && (!best || n > best.n)) best = { lv: v.level, pct, n }
+            for (let pct = 100; pct >= 1; pct--) {
+              const n = Math.round((v.words || 0) * pct / 100)
+              if (n === goal) { best = { lv: v.level, pct, n } }
+              if (best) break
             }
+            if (best) break
           }
           if (best) { vocabLv = best.lv; vocabPct = best.pct }
         }
@@ -580,11 +585,11 @@ export async function mountPlan(el) {
               <div class="pe-lec-grid" id="pe-hw-grid">${hwChipsPool(hwPapers.filter((l) => !doneHw.has(l.number)), hwSel, 'hwc') || '<p class="muted">全部作业卷已完成</p>'}</div>
             </div>
             <div class="pe-sec">
-              <h4>🔤 词汇目标 <i>学到 L几 的百分比；已掌握 ${ed.vocab_mastered || 0} 词</i></h4>
+              <h4>🔤 词汇目标 <i>目标 = 级内词数 × 百分比（L1 目标与 L0 无关）</i></h4>
               <div class="pe-vocab-row">
                 <select id="pe-vocab-lv">
                   ${(ed.goal_assets?.vocab_levels || []).map((v) =>
-                    `<option value="${v.level}" ${vocabLv === v.level ? 'selected' : ''}>学到 L${v.level}</option>`).join('')}
+                    `<option value="${v.level}" ${vocabLv === v.level ? 'selected' : ''}>L${v.level}（${v.words} 词 · 已会 ${v.mastered ?? 0}）</option>`).join('')}
                 </select>
                 <label>完成 <input id="pe-vocab-pct" type="number" min="1" max="100" value="${vocabPct}" style="width:56px"/>%</label>
                 <span id="pe-vocab-diff" class="pe-vocab-diff"></span>
@@ -691,7 +696,7 @@ export async function mountPlan(el) {
           if (fceSel.has(k)) { fceSel.delete(k); b.classList.remove('on') }
           else { fceSel.add(k); b.classList.add('on') }
         }))
-      // 词汇目标（级别百分比口径）：选择即显示目标词数与当前差距
+      // 词汇目标（级别内增量口径）：目标 = L几 内掌握 N 词，与低级别无关
       const vocabDiff = () => {
         const lvSel = dlg.querySelector('#pe-vocab-lv')
         const pctInp = dlg.querySelector('#pe-vocab-pct')
@@ -700,12 +705,13 @@ export async function mountPlan(el) {
         const lv = Number(lvSel.value)
         const pct = Math.min(100, Math.max(1, Number(pctInp.value) || 0))
         const v = vLevels.find((x) => x.level === lv)
-        const cum = v?.cum_words || v?.words || 0
-        const target = Math.round(cum * pct / 100)
-        const delta = target - mastered
+        const words = v?.words || 0
+        const lvMastered = v?.mastered || 0
+        const target = Math.round(words * pct / 100)
+        const delta = target - lvMastered
         hint.innerHTML = delta > 0
-          ? `目标 <b>${target}</b> 词 · 还需掌握 <b>+${delta}</b> 词`
-          : `目标 <b>${target}</b> 词 · 已达成（现 ${mastered} 词）`
+          ? `目标 L${lv} 内掌握 <b>${target}</b> 词（${words}×${pct}%）· 该级已会 ${lvMastered} · 还需 <b>+${delta}</b>`
+          : `目标 L${lv} 内掌握 <b>${target}</b> 词 · 该级已会 ${lvMastered}（已达成）`
         hint.className = `pe-vocab-diff ${delta > 0 ? '' : 'ok'}`
       }
       dlg.querySelector('#pe-vocab-lv').addEventListener('change', vocabDiff)
@@ -760,12 +766,12 @@ export async function mountPlan(el) {
         if (lec.length) tasks.lectures = lec
         const hw = [...hwSel]
         if (hw.length) tasks.hw_papers = hw
-        // 词汇目标：级别百分比口径（vocab_lv/vocab_pct），兼容字段 vocab_goal
-        // 由后端按 cum_words 折算；两者都存便于旧端点/周目标区显示
+        // 词汇目标（级别内增量口径）：vocab_goal = L几 词库数 × pct%，
+        // 与低级别掌握无关；三个字段都存便于周目标区与维度卡显示
         const lv = Number(dlg.querySelector('#pe-vocab-lv').value)
         const pct = Math.min(100, Math.max(1, Number(dlg.querySelector('#pe-vocab-pct').value) || 0))
         const vInfo = vLevels.find((x) => x.level === lv)
-        const vTarget = Math.round((vInfo?.cum_words || 0) * pct / 100)
+        const vTarget = Math.round((vInfo?.words || 0) * pct / 100)
         if (vTarget > 0) {
           tasks.vocab_lv = lv
           tasks.vocab_pct = pct

@@ -80,6 +80,13 @@ class PlanStore:
                  library_db_path: Optional[str] = None):
         self.db_path = db_path or _default_db_path()
         self.exam_db_path = exam_db_path
+        # 主库默认路径与 ingest.default_db_path 同口径（GRAMMAR_KB_DB →
+        # cwd/data/grammar.db）——此前 None 时 _vocab_level_words 各自兜底
+        # 到「代码仓库 data/」，与 server 实际打开的库可能不是同一个
+        if grammar_db_path is None:
+            import os as _os
+            env = _os.environ.get("GRAMMAR_KB_DB")
+            grammar_db_path = env or str(Path.cwd() / "data" / "grammar.db")
         self.grammar_db_path = grammar_db_path
         # 与 LibraryStore 同口径：环境变量优先（测试注入/生产改库都用它）
         import os as _os
@@ -220,11 +227,10 @@ class PlanStore:
     def _vocab_level_words(self, level: Optional[int]) -> Optional[set[str]]:
         """目标词集（grammar.db vocab_word；level=None=不过滤）。
 
-        周计划 vocab_goal = cum_words(L{lv})×pct% 是【累计】目标（学到
-        L1 的 100% = L0+L1 共 N 词），所以词集取 level ≤ lv；其他更高级
-        别的掌握记录不进分子分母（否则背了高级词会虚增进度、基线里
-        混入的高级词会虚大分母——两处都会让「还差」与「LX 100% 剩余」
-        对不上）。词库不可用时返回 None（降级为全词口径，旧行为）。
+        周计划 vocab_goal = words(L{lv})×pct% 是【级别内增量】目标
+        （L1 的 10% = L1 词库 1039×10% ≈ 104 词，与 L0 无关），词集取
+        level = lv；其他级别的掌握记录不进分子分母。词库不可用时返回
+        None（降级为全词口径，旧行为）。
         """
         if level is None:
             return None
@@ -235,7 +241,7 @@ class PlanStore:
         try:
             with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
                 return {r[0] for r in conn.execute(
-                    "SELECT word FROM vocab_word WHERE level <= ?", (int(level),))}
+                    "SELECT word FROM vocab_word WHERE level = ?", (int(level),))}
         except sqlite3.Error:
             return None
 
@@ -1160,16 +1166,19 @@ class PlanStore:
                 done_hw = 0
             dim("📝", "作业卷", done_hw, len(hw_papers))
 
-        # 词汇差额口径：分母 = 目标词数 − 周初已掌握【≤目标级别】词数；分子 =
-        # 周内新掌握【≤目标级别】词数。与「学到 LX 还差几词」严格对齐
-        #（背更高级别的词不进分子，基线不混入高级词）。
+        # 词汇差额口径（级别内增量）：分母 = 目标词数 − 周初该级别已掌握
+        # 词数；分子 = 周内该级别新掌握词数。目标本身就是「L几 内掌握
+        # N 词」，周初已超额的显示满格。
         vg = t.get("vocab_goal")
         if vg:
             lv_words = self._vocab_level_words(t.get("vocab_lv"))
             gained = self._vocab_actuals(week_start, add_days(week_start, 7), user, lv_words)
             base = self._vocab_mastered_before(week_start, user, lv_words)
-            denom = max(1, vg - base)
-            dim("🔤", "词汇", min(gained, denom), denom)
+            if base >= vg:
+                dim("🔤", "词汇", vg, vg, extra="周初已达成")
+            else:
+                denom = vg - base
+                dim("🔤", "词汇", min(gained, denom), denom)
 
         fce = t.get("fce") or []
         if fce:
@@ -1705,7 +1714,8 @@ class PlanStore:
             "hw_done": l["number"] in hw_done,
         } for l in lectures]
 
-        # 4.2 单词级别 + 词数（词表在 grammar.db）；cum_words=到该级止累计词数
+        # 4.2 单词级别 + 词数 + 该生每级已掌握数（词表在 grammar.db）；
+        # 词数是级别内增量口径（L1 的目标与 L0 无关）
         vocab_levels = []
         vocab_counts: dict[int, int] = {}
         if Path(gp).exists():
@@ -1717,12 +1727,20 @@ class PlanStore:
                         vocab_counts[r[0]] = r[1]
             except sqlite3.Error:
                 pass
-        cum = 0
+        lv_mastered: dict[int, int] = {}
+        try:
+            with self._connect() as conn:
+                for r in conn.execute(
+                        "SELECT level, COUNT(*) n FROM recite_word_progress"
+                        " WHERE user = ? AND mastered_at IS NOT NULL"
+                        " AND level IS NOT NULL GROUP BY level", (user,)):
+                    lv_mastered[r["level"]] = r["n"]
+        except sqlite3.Error:
+            pass
         for lv in range(6):
-            cum += vocab_counts.get(lv, 0)
             vocab_levels.append({"level": lv,
                                  "words": vocab_counts.get(lv, 0),
-                                 "cum_words": cum})
+                                 "mastered": lv_mastered.get(lv, 0)})
 
         # 4.6 单词试卷资产（vocab_paper_history，fce.db）
         vocab_papers = []
@@ -1794,7 +1812,8 @@ class PlanStore:
             w = self._get_week(ws, user=user)
             t = w.get("tasks") or {}
             has_plan = bool(t.get("focus_kps") or t.get("lectures")
-                            or t.get("vocab_goal") or t.get("fce") or t.get("reading"))
+                            or t.get("hw_papers") or t.get("vocab_goal")
+                            or t.get("fce") or t.get("reading"))
             done = total = 0
             if ws <= cur:  # 已开始的周才聚合完成度（未来周无 actuals）
                 historical_week = ws < cur
@@ -1815,6 +1834,9 @@ class PlanStore:
                 "is_current": ws == cur, "past": ws < cur,
                 "focus_kps": t.get("focus_kps") or [],
                 "lectures": t.get("lectures") or [],
+                "hw_papers": t.get("hw_papers") or [],
+                "vocab_lv": t.get("vocab_lv"),
+                "vocab_pct": t.get("vocab_pct"),
                 "vocab_goal": t.get("vocab_goal"),
                 "reading": t.get("reading") or {},
                 "notes": w.get("notes") or "",

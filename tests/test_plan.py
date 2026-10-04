@@ -309,3 +309,98 @@ def test_exam_kind_field_roundtrip(plan_env):
     r3 = c.post("/exams", headers=hs, json={"lecture": 3, "date": "2026-10-05",
                                             "score": 70, "wrong": [], "kind": "bogus"})
     assert r3.json()["data"]["kind"] == "lecture"
+
+
+def test_vocab_goal_within_level_semantics(plan_env):
+    """词汇目标=级别内增量口径：L1 的目标与 L0 掌握无关——分子分母只算
+    L1 词；goal_assets.vocab_levels 带每级 mastered；周初超额显示满格。"""
+    con = sqlite3.connect(plan_env / "grammar.db")
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS vocab_word (word TEXT PRIMARY KEY, level INTEGER NOT NULL,"
+        " pos TEXT DEFAULT '[]', gloss TEXT DEFAULT '', meanings TEXT DEFAULT '[]',"
+        " example TEXT DEFAULT '', extra TEXT DEFAULT '{}')"
+    )
+    for w, lv in [("l0a", 0), ("l0b", 0), ("l1a", 1), ("l1b", 1), ("l1c", 1), ("l2a", 2)]:
+        con.execute("INSERT INTO vocab_word (word, level) VALUES (?,?)", (w, lv))
+    con.commit()
+    con.close()
+
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    ht = _login(c, "teacher", "123456")
+    # 已掌握：L0 两词 + L1 一词。recite 上报的 level 补全走
+    # ingest.default_db_path（本地 data/grammar.db）不经 create_app 传入
+    # 路径——测试直接写 recite_word_progress.level。
+    c.post("/recite/sessions", headers=hs, json={
+        "total": 3, "wrong": 0, "acc": 100, "duration_sec": 5,
+        "wrong_words": [], "mode": "flip", "scope": "all",
+        "details": [{"word": w, "correct": True} for w in ("l0a", "l0b", "l1a")],
+    })
+    con2 = sqlite3.connect(plan_env / "fce.db")
+    for w, lv in (("l0a", 0), ("l0b", 0), ("l1a", 1)):
+        con2.execute("UPDATE recite_word_progress SET level = ? WHERE word = ?", (lv, w))
+    con2.commit()
+    con2.close()
+    # l1a 上周就会了（拨 mastered_at 进基线）
+    old = (date.today() - timedelta(days=7)).isoformat() + "T00:00:00+00:00"
+    con2b = sqlite3.connect(plan_env / "fce.db")
+    con2b.execute("UPDATE recite_word_progress SET mastered_at=? WHERE word='l1a'", (old,))
+    con2b.commit()
+    con2b.close()
+    # goal_assets：每级 mastered 正确（L0=2 / L1=1）
+    ed = c.get("/plan/editor-data?user=malin", headers=ht).json()["data"]
+    vls = {v["level"]: v for v in ed["goal_assets"]["vocab_levels"]}
+    assert vls[0]["mastered"] == 2 and vls[1]["mastered"] == 1
+    assert vls[1]["words"] == 3  # 级内词数（不是累计 5）
+    # 周计划 L1 60%（=2 词）：周初已会 1 → 分母 1；周内新会 l1b → 满格
+    c.post("/recite/sessions", headers=hs, json={
+        "total": 1, "wrong": 0, "acc": 100, "duration_sec": 5,
+        "wrong_words": [], "mode": "flip", "scope": "L1",
+        "details": [{"word": "l1b", "correct": True}],
+    })
+    con3 = sqlite3.connect(plan_env / "fce.db")
+    con3.execute("UPDATE recite_word_progress SET level = 1 WHERE word = 'l1b'")
+    con3.commit()
+    con3.close()
+    c.put(f"/plan/weeks/{MON}", headers=ht,
+          json={"tasks": {"vocab_lv": 1, "vocab_pct": 60, "vocab_goal": 2}})
+    d = c.get(f"/plan/week-view?week_start={MON}&user=malin",
+              headers=ht).json()["data"]
+    dim = next(x for x in d["goal_progress"]["dims"] if x["name"] == "词汇")
+    # 分母=目标2−周初基线1=1；周内 L1 新会 l1b=1 → 1/1 满格
+    assert dim["total"] == 1 and dim["done"] == 1
+
+
+def test_vocab_goal_base_exceeded(plan_env):
+    """周初已超额：L0 全会（509 口径在小词表=2/2），目标 1 词 → 满格+提示。"""
+    con = sqlite3.connect(plan_env / "grammar.db")
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS vocab_word (word TEXT PRIMARY KEY, level INTEGER NOT NULL,"
+        " pos TEXT DEFAULT '[]', gloss TEXT DEFAULT '', meanings TEXT DEFAULT '[]',"
+        " example TEXT DEFAULT '', extra TEXT DEFAULT '{}')"
+    )
+    for w in ("l0a", "l0b"):
+        con.execute("INSERT INTO vocab_word (word, level) VALUES (?,0)", (w,))
+    con.commit()
+    con.close()
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    ht = _login(c, "teacher", "123456")
+    # 上周就会了 L0 两词（mastered_at 拨到上周）
+    c.post("/recite/sessions", headers=hs, json={
+        "total": 2, "wrong": 0, "acc": 100, "duration_sec": 5,
+        "wrong_words": [], "mode": "flip", "scope": "all",
+        "details": [{"word": "l0a", "correct": True}, {"word": "l0b", "correct": True}],
+    })
+    old = (date.today() - timedelta(days=14)).isoformat()
+    con2 = sqlite3.connect(plan_env / "fce.db")
+    con2.execute("UPDATE recite_word_progress SET level=0, mastered_at=?", (old,))
+    con2.commit()
+    con2.close()
+    # 目标 L0 50%（=1 词）但周初已会 2 → 满格 + 「周初已达成」
+    c.put(f"/plan/weeks/{MON}", headers=ht,
+          json={"tasks": {"vocab_lv": 0, "vocab_pct": 50, "vocab_goal": 1}})
+    d = c.get(f"/plan/week-view?week_start={MON}&user=malin",
+              headers=ht).json()["data"]
+    dim = next(x for x in d["goal_progress"]["dims"] if x["name"] == "词汇")
+    assert dim["done"] == dim["total"] and "周初已达成" in (dim.get("extra") or "")
