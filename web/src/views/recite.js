@@ -269,7 +269,19 @@ export async function mountRecite(el, { vocab, role }) {
   // （独立请求 items，与 chips 那次分开，避免耦合渲染顺序）
   let levelVocab = []
   try {
-    levelVocab = (await api.vocabLevels({ maxLevel: LEVEL_MAX })).items || []
+    const items = (await api.vocabLevels({ maxLevel: LEVEL_MAX })).items || []
+    // 标准化：/vocab-levels 把 forms/phonetic/special_spellings 放在
+    // extra 里，卡片与出题读顶层——这里提升一次（历史 bug：顶层读
+    // 拿不到 forms，词形变化题从未出过、音标不显示）
+    levelVocab = items.map((it) => {
+      const ex = it.extra || {}
+      return {
+        ...it,
+        forms: it.forms || ex.forms || {},
+        phonetic: it.phonetic || ex.phonetic || '',
+        special_spellings: it.special_spellings || ex.special_spellings || [],
+      }
+    })
   } catch {
     levelVocab = [] // 接口失败时仍可用基础词表（下方兜底）
   } finally {
@@ -623,7 +635,7 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
   const specials = (e.special_spellings || [])
     .map((s) => `<span class="rc-special">${escapeHtml(s)}</span>`)
     .join('')
-  const example = (e.examples || [])[0]
+  const example = (e.examples || [])[0] || (e.example && e.example.en ? e.example : null)
 
   const promptHtml =
     q.type === 'en2zh'
@@ -653,22 +665,27 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
 
   overlay.querySelector('.rc-quit').addEventListener('click', onQuit)
 
+  // 释义区：gloss 逗号长串拆成前 6 条分行（每行一条义项，可读）；
+  // meanings 是语料例句中文，不混进释义。
+  const glossLines = () => {
+    const g = e.gloss || ''
+    if (!g) return []
+    return g.split(/[,，/]+/).map((s) => s.trim()).filter(Boolean).slice(0, 6)
+  }
+
   const revealDetail = () => {
+    const gl = glossLines()
+    const forms = Object.entries(e.forms || {}).filter(([k]) => FORM_CN[k])
+    const ex = example
     $extra.innerHTML = `
       <div class="rc-detail">
+        ${q.type !== 'en2zh' ? '' : gl.length ? `<div class="rc-gloss">${gl.map((l) => `<p>${escapeHtml(l)}</p>`).join('')}</div>` : ''}
         ${specials ? `<div class="rc-special-row">${specials}</div>` : ''}
-        ${Object.entries(e.forms || {})
-          .filter(([k]) => FORM_CN[k])
-          .map(
-            ([k, v]) =>
-              `<span class="rc-form"><i>${FORM_CN[k]}</i> ${k === q.key && q.type === 'form' ? `<b>${escapeHtml(v)}</b>` : escapeHtml(v)}</span>`,
-          )
-          .join('')}
-        ${example
-          ? `<div class="rc-example">${escapeHtml(example.en)}<br/><span class="muted">${escapeHtml(example.zh)}</span></div>`
-          : e.example && e.example.en
-            ? `<div class="rc-example">${escapeHtml(e.example.en)}<br/><span class="muted">${escapeHtml(e.example.zh || '')}</span></div>`
-            : ''}
+        ${forms.length ? `<div class="rc-forms">${forms.map(
+          ([k, v]) =>
+            `<span class="rc-form"><i>${FORM_CN[k]}</i>${k === q.key && q.type === 'form' ? `<b>${escapeHtml(v)}</b>` : escapeHtml(v)}</span>`,
+        ).join('')}</div>` : ''}
+        ${ex ? `<div class="rc-example">${escapeHtml(ex.en)}<br/><span class="muted">${escapeHtml(ex.zh || '')}</span></div>` : ''}
       </div>
     `
   }
@@ -682,7 +699,9 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
       $card.dataset.state = 'back'
       revealDetail()
       $area.innerHTML = `
-        ${q.type !== 'en2zh' ? `<div class="rc-word">${escapeHtml(q.answer)}</div>` : ''}
+        ${q.type === 'en2zh'
+          ? `<div class="rc-answer-gloss">${glossLines().slice(0, 3).map((l) => escapeHtml(l)).join('；') || '—'}</div>`
+          : `<div class="rc-word">${escapeHtml(q.answer)}</div>`}
         <div class="rc-self">
           <button class="rc-btn wrong" data-r="0">不认识</button>
           <button class="rc-btn fuzzy" data-r="1">模糊</button>

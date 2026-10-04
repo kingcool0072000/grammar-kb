@@ -1052,11 +1052,42 @@ main {
   padding-top: 14px;
   border-top: 1px solid var(--line);
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   font-size: 15px;
   color: var(--ink-soft);
+}
+/* 释义区：gloss 拆行后的义项列表（每行一条，前缀点） */
+.rc-gloss {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+}
+.rc-gloss p { margin: 0; line-height: 1.55; color: var(--ink); }
+.rc-gloss p::before { content: '·'; color: var(--ink-faint); margin-right: 6px; }
+/* 翻面答案区的释义串（en2zh 背面主答案） */
+.rc-answer-gloss {
+  font-size: 17px;
+  color: var(--brand-ink);
+  font-weight: 600;
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+/* 词形变化区：胶囊组，每格「标签 词形」 */
+.rc-forms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+.rc-form {
+  background: var(--bg-soft, #f1f5f9);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 14px;
 }
 .rc-special {
   background: #fef3c7;
@@ -1078,6 +1109,9 @@ main {
   color: var(--ink);
   margin-top: 6px;
   line-height: 1.6;
+  background: rgba(14, 116, 144, 0.06);
+  border-radius: 10px;
+  padding: 8px 12px;
 }
 .rc-example .muted { font-size: 13px; }
 
