@@ -716,6 +716,13 @@ function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
         cleanupKeys()
         overlay.remove()
         overlay = null
+        // 中途退出：已作答部分照常上报（答对计云端进度、答错进艾宾浩斯
+        // 周期、按已答题数记一组部分成绩），避免白背。
+        if (done > 0) {
+          const uniqWrong = [...new Set(wrongEntries.map((e) => e.word))]
+          uploadSession(done, uniqWrong, Math.round((Date.now() - t0) / 1000), details)
+          if (onFinish) onFinish()
+        }
       },
     })
   }
