@@ -36,10 +36,23 @@ CREATE TABLE IF NOT EXISTS vocab_exams (
     score      INTEGER NOT NULL,
     exam_date  TEXT NOT NULL,
     note       TEXT DEFAULT '',
-    created_at TEXT
+    created_at TEXT,
+    paper_id   TEXT DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_vex_user ON vocab_exams(user, level, score);
+CREATE INDEX IF NOT EXISTS idx_vex_paper ON vocab_exams(paper_id);
 """
+
+
+def _ensure_paper_col(conn: sqlite3.Connection) -> None:
+    """老库补列（paper_id 关联具体试卷，批改打分用；ALTER 幂等）。
+
+    首次建库（表还不存在）跳过——由 SCHEMA 的 CREATE TABLE 带出该列。
+    """
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(vocab_exams)")}
+    if cols and "paper_id" not in cols:
+        conn.execute("ALTER TABLE vocab_exams ADD COLUMN paper_id TEXT DEFAULT ''")
+        conn.commit()
 
 PASS_SCORE = 80
 
@@ -56,10 +69,15 @@ class VocabExamStore:
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
+        # 老库先补列再跑 SCHEMA——executescript 里的 CREATE INDEX 引用
+        # paper_id，列不存在时（executescript 自动提交绕过 ALTER 顺序）
+        # 会直接 OperationalError
+        _ensure_paper_col(conn)
         conn.executescript(SCHEMA)
         return conn
 
-    def record(self, user: str, level: int, score: int, exam_date: str, note: str = "") -> dict:
+    def record(self, user: str, level: int, score: int, exam_date: str,
+               note: str = "", paper_id: str = "") -> dict:
         if not (0 <= int(level) <= 7):
             raise ValueError("level 须为 0-7")
         if not (0 <= int(score) <= 100):
@@ -67,16 +85,32 @@ class VocabExamStore:
         datetime.strptime(exam_date, "%Y-%m-%d")  # 非法日期抛 ValueError
         with self._connect() as conn:
             cur = conn.execute(
-                "INSERT INTO vocab_exams (user, level, score, exam_date, note, created_at)"
-                " VALUES (?,?,?,?,?,?)",
+                "INSERT INTO vocab_exams (user, level, score, exam_date, note, created_at, paper_id)"
+                " VALUES (?,?,?,?,?,?,?)",
                 ((user or "").strip()[:60], int(level), int(score), exam_date,
                  (note or "")[:500],
-                 datetime.now(_tz.utc).isoformat(timespec="seconds")),
+                 datetime.now(_tz.utc).isoformat(timespec="seconds"),
+                 (paper_id or "")[:64]),
             )
             row = conn.execute(
                 "SELECT * FROM vocab_exams WHERE id = ?", (cur.lastrowid,)
             ).fetchone()
         return dict(row)
+
+    def exams_for_papers(self, paper_ids: list[str]) -> dict[str, list[dict]]:
+        """按试卷 id 反查已登记成绩（批改中心打分卡：标记哪卷已登分）。"""
+        ids = [str(x)[:64] for x in paper_ids if x]
+        if not ids:
+            return {}
+        ph = ",".join("?" * len(ids))
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"SELECT id, user, level, score, exam_date, paper_id"
+                f" FROM vocab_exams WHERE paper_id IN ({ph})", ids).fetchall()
+        out: dict[str, list[dict]] = {}
+        for r in rows:
+            out.setdefault(r["paper_id"], []).append(dict(r))
+        return out
 
     def list(self, user: Optional[str] = None) -> list[dict]:
         sql = "SELECT * FROM vocab_exams"

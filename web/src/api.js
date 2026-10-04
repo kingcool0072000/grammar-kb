@@ -275,6 +275,7 @@ export const api = {
     reqJson('/vocab-papers/generate', 'POST', { level, save }),
   vocabPaperSave: (paper) =>
     reqJson('/vocab-papers/save', 'POST', paper),
+  vocabPaperGrading: () => req('/vocab-papers/grading'),
   vocabPaperDelete: (paperId) =>
     reqJson(`/vocab-papers/${encodeURIComponent(paperId)}`, 'DELETE'),
   vocabPaperPreview: (paperId) =>

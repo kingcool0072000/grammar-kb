@@ -3000,6 +3000,35 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 .rl-struct-name i { font-style: normal; color: var(--ink-faint); margin-left: 4px; font-size: 11.5px; }
 .rl-lesson-tag { font-size: 11px; --cat-color: #6b7c93; }
 .rl-topic-desc { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 6px; }
+
+/* ===== 批改中心 · 考试打分卡（单词试卷手动登记） ===== */
+.gd-exam-grading .gcard-head i { font-style: normal; font-size: 12px; color: var(--ink-faint); font-weight: 400; margin-left: 6px; }
+.geg-row {
+  display: grid; grid-template-columns: minmax(200px, 1.2fr) minmax(140px, 1fr) auto;
+  gap: 12px; align-items: center;
+  padding: 9px 4px; border-bottom: 1px dashed var(--line, #eef2f7);
+}
+.geg-row:last-child { border-bottom: none; }
+.geg-info b { font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.geg-info span { display: block; font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; }
+.geg-grades { display: flex; flex-wrap: wrap; gap: 5px; }
+.geg-chip {
+  font-size: 12px; padding: 2px 9px; border-radius: 9px;
+  background: #fffaeb; border: 1px solid #f5e0b8; color: #93601a; font-weight: 600;
+}
+.geg-chip.ok { background: #f0f9f0; border-color: #bfe5bf; color: #2e7d32; }
+.geg-chip.none { background: var(--bg-soft, #f8fafc); border-color: var(--line); color: var(--ink-faint); font-weight: 400; }
+.geg-form { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.geg-form select, .geg-form input {
+  min-height: 34px; font-size: 13.5px; padding: 0 8px;
+  border: 1px solid var(--line, #e2e8f0); border-radius: 8px;
+  background: white; color: var(--ink); font-family: inherit;
+}
+.geg-form .geg-score { width: 74px; }
+@media (max-width: 900px) {
+  .geg-row { grid-template-columns: 1fr; }
+  .geg-form { width: 100%; }
+}
 .rl-diff-note { font-size: 11.5px; color: var(--ink-faint); margin: 10px 0 12px; }
 
 /* ===== 精读辅助标注（学生端：句首/连词蓝/动词红/L3+ 难词） ===== */

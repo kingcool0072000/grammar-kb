@@ -666,7 +666,10 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     @app.post("/vocab-exams")
     def vocab_exam_add(payload: dict, request: "fastapi.Request"):
-        """登记一次词汇考试成绩（教师专属）。≥80 分自动解锁下一级。"""
+        """登记一次词汇考试成绩（教师专属）。≥80 分自动解锁下一级。
+
+        paper_id 可选：从批改中心考试打分卡登记时带上，关联具体试卷。
+        """
         _require_teacher(request)
         try:
             user = str(payload.get("user", "")).strip()
@@ -674,12 +677,13 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             score = int(payload.get("score"))
             exam_date = str(payload.get("exam_date", "")).strip()
             note = str(payload.get("note", "") or "")
+            paper_id = str(payload.get("paper_id", "") or "").strip()
         except (TypeError, ValueError):
             raise HTTPException(status_code=422, detail="user/level/score/exam_date 须齐全")
         if not user:
             raise HTTPException(status_code=422, detail="user 须指定学生账号")
         try:
-            rec = vocab_exam.record(user, level, score, exam_date, note)
+            rec = vocab_exam.record(user, level, score, exam_date, note, paper_id)
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
         return _ok({
@@ -687,6 +691,18 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             "unlocked_level": vocab_exam.unlocked_level(user),
             "passed": score >= 80,
         })
+
+    @app.get("/vocab-papers/grading")
+    def vocab_papers_grading(request: "fastapi.Request", level: int = -1):
+        """批改中心·考试打分：已存档试卷 + 每卷已登记成绩（教师专属）。"""
+        _require_teacher(request)
+        from .vocab_paper import list_paper_history
+        papers = list_paper_history(None if level < 0 else level, limit=50)
+        by_paper = vocab_exam.exams_for_papers([p["paper_id"] for p in papers])
+        out = []
+        for p in papers:
+            out.append({**p, "exams": by_paper.get(p["paper_id"], [])})
+        return _ok({"papers": out})
 
     @app.delete("/vocab-exams/{exam_id}")
     def vocab_exam_del(exam_id: int, request: "fastapi.Request"):

@@ -255,7 +255,15 @@ export async function mountGrading(el) {
           <button class="gcard-more" data-all="${c.key}">查看全部（${c.list.length}）→</button>
         </section>`).join('')}
     </div>
+    <section class="gcard gd-exam-grading" id="gd-exam-grading" style="grid-column: 1 / -1">
+      <header class="gcard-head">
+        <h2>📝 考试打分 <i>单词试卷 · 线下考完手动登记</i></h2>
+        <b class="gcard-n" id="geg-count">…</b>
+      </header>
+      <div class="gcard-list"><p class="reading-hint">加载试卷…</p></div>
+    </section>
   `
+  mountExamGrading(el.querySelector('#gd-exam-grading'), students)
 
   // 各卡「查看全部」→ 全量列表视图（页内切换）
   const showAll = {
@@ -278,6 +286,94 @@ export async function mountGrading(el) {
     sessionStorage.removeItem('gkb-open-review')
     openRecordingReview()
   }
+}
+
+// ---- 考试打分卡：已存档单词试卷 + 逐卷登记成绩（关联学生，手动填分） ----
+function toast(msg) {
+  const t = document.createElement('div')
+  t.className = 'plan-toast'
+  t.textContent = msg
+  document.body.appendChild(t)
+  setTimeout(() => t.remove(), 3200)
+}
+
+async function mountExamGrading(host, students) {
+  if (!host) return
+  const list = host.querySelector('.gcard-list')
+  const countEl = host.querySelector('#geg-count')
+  let papers = []
+  try {
+    papers = (await api.vocabPaperGrading()).papers || []
+  } catch {
+    list.innerHTML = '<p class="reading-hint">试卷列表加载失败（可刷新重试）。</p>'
+    countEl.textContent = '—'
+    return
+  }
+  const pending = papers.filter((p) => !(p.exams || []).length)
+  countEl.textContent = `${pending.length} 卷待打分`
+
+  if (!papers.length) {
+    list.innerHTML = '<p class="reading-hint">还没有存档试卷——备课中心 → 背单词 → 生成试卷并保存后，在这里登记线下考试成绩。</p>'
+    return
+  }
+
+  const today = new Date().toISOString().slice(0, 10)
+  const rowHtml = (p) => {
+    const graded = (p.exams || [])
+    return `
+    <div class="geg-row ${graded.length ? 'graded' : ''}" data-pid="${escapeHtml(p.paper_id)}">
+      <div class="geg-info">
+        <b>L${p.level} 卷 ${escapeHtml(p.paper_id)}</b>
+        <span>${p.count} 词 · ${escapeHtml((p.created_at || '').slice(0, 10))}</span>
+      </div>
+      <div class="geg-grades">
+        ${graded.length
+          ? graded.map((e) => `<span class="geg-chip ${e.score >= 80 ? 'ok' : ''}">${escapeHtml(e.user)} ${e.score} 分${e.score >= 80 ? ' ✓解锁' : ''}</span>`).join('')
+          : '<span class="geg-chip none">未登记</span>'}
+      </div>
+      <div class="geg-form">
+        <select class="geg-user" data-pid="${escapeHtml(p.paper_id)}">
+          ${students.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+        </select>
+        <input class="geg-score" type="number" min="0" max="100" placeholder="分数" data-pid="${escapeHtml(p.paper_id)}">
+        <input class="geg-date" type="date" value="${today}" data-pid="${escapeHtml(p.paper_id)}">
+        <button class="reading-btn small primary" data-geg="${escapeHtml(p.paper_id)}" data-lv="${p.level}">登记</button>
+      </div>
+    </div>`
+  }
+  list.innerHTML = papers.map(rowHtml).join('')
+
+  // 登记按钮：list 级事件委托（行替换后监听不丢）
+  list.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-geg]')
+    if (!btn) return
+    const pid = btn.dataset.geg
+    const lv = Number(btn.dataset.lv)
+    const row = list.querySelector(`.geg-row[data-pid="${CSS.escape(pid)}"]`)
+    const user = row.querySelector('.geg-user').value
+    const score = Number(row.querySelector('.geg-score').value)
+    const date = row.querySelector('.geg-date').value
+    if (!user) return alert('请选择学生')
+    if (!(score >= 0 && score <= 100)) return alert('分数须为 0-100')
+    if (!date) return alert('请选择考试日期')
+    btn.disabled = true
+    btn.textContent = '登记中…'
+    try {
+      const r = await api.vocabExamAdd({ user, level: lv, score, exam_date: date, paper_id: pid })
+      toast(score >= 80
+        ? `🎉 ${user} ${score} 分通过！已解锁 L${r.unlocked_level}`
+        : `已登记 ${user} ${score} 分（差 ${80 - score} 分解锁）`)
+      // 刷新该卷行 + 待打分数
+      const fresh = (await api.vocabPaperGrading()).papers || []
+      const np = fresh.find((x) => x.paper_id === pid)
+      if (np && row.isConnected) row.outerHTML = rowHtml(np)
+      countEl.textContent = `${fresh.filter((x) => !(x.exams || []).length).length} 卷待打分`
+    } catch (err) {
+      alert('登记失败：' + err.message)
+      btn.disabled = false
+      btn.textContent = '登记'
+    }
+  })
 }
 
 // 专注会话标题：泛读 = 「泛读-书名-章节」；精读/专题=内容名（后端已按
