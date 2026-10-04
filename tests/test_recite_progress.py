@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime, timedelta, timezone as _tz
 
 import pytest
 
@@ -104,7 +105,7 @@ def test_clear_progress_teacher_only(recite_env):
 
 
 def test_wrongbook_with_gloss(recite_env):
-    """错词本：返回错次聚合 + vocab_word 表的中文释义（大小写不敏感匹配）。"""
+    """错词本：在周期词带错次/日程 + vocab_word 中文释义（大小写不敏感匹配）。"""
     import json
 
     con = sqlite3.connect(recite_env / "grammar.db")
@@ -127,8 +128,95 @@ def test_wrongbook_with_gloss(recite_env):
         "wrong_words": ["Bad"], "mode": "flip", "scope": "all",
         "details": [{"word": "Bad", "correct": False}],
     })
-    items = c.get("/recite/wrongbook", headers=h).json()["data"]
-    assert len(items) == 1 and items[0]["wrong_count"] == 1
+    data = c.get("/recite/wrongbook", headers=h).json()["data"]
+    assert len(data["in_cycle"]) == 1
+    w = data["in_cycle"][0]
+    assert w["wrong_count"] == 1 and w["stage"] == 0
+    # 新鲜路径：next_review = 答错日+1（明天），今天未到期
+    assert w["due"] is False
+    assert w["next_review"] == (datetime.now(_tz.utc).date() + timedelta(days=1)).isoformat()
     # 上报词大小写不一致（Bad vs bad）也要能匹配到释义
-    assert items[0]["gloss"] == "坏的"
-    assert items[0]["meanings"] == ["adj. 坏的", "n. 坏事"]
+    assert w["gloss"] == "坏的"
+    assert w["meanings"] == ["adj. 坏的", "n. 坏事"]
+    assert data["conquered"] == []
+    assert data["stats"]["total"] == 1 and data["stats"]["due"] == 0
+
+
+def _submit(c, h, details, scope="all"):
+    wrong = [d["word"] for d in details if not d["correct"]]
+    return c.post("/recite/sessions", headers=h, json={
+        "total": len(details), "wrong": len(wrong),
+        "acc": round(100 * (len(details) - len(wrong)) / len(details)),
+        "duration_sec": 5, "wrong_words": wrong, "mode": "flip",
+        "scope": scope, "details": details,
+    })
+
+
+def _wb(c, h):
+    return c.get("/recite/wrongbook", headers=h).json()["data"]
+
+
+def test_ebbinghaus_cycle(recite_env):
+    """艾宾浩斯周期：错→进周期；复习答对逐节点推进；六节点全过→攻克；
+    再答错→回炉 stage 清零。普通会话答对不推进。"""
+    from grammar_kb.recite import EB_STAGES
+
+    c = _client(recite_env)
+    h = _login(c, "malin", "123456")
+    con = sqlite3.connect(recite_env / "fce.db")
+
+    _submit(c, h, [{"word": "bad", "correct": False}])
+    d = _wb(c, h)
+    assert d["stats"]["total"] == 1 and d["stats"]["due"] == 0  # D+1 明天到期
+    w = d["in_cycle"][0]
+    assert w["stage"] == 0
+
+    # 普通会话答对：不推进节点
+    _submit(c, h, [{"word": "bad", "correct": True}], scope="all")
+    assert _wb(c, h)["in_cycle"][0]["stage"] == 0
+
+    # 复习会话答对六次 → 六节点全过 → 攻克
+    for i in range(len(EB_STAGES)):
+        # 到期判断：next_review 可能在未来（按今天算 D+1 起），测试直接
+        # 把 next_review 拉到今天模拟到期，再提交复习
+        con.execute(
+            "UPDATE recite_review SET next_review = ? WHERE user='malin' AND word='bad'",
+            (datetime.now(_tz.utc).date().isoformat(),),
+        )
+        con.commit()
+        r = _submit(c, h, [{"word": "bad", "correct": True}], scope="wrongbook")
+        assert r.status_code == 200
+    d = _wb(c, h)
+    assert d["stats"]["total"] == 0 and d["stats"]["conquered_n"] == 1
+    cq = d["conquered"][0]
+    assert cq["wrong_count"] == 1 and cq["stage"] == len(EB_STAGES)
+
+    # 攻克后再答错：回炉（stage=0、wrong_count 累加、conquered_at 清空）
+    _submit(c, h, [{"word": "bad", "correct": False}])
+    d = _wb(c, h)
+    assert d["stats"]["total"] == 1 and d["stats"]["conquered_n"] == 0
+    w = d["in_cycle"][0]
+    assert w["stage"] == 0 and w["wrong_count"] == 2
+    con.close()
+
+
+def test_review_backfill_from_history(recite_env):
+    """存量兼容：历史会话错过但无 recite_review 行的词，读 wrongbook 时回填。"""
+    from grammar_kb.recite import ReciteStore
+
+    # 直接绕过新调度写一条历史会话（模拟旧版本数据）
+    store = ReciteStore(str(recite_env / "fce.db"))
+    with store._connect() as conn:
+        conn.execute(
+            "INSERT INTO recite_sessions (user, total, wrong, acc, duration_sec,"
+            " wrong_words, mode, scope, created_at) VALUES ('malin', 1, 1, 0, 5,"
+            " '[\"oldword\"]', 'flip', 'all', ?)",
+            ((datetime.now(_tz.utc) - timedelta(days=3)).isoformat(timespec="seconds"),),
+        )
+    c = _client(recite_env)
+    h = _login(c, "malin", "123456")
+    d = _wb(c, h)
+    assert d["stats"]["total"] == 1
+    w = d["in_cycle"][0]
+    assert w["word"] == "oldword" and w["wrong_count"] == 1
+    assert w["due"] is True  # 3 天前错的，D+1 早已过期

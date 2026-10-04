@@ -4,16 +4,25 @@
 正确率、用时、错词列表与练习模式（打字输入/翻面自评），以及逐词对错
 明细（写入 recite_word_progress，云端唯一进度源）。教师端在
 「批改中心」查看。数据量极小，不设删除（历史即成长记录）。
+
+错词走艾宾浩斯记忆周期（recite_review 表）：答错日 D 起，在 D+1/2/4/7/
+15/30 六个节点各复习一次；复习（scope=wrongbook 会话）答对过一节点，
+六节点全过即「攻克」入已攻克词本；任何会话再答错则回炉重计周期。
 """
 from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import datetime, timezone as _tz
+from datetime import date, datetime, timedelta, timezone as _tz
 from pathlib import Path
 from typing import Optional
 
 from .fce_query import _default_db_path
+
+# 艾宾浩斯复习节点（天）：D 为本轮周期首次答错日
+EB_STAGES = (1, 2, 4, 7, 15, 30)
+# 复习会话标识（scope 值）：该类会话里的答对才推进节点
+REVIEW_SCOPE = "wrongbook"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS recite_sessions (
@@ -40,7 +49,27 @@ CREATE TABLE IF NOT EXISTS recite_word_progress (
     PRIMARY KEY (user, word)
 );
 CREATE INDEX IF NOT EXISTS idx_rwp_user_seen ON recite_word_progress(user, last_seen);
+CREATE TABLE IF NOT EXISTS recite_review (
+    user      TEXT NOT NULL,
+    word      TEXT NOT NULL,
+    level     INTEGER,
+    wrong_count INTEGER NOT NULL DEFAULT 0,
+    stage     INTEGER NOT NULL DEFAULT 0,
+    first_wrong_at TEXT,
+    next_review TEXT,
+    last_review_at TEXT,
+    conquered_at TEXT,
+    PRIMARY KEY (user, word)
+);
+CREATE INDEX IF NOT EXISTS idx_rr_due ON recite_review(user, next_review);
 """
+
+
+def _add_days(day_iso: str, n: int) -> str:
+    try:
+        return (date.fromisoformat(day_iso) + timedelta(days=n)).isoformat()
+    except ValueError:
+        return datetime.now(_tz.utc).date().isoformat()
 
 
 class ReciteStore:
@@ -67,6 +96,7 @@ class ReciteStore:
             raise ValueError("题数须为正")
         wrong_words = [str(w)[:60] for w in (wrong_words or [])][:50]
         now = datetime.now(_tz.utc).isoformat(timespec="seconds")
+        review_stats: dict = {}
         with self._connect() as conn:
             cur = conn.execute(
                 "INSERT INTO recite_sessions (user, total, wrong, acc, duration_sec,"
@@ -77,10 +107,14 @@ class ReciteStore:
             )
             if details:
                 self._upsert_details(conn, user, details)
+                review_stats = self._update_reviews(
+                    conn, user, details, is_review=(scope == REVIEW_SCOPE))
             row = conn.execute(
                 "SELECT * FROM recite_sessions WHERE id = ?", (cur.lastrowid,)
             ).fetchone()
-        return _out(row)
+        out = _out(row)
+        out["review"] = review_stats
+        return out
 
     def _upsert_details(self, conn: sqlite3.Connection, user: str, details: list) -> None:
         """逐词对错明细落 recite_word_progress（累加计数 + 补 level）。
@@ -122,6 +156,70 @@ class ReciteStore:
                     (user, w, levels.get(w), r, wr,
                      now if correct else None, now),
                 )
+
+    def _update_reviews(self, conn: sqlite3.Connection, user: str,
+                        details: list, is_review: bool) -> dict:
+        """艾宾浩斯周期状态机：答错 → 进/回炉周期；复习会话答对 → 推进
+        一个节点；过满六节点（D+1/2/4/7/15/30）→ 攻克入已攻克词本。
+
+        普通会话的答对不推进节点（避免常规练习顺手清空错题周期）；
+        任何会话的答错都会把该词拉回 stage=0 重计。返回本组统计
+        {entered, advanced, conquered, due_now}。
+        """
+        clean: dict[str, int] = {}
+        for d in details or []:
+            w = str(d.get("word", "")).strip().lower()[:60]
+            if w and w not in clean:
+                clean[w] = 1 if d.get("correct") else 0
+        if not clean:
+            return {}
+        today = datetime.now(_tz.utc).date().isoformat()
+        levels = self._vocab_levels(list(clean))
+        stats = {"entered": 0, "advanced": 0, "conquered": 0, "due_now": 0}
+        for w, correct in clean.items():
+            row = conn.execute(
+                "SELECT wrong_count, stage, conquered_at FROM recite_review"
+                " WHERE user = ? AND word = ?", (user, w),
+            ).fetchone()
+            if not correct:
+                # 答错：进周期（或攻克后回炉，stage 清零重计）
+                wc = (row["wrong_count"] + 1) if row else 1
+                conn.execute(
+                    "INSERT INTO recite_review (user, word, level, wrong_count, stage,"
+                    " first_wrong_at, next_review, last_review_at)"
+                    " VALUES (?,?,?,?,?,?,?,?)"
+                    " ON CONFLICT(user, word) DO UPDATE SET wrong_count=excluded.wrong_count,"
+                    " level=COALESCE(recite_review.level, excluded.level), stage=0,"
+                    " first_wrong_at=excluded.first_wrong_at,"
+                    " next_review=excluded.next_review, conquered_at=NULL",
+                    (user, w, levels.get(w), wc, 0, today,
+                     _add_days(today, EB_STAGES[0]), today),
+                )
+                stats["entered"] += 1
+            elif row and not row["conquered_at"]:
+                if not is_review:
+                    continue  # 普通会话答对不动周期
+                stage = row["stage"] + 1
+                if stage >= len(EB_STAGES):
+                    conn.execute(
+                        "UPDATE recite_review SET stage=?, next_review=NULL,"
+                        " last_review_at=?, conquered_at=? WHERE user=? AND word=?",
+                        (stage, today, today, user, w),
+                    )
+                    stats["conquered"] += 1
+                else:
+                    conn.execute(
+                        "UPDATE recite_review SET stage=?, next_review=?, last_review_at=?"
+                        " WHERE user=? AND word=?",
+                        (stage, _add_days(today, EB_STAGES[stage]), today, user, w),
+                    )
+                    stats["advanced"] += 1
+        stats["due_now"] = conn.execute(
+            "SELECT COUNT(*) FROM recite_review WHERE user=? AND conquered_at IS NULL"
+            " AND next_review IS NOT NULL AND next_review <= ?",
+            (user, today),
+        ).fetchone()[0]
+        return stats
 
     def _vocab_levels(self, words: list[str]) -> dict[str, int]:
         """从 grammar.db vocab_word 取词的层级（小写 join；库缺失返回空）。"""
@@ -215,12 +313,16 @@ class ReciteStore:
         return {r["word"] for r in rows}
 
     def clear_progress(self, user: str) -> int:
-        """清空某学生的云端逐词进度（教师操作），返回删除行数。"""
+        """清空某学生的云端逐词进度（教师操作），返回删除行数。
+
+        一并清掉艾宾浩斯周期（错词本在下次答错时自然重建）。
+        """
         user = (user or "").strip()[:60]
         with self._connect() as conn:
             cur = conn.execute(
                 "DELETE FROM recite_word_progress WHERE user = ?", (user,)
             )
+            conn.execute("DELETE FROM recite_review WHERE user = ?", (user,))
             return cur.rowcount
 
     def merge_progress(self, user: str, data: dict) -> dict:
@@ -272,41 +374,89 @@ class ReciteStore:
                         )
         return self.progress(user, include_words=True)
 
-    def wrongbook(self, user: str, limit: int = 500) -> list[dict]:
-        """错词本：聚合该学生全部会话的错词。
+    def wrongbook(self, user: str, limit: int = 500) -> dict:
+        """错词本（艾宾浩斯口径）：在周期词（含到期/节点/日程）+ 已攻克词本。
 
-        每词统计：答错次数 / 最近答错时间 / 最近答对标记（其后的会话里
-        没再错过该词则视为已翻正——翻正词仍列出但标 mastered，供复习。
+        返回 {in_cycle, due_today, conquered, stats}。存量兼容：历史会话
+        错过但尚无 recite_review 行的词，首次读取时按最近答错日回填
+        （stage=0、next_review=最近错日+1 天——绝大多数当天就到期，
+        立即进入复习流）。
         """
         user = (user or "").strip()[:60]
+        today = datetime.now(_tz.utc).date().isoformat()
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT wrong_words, created_at FROM recite_sessions"
                 " WHERE user = ? ORDER BY id DESC LIMIT ?",
                 (user, int(limit)),
             ).fetchall()
-        wrong_at: dict[str, str] = {}
-        counts: dict[str, int] = {}
-        seen_sessions = 0
-        # rows 由新到旧：同一词在新会话错过、且此后（更旧的）会话不再出现
-        # 无法直接推「答对」——sessions 只有错词表。简化口径：
-        # 错词本 = 全部历史错词 + 错次 + 最近错时间；翻正判定交给前端
-        # 进度（localStorage right>=wrong）不做，云端只做事实聚合。
-        for r in rows:
-            try:
-                ws = json.loads(r["wrong_words"] or "[]")
-            except (ValueError, TypeError):
-                ws = []
-            for w in ws:
-                w = str(w)[:60]
-                counts[w] = counts.get(w, 0) + 1
-                wrong_at.setdefault(w, r["created_at"])
-            seen_sessions += 1
-        items = [
-            {"word": w, "wrong_count": c, "last_wrong_at": wrong_at[w]}
-            for w, c in sorted(counts.items(), key=lambda kv: -kv[1])
-        ]
-        return items
+            wrong_at: dict[str, str] = {}
+            counts: dict[str, int] = {}
+            for r in rows:  # 由新到旧：setdefault 拿到最近答错时间
+                try:
+                    ws = json.loads(r["wrong_words"] or "[]")
+                except (ValueError, TypeError):
+                    ws = []
+                for w in ws:
+                    w = str(w).strip().lower()[:60]
+                    if not w:
+                        continue
+                    counts[w] = counts.get(w, 0) + 1
+                    wrong_at.setdefault(w, r["created_at"] or "")
+            if counts:
+                have = {r[0] for r in conn.execute(
+                    "SELECT word FROM recite_review WHERE user = ?", (user,)
+                ).fetchall()}
+                missing = [w for w in counts if w not in have]
+                if missing:
+                    levels = self._vocab_levels(missing)
+                    for w in missing:
+                        last_day = (wrong_at.get(w) or "")[:10] or today
+                        conn.execute(
+                            "INSERT INTO recite_review (user, word, level, wrong_count,"
+                            " stage, first_wrong_at, next_review, last_review_at)"
+                            " VALUES (?,?,?,?,?,?,?,?)",
+                            (user, w, levels.get(w), counts[w], 0, last_day,
+                             _add_days(last_day, EB_STAGES[0]), last_day),
+                        )
+            rr = conn.execute(
+                "SELECT word, level, wrong_count, stage, first_wrong_at, next_review,"
+                " last_review_at, conquered_at FROM recite_review WHERE user = ?",
+                (user,),
+            ).fetchall()
+        in_cycle: list[dict] = []
+        conquered: list[dict] = []
+        for r in rr:
+            base = {
+                "word": r["word"], "level": r["level"],
+                "wrong_count": r["wrong_count"], "stage": r["stage"],
+                "first_wrong_at": r["first_wrong_at"],
+                "next_review": r["next_review"],
+                "last_review_at": r["last_review_at"],
+            }
+            if r["conquered_at"]:
+                conquered.append({**base, "conquered_at": r["conquered_at"]})
+            else:
+                base["due"] = bool(r["next_review"] and r["next_review"] <= today)
+                in_cycle.append(base)
+        # 到期在前；同期按错次降序（错得多的先见）
+        in_cycle.sort(key=lambda x: (x["next_review"] or "9999-12-31",
+                                     -x["wrong_count"]))
+        conquered.sort(key=lambda x: x["conquered_at"] or "", reverse=True)
+        due_today = [x for x in in_cycle if x["due"]]
+        stage_dist = [0] * len(EB_STAGES)
+        for x in in_cycle:
+            stage_dist[min(x["stage"], len(EB_STAGES) - 1)] += 1
+        return {
+            "in_cycle": in_cycle,
+            "due_today": due_today,
+            "conquered": conquered,
+            "stats": {
+                "total": len(in_cycle), "due": len(due_today),
+                "conquered_n": len(conquered),
+                "stages": list(EB_STAGES), "stage_dist": stage_dist,
+            },
+        }
 
     def list(self, user: Optional[str] = None, limit: int = 100) -> list[dict]:
         sql = "SELECT * FROM recite_sessions"

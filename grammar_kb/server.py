@@ -1052,13 +1052,11 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     @app.get("/recite/wrongbook")
     def recite_wrongbook(request: "fastapi.Request", user: Optional[str] = None, limit: int = 500):
-        """背单词错词本：聚合学生会话错词（错次/最近错时间）+ vocab_word 中文释义。"""
-        u = _request_user(request)
-        if request.state.role != "teacher":
-            u = _request_user(request)
-        elif user:
-            u = user
-        items = recite.wrongbook(u, limit=limit)
+        """背单词错词本（艾宾浩斯口径）：在周期词 + 已攻克词本 + 统计，
+        词带 vocab_word 中文释义（大小写不敏感匹配）。"""
+        u = user if (request.state.role == "teacher" and user) else request.state.user
+        data = recite.wrongbook(u, limit=limit)
+        items = data.get("in_cycle", []) + data.get("conquered", [])
         # 批量补中文释义（vocab_word 同库于 grammar.db；大小写不敏感匹配）
         import json as _json
         import sqlite3 as _sqlite3
@@ -1091,7 +1089,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             if g:
                 x["gloss"] = g["gloss"]
                 x["meanings"] = g["meanings"]
-        return _ok(items)
+        return _ok(data)
 
     @app.get("/recite/sessions")
     def recite_list(

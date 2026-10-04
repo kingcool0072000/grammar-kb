@@ -1,8 +1,13 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
+import { speak } from '../tts.js'
 
-// 背单词：全屏沉浸卡片。三种题型——认词（英→中）、拼写（中→英）、
-// 动词变形（go 的过去式？），统一「翻面自评」作答；错词间隔重现直到答对。
+// 背单词：全屏沉浸卡片。三种题型——中译英（看释义拼单词）、英译中（认词）、
+// 拼写挖空（缺字母补全），统一「翻面自评」作答；错词间隔重现直到答对。
+// 翻面揭晓答案时自动 TTS 发音一次（右上角 🔊 可静音）。
+//
+// 错题本走艾宾浩斯记忆周期（D+1/2/4/7/15/30 六节点）：到期词优先复习，
+// 六节点全过 → 已攻克词本；任何会话再答错则回炉重计。
 //
 // 进度不再存 localStorage：逐词对错实时上报云端（recite_word_progress），
 // 看板/出题「未掌握词池」/历史记录全部走云端 API。首次进入时若检测到
@@ -18,6 +23,22 @@ const FORM_CN = {
 const FORM_KEYS = ['past', 'past_participle', 'present_participle', 'third_singular', 'comparative', 'superlative', 'plural']
 const GROUP_SIZES = [20, 30]
 const WB_COLLAPSE_N = 60 // 错题本超过此数折叠，点「展开全部」看所有词
+const TTS_KEY = 'gkb-rc-tts-v1' // 翻面自动发音开关（默认开）
+
+function ttsOn() {
+  try {
+    return localStorage.getItem(TTS_KEY) !== 'off'
+  } catch {
+    return true
+  }
+}
+
+function setTtsOn(on) {
+  try {
+    if (on) localStorage.removeItem(TTS_KEY)
+    else localStorage.setItem(TTS_KEY, 'off')
+  } catch { /* 忽略 */ }
+}
 
 function shuffle(arr) {
   const a = arr.slice()
@@ -41,25 +62,28 @@ function entryMeaning(e) {
   )
 }
 
+/** 拼写挖空的遮罩：遮约 40% 字母（≥1 个），非字母字符（- ' 空格）保留。 */
+function maskWord(word) {
+  const w = (word || '').toLowerCase()
+  const letters = [...w].map((c, i) => (/[a-z]/.test(c) ? i : -1)).filter((i) => i >= 0)
+  if (!letters.length) return w
+  const maskN = Math.max(1, Math.round(letters.length * 0.4))
+  const pick = new Set(shuffle(letters).slice(0, maskN))
+  return [...w].map((c, i) => (pick.has(i) ? '_' : c)).join('')
+}
+
 /**
  * 生成一道题。
- * - 'en2zh'  英→中 认词
- * - 'zh2en'  中→英 拼写（打字输入）
- * - 'form'   词形变化（go 的过去式？），动词时态为主，形容词比较级也考
+ * - 'zh2en'  中译英（看中文释义，拼出单词）
+ * - 'en2zh'  英译中（认词）
+ * - 'cloze'  拼写挖空（缺字母补全）
  */
 function makeQuestion(e) {
-  const forms = e.forms || {}
-  const formKeys = FORM_KEYS.filter((k) => forms[k])
-  const isVerb = (e.pos || []).includes('v')
-  const hasAdjForm = forms.comparative || forms.superlative
-  // 拼写+变形为主：认词 25% / 拼写 50% / 变形 25%（有变形可用时）
+  const answer = e.display || e.word
   const roll = Math.random()
-  if (formKeys.length && (isVerb || hasAdjForm) && roll < 0.25) {
-    const key = formKeys[Math.floor(Math.random() * formKeys.length)]
-    return { type: 'form', entry: e, key, answer: forms[key], meaning: entryMeaning(e) }
-  }
-  if (roll < 0.75) return { type: 'zh2en', entry: e, answer: e.display || e.word, meaning: entryMeaning(e) }
-  return { type: 'en2zh', entry: e, answer: '', meaning: entryMeaning(e) }
+  if (roll < 0.5) return { type: 'zh2en', entry: e, answer, meaning: entryMeaning(e) }
+  if (roll < 0.75) return { type: 'en2zh', entry: e, answer: '', meaning: entryMeaning(e) }
+  return { type: 'cloze', entry: e, answer, masked: maskWord(answer), meaning: entryMeaning(e) }
 }
 
 function buildQuiz(pool, size) {
@@ -137,7 +161,7 @@ export async function mountRecite(el, { vocab, role }) {
   el.innerHTML = `
     <div class="view-head">
       <h1>背单词</h1>
-      <p>基于词汇表（${vocab.length} 词）的全屏卡片：认词、中→英拼写、动词时态变形。答错的词会重复出现直到答对。</p>
+      <p>基于词汇表（${vocab.length} 词）的全屏卡片：中译英、英译中、拼写挖空。翻面自动发音，答错的词按艾宾浩斯记忆法复习（1、2、4、7、15、30 天），直到攻克。</p>
     </div>
     <div class="card recite-dash" id="rc-dash"></div>
     <div class="recite-setup card">
@@ -363,24 +387,56 @@ export async function mountRecite(el, { vocab, role }) {
   }
   renderHistory()
 
-  // ---- 错题本（云端聚合：错次 / 最近答错） ----
+  // ---- 错题本（艾宾浩斯周期：在周期词 + 已攻克 + 复习日历） ----
   const renderWrongbook = async () => {
     const host = el.querySelector('#rc-wrongbook')
     if (!host) return
-    let words
+    let data
     try {
-      words = await api.wrongbook()
+      data = await api.wrongbook()
     } catch {
       host.innerHTML = ''
       return
     }
-    if (!words.length) {
+    const inCycle = (data && data.in_cycle) || []
+    const dueToday = (data && data.due_today) || []
+    const conquered = (data && data.conquered) || []
+    const stats = (data && data.stats) || {}
+    if (!inCycle.length && !conquered.length) {
       host.innerHTML = `
         <section class="fce-group">
           <div class="fce-group-title">📕 错题本</div>
-          <p class="reading-hint">答错的单词会自动收进来。错了不可怕，练到全对它就会变成你的词。</p>
+          <p class="reading-hint">答错的单词会自动收进来，按艾宾浩斯记忆法安排复习（1、2、4、7、15、30 天）。错了不可怕，六轮复习全过它就变成你的词。</p>
         </section>`
       return
+    }
+    const stages = stats.stages || [1, 2, 4, 7, 15, 30]
+    const stageDist = stats.stage_dist || []
+    const today = new Date()
+    const dueByDay = new Map()
+    for (const w of inCycle) {
+      if (w.next_review) dueByDay.set(w.next_review, (dueByDay.get(w.next_review) || 0) + 1)
+    }
+    // 未来 14 天到期分布（含今天；过去顺延的也计入今天口径由后端 due 标记）
+    const horizon = [...Array(14)].map((_, i) => {
+      const d = new Date(today)
+      d.setDate(d.getDate() + i)
+      return d.toISOString().slice(0, 10)
+    })
+    const fmtDay = (iso) => {
+      const d = new Date(iso + 'T00:00:00')
+      const wk = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()]
+      return `${Number(iso.slice(8, 10))}日·周${wk}`
+    }
+    const todayIso = today.toISOString().slice(0, 10)
+    let overdue = 0
+    for (const w of inCycle) {
+      if (w.next_review && w.next_review < todayIso) overdue++
+    }
+    // 14 天日历之外的排期（>13 天后）合并展示
+    let beyond = 0
+    for (const [iso, n] of dueByDay) {
+      if (!horizon.includes(iso) && iso >= todayIso) beyond += n
     }
     const findEntry = (w) =>
       levelVocab.find((x) => x.word === w) ||
@@ -389,10 +445,10 @@ export async function mountRecite(el, { vocab, role }) {
         // 最小可出题兜底：认词题至少有词本身
         example: {}, extra: {},
       }
-    // 错词中文释义优先级：后端聚合的 gloss/meanings（vocab_word 表，不受
-    // 解锁层截断影响）→ 本地词表 findEntry；都没有时点击再查 /dict 兜底。
+    // 优先后端聚合的 gloss/meanings（vocab_word 表，不受解锁层截断影响）
+    const itemOf = (w) => inCycle.find((x) => x.word === w) || conquered.find((x) => x.word === w) || {}
     const glossOf = (w) => {
-      const item = words.find((x) => x.word === w)
+      const item = itemOf(w)
       if (item && (item.gloss || (item.meanings || []).length)) {
         return item.meanings?.length ? item.meanings : [item.gloss].filter(Boolean)
       }
@@ -401,42 +457,69 @@ export async function mountRecite(el, { vocab, role }) {
       if (m.length) return m
       return e.gloss ? [e.gloss] : []
     }
+    const stageLabel = (s) => `D+${stages[Math.min(s, stages.length - 1)]}`
+    const chipHtml = (w, kind) => {
+      const e = findEntry(w.word)
+      const tip = kind === 'done'
+        ? `${(w.conquered_at || '').slice(0, 10)} 攻克`
+        : `${stageLabel(w.stage || 0)} 轮 · 下次 ${w.next_review || '—'}${w.due ? '（已到期）' : ''}`
+      return `<span class="rc-wb-word ${kind} ${w.due ? 'due' : ''}" data-word="${escapeHtml(w.word)}" title="${escapeHtml(tip)}｜${e && e.gloss ? escapeHtml(e.gloss.slice(0, 40)) : ''}">${escapeHtml(w.word)}<sup>${w.wrong_count || 1}</sup></span>`
+    }
     host.innerHTML = `
       <section class="fce-group">
-        <div class="fce-group-title">📕 错题本（${words.length} 词）· 点词看释义</div>
-        <div class="rc-wb-words">
-          ${words.slice(0, WB_COLLAPSE_N).map((w) => {
-            const e = findEntry(w.word)
-            return `<span class="rc-wb-word" data-word="${escapeHtml(w.word)}" title="${e && e.gloss ? escapeHtml(e.gloss.slice(0, 40)) : ''}">${escapeHtml(w.word)}<sup>${w.wrong_count}</sup></span>`
+        <div class="fce-group-title">📕 错题本 · 艾宾浩斯复习（在记 ${inCycle.length} 词 · 今日到期 <b class="rc-due-n">${dueToday.length + overdue}</b> · 已攻克 ${conquered.length}）</div>
+        <div class="rc-eb-stages">
+          ${stages.map((d, i) => `<span class="rc-eb-stage ${stageDist[i] ? 'has' : ''}"><i>D+${d}</i><b>${stageDist[i] || 0}</b></span>`).join('')}
+        </div>
+        <div class="rc-eb-cal">
+          ${horizon.map((iso) => {
+            const n = iso === todayIso ? dueToday.length + overdue : (dueByDay.get(iso) || 0)
+            return `<div class="rc-eb-day ${n ? 'has' : ''} ${iso === todayIso ? 'today' : ''}">${n ? `<b>${n}</b>` : ''}<span>${fmtDay(iso)}</span></div>`
           }).join('')}
-          ${words.length > WB_COLLAPSE_N ? `
-            <button class="reading-btn small" id="rc-wb-toggle">展开全部（${words.length} 词）⌄</button>
-            <div class="rc-wb-rest" hidden>
-              ${words.slice(WB_COLLAPSE_N).map((w) => {
-                const e = findEntry(w.word)
-                return `<span class="rc-wb-word" data-word="${escapeHtml(w.word)}" title="${e && e.gloss ? escapeHtml(e.gloss.slice(0, 40)) : ''}">${escapeHtml(w.word)}<sup>${w.wrong_count}</sup></span>`
-              }).join('')}
-            </div>` : ''}
+          ${beyond ? `<div class="rc-eb-day more" title="14 天以后的复习">${beyond}+<span>更远</span></div>` : ''}
         </div>
         <div class="chip-row" style="margin-top:10px">
-          <button class="btn-primary" id="rc-wb-drill">只练错词（${Math.min(20, words.length)} 词）</button>
+          ${dueToday.length + overdue ? `<button class="btn-primary" id="rc-wb-due">复习今日到期（${Math.min(20, dueToday.length + overdue)} 词）</button>` : ''}
+          ${inCycle.length ? `<button class="btn-primary ghost" id="rc-wb-drill">全部错词轮一遍（${Math.min(20, inCycle.length)} 词）</button>` : ''}
         </div>
-      </section>`
-    const toggle = host.querySelector('#rc-wb-toggle')
-    if (toggle) {
+        <div class="rc-wb-words">
+          ${inCycle.slice(0, WB_COLLAPSE_N).map((w) => chipHtml(w, 'in')).join('')}
+          ${inCycle.length > WB_COLLAPSE_N ? `
+            <button class="reading-btn small" id="rc-wb-toggle">展开全部（${inCycle.length} 词）⌄</button>
+            <div class="rc-wb-rest" hidden>
+              ${inCycle.slice(WB_COLLAPSE_N).map((w) => chipHtml(w, 'in')).join('')}
+            </div>` : ''}
+        </div>
+      </section>
+      ${conquered.length ? `
+      <section class="fce-group" id="rc-wb-cq">
+        <div class="fce-group-title">✅ 已攻克（${conquered.length} 词）· 六轮复习全过</div>
+        <div class="rc-wb-words">
+          ${conquered.slice(0, WB_COLLAPSE_N).map((w) => chipHtml(w, 'done')).join('')}
+          ${conquered.length > WB_COLLAPSE_N ? `
+            <button class="reading-btn small" id="rc-wb-toggle2">展开全部（${conquered.length} 词）⌄</button>
+            <div class="rc-wb-rest" hidden>
+              ${conquered.slice(WB_COLLAPSE_N).map((w) => chipHtml(w, 'done')).join('')}
+            </div>` : ''}
+        </div>
+      </section>` : ''}`
+    const bindToggle = (btnId, sel) => {
+      const toggle = host.querySelector(btnId)
+      if (!toggle) return
       toggle.addEventListener('click', () => {
-        const rest = host.querySelector('.rc-wb-rest')
+        const rest = host.querySelector(sel)
         const open = !rest.hidden
         rest.hidden = open
-        toggle.textContent = open
-          ? `展开全部（${words.length} 词）⌄`
-          : '收起 ⌃'
+        toggle.textContent = open ? `展开全部⌄` : '收起 ⌃'
       })
     }
-    // 点击错词：行内展开中文释义（无本地释义时查 /dict 兜底，再没有就明说）
+    bindToggle('#rc-wb-toggle', '.rc-wb-rest:not(#rc-wb-cq .rc-wb-rest)')
+    bindToggle('#rc-wb-toggle2', '#rc-wb-cq .rc-wb-rest')
+    // 点击错词：行内展开中文释义 + 发音（无释义时查 /dict 兜底）
     host.querySelectorAll('.rc-wb-word').forEach((chip) => {
       chip.addEventListener('click', async () => {
         const w = chip.dataset.word
+        if (ttsOn()) speak(w)
         const show = (lines, note) => {
           host.querySelectorAll('.rc-wb-detail').forEach((b) => b.remove())
           const box = document.createElement('div')
@@ -460,26 +543,39 @@ export async function mountRecite(el, { vocab, role }) {
         }
       })
     })
-    const drill = host.querySelector('#rc-wb-drill')
-    if (drill)
-      drill.addEventListener('click', () => {
-        const entries = shuffle(words.map((w) => findEntry(w.word))).slice(0, 20).map((e) => ({
-          ...e,
-          display: '',
-          examples: e.example && e.example.en ? [e.example] : (e.examples || []),
-        }))
-        if (!entries.length) return
-        startSession(el, {
-          pool: entries,
-          size: entries.length,
-          mode: 'flip',
-          scope: 'wrongbook',
-          onFinish: () => {
-            refreshFromCloud()
-            setTimeout(renderWrongbook, 800)
-          },
-        })
+    const startReview = (list, label) => {
+      const entries = shuffle(list.map((w) => findEntry(w.word))).slice(0, 20).map((e) => ({
+        ...e,
+        display: '',
+        examples: e.example && e.example.en ? [e.example] : (e.examples || []),
+      }))
+      if (!entries.length) return
+      startSession(el, {
+        pool: entries,
+        size: entries.length,
+        mode: 'flip',
+        scope: 'wrongbook', // 复习会话：答对推进艾宾浩斯节点
+        onFinish: () => {
+          refreshFromCloud()
+          setTimeout(renderWrongbook, 800)
+        },
       })
+    }
+    const dueBtn = host.querySelector('#rc-wb-due')
+    if (dueBtn) {
+      dueBtn.addEventListener('click', () => {
+        const overdueSet = new Set(
+          inCycle.filter((w) => w.next_review && w.next_review < todayIso).map((w) => w.word),
+        )
+        const list = [
+          ...inCycle.filter((w) => w.due && !overdueSet.has(w.word)),
+          ...inCycle.filter((w) => overdueSet.has(w.word)),
+        ]
+        startReview(list, '到期')
+      })
+    }
+    const drill = host.querySelector('#rc-wb-drill')
+    if (drill) drill.addEventListener('click', () => startReview(inCycle, '全部'))
   }
   renderWrongbook()
 
@@ -641,16 +737,17 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
     q.type === 'en2zh'
       ? `<div class="rc-word">${escapeHtml(e.display || e.word)}</div>
          <div class="rc-phonetic">${escapeHtml(e.phonetic || '')} ${posTags}</div>`
-      : q.type === 'zh2en'
-        ? `<div class="rc-meaning">${escapeHtml(q.meaning)}</div>
-           <div class="rc-phonetic">${posTags}${e.phonetic ? ` 音标稍后揭晓` : ''}</div>`
-        : `<div class="rc-meaning"><b>${escapeHtml(e.display || e.word)}</b> 的${FORM_CN[q.key]}</div>
-           <div class="rc-phonetic">${posTags} ${escapeHtml(entryMeaning(e))}</div>`
+      : q.type === 'cloze'
+        ? `<div class="rc-word rc-cloze">${escapeHtml(q.masked)}</div>
+           <div class="rc-phonetic">${posTags} ${escapeHtml(q.meaning)}</div>`
+        : `<div class="rc-meaning">${escapeHtml(q.meaning)}</div>
+           <div class="rc-phonetic">${posTags}${e.phonetic ? ' 音标稍后揭晓' : ''}</div>`
 
   overlay.innerHTML = `
     <div class="rc-top">
       <button class="rc-quit" title="退出">✕ 退出</button>
       <div class="rc-progress">${idx} / ${total}</div>
+      <button class="rc-tts" title="${ttsOn() ? '翻面自动发音中，点击静音' : '已静音，点击开启自动发音'}">${ttsOn() ? '🔊' : '🔇'}</button>
     </div>
     <div class="rc-card" data-state="front">
       <div class="rc-prompt">${promptHtml}</div>
@@ -664,6 +761,14 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
   const $extra = overlay.querySelector('.rc-extra')
 
   overlay.querySelector('.rc-quit').addEventListener('click', onQuit)
+  const $tts = overlay.querySelector('.rc-tts')
+  $tts.addEventListener('click', () => {
+    const on = !ttsOn()
+    setTtsOn(on)
+    $tts.textContent = on ? '🔊' : '🔇'
+    $tts.title = on ? '翻面自动发音中，点击静音' : '已静音，点击开启自动发音'
+    if (on && $card.dataset.state === 'back') speak(e.display || e.word) // 开启后立即补一次
+  })
 
   // 释义区：gloss 逗号长串拆成前 6 条分行（每行一条义项，可读）；
   // meanings 是语料例句中文，不混进释义。
@@ -682,8 +787,7 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
         ${q.type !== 'en2zh' ? '' : gl.length ? `<div class="rc-gloss">${gl.map((l) => `<p>${escapeHtml(l)}</p>`).join('')}</div>` : ''}
         ${specials ? `<div class="rc-special-row">${specials}</div>` : ''}
         ${forms.length ? `<div class="rc-forms">${forms.map(
-          ([k, v]) =>
-            `<span class="rc-form"><i>${FORM_CN[k]}</i>${k === q.key && q.type === 'form' ? `<b>${escapeHtml(v)}</b>` : escapeHtml(v)}</span>`,
+          ([k, v]) => `<span class="rc-form"><i>${FORM_CN[k]}</i>${escapeHtml(v)}</span>`,
         ).join('')}</div>` : ''}
         ${ex ? `<div class="rc-example">${escapeHtml(ex.en)}<br/><span class="muted">${escapeHtml(ex.zh || '')}</span></div>` : ''}
       </div>
@@ -691,17 +795,19 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
   }
 
   {
-    // 统一翻面自评：正面看提示（词/释义/变形问法），翻面看答案三键自评
+    // 统一翻面自评：正面看提示（释义/词/挖空），翻面看答案 + 自动发音 + 三键自评
     $card.dataset.state = 'front'
     $area.innerHTML = '<div class="rc-hint">点击卡片或按空格键翻面</div>'
     const flip = () => {
       if ($card.dataset.state !== 'front') return
       $card.dataset.state = 'back'
       revealDetail()
+      // 翻面揭晓答案：自动 TTS 发音一次（🔇 可关）
+      if (ttsOn()) speak(e.display || e.word)
       $area.innerHTML = `
         ${q.type === 'en2zh'
           ? `<div class="rc-answer-gloss">${glossLines().slice(0, 3).map((l) => escapeHtml(l)).join('；') || '—'}</div>`
-          : `<div class="rc-word">${escapeHtml(q.answer)}</div>`}
+          : `<div class="rc-word">${escapeHtml(q.answer)}${q.type === 'cloze' ? `<span class="rc-cloze-key">${escapeHtml(q.masked)} → ${escapeHtml(q.answer)}</span>` : ''}</div>`}
         <div class="rc-self">
           <button class="rc-btn wrong" data-r="0">不认识</button>
           <button class="rc-btn fuzzy" data-r="1">模糊</button>
@@ -737,13 +843,16 @@ function mountResult(el, { total, uniqWrong, acc, duration, pool, size, mode, sc
   wrap.innerHTML = `
     <h2>本组完成 🎉</h2>
     <p>共 ${total} 题 · 首答正确率 <b>${acc}%</b> · 用时 ${fmtDuration(duration)}</p>
-    ${uniqWrong.length ? `<h3>错词（${uniqWrong.length}）</h3><p>${uniqWrong.map((w) => `<span class="vocab-form">${escapeHtml(w)}</span>`).join(' ')}</p>` : '<p>全对，太棒了！</p>'}
+    ${uniqWrong.length ? `<h3>错词（${uniqWrong.length}）· 点击发音</h3><p>${uniqWrong.map((w) => `<span class="vocab-form rc-say" data-say="${escapeHtml(w)}">${escapeHtml(w)}</span>`).join(' ')}</p>` : '<p>全对，太棒了！</p>'}
     <div class="chip-row">
       <button class="btn-primary" id="rr-again">再背一组</button>
       ${uniqWrong.length ? '<button class="btn-primary ghost" id="rr-wrong">只练错词</button>' : ''}
     </div>
   `
   el.appendChild(wrap)
+  wrap.querySelectorAll('.rc-say').forEach((s) =>
+    s.addEventListener('click', () => { if (ttsOn()) speak(s.dataset.say) }),
+  )
   wrap.querySelector('#rr-again').addEventListener('click', () => {
     wrap.remove()
     startSession(el, { pool, size, mode, scope, onFinish })
