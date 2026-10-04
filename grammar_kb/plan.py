@@ -1023,11 +1023,25 @@ class PlanStore:
 
         # ---- 周拆解 ----
         reading_items = []
-        for book_key, pct in (t.get("reading") or {}).items():
+        for book_key, goal_val in (t.get("reading") or {}).items():
             row = self._match_book(book_key, user)
-            st = self._book_reading_state(row["id"], pct, user) if row else None
+            # 章选格式（list）不做全书百分比状态（_book_reading_state 只吃
+            # float——此前 list 直接传入会 500，周计划选章后周历/课程表必炸）
+            st = (self._book_reading_state(row["id"], float(goal_val), user)
+                  if row and not isinstance(goal_val, list) else None)
+            # 章选格式补展示章区间（「第6–7章」）——学生课程表摘要直接引用
+            chapter_range = None
+            if isinstance(goal_val, list) and row:
+                nos = self._chapter_nos(row["id"], goal_val)
+                if len(nos) > 1:
+                    chapter_range = f"第{nos[0]}–{nos[-1]}章"
+                elif nos:
+                    chapter_range = f"第{nos[0]}章"
+            title = (row["title"][:14] if row else str(book_key)[:14])
             reading_items.append({
-                "book": book_key, "goal_pct": pct,
+                "book": book_key, "title": title,
+                "chapter_range": chapter_range,
+                "goal_pct": goal_val if not isinstance(goal_val, list) else None,
                 "percent": st["percent"] if st else None,
                 "goal_percent": st["goal_percent"] if st else None,
                 "goal_words": st["goal_words"] if st else None,

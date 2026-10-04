@@ -26,15 +26,26 @@ export async function mountTimetable(el) {
   const dims = gp.dims || []
   const today = todayIso()
 
-  // 周拆解摘要（与教师看板同口径）
+  // 周拆解摘要（与教师看板同口径）。泛读按书显示章区间
+  // （reading_items 由后端带 title/chapter_range——「读完第6–7章」
+  // 比笼统的「1 本」信息量大；旧 pct 格式无区间则退回 N 本）
   const summary = []
   if (tasks.lectures?.length) summary.push(`📚 语法 ${tasks.lectures.length} 讲`)
   if (tasks.hw_papers?.length) summary.push(`🗒 作业卷 ${tasks.hw_papers.length} 卷`)
   if (tasks.vocab_goal) summary.push(`🔤 词汇目标 ${tasks.vocab_goal} 词`)
   if (tasks.fce?.length) summary.push(`🎧 FCE真题 ${tasks.fce.length} 项`)
   if (tasks.articles?.length) summary.push(`📄 精读 ${tasks.articles.length} 篇`)
-  const readingBooks = Object.keys(tasks.reading || {}).length
-  if (readingBooks) summary.push(`📖 泛读 ${readingBooks} 本`)
+  const rItems = d.breakdown?.reading_items || []
+  if (rItems.length) {
+    for (const r of rItems) {
+      summary.push(r.chapter_range
+        ? `📖 ${r.title || '泛读'} 读完${r.chapter_range}`
+        : `📖 泛读 ${r.title || ''} ${r.goal_pct != null ? `到${r.goal_pct}%` : ''}`.trim())
+    }
+  } else {
+    const readingBooks = Object.keys(tasks.reading || {}).length
+    if (readingBooks) summary.push(`📖 泛读 ${readingBooks} 本`)
+  }
   if (tasks.vocab_papers?.length) summary.push(`📝 试卷 ${tasks.vocab_papers.length} 份`)
 
   const dimRow = (x) => `
