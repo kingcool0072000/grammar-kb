@@ -7,7 +7,8 @@ import { escapeHtml, todayIso, studyGoalMin } from '../render.js'
 const WEEK_CN = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 const TYPE_ICON = {
   lecture: '📚', fce: '🎧', paper: '📝', hw_paper: '🗒', article: '📄',
-  reading: '📖', vocab: '🔤', speak: '🎤',
+  reading: '📖', vocab: '🔤', speak: '🎤', wrong_words: '🔤',
+  micro_drill: '✏️', history: '•', plan: '•',
 }
 
 export async function mountTimetable(el) {
@@ -65,7 +66,7 @@ export async function mountTimetable(el) {
 
   const dayCell = (day, i) => {
     const isToday = day.date === today
-    // 只展示已完成的学习（课程表=学习记录视角）：完成计划任务 +
+    // 已完成的学习（课程表=学习记录视角）：完成计划任务 +
     // 计划外朗读 + 泛读/背单词实录统计（与教师计划看板日卡同口径）
     const doneTasks = (day.tasks || []).filter((t) => t.done)
     const items = doneTasks.map((t) => `
@@ -73,6 +74,14 @@ export async function mountTimetable(el) {
         <span class="tt-task-ic">${TYPE_ICON[t.type] || '•'}</span>
         <span class="tt-task-text">${escapeHtml(t.text || t.key)}</span>
         <span class="tt-task-check">✓</span>
+      </div>`).join('')
+    // 未来日/今天（尚无完成时）：展示均摊后的当日计划（灰显「今天/那天该做什么」）
+    const planTasks = (day.future || isToday) && !doneTasks.length
+      ? (day.tasks || []).filter((t) => !t.done) : []
+    const planItems = planTasks.map((t) => `
+      <div class="tt-task plan" title="${escapeHtml(t.detail || '')}">
+        <span class="tt-task-ic">${TYPE_ICON[t.type] || '•'}</span>
+        <span class="tt-task-text">${escapeHtml(t.text || t.key)}</span>
       </div>`).join('')
     const acts = day.acts || {}
     const extraRows = (acts.extra_speaks || []).map((x) => `
@@ -102,9 +111,12 @@ export async function mountTimetable(el) {
           <span class="tt-day-date">${day.date.slice(5)}</span>
           ${isToday ? '<i class="tt-today-tag">今天</i>' : ''}
           ${minBadge}
-          <span class="tt-day-count">${day.future ? '' : `${day.done}/${day.total}`}</span>
+          <span class="tt-day-count">${day.future ? `${day.total} 项` : `${day.done}/${day.total}`}</span>
         </header>
-        ${live ? items + extraRows + statHtml : `<p class="tt-day-empty">${day.future ? '未开始' : '还没有完成的学习'}</p>`}
+        ${day.future
+          ? (planItems || `<p class="tt-day-empty">无安排</p>`)
+          : (live ? items + extraRows + statHtml
+            : (planItems || `<p class="tt-day-empty">还没有完成的学习</p>`))}
       </section>`
   }
 

@@ -2693,9 +2693,9 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 }
 .pw-day-head {
   display: flex; align-items: baseline; gap: 6px; padding: 7px 9px 5px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line); flex-wrap: wrap;
 }
-.pw-day-head b { font-size: 12px; font-weight: 800; color: var(--ink); }
+.pw-day-head b { font-size: 12px; font-weight: 800; color: var(--ink); white-space: nowrap; }
 .pw-day-head span { font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
 .pw-day-head em {
   margin-left: auto; font-style: normal; font-size: 11px; font-weight: 700;
@@ -2725,6 +2725,9 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 }
 .pw-task.done { color: var(--ink-faint); text-decoration: line-through; }
 .pw-task.done span { text-decoration: line-through; }
+/* 未来日计划行（均摊后的当日目标，灰显不划线） */
+.pw-task.plan { color: var(--ink-faint); }
+.pw-task.plan span { color: inherit; text-decoration: none; }
 .pw-task em { font-style: normal; color: #2e7d4f; font-weight: 800; flex: none; }
 .pw-none { font-style: normal; font-size: 10.5px; color: var(--ink-faint); }
 .pw-acts { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--line); }
@@ -3283,8 +3286,8 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 }
 .tt-day.today { border-color: #0e7490; box-shadow: 0 0 0 2px rgba(14,116,144,.15); }
 .tt-day.future { opacity: .55; }
-.tt-day header { display: flex; align-items: baseline; gap: 5px; margin-bottom: 6px; }
-.tt-day header b { font-size: 13.5px; color: var(--ink); }
+.tt-day header { display: flex; align-items: baseline; gap: 5px; margin-bottom: 6px; flex-wrap: wrap; }
+.tt-day header b { font-size: 13.5px; color: var(--ink); white-space: nowrap; }
 .tt-day-date { font-size: 11px; color: var(--ink-faint); }
 .tt-today-tag { font-style: normal; font-size: 10.5px; background: #0e7490; color: white; border-radius: 8px; padding: 0 6px; }
 /* 每日有效学习时长徽标（周中45/周末90，达标绿）——学生课程表 */
@@ -3299,6 +3302,8 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 .tt-task-ic { flex: none; }
 .tt-task-text { flex: 1; min-width: 0; word-break: break-word; }
 .tt-task.ok { color: var(--ink-faint); text-decoration: line-through; text-decoration-color: rgba(107,114,128,.5); }
+/* 未来日计划行（均摊后的当日目标，灰显不划线） */
+.tt-task.plan { color: var(--ink-faint); }
 .tt-task-check { color: #3b8a3b; font-weight: 700; }
 .tt-acts { display: flex; flex-direction: column; gap: 2px; margin-top: 5px; padding-top: 5px; border-top: 1px dashed var(--line, #eef2f7); }
 .tt-acts span { font-size: 11.5px; color: var(--ink-soft); line-height: 1.5; }

@@ -449,3 +449,71 @@ def test_daily_study_minutes(plan_env):
     m = c.get("/plan/my-week", headers=hs).json()["data"]
     m_mon = next(x for x in m["days"] if x["date"] == d1)
     assert m_mon["acts"]["study_min"] == 45
+
+
+# ---- 周目标逐日均摊（week_daily_tasks 重构）----
+
+def _put_week(c, ht, tasks):
+    r = c.put(f"/plan/weeks/{MON}", headers=ht, json={"tasks": tasks})
+    assert r.status_code == 200, r.text
+
+
+def test_daily_spread_weekday_template(plan_env):
+    """工作日均摊：讲次摊工作日、背词配额=剩余词÷剩余工作日。"""
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    ht = _login(c, "teacher", "123456")
+    _put_week(c, ht, {"lectures": [25, 26], "vocab_goal": 100})
+    d = c.get("/plan/today", headers=hs).json()["data"]
+    types = [t["type"] for t in d["tasks"]]
+    # 背词配额行存在且 quota 量化（周一跑：5 工作日 → 100/5=20）
+    vocab = next((t for t in d["tasks"] if t["type"] == "vocab"), None)
+    assert vocab is not None and vocab.get("quota")
+    # 讲次行按当天摊（2 讲/5 工作日 → 每天 1 讲）
+    lecs = [t for t in d["tasks"] if t["type"] == "lecture"]
+    assert len(lecs) == 1 and "25" in lecs[0]["text"] or "26" in lecs[0]["text"]
+
+
+def test_daily_spread_future_days_carry_plan(plan_env):
+    """未来日带出均摊计划：week_view 的 future days 不再是空 tasks。"""
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    _put_week(c, ht, {"lectures": [25], "vocab_goal": 200, "fce": ["Test1 RUE"]})
+    d = c.get(f"/plan/week-view?week_start={MON}&user=malin",
+              headers=ht).json()["data"]
+    futures = [x for x in d["days"] if x["future"]]
+    assert futures, "本周应存在未来日"
+    for x in futures:
+        assert x["total"] == len(x["tasks"])
+        # 未来日任务全部 done=False（灰显计划，不是完成记录）
+        assert all(not t["done"] for t in x["tasks"])
+    # 周六未来日应排 FCE（模板：周六=FCE 大题+精读）
+    sat = next((x for x in futures if x["date"] > MON), None)
+    sat_all = [x for x in d["days"]
+               if x["future"] and date.fromisoformat(x["date"]).weekday() == 5]
+    if sat_all:
+        sat_tasks = sat_all[0]["tasks"]
+        assert any(t["type"] == "fce" for t in sat_tasks)
+    # 工作日未来日应有背词配额
+    wd = [x for x in futures if date.fromisoformat(x["date"]).weekday() < 5]
+    if wd:
+        assert any(t["type"] == "vocab" for t in wd[0]["tasks"])
+
+
+def test_vocab_quota_done_judgement(plan_env):
+    """背词配额完成判定：当天背词词数 ≥ quota 即点亮。"""
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    ht = _login(c, "teacher", "123456")
+    _put_week(c, ht, {"vocab_goal": 20})  # 周一跑：quota=4
+    d = c.get("/plan/today", headers=hs).json()["data"]
+    vocab = next(t for t in d["tasks"] if t["type"] == "vocab")
+    assert vocab["done"] is False
+    # 背 5 词（≥quota）→ 完成
+    c.post("/recite/sessions", headers=hs, json={
+        "total": 5, "wrong": 0, "acc": 100, "duration_sec": 300,
+        "wrong_words": [], "mode": "flip", "scope": "all", "details": [],
+    })
+    d = c.get("/plan/today", headers=hs).json()["data"]
+    vocab = next(t for t in d["tasks"] if t["type"] == "vocab")
+    assert vocab["done"] is True and "✓" in (vocab.get("detail") or "")

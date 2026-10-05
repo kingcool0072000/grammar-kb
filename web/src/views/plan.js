@@ -245,14 +245,20 @@ export async function mountPlan(el) {
     function dayCell(d, i, dayNames) {
       const dd = Number(d.date.slice(8))
       const isToday = d.date === today
-      const icon = { micro_drill: '✏️', wrong_words: '🔤', lecture: '📚', fce: '🎧', reading: '📖', speak: '🎤', article: '📄', paper: '📝' }
-      // 单日卡片只显示当天完成的工作；未完成的计划不在卡上列出。
+      const icon = { micro_drill: '✏️', wrong_words: '🔤', lecture: '📚', fce: '🎧', reading: '📖', speak: '🎤', article: '📄', paper: '📝', vocab: '🔤', hw_paper: '🗒' }
+      // 单日卡片显示当天完成的工作；未来日/今天显示均摊后的当日计划
+      // （今天有完成时只显示已完成——完成度视角优先，空了才亮当日计划）。
       // 计划外的工作（朗读/泛读/背单词量化实录）由 acts 补充显示。
       const rows = (d.tasks || []).filter((x) => x.done).map((x) => `
         <div class="pw-task done">
           <i>${icon[x.type] || '•'}</i>
           <span title="${escapeHtml(x.text)}">${escapeHtml(x.text)}</span>
           <em>✓</em>
+        </div>`).join('')
+      const planRows = (d.tasks || []).filter((x) => !x.done).map((x) => `
+        <div class="pw-task plan ${isToday ? 'today' : ''}" title="${escapeHtml(x.detail || '')}">
+          <i>${icon[x.type] || '•'}</i>
+          <span title="${escapeHtml(x.text)}">${escapeHtml(x.text)}</span>
         </div>`).join('')
       const acts = d.acts || {}
       const extraRows = (acts.extra_speaks || []).map((x) => `
@@ -281,9 +287,11 @@ export async function mountPlan(el) {
         <div class="pw-day-head">
           <b>周${dayNames[i]}</b><span>${dd} 日</span>
           ${minBadge}
-          <em>${d.future ? '待来' : (d.done ? `${d.done} ✓` : '—')}</em>
+          <em>${d.future ? (d.total ? `${d.total} 项` : '待来') : (d.done ? `${d.done} ✓` : '—')}</em>
         </div>
-        <div class="pw-tasks">${hasLive ? rows + extraRows + statHtml : (d.future ? '' : '<i class="pw-none">无完成</i>')}</div>
+        <div class="pw-tasks">${hasLive
+          ? rows + extraRows + statHtml
+          : ((d.future || isToday) ? planRows : '<i class="pw-none">无完成</i>')}</div>
       </div>`
     }
 
