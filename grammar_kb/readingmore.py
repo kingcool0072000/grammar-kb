@@ -20,16 +20,20 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-_DATA_DIR = Path(os.environ.get("GRAMMAR_KB_DATA_DIR")
-                 or Path(__file__).resolve().parent.parent / "data")
-_DB = _DATA_DIR / "readingmore.db"
-
 _router = APIRouter(prefix="/readingmore/api")
 
 
+def _db_path() -> Path:
+    """惰性解析库路径：环境变量可能在模块导入后才设（测试隔离场景）。"""
+    data_dir = Path(os.environ.get("GRAMMAR_KB_DATA_DIR")
+                    or Path(__file__).resolve().parent.parent / "data")
+    return data_dir / "readingmore.db"
+
+
 def _conn() -> sqlite3.Connection:
-    _DATA_DIR.mkdir(parents=True, exist_ok=True)
-    c = sqlite3.connect(_DB, timeout=10)
+    db = _db_path()
+    db.parent.mkdir(parents=True, exist_ok=True)
+    c = sqlite3.connect(db, timeout=10)
     c.row_factory = sqlite3.Row
     c.execute("PRAGMA journal_mode=WAL")
     return c
@@ -157,6 +161,44 @@ def post_session(rec: SessionHeartbeat, request: Request) -> dict:
                 (rec.id,),
             )
     return {"code": 0, "message": "ok", "data": {"received": len(lookups)}}
+
+
+@_router.get("/sessions")
+def list_sessions(request: Request, user: str = "", limit: int = 100) -> dict:
+    """教师端学习日志：杂志阅读会话列表（按 user 可选过滤）。
+
+    教师专属（学生由 server.py 鉴权中间件先拦 403，这里兜底再校验）；
+    started_at 输出 UTC ISO 串（带 Z），与 focus 会话前端时间处理约定一致。
+    """
+    if getattr(request.state, "role", "") != "teacher":
+        raise HTTPException(status_code=403, detail="仅教师可查看")
+    lim = _clamp_int(limit, 1, 200)
+    with _conn() as c:
+        rows = c.execute(
+            """SELECT s.id, s.user, s.device, s.book, s.start,
+                      s.total_ms, s.engaged_ms, s.turn_count, s.vocab_ops,
+                      (SELECT COUNT(*) FROM rm_lookups l WHERE l.sid = s.id) lookups
+               FROM rm_sessions s
+               WHERE (? = '' OR s.user = ?)
+               ORDER BY s.start DESC LIMIT ?""",
+            (user, user, lim)).fetchall()
+        items = []
+        for r in rows:
+            try:
+                vocab_add = int(json.loads(r["vocab_ops"] or "{}").get("add", 0))
+            except (ValueError, TypeError):
+                vocab_add = 0
+            items.append({
+                "id": r["id"], "user": r["user"], "book": r["book"],
+                "device": r["device"],
+                "started_at": datetime.fromtimestamp(
+                    r["start"] / 1000, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "total_sec": round(r["total_ms"] / 1000),
+                "engaged_sec": round(r["engaged_ms"] / 1000),
+                "turns": r["turn_count"], "lookups": r["lookups"],
+                "vocab_add": vocab_add,
+            })
+    return {"code": 0, "message": "ok", "data": items}
 
 
 def _agg(c: sqlite3.Connection, sql: str, args: tuple = ()) -> Any:

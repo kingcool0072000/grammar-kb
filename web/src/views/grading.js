@@ -74,12 +74,22 @@ export async function mountGrading(el) {
     const timed = (p, ms = 8000) => Promise.race([
       p, new Promise((resolve) => setTimeout(() => resolve([]), ms)),
     ]).catch(() => [])
-    let focus = [], recite = []
-    ;[focus, recite] = await Promise.all([
+    let focus = [], recite = [], rm = []
+    ;[focus, recite, rm] = await Promise.all([
       timed(api.focusSessions({ limit: 100, offset: 0, user: student })),
       timed(api.reciteSessions({ limit: 100, user: student })),
+      timed(api.rmSessions({ user: student })),
     ])
     focus = Array.isArray(focus) ? focus : []
+    // 杂志会话归一成学习日志行形状：module=rm；时长主数字=专注学习
+    // engaged_sec（对齐 active_sec 语义）；total_ms_r 保留原始总时长
+    // （rmLogRow 算专注占比用，不能被 total_sec 污染）；rw.words 复用
+    // 聚合行的「新学 N 词」
+    rm = (Array.isArray(rm) ? rm : []).map((x) => ({
+      ...x, module: 'rm', active_sec: x.engaged_sec || 0,
+      total_sec: x.engaged_sec || 0, total_ms_r: x.total_sec || 0,
+      rw: (x.vocab_add || 0) > 0 ? { words: x.vocab_add } : null,
+    }))
 
     const weekMs = 7 * 24 * 3600 * 1000
     const nowMs = Date.now()
@@ -87,11 +97,13 @@ export async function mountGrading(el) {
     const focusWeek = focus.filter((s) => inWeek(s.started_at || s.created_at))
     const libW = focus.filter((s) => s.module === 'library' && inWeek(s.started_at || s.created_at))
     const rdW = focus.filter((s) => s.module === 'reading' && inWeek(s.started_at || s.created_at))
+    const rmW = rm.filter((s) => inWeek(s.started_at))
     const vocabW = recite.filter((s) => inWeek(s.created_at))
     const scores = focusWeek.filter((s) => typeof s.score === 'number')
     const parts = []
     if (libW.length) parts.push(`📖 泛读 ${Math.round(libW.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)} 分钟`)
     if (rdW.length) parts.push(`📄 精读 ${Math.round(rdW.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)} 分钟`)
+    if (rmW.length) parts.push(`📰 杂志 ${Math.round(rmW.reduce((a, s) => a + (s.engaged_sec || 0), 0) / 60)} 分钟`)
     if (vocabW.length) parts.push(`🔤 背词 ${vocabW.reduce((a, s) => a + (s.total || 0), 0)} 词 · ${Math.round(vocabW.reduce((a, s) => a + (s.duration_sec || 0), 0) / 60)} 分钟`)
     if (scores.length) parts.push(`👁 专注 ${Math.round(scores.reduce((a, s) => a + s.score, 0) / scores.length)} 分`)
 
@@ -99,7 +111,7 @@ export async function mountGrading(el) {
       <section class="gcard" data-card="focus" style="margin-bottom:14px">
         <header class="gcard-head">
           <h2>📚 学习日志</h2>
-          <b class="gcard-n">${focus.length + recite.length}</b>
+          <b class="gcard-n">${focus.length + recite.length + rm.length}</b>
           <button class="reading-btn small" id="gd-log-agg" title="同一天的同类型日志合并为一条汇总">📅 按日聚合</button>
         </header>
         <p class="reading-hint">${parts.length ? `近 7 天：${parts.join(' · ')}` : '近 7 天暂无学习记录'}</p>
@@ -127,6 +139,7 @@ export async function mountGrading(el) {
         const mod = s.module === 'reading' ? '精读' : s.module === 'topics' ? '专题' : '泛读'
         push(s.started_at || s.created_at, mod, s)
       }
+      for (const r of rm) push(r.started_at, '杂志', r)
       for (const r of recite) push(r.created_at, '背词', r)
       return [...groups.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1))
     }
@@ -145,7 +158,8 @@ export async function mountGrading(el) {
             <b class="gd-agg-min">${min}<u>分钟</u></b>
             <span>${list.length} 组 · ${words} 词 · 正确率 <b class="fce-his-score ${acc >= 80 ? 'ok' : acc >= 60 ? '' : 'bad'}">${acc}%</b></span></div>`)
         } else {
-          const modCls = mod === '精读' ? 'gd-focus-mod reading' : 'gd-focus-mod'
+          const modCls = mod === '精读' ? 'gd-focus-mod reading'
+            : mod === '杂志' ? 'gd-focus-mod rm' : 'gd-focus-mod'
           const sec = list.reduce((a, x) => a + (x.active_sec || 0), 0)
           const min = Math.round(sec / 60)
           const words = list.reduce((a, x) => a + ((x.rw && x.rw.words) || 0), 0)
@@ -159,10 +173,11 @@ export async function mountGrading(el) {
         }
       }
       // 展开态：该日全部原始明细行（聚合行仍置顶）。recite 行无 module
-      // 字段，靠 kind 区分——mods 建组时用 raw 原行，module 在则 focus 行
+      // 字段，靠 kind 区分；rm 行有 module='rm'，先于 focusRow 判掉
       const detailHtml = expanded
         ? `<div class="gd-agg-detail">${[...mods.values()].flat()
-            .map((s) => (s.module ? focusRow(s) : reciteLogRow(s)))
+            .map((s) => (s.module === 'rm' ? rmLogRow(s)
+              : s.module ? focusRow(s) : reciteLogRow(s)))
             .join('')}</div>`
         : ''
       const open = expanded ? '▾' : '▸'
@@ -237,6 +252,10 @@ export async function mountGrading(el) {
       for (const r of recite) {
         items.push({ kind: 'recite', id: `r${r.id}`, user: r.user, module: 'vocab', t: r.created_at, raw: r })
       }
+      // 杂志阅读会话（阅读更多）并入
+      for (const r of rm) {
+        items.push({ kind: 'rm', id: `m${r.id}`, user: r.user, module: 'rm', t: r.started_at, raw: r })
+      }
       items.sort((a, b) => (b.t || '') < (a.t || '') ? -1 : 1)
       focusPage = page
       const pageItems = items.slice(page * FOCUS_PAGE, (page + 1) * FOCUS_PAGE)
@@ -254,7 +273,8 @@ export async function mountGrading(el) {
           ? '<p class="reading-hint">暂无学习记录——学生在泛读馆读书/背单词后自动生成</p>'
           : '<p class="reading-hint">没有更多记录了</p>'
       } else {
-        host.innerHTML = pageItems.map((s) => s.kind === 'recite' ? reciteLogRow(s.raw) : focusRow(s.raw)).join('')
+        host.innerHTML = pageItems.map((s) => s.kind === 'recite' ? reciteLogRow(s.raw)
+          : s.kind === 'rm' ? rmLogRow(s.raw) : focusRow(s.raw)).join('')
         host.querySelectorAll('[data-focus-id]').forEach((row) => {
           row.addEventListener('click', () => openFocusDetail(Number(row.dataset.focusId)))
         })
@@ -571,6 +591,27 @@ function reciteLogRow(x) {
     </div>`
 }
 
+// 学习日志-杂志阅读行（阅读更多）：质量数字=专注占比（engaged/total），
+// 无评分模型；生词本 add 数即本次加生词量
+function rmLogRow(x) {
+  // 占比分母=会话原始总时长（页面可见），total_sec 已被归一化为专注秒数
+  const denom = x.total_ms_r || x.total_sec || 0
+  const pct = denom ? Math.round((x.engaged_sec || 0) / denom * 100) : 0
+  const book = (x.book || '').trim() || '未记书名'
+  return `
+    <div class="fce-his-row gd-focus-row">
+      <span class="fce-his-what">${escapeHtml(x.user || '')} · 📰 ${escapeHtml(book)}</span>
+      <b class="fce-his-score ${pct >= 80 ? 'ok' : pct >= 60 ? '' : 'bad'}">${pct}%</b>
+      <span class="fce-his-date">${fmtDur(x.engaged_sec || 0)} 专注 · ${fmtCnTime(x.started_at)}</span>
+      <span class="gd-focus-chips">
+        <i class="gd-focus-mod rm">杂志</i>
+        ${x.turns ? `<i class="gd-focus-chip">翻页 ${x.turns}</i>` : ''}
+        ${x.lookups ? `<i class="gd-focus-chip">查词 ${x.lookups}</i>` : ''}
+        ${x.vocab_add ? `<i class="gd-focus-chip">生词本 +${x.vocab_add}</i>` : ''}
+      </span>
+    </div>`
+}
+
 /** 学习范围卡：模块徽标 + 范围标签 + 位置区间。
  * 泛读会话=逐章统计（每章一行：章内起止% 进度条 + 该章新学/重合词数）
  * ——统计口径是「当前阅读章节的章内百分比」，新章开启=第N章 0%、
@@ -813,7 +854,10 @@ function fmtCnTime(iso, withDate = true) {
   if (isNaN(d.getTime())) return raw.slice(0, 16).replace('T', ' ')
   const p = (n) => String(n).padStart(2, '0')
   const hm = `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
-  return withDate ? hm : hm.slice(6)
+  if (!withDate) return hm.slice(6)
+  // 非当年补年份：跨年日志混排时「09-03」排「10-06」上面会像排序坏了
+  const yr = d.getFullYear() !== new Date().getFullYear() ? `${d.getFullYear()}-` : ''
+  return yr + hm
 }
 
 /** 秒 → m:ss / mm:ss 刻度文字 */
