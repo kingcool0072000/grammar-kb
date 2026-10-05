@@ -1,0 +1,1359 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>阅读更多 · The Week Junior</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff7a59' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M4 4h6.5a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H4zM20 4h-6.5a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2H20z'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0f0f13; --bg2:#17171d;
+  --ink:#eceae4; --ink-dim:#9b988f; --ink-faint:#6a6862;
+  --accent:#ff7a59; --accent2:#ffb454;
+  --glass:rgba(20,20,26,.78); --line:rgba(255,255,255,.08);
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --bar-h:52px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI","Helvetica Neue",sans-serif;
+  background:
+    radial-gradient(1200px 700px at 50% -10%, #1d1d26 0%, transparent 60%),
+    radial-gradient(900px 600px at 50% 115%, #191922 0%, transparent 55%),
+    var(--bg);
+  color:var(--ink); overflow:hidden; user-select:none;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+
+/* ── 顶部加载进度 ─────────────────────────── */
+#progress{position:fixed;top:0;left:0;right:0;height:3px;z-index:60;pointer-events:none;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));transform-origin:0 50%;transform:scaleX(0);
+  transition:transform .25s ease,opacity .4s ease;opacity:0}
+#progress.on{opacity:1}
+
+/* ── 顶栏 ─────────────────────────── */
+#topbar{position:fixed;top:0;left:0;right:0;height:var(--bar-h);z-index:40;
+  display:flex;align-items:center;gap:14px;padding:0 16px;
+  background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--line);
+  transition:transform .4s var(--ease),opacity .35s ease}
+.tb-left{display:flex;align-items:baseline;gap:10px;min-width:0}
+.tb-left .logo{font-family:Georgia,"Times New Roman",serif;font-style:italic;font-weight:700;
+  font-size:19px;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34vw;
+  background:linear-gradient(100deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.tb-left .issue{font-size:11px;color:var(--ink-dim);border:1px solid var(--line);border-radius:999px;padding:2px 9px;white-space:nowrap}
+#pageLabel{flex:1;text-align:center;font-size:13px;color:var(--ink-dim);letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pageLabel .lbl-sm{display:none}
+.tb-right{display:flex;align-items:center;gap:6px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;min-width:32px;
+  padding:0 10px;border-radius:9px;font-size:12.5px;color:var(--ink-dim);
+  border:1px solid transparent;transition:all .18s ease;white-space:nowrap}
+.btn:hover{background:rgba(255,255,255,.07);color:var(--ink)}
+.btn.active{color:var(--accent2);border-color:rgba(255,180,84,.35);background:rgba(255,180,84,.08)}
+.btn.icon{font-size:16px;padding:0;width:32px}
+#zoomLabel{min-width:46px;text-align:center;font-size:12px;color:var(--ink-dim);cursor:pointer;border-radius:8px;padding:4px 2px}
+#zoomLabel:hover{color:var(--ink);background:rgba(255,255,255,.06)}
+
+/* ── 舞台 ─────────────────────────── */
+#stage-wrap{position:fixed;inset:var(--bar-h) 0 46px 0;overflow:hidden;touch-action:pan-x pan-y}
+#stage{display:flex;height:100%;width:100%;transition:transform .55s var(--ease);will-change:transform}
+#stage.no-anim{transition:none}
+.spread{flex:0 0 100%;height:100%;display:flex;
+  padding:clamp(12px,2.4vh,30px) clamp(12px,2vw,30px);overflow:hidden}
+/* 内层 margin:auto：放得下时居中；放大溢出时回落为 0，顶部内容可滚动到（修 align-items:center 滚不到顶的 bug） */
+.spread-inner{display:flex;align-items:center;justify-content:center;
+  gap:clamp(10px,1.4vw,22px);margin:auto}
+body.zoomed .spread{overflow:auto;scrollbar-width:thin}
+.spread::-webkit-scrollbar{width:9px;height:9px}
+.spread::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:9px;border:2px solid transparent;background-clip:content-box}
+.spread::-webkit-scrollbar-track{background:transparent}
+.page{position:relative;flex:none;background:#fff;border-radius:3px;
+  box-shadow:0 1px 2px rgba(0,0,0,.5),0 12px 34px rgba(0,0,0,.55),0 32px 90px rgba(0,0,0,.4)}
+.page canvas{display:block;border-radius:3px}
+.page .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:#c8c5bd;font-size:15px;letter-spacing:1px;font-family:Georgia,serif}
+body.zoomed .page{cursor:grab}
+body.zoomed .page.panning{cursor:grabbing}
+
+/* pdf.js 文本层（透明、可选中） */
+.textLayer{position:absolute;inset:0;overflow:hidden;line-height:1;text-size-adjust:none;
+  forced-color-adjust:none;transform-origin:0 0;z-index:2;opacity:1;caret-color:transparent;
+  user-select:text;-webkit-user-select:text}
+.textLayer span,.textLayer br{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0% 0%}
+.textLayer ::selection{background:rgba(255,122,89,.4)}
+.textLayer span::-webkit-selection{background:rgba(255,122,89,.4)}
+body.idle .textLayer{cursor:default}
+
+/* 翻页入场 */
+.spread.turn-in .page{animation:pageIn .55s var(--ease) both}
+@keyframes pageIn{from{opacity:.25;transform:scale(.982)}to{opacity:1;transform:scale(1)}}
+
+/* ── 导航箭头 ─────────────────────────── */
+.nav{position:fixed;top:50%;transform:translateY(-50%);z-index:30;width:46px;height:46px;
+  display:flex;align-items:center;justify-content:center;border-radius:50%;
+  background:rgba(22,22,28,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid var(--line);color:var(--ink-dim);font-size:26px;line-height:1;
+  transition:all .22s ease}
+.nav:hover{color:var(--ink);background:rgba(34,34,42,.85);border-color:rgba(255,255,255,.18);transform:translateY(-50%) scale(1.07)}
+.nav.prev{left:14px}.nav.next{right:14px}
+.nav:disabled{opacity:.25;pointer-events:none}
+
+/* ── 底栏 ─────────────────────────── */
+#bottombar{position:fixed;left:0;right:0;bottom:0;height:46px;z-index:40;
+  display:flex;align-items:center;gap:14px;padding:0 16px;
+  background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-top:1px solid var(--line);
+  transition:transform .4s var(--ease),opacity .35s ease}
+#pageHint{font-size:11.5px;color:var(--ink-faint);white-space:nowrap}
+#slider{flex:1;height:22px;-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;min-width:60px}
+#slider::-webkit-slider-runnable-track{height:4px;border-radius:4px;background:rgba(255,255,255,.14)}
+#slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 0 0 3px rgba(255,122,89,.18);transition:transform .15s}
+#slider::-webkit-slider-thumb:hover{transform:scale(1.2)}
+#slider::-moz-range-track{height:4px;border-radius:4px;background:rgba(255,255,255,.14)}
+#slider::-moz-range-thumb{width:14px;height:14px;border:none;border-radius:50%;background:var(--accent)}
+
+/* idle 隐藏 */
+body.idle #topbar{transform:translateY(-100%);opacity:0;pointer-events:none}
+body.idle #bottombar{transform:translateY(100%);opacity:0;pointer-events:none}
+body.idle .nav{opacity:0;pointer-events:none}
+
+/* ── 拖放/空态 ─────────────────────────── */
+#dropHint{position:fixed;inset:var(--bar-h) 0 46px 0;z-index:25;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px}
+#dropHint.show{display:flex}
+#dropHint .card{max-width:520px;padding:44px 40px;border-radius:18px;
+  border:1.5px dashed rgba(255,255,255,.18);background:rgba(255,255,255,.025)}
+#dropHint h2{font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:26px;margin-bottom:10px;
+  background:linear-gradient(100deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+#dropHint p{font-size:13.5px;color:var(--ink-dim);line-height:1.9}
+#dropHint .btn{height:40px;padding:0 22px;font-size:14px;margin-top:18px;color:var(--ink);
+  background:linear-gradient(120deg,var(--accent),#ff9448);border-radius:11px;font-weight:600}
+#dropHint .btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+body.dragover #dropHint{display:flex}
+body.dragover #dropHint .card{border-color:var(--accent);background:rgba(255,122,89,.06)}
+
+/* ── 加载 spinner ─────────────────────────── */
+#loader{position:fixed;inset:0;z-index:45;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  background:rgba(15,15,19,.55);backdrop-filter:blur(4px)}
+#loader.show{display:flex}
+.spin{width:38px;height:38px;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:var(--accent);animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+#loader .txt{font-size:13px;color:var(--ink-dim)}
+
+/* ── 划选查词 pill ─────────────────────────── */
+#selPill{position:fixed;z-index:52;height:32px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:600;
+  color:#fff;background:linear-gradient(120deg,var(--accent),#ff9448);box-shadow:0 6px 20px rgba(255,122,89,.35);
+  display:none;align-items:center;animation:popIn .18s ease}
+#selPill.show{display:flex}
+@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* ── 查词弹窗 ─────────────────────────── */
+#dictPop{position:fixed;z-index:55;width:min(430px,calc(100vw - 28px));max-height:min(62vh,560px);
+  display:none;flex-direction:column;border-radius:15px;overflow:hidden;
+  background:rgba(24,24,31,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.12);box-shadow:0 24px 70px rgba(0,0,0,.6);
+  animation:popIn .2s ease}
+#dictPop.show{display:flex}
+.dp-body{overflow-y:auto;padding:16px 18px;scrollbar-width:thin}
+.dp-word{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.dp-word .w{font-family:Georgia,serif;font-size:23px;font-weight:700;color:var(--accent2)}
+.dp-word .phon{font-size:13px;color:var(--ink-dim)}
+.dp-word .audio{font-size:15px;line-height:1;padding:2px 6px;border-radius:7px}
+.dp-word .audio:hover{background:rgba(255,255,255,.08)}
+.dp-close{position:absolute;top:8px;right:10px;font-size:15px;color:var(--ink-faint);width:28px;height:28px;border-radius:8px}
+.dp-close:hover{color:var(--ink);background:rgba(255,255,255,.08)}
+.dp-meanings{margin-top:12px;display:flex;flex-direction:column;gap:12px}
+.dp-trans{margin-top:12px;font-size:14.5px;line-height:1.8;color:var(--ink);white-space:pre-line}
+.dp-defs{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);
+  font-size:12.5px;line-height:1.7;color:var(--ink-dim);white-space:pre-line}
+.dp-badges{display:flex;gap:6px;margin-top:7px}
+.dp-badges .badge{font-size:10.5px;color:var(--accent2);border:1px solid rgba(255,180,84,.3);
+  border-radius:6px;padding:1.5px 7px;background:rgba(255,180,84,.07)}
+.infl{margin-top:9px;font-size:12px;color:var(--ink-dim);
+  padding:7px 10px;border-radius:8px;background:rgba(255,255,255,.05)}
+.dp-foot .src{font-size:11px;color:var(--ink-faint);align-self:center}
+.dp-foot .links{display:inline-flex;gap:14px;margin-left:auto;align-self:center}
+.dp-foot .links a{margin-left:0}
+.dp-m .pos{display:inline-block;font-size:11px;font-style:italic;color:var(--accent);
+  border:1px solid rgba(255,122,89,.3);border-radius:6px;padding:1px 7px;margin-bottom:5px}
+.dp-m .def{font-size:13.5px;line-height:1.65;color:var(--ink)}
+.dp-m .def+.def{margin-top:5px}
+.dp-m .ex{font-size:12.5px;color:var(--ink-dim);font-style:italic;margin-top:3px}
+.dp-foot{display:flex;gap:8px;flex-wrap:wrap;padding:11px 18px;border-top:1px solid var(--line)}
+.dp-foot .btn{border:1px solid var(--line)}
+.dp-foot .btn.primary{color:#fff;background:linear-gradient(120deg,var(--accent),#ff9448);border:none;font-weight:600}
+.dp-foot a{color:var(--ink-dim);font-size:12px;text-decoration:none;align-self:center;margin-left:auto}
+.dp-foot a:hover{color:var(--accent2)}
+.dp-loading{display:flex;align-items:center;gap:10px;padding:6px 0;color:var(--ink-dim);font-size:13px}
+.dp-loading .spin{width:18px;height:18px;border-width:2px}
+.dp-err{font-size:13px;color:var(--ink-dim);line-height:1.7}
+.dp-err a{color:var(--accent2)}
+
+/* ── 生词本面板 ─────────────────────────── */
+#vocabPanel{position:fixed;top:0;right:0;bottom:0;width:min(360px,92vw);z-index:50;
+  display:flex;flex-direction:column;background:rgba(21,21,27,.94);
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  border-left:1px solid var(--line);transform:translateX(105%);
+  transition:transform .42s var(--ease);box-shadow:-18px 0 60px rgba(0,0,0,.45)}
+#vocabPanel.open{transform:none}
+.vp-head{display:flex;align-items:center;gap:8px;padding:15px 16px 11px;border-bottom:1px solid var(--line)}
+.vp-head h3{font-size:15px;font-weight:700;flex:1}
+.vp-head h3 .cnt{color:var(--accent2);font-family:Georgia,serif}
+.vp-search{display:flex;gap:7px;padding:11px 14px;border-bottom:1px solid var(--line)}
+.vp-search input{flex:1;height:36px;border-radius:9px;border:1px solid var(--line);
+  background:rgba(255,255,255,.05);color:var(--ink);padding:0 12px;font-size:13.5px;outline:none}
+.vp-search input:focus{border-color:rgba(255,180,84,.5)}
+.vp-search input::placeholder{color:var(--ink-faint)}
+.vp-result{position:relative;max-height:44vh;overflow-y:auto;scrollbar-width:thin;padding-bottom:4px}
+.vp-result::after{content:'';position:absolute;left:0;right:0;bottom:0;height:22px;pointer-events:none;
+  background:linear-gradient(to bottom,rgba(21,21,27,0),rgba(21,21,27,.95))}
+#vocabList{flex:1;overflow-y:auto;padding:6px 8px;scrollbar-width:thin}
+#vocabList::-webkit-scrollbar,.dp-body::-webkit-scrollbar,.vp-result::-webkit-scrollbar{width:8px}
+#vocabList::-webkit-scrollbar-thumb,.dp-body::-webkit-scrollbar-thumb,.vp-result::-webkit-scrollbar-thumb{background:rgba(255,255,255,.13);border-radius:8px}
+.vp-item{position:relative;padding:11px 12px 11px 14px;border-radius:11px;cursor:pointer;transition:background .15s}
+.vp-item:hover{background:rgba(255,255,255,.05)}
+.vp-item .w{font-family:Georgia,serif;font-size:15.5px;font-weight:700;color:var(--ink)}
+.vp-item .w::first-letter{text-transform:uppercase}
+.vp-item .phon{font-size:11.5px;color:var(--ink-faint);margin-left:7px}
+.vp-item .d{font-size:12px;color:var(--ink-dim);line-height:1.55;margin-top:3px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.vp-item .del{position:absolute;top:9px;right:9px;width:24px;height:24px;border-radius:7px;
+  color:var(--ink-faint);font-size:13px;opacity:0;transition:opacity .15s}
+.vp-item:hover .del{opacity:1}
+.vp-item .del:hover{color:#ff6b6b;background:rgba(255,107,107,.12)}
+.vp-empty{padding:40px 20px;text-align:center;color:var(--ink-faint);font-size:13px;line-height:2}
+.vp-empty .big{font-size:30px;display:block;margin-bottom:8px}
+.vp-tools{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line)}
+
+/* ── toast ─────────────────────────── */
+#toast{position:fixed;left:50%;bottom:64px;transform:translateX(-50%) translateY(8px);z-index:70;
+  padding:9px 18px;border-radius:999px;font-size:13px;color:var(--ink);
+  background:rgba(30,30,38,.92);border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.5);
+  opacity:0;pointer-events:none;transition:all .3s ease}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── 学习日志 #history ─────────────────────────── */
+#histOverlay{position:fixed;inset:0;z-index:80;display:none;flex-direction:column;
+  background:radial-gradient(1100px 600px at 50% -8%, #1d1d26 0%, transparent 60%), var(--bg);
+  opacity:0;transition:opacity .3s ease}
+#histOverlay.show{display:flex;opacity:1}
+.hist-head{flex:none;display:flex;align-items:center;gap:14px;padding:16px 26px;border-bottom:1px solid var(--line)}
+.hist-head h2{font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:21px;
+  background:linear-gradient(100deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hist-head .sub{font-size:12px;color:var(--ink-faint)}
+.hist-head .sp{flex:1}
+.hist-body{flex:1;overflow-y:auto;padding:22px 26px 60px;scrollbar-width:thin}
+.hist-body::-webkit-scrollbar{width:9px}
+.hist-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.13);border-radius:8px}
+.hist-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{padding:16px 18px;border-radius:13px;background:rgba(255,255,255,.035);border:1px solid var(--line)}
+.stat-card .v{font-family:Georgia,serif;font-size:26px;font-weight:700;color:var(--accent2);line-height:1.1}
+.stat-card .k{font-size:11.5px;color:var(--ink-dim);margin-top:6px}
+.stat-card .d{font-size:10.5px;color:var(--ink-faint);margin-top:3px}
+.hist-sec{margin-bottom:24px}
+.hist-sec h3{font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:12px;letter-spacing:.3px}
+.hist-sec h3 .note{font-weight:400;font-size:11px;color:var(--ink-faint);margin-left:8px}
+.hbar-row{display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:12px;color:var(--ink-dim)}
+.hbar-row .lab{flex:none;width:110px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbar-row .bar{flex:1;height:14px;border-radius:4px;background:rgba(255,255,255,.05);overflow:hidden}
+.hbar-row .bar i{display:block;height:100%;border-radius:4px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));min-width:2px}
+.hbar-row .num{flex:none;width:84px;font-variant-numeric:tabular-nums}
+table.hist-tb{width:100%;border-collapse:collapse;font-size:12px}
+table.hist-tb th{font-weight:600;color:var(--ink-faint);text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.hist-tb td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.05);color:var(--ink-dim);font-variant-numeric:tabular-nums}
+table.hist-tb td.hl{color:var(--ink)}
+table.hist-tb tr:hover td{background:rgba(255,255,255,.03)}
+.hist-2col{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+#pathCanvas{width:100%;height:320px;border-radius:13px;border:1px solid var(--line);background:rgba(255,255,255,.025)}
+.hist-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.hist-tools .btn{border:1px solid var(--line)}
+.empty-tip{padding:30px;text-align:center;color:var(--ink-faint);font-size:13px}
+@media (max-width:760px){ .hist-2col{grid-template-columns:1fr} .hbar-row .lab{width:76px} }
+
+@media (max-width:640px){
+  .tb-left .issue{display:none}
+  .btn.hide-sm{display:none}
+  #zoomLabel{display:none}
+  #pageHint{display:none}
+  #pageLabel .lbl-full{display:none}
+  #pageLabel .lbl-sm{display:inline}
+  .nav{opacity:.85}
+  .nav{width:38px;height:38px;font-size:22px}
+  .nav.prev{left:7px}.nav.next{right:7px}
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<header id="topbar">
+  <div class="tb-left">
+    <span class="logo" id="bookTitle">The Week Junior</span>
+    <span class="issue" id="bookIssue">562 期</span>
+  </div>
+  <div id="pageLabel">正在载入…</div>
+  <div class="tb-right">
+    <button class="btn" id="btnMode" title="切换 单页 / 双页（快捷键 D）">双页</button>
+    <button class="btn icon hide-sm" id="btnZoomOut" title="缩小（−）">−</button>
+    <span id="zoomLabel" title="点击恢复 100%">100%</span>
+    <button class="btn icon hide-sm" id="btnZoomIn" title="放大（+）">+</button>
+    <button class="btn icon" id="btnFull" title="全屏（F）"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+    <button class="btn" id="btnVocab" title="生词本">生词本</button>
+  </div>
+</header>
+
+<main id="stage-wrap">
+  <div id="stage"></div>
+  <button class="nav prev" id="navPrev" title="上一页（←）">‹</button>
+  <button class="nav next" id="navNext" title="下一页（→）">›</button>
+  <div id="dropHint">
+    <div class="card">
+      <h2>杂志阅读器</h2>
+      <p>把 PDF 拖到这里，或点击下方按钮选择文件。<br>
+      封面单页 · 正文双页展开 · 双击页面上的单词即可查释义。</p>
+      <button class="btn" id="pickBtn">选择 PDF 文件</button>
+      <input type="file" id="fileInput" accept="application/pdf" hidden>
+    </div>
+  </div>
+  <div id="loader"><div class="spin"></div><div class="txt" id="loaderTxt">正在载入杂志…</div></div>
+</main>
+
+<footer id="bottombar">
+  <input type="range" id="slider" min="1" max="1" value="1">
+  <div id="pageHint">← → 翻页 · 双击查词 · F 全屏 · D 单双页 · /#history 学习日志（含云端聚合）</div>
+</footer>
+
+<button id="selPill">查词</button>
+
+<div id="dictPop"></div>
+
+<aside id="vocabPanel">
+  <div class="vp-head">
+    <h3>生词本 <span class="cnt" id="vpCount">0</span></h3>
+    <button class="btn icon" id="vpClose" title="收起"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="vp-search">
+    <input id="vpInput" type="text" placeholder="输入英文单词查释义…" autocomplete="off" spellcheck="false">
+    <button class="btn icon" id="vpSearchBtn" title="查询"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>
+  </div>
+  <div class="vp-result" id="vpResult"></div>
+  <div id="vocabList"></div>
+  <div class="vp-tools">
+    <button class="btn" id="vpExport">复制导出</button>
+    <button class="btn" id="vpClear">清空</button>
+  </div>
+</aside>
+
+<div id="toast"></div>
+
+<div id="histOverlay">
+  <div class="hist-head">
+    <h2>学习日志</h2>
+    <span class="sub">本地统计 · 60s 心跳落盘 · 不上传任何数据</span>
+    <span class="sp"></span>
+    <button class="btn" id="histClose">返回阅读 ✕</button>
+  </div>
+  <div class="hist-body" id="histBody"></div>
+</div>
+
+<script src="assets/pdf.min.js"></script>
+<script>
+'use strict';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/pdf.worker.min.js';
+
+const DEFAULT_PDF = 'the-week-junior-562.pdf';
+const $ = id => document.getElementById(id);
+const els = {
+  stage:$('stage'), wrap:$('stage-wrap'), track:$('stage'),
+  navPrev:$('navPrev'), navNext:$('navNext'),
+  pageLabel:$('pageLabel'), slider:$('slider'), zoomLabel:$('zoomLabel'),
+  btnZoomIn:$('btnZoomIn'), btnZoomOut:$('btnZoomOut'),
+  btnMode:$('btnMode'), btnFull:$('btnFull'), btnVocab:$('btnVocab'),
+  dropHint:$('dropHint'), loader:$('loader'), loaderTxt:$('loaderTxt'),
+  progress:$('progress'), pill:$('selPill'), pop:$('dictPop'),
+  panel:$('vocabPanel'), vpList:$('vocabList'), vpResult:$('vpResult'),
+  vpInput:$('vpInput'), vpCount:$('vpCount'), toast:$('toast'),
+  histOverlay:$('histOverlay'), histBody:$('histBody'),
+  bookTitle:$('bookTitle'), bookIssue:$('bookIssue'),
+};
+
+const state = {
+  pdf:null, fp:'', N:0, mode:'double', spreads:[], index:0, zoom:1,
+  dims:{},            // pageNo -> {w,h}
+  dictCache:new Map(),
+  vocab:[], lastDict:null, panelOpen:false, popupOpen:false,
+};
+
+/* ══════════ PDF 载入 ══════════ */
+async function loadPdf(source, displayName){
+  showLoader(true, '正在载入杂志…');
+  setProgress(0);
+  let task;
+  try{
+    if (source instanceof File){
+      task = pdfjsLib.getDocument({ data: await source.arrayBuffer(), disableFontFace:false, useSystemFonts:false });
+    } else {
+      task = pdfjsLib.getDocument({ url: source, disableFontFace:false, useSystemFonts:false });
+    }
+    task.onProgress = p => { if (p.total) setProgress(p.loaded / p.total); };
+    const pdf = await task.promise;
+    if (state.pdf){ try{ state.pdf.destroy(); }catch(e){} }
+    state.pdf = pdf; state.fp = pdf.fingerprint; state.N = pdf.numPages; state.dims = {};
+    setBookName(displayName || (source instanceof File ? source.name : decodeURIComponent(source.split('/').pop())));
+    const savedMode = localStorage.getItem(`mz.${state.fp}.mode`);
+    state.mode = savedMode || (innerWidth < 760 ? 'single' : 'double');
+    state.zoom = 1; syncZoomUI();
+    state.vocab = JSON.parse(localStorage.getItem(`mz.${state.fp}.vocab`) || '[]');
+    renderVocabList();
+    buildStage();
+    const savedPage = +(localStorage.getItem(`mz.${state.fp}.page`) || 1);
+    goToSpreadOfPage(clamp(savedPage, 1, state.N), false);
+    els.dropHint.classList.remove('show');
+  }catch(err){
+    console.warn(err);
+    els.dropHint.classList.add('show');
+    els.pageLabel.textContent = '载入失败';
+    toast('载入失败：可把 PDF 拖进窗口直接阅读');
+  }finally{
+    showLoader(false); setProgress(null);
+  }
+}
+function setBookName(name){
+  let base = (name || 'Magazine').replace(/\.pdf$/i, '').trim();
+  let issue = '';
+  base = base.replace(/[\s_-]+(\d{1,4})$/, (m, n)=>{ issue = n; return ''; }).trim();
+  base = base.replace(/[-_]+/g, ' ').replace(/\s{2,}/g, ' ');
+  const small = new Set(['a','an','the','and','or','of','for','to','in','on','with','at','by']);
+  base = base.split(' ').map((w,i)=>(i>0 && small.has(w.toLowerCase())) ? w.toLowerCase() : w.charAt(0).toUpperCase()+w.slice(1)).join(' ') || 'Magazine';
+  els.bookTitle.textContent = base;
+  els.bookIssue.textContent = issue ? `${issue} 期` : '';
+  document.title = `${base}${issue ? ' '+issue : ''} · 杂志阅读器`;
+}
+
+/* ══════════ 版面搭建 ══════════ */
+function computeSpreads(){
+  const sp = [];
+  if (state.mode === 'single'){ for (let i=1;i<=state.N;i++) sp.push([i]); }
+  else {
+    sp.push([1]);
+    for (let i=2;i<=state.N;i+=2) sp.push(i+1<=state.N ? [i,i+1] : [i]);
+  }
+  return sp;
+}
+function buildStage(){
+  state.spreads = computeSpreads();
+  els.stage.innerHTML = '';
+  for (const pages of state.spreads){
+    const sp = document.createElement('div'); sp.className = 'spread';
+    const inner = document.createElement('div'); inner.className = 'spread-inner';
+    sp.appendChild(inner);
+    for (const no of pages){
+      const pg = document.createElement('div'); pg.className = 'page'; pg.dataset.no = no;
+      pg.innerHTML = `<div class="ph">${no}</div>`;
+      inner.appendChild(pg);
+    }
+    els.stage.appendChild(sp);
+  }
+  els.slider.max = state.N;
+  syncModeUI();
+}
+
+async function getPageDims(no){
+  if (state.dims[no]) return state.dims[no];
+  const page = await state.pdf.getPage(no);
+  const vp = page.getViewport({scale:1});
+  return state.dims[no] = { w: vp.width, h: vp.height };
+}
+
+async function layoutSpread(spEl){
+  if (!spEl || !spEl.isConnected) return;
+  const pages = spEl.querySelectorAll('.page');
+  const cs = getComputedStyle(spEl);
+  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  const inner = spEl.querySelector('.spread-inner');
+  const gap = parseFloat(getComputedStyle(inner).columnGap) || 0;
+  const k = pages.length;
+  const availW = spEl.clientWidth - padX - gap*(k-1);
+  const availH = spEl.clientHeight - padY;
+  for (const pg of pages){
+    const no = +pg.dataset.no;
+    const d = await getPageDims(no);
+    if (!pg.isConnected) return;
+    const scale = Math.min(availW/(k*d.w), availH/d.h) * state.zoom;
+    renderPage(pg, no, scale);
+  }
+}
+
+const inflight = new WeakMap();
+async function renderPage(pg, no, scale){
+  const key = `${no}@${Math.round(scale*1000)}`;
+  if (pg.dataset.key === key && pg.dataset.done) { sizePage(pg, no, scale); return; }
+  if (inflight.get(pg) === key) { sizePage(pg, no, scale); return; }
+  inflight.set(pg, key);
+  pg.dataset.key = key; pg.dataset.done = '';
+  sizePage(pg, no, scale);
+  pg.innerHTML = `<div class="ph">${no}</div>`;
+  try{
+    const page = await state.pdf.getPage(no);
+    if (pg.dataset.key !== key) return;
+    const vpCss = page.getViewport({ scale });
+    const dpr = Math.min(devicePixelRatio||1, 2, Math.sqrt(34e6/(vpCss.width*vpCss.height)) || 1);
+    const vpHi = page.getViewport({ scale: scale * dpr });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(vpHi.width); canvas.height = Math.floor(vpHi.height);
+    canvas.style.width = vpCss.width+'px'; canvas.style.height = vpCss.height+'px';
+    await page.render({ canvasContext: canvas.getContext('2d', {alpha:false}), viewport: vpHi }).promise;
+    if (pg.dataset.key !== key) return;
+    pg.innerHTML = ''; pg.appendChild(canvas);
+    const tl = document.createElement('div'); tl.className = 'textLayer';
+    tl.style.setProperty('--scale-factor', scale);
+    pg.appendChild(tl);
+    const tc = await page.getTextContent();
+    if (pg.dataset.key !== key) return;
+    if (tc.items.length){
+      // 文本层默认用系统 fallback 字体 + scaleX 硬拉宽度，选区会漂移；
+      // 把 styles 指回页面内嵌字体（fontName 即 loadedName，渲染时已注册），度量与 PDF 一致
+      let hasEmbedded = false;
+      for (const k of Object.keys(tc.styles || {})){
+        if ([...document.fonts].some(f => f.family === k)){
+          tc.styles[k].fontFamily = k;
+          hasEmbedded = true;
+        }
+      }
+      if (hasEmbedded) await document.fonts.ready;
+      await pdfjsLib.renderTextLayer({
+        textContent: tc, container: tl, viewport: vpCss, textDivs: [],
+      }).promise;
+    }
+    if (pg.dataset.key !== key) return;
+    pg.dataset.done = '1';
+  }catch(e){ console.warn('render page', no, e); }
+  finally{ if (inflight.get(pg) === key) inflight.delete(pg); }
+}
+function sizePage(pg, no, scale){
+  const d = state.dims[no]; if (!d) return;
+  pg.style.width = Math.round(d.w*scale)+'px';
+  pg.style.height = Math.round(d.h*scale)+'px';
+}
+
+/* ══════════ 翻页与渲染调度 ══════════ */
+function goTo(i, animate=true, method='program'){
+  i = clamp(i, 0, state.spreads.length-1);
+  if (method !== 'program') Stats.turn(method);
+  state.index = i;
+  els.stage.classList.toggle('no-anim', !animate);
+  els.stage.style.transform = `translateX(${-i*100}%)`;
+  if (animate){
+    const sp = els.stage.children[i];
+    if (sp){ sp.classList.remove('turn-in'); void sp.offsetWidth; sp.classList.add('turn-in'); }
+  }
+  els.navPrev.disabled = i===0;
+  els.navNext.disabled = i===state.spreads.length-1;
+  const pages = state.spreads[i] || [];
+  els.slider.value = pages[0] || 1;
+  const range = pages.length===2 ? `${pages[0]}–${pages[1]}` : `${pages[0]}`;
+  els.pageLabel.innerHTML = `<span class="lbl-full">第 ${range} 页 · 共 ${state.N} 页</span><span class="lbl-sm">${range} / ${state.N}</span>`;
+  if (state.fp) localStorage.setItem(`mz.${state.fp}.page`, pages[0]);
+  renderAround();
+  closePop();
+}
+function goToSpreadOfPage(no, animate=true, method='program'){
+  const i = state.spreads.findIndex(sp => sp.includes(no));
+  if (i >= 0) goTo(Math.max(0,i), animate, method);
+}
+function renderAround(){
+  const i = state.index;
+  for (const sp of [i-1,i,i+1]){
+    if (sp>=0 && sp<state.spreads.length) layoutSpread(els.stage.children[sp]);
+  }
+  // 远端释放显存
+  els.stage.querySelectorAll('.spread').forEach((sp,j)=>{
+    if (Math.abs(j-i) > 2){
+      sp.querySelectorAll('.page').forEach(pg=>{ if (pg.dataset.done){ pg.innerHTML=`<div class="ph">${pg.dataset.no}</div>`; pg.dataset.done=''; } });
+    }
+  });
+  // 超出视口的页定位到中间
+  requestAnimationFrame(()=>{
+    const cur = els.stage.children[i];
+    if (cur && (cur.scrollWidth > cur.clientWidth || cur.scrollHeight > cur.clientHeight)){
+      cur.scrollLeft = (cur.scrollWidth - cur.clientWidth)/2;
+      cur.scrollTop = (cur.scrollHeight - cur.clientHeight)/2;
+    }
+  });
+}
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+
+/* ══════════ 模式 / 缩放 ══════════ */
+function setMode(mode){
+  if (mode===state.mode) return;
+  const curPage = (state.spreads[state.index]||[1])[0];
+  state.mode = mode;
+  if (state.fp) localStorage.setItem(`mz.${state.fp}.mode`, mode);
+  buildStage();
+  goToSpreadOfPage(curPage, false);
+  syncModeUI();
+}
+function syncModeUI(){ els.btnMode.textContent = state.mode==='double' ? '双页' : '单页'; }
+function setZoom(z, src='button'){
+  Stats.zoom(src);
+  state.zoom = clamp(z, .6, 3.5);
+  document.body.classList.toggle('zoomed', state.zoom > 1.001);
+  syncZoomUI();
+  const i = state.index;
+  for (const sp of [i-1,i,i+1]) if (sp>=0 && sp<state.spreads.length) layoutSpread(els.stage.children[sp]);
+  renderAround();
+}
+function syncZoomUI(){ els.zoomLabel.textContent = Math.round(state.zoom*100)+'%'; }
+
+/* ══════════ 查词（ECDICT 本地词典，纯离线） ══════════ */
+function pickWord(){
+  const s = getSelection();
+  if (!s || s.isCollapsed) return null;
+  const t = s.toString().trim();
+  if (!t || t.length > 80) return null;
+  const m = t.match(/[A-Za-z][A-Za-z'’-]*/);
+  return m ? m[0].replace(/['’-]+$/,'') : null;
+}
+function selRect(){
+  const s = getSelection();
+  if (!s.rangeCount) return null;
+  const r = s.getRangeAt(0).getBoundingClientRect();
+  if (!r || (!r.width && !r.height)) return null;
+  return r;
+}
+const bucketCache = new Map();
+async function loadBucket(key){
+  if (bucketCache.has(key)) return bucketCache.get(key);
+  const p = fetch(`dict/${key}.json`).then(r=>{
+    if (!r.ok) throw new Error('dict bucket missing');
+    return r.json();
+  }).catch(()=>({}));
+  bucketCache.set(key, p);
+  return p;
+}
+function normalizeWord(w){ return w.toLowerCase().replace(/[^a-z'’\- ]/g,''); }
+async function ecdictLookup(raw){
+  const w = normalizeWord(raw);
+  if (!w) return null;
+  const bucket = await loadBucket((w.slice(0,2)+'__').slice(0,2));
+  let hit = bucket[w];
+  if (hit && hit.r){        // 变形 → 查原形
+    const b2 = await loadBucket((hit.r.slice(0,2)+'__').slice(0,2));
+    hit = b2[hit.r] || null;
+    if (hit) hit = { ...hit, infl: w };
+  }
+  if (hit) return toEntry(hit, w);
+  // 后缀推断（所有格/词典漏网的常规变形）：stories→story, world's→world …
+  for (const cand of inflCandidates(w)){
+    const b = await loadBucket((cand.slice(0,2)+'__').slice(0,2));
+    const h = b[cand];
+    if (h && (h.t !== undefined || h.d !== undefined)) return toEntry({ ...h, infl: w }, w);
+  }
+  return null;
+}
+function toEntry(hit, w){
+  return { word: hit.w || w, phon: hit.p || '', trans: hit.t || '', defs: hit.d || '',
+           collins: hit.c || 0, oxford: hit.o || 0, infl: hit.infl || '' };
+}
+function inflCandidates(w){
+  const out = [];
+  const push = x => { if (x && x.length >= 3 && x !== w && !out.includes(x)) out.push(x); };
+  if (w.endsWith("'s") || w.endsWith("’s")) push(w.slice(0,-2));
+  else if (w.endsWith("'") || w.endsWith("’")) push(w.slice(0,-1));
+  push(w.replace(/ies$/, 'y'));
+  push(w.replace(/([a-z])\1ed$/, '$1'));
+  push(w.replace(/([a-z])\1ing$/, '$1'));
+  push(w.replace(/ed$/, 'e'));
+  push(w.replace(/ed$/, ''));
+  push(w.replace(/ing$/, 'e'));
+  push(w.replace(/ing$/, ''));
+  push(w.replace(/es$/, ''));
+  push(w.replace(/s$/, ''));
+  return out;
+}
+async function fetchDict(word){
+  const w = normalizeWord(word);
+  if (state.dictCache.has(w)) return state.dictCache.get(w);
+  const p = ecdictLookup(w);
+  state.dictCache.set(w, p);
+  return p;
+}
+function dictCardHTML(entry){
+  const spk = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z" fill="currentColor" stroke="none"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>`;
+  const badges = (entry.collins ? `<span class="badge">柯林斯 ${entry.collins}★</span>` : '')
+              + (entry.oxford ? `<span class="badge">牛津核心</span>` : '');
+  const inflNote = entry.infl ? `<div class="infl">「${esc(entry.infl)}」是「${esc(entry.word)}」的变形，已显示原形释义</div>` : '';
+  const body = `${entry.trans ? `<div class="dp-trans">${esc(entry.trans.trim())}</div>` : ''}${entry.defs ? `<div class="dp-defs">${esc(entry.defs.trim())}</div>` : ''}`;
+  const speak = `<button class="audio" data-speak="${esc(entry.word)}" title="发音">${spk}</button>`;
+  const foot = `<div class="dp-foot">
+      <button class="btn primary" data-add="1">＋ 加入生词本</button>
+      <span class="src">ECDICT · 离线</span>
+      <a href="https://dict.youdao.com/result?word=${encodeURIComponent(entry.word)}&lang=en" target="_blank" rel="noopener">有道 ↗</a>
+    </div>`;
+  return `
+    <div class="dp-body">
+      <div class="dp-word">
+        <span class="w">${esc(entry.word)}</span>
+        ${entry.phon?`<span class="phon">/${esc(entry.phon)}/</span>`:''}
+        ${speak}
+      </div>
+      ${badges?`<div class="dp-badges">${badges}</div>`:''}
+      ${inflNote}
+      ${body}
+    </div>
+    ${foot}`;
+}
+function missCardHTML(word){
+  return `<div class="dp-body"><div class="dp-err">本地词典没有收录「${esc(word)}」<br>（可能是人名、地名或专有名词），试试在线词典：</div></div>
+    <div class="dp-foot">
+      <span class="links">
+        <a href="https://dict.youdao.com/result?word=${encodeURIComponent(word)}&lang=en" target="_blank" rel="noopener">有道 ↗</a>
+      </span>
+    </div>`;
+}
+async function lookup(word){
+  word = word.trim();
+  if (!word) return null;
+  state.lastDict = null;
+  const hit = await fetchDict(word);
+  Stats.lookup(word, !!hit);
+  if (!hit) return { html: missCardHTML(word) };
+  const entry = { ...hit, local:true };
+  entry.brief = entry.trans ? entry.trans.split('\n')[0] : '';
+  state.lastDict = entry;
+  return { html: dictCardHTML(entry) };
+}
+
+/* ── 弹窗 ── */
+function showPop(html, rect){
+  els.pill.classList.remove('show');
+  els.pop.innerHTML = `<button class="dp-close" data-close="1" title="关闭"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>${html}`;
+  els.pop.classList.add('show');
+  state.popupOpen = true;
+  els.pop.style.visibility = 'hidden';
+  requestAnimationFrame(()=>{
+    const pw = els.pop.offsetWidth, ph = els.pop.offsetHeight;
+    let x, y;
+    if (rect){
+      x = clamp(rect.left + rect.width/2 - pw/2, 12, innerWidth - pw - 12);
+      y = rect.top - ph - 12;
+      if (y < 60) y = Math.min(rect.bottom + 12, innerHeight - ph - 12);
+    } else {
+      x = innerWidth/2 - pw/2; y = innerHeight*0.3;
+    }
+    els.pop.style.left = x+'px'; els.pop.style.top = y+'px';
+    els.pop.style.visibility = '';
+  });
+}
+function closePop(){ els.pop.classList.remove('show'); state.popupOpen = false; }
+
+async function lookupToPop(word, rect){
+  showPop(`<div class="dp-body"><div class="dp-loading"><div class="spin"></div>正在查询 ${esc(word)}…</div></div>`, rect);
+  const res = await lookup(word);
+  if (!state.popupOpen || !res) return;
+  showPop(res.html, rect);
+  speakWord(state.lastDict ? state.lastDict.word : word);
+}
+
+/* ── 生词本 ── */
+function speakWord(word){
+  try{
+    const u = new SpeechSynthesisUtterance(word);
+    u.lang = 'en-US'; u.rate = .92;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }catch(e){ toast('此浏览器不支持语音朗读'); }
+}
+function saveVocab(){ localStorage.setItem(`mz.${state.fp}.vocab`, JSON.stringify(state.vocab)); }
+function addVocab(entry){
+  if (!entry) return;
+  Stats.vocabOp('add');
+  state.vocab = state.vocab.filter(v=>v.word!==entry.word);
+  state.vocab.unshift({ word:entry.word, phon:entry.phon, brief:entry.brief, ts:Date.now() });
+  state.vocab = state.vocab.slice(0, 500);
+  saveVocab(); renderVocabList();
+  toast(`「${entry.word}」已加入生词本`);
+}
+function renderVocabList(){
+  els.vpCount.textContent = state.vocab.length;
+  els.vpList.innerHTML = state.vocab.length ? state.vocab.map((v,i)=>`
+    <div class="vp-item" data-i="${i}">
+      <span class="w">${esc(v.word)}</span>${v.phon?`<span class="phon">/${esc(v.phon)}/</span>`:''}
+      <div class="d">${esc(v.brief||'')}</div>
+      <button class="del" data-del="${i}" title="删除"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>`).join('')
+    : `<div class="vp-empty"><svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" style="display:block;margin:0 auto 10px"><path d="M4 4h6.5a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H4zM20 4h-6.5a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2H20z"/></svg>还没有生词<br>阅读时双击单词，点「＋ 加入生词本」</div>`;
+}
+async function lookupToPanel(word){
+  els.vpResult.innerHTML = `<div class="dp-loading" style="padding:12px 16px"><div class="spin"></div>正在查询 ${esc(word)}…</div>`;
+  const res = await lookup(word);
+  if (!res){ els.vpResult.innerHTML = ''; return; }
+  els.vpResult.innerHTML = res.html;
+}
+function openPanel(open=true){
+  state.panelOpen = open;
+  els.panel.classList.toggle('open', open);
+  els.btnVocab.classList.toggle('active', open);
+  if (open){ closePop(); renderVocabList(); setTimeout(()=>els.vpInput.focus(), 250); }
+}
+
+/* ══════════ UI 基础 ══════════ */
+function toast(msg){
+  els.toast.textContent = msg; els.toast.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(()=>els.toast.classList.remove('show'), 2200);
+}
+function showLoader(on, txt){ els.loader.classList.toggle('show', !!on); if (txt) els.loaderTxt.textContent = txt; }
+function setProgress(r){
+  if (r==null){ els.progress.classList.remove('on'); els.progress.style.transform='scaleX(0)'; return; }
+  els.progress.classList.add('on');
+  els.progress.style.transform = `scaleX(${clamp(r,0.02,1)})`;
+}
+const esc = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ══════════ 事件 ══════════ */
+els.navPrev.onclick = ()=>goTo(state.index-1, true, 'arrow');
+els.navNext.onclick = ()=>goTo(state.index+1, true, 'arrow');
+els.btnMode.onclick = ()=>setMode(state.mode==='double'?'single':'double');
+els.btnZoomIn.onclick = ()=>setZoom(state.zoom*1.2, 'button');
+els.btnZoomOut.onclick = ()=>setZoom(state.zoom/1.2, 'button');
+els.zoomLabel.onclick = ()=>setZoom(1, 'button');
+els.btnFull.onclick = ()=>{
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(()=>toast('浏览器拒绝了全屏'));
+};
+els.btnVocab.onclick = ()=>openPanel(!state.panelOpen);
+$('vpClose').onclick = ()=>openPanel(false);
+
+let sliderT;
+els.slider.addEventListener('input', ()=>{
+  clearTimeout(sliderT);
+  sliderT = setTimeout(()=>goToSpreadOfPage(+els.slider.value, true, 'slider'), 60);
+});
+
+document.addEventListener('keydown', e=>{
+  if (e.target.matches('input,textarea')) return;
+  if (Stats._histOpen && e.key!=='Escape') return;
+  Stats.bump();
+  switch(e.key){
+    case 'ArrowRight': case 'PageDown': goTo(state.index+1, true, 'key'); break;
+    case 'ArrowLeft': case 'PageUp': goTo(state.index-1, true, 'key'); break;
+    case 'Home': goTo(0, true, 'key'); break;
+    case 'End': goTo(state.spreads.length-1, true, 'key'); break;
+    case '+': case '=': setZoom(state.zoom*1.2, 'key'); break;
+    case '-': setZoom(state.zoom/1.2, 'key'); break;
+    case '0': setZoom(1, 'key'); break;
+    case 'f': case 'F': els.btnFull.click(); break;
+    case 'd': case 'D': els.btnMode.click(); break;
+    case 'Escape':
+      if (state.popupOpen) closePop();
+      else if (state.panelOpen) openPanel(false);
+      else if (location.hash === '#history') location.hash = '';
+      break;
+  }
+});
+
+/* 划选 → 查词 pill；双击 → 直接查 */
+function updatePill(){
+  const w = pickWord();
+  const r = w ? selRect() : null;
+  if (w && r){
+    els.pill.classList.add('show');
+    const x = clamp(r.left + r.width/2 - 30, 8, innerWidth - 68);
+    const y = r.top - 40 > 58 ? r.top - 40 : r.bottom + 8;
+    els.pill.style.left = x+'px'; els.pill.style.top = y+'px';
+  } else {
+    els.pill.classList.remove('show');
+  }
+}
+document.addEventListener('selectionchange', ()=>{ clearTimeout(updatePill._t); updatePill._t = setTimeout(updatePill, 120); });
+document.addEventListener('dblclick', e=>{
+  if (!e.target.closest('.textLayer')) return;
+  const w = pickWord(); if (!w) return;
+  lookupToPop(w, selRect());
+});
+els.pill.addEventListener('pointerdown', e=>{
+  e.preventDefault();
+  const w = pickWord(); const r = selRect();
+  els.pill.classList.remove('show');
+  if (w) lookupToPop(w, r);
+});
+document.addEventListener('pointerdown', e=>{
+  if (state.popupOpen && !e.target.closest('#dictPop') && !e.target.closest('#selPill')) closePop();
+  if (!e.target.closest('#selPill') && !e.target.closest('.textLayer') && getSelection().isCollapsed) els.pill.classList.remove('show');
+});
+
+/* 弹窗 / 面板内事件委托 */
+els.pop.addEventListener('click', e=>{
+  const spk = e.target.closest('[data-speak]');
+  if (spk){ speakWord(spk.dataset.speak); return; }
+  if (e.target.closest('[data-close]')){ closePop(); return; }
+  if (e.target.closest('[data-add]')){ addVocab(state.lastDict); return; }
+});
+els.panel.addEventListener('click', e=>{
+  const spk = e.target.closest('[data-speak]');
+  if (spk){ speakWord(spk.dataset.speak); return; }
+  const add = e.target.closest('[data-add]');
+  if (add){ addVocab(state.lastDict); return; }
+  const del = e.target.closest('[data-del]');
+  if (del){ Stats.vocabOp('del'); state.vocab.splice(+del.dataset.del,1); saveVocab(); renderVocabList(); return; }
+  const item = e.target.closest('.vp-item');
+  if (item){ lookupToPanel(state.vocab[+item.dataset.i].word); return; }
+  if (e.target.closest('#vpClear')){
+    if (state.vocab.length && confirm(`清空全部 ${state.vocab.length} 个生词？`)){ Stats.vocabOp('clear'); state.vocab=[]; saveVocab(); renderVocabList(); }
+    return;
+  }
+  if (e.target.closest('#vpExport')){
+    Stats.vocabOp('export');
+    if (!state.vocab.length){ toast('生词本还是空的'); return; }
+    const text = state.vocab.map(v=>`${v.word}\t${v.phon||''}\t${(v.brief||'').replace(/\t|\n/g,' ')}`).join('\n');
+    navigator.clipboard.writeText(text).then(()=>toast(`已复制 ${state.vocab.length} 个生词（可粘贴到 Excel）`), ()=>toast('复制失败'));
+    return;
+  }
+});
+$('vpSearchBtn').onclick = ()=>{ const w=els.vpInput.value.trim(); if(w) lookupToPanel(w); };
+els.vpInput.addEventListener('keydown', e=>{ if (e.key==='Enter'){ const w=els.vpInput.value.trim(); if(w) lookupToPanel(w); } });
+
+/* 拖放 / 选择文件 */
+$('pickBtn').onclick = ()=>$('fileInput').click();
+$('fileInput').addEventListener('change', e=>{ const f=e.target.files[0]; if(f) loadPdf(f); });
+document.addEventListener('dragover', e=>{ e.preventDefault(); document.body.classList.add('dragover'); });
+document.addEventListener('dragleave', e=>{ if (!e.relatedTarget) document.body.classList.remove('dragover'); });
+document.addEventListener('drop', e=>{
+  e.preventDefault(); document.body.classList.remove('dragover');
+  const f = [...(e.dataTransfer.files||[])].find(f=>/\.pdf$/i.test(f.name));
+  if (f) loadPdf(f);
+});
+
+/* 触摸滑动翻页（未放大时） */
+let touch = null;
+els.wrap.addEventListener('pointerdown', e=>{
+  if (e.pointerType!=='touch') return;
+  touch = { x:e.clientX, y:e.clientY };
+});
+els.wrap.addEventListener('pointerup', e=>{
+  if (!touch || didPinch){ touch = null; return; }
+  const dx = e.clientX-touch.x, dy = e.clientY-touch.y; touch = null;
+  const cur = els.stage.children[state.index];
+  if (cur && cur.scrollWidth > cur.clientWidth+4) return;
+  if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy)*1.4) goTo(state.index + (dx<0?1:-1), true, 'swipe');
+});
+
+/* 放大后拖拽平移 */
+let pan = null;
+els.wrap.addEventListener('pointerdown', e=>{
+  if (e.pointerType==='touch') return;
+  if (e.target.closest('.textLayer') || e.target.closest('.nav')) return;
+  const cur = els.stage.children[state.index];
+  if (!cur || (cur.scrollWidth<=cur.clientWidth+2 && cur.scrollHeight<=cur.clientHeight+2)) return;
+  pan = { x:e.clientX, y:e.clientY, sl:cur.scrollLeft, st:cur.scrollTop, el:cur };
+  cur.classList.add('panning');
+  els.wrap.setPointerCapture(e.pointerId);
+});
+els.wrap.addEventListener('pointermove', e=>{
+  if (!pan) return;
+  pan.el.scrollLeft = pan.sl - (e.clientX-pan.x);
+  pan.el.scrollTop = pan.st - (e.clientY-pan.y);
+});
+const endPan = ()=>{ if (pan){ pan.el.classList.remove('panning'); pan=null; } };
+els.wrap.addEventListener('pointerup', endPan);
+els.wrap.addEventListener('pointercancel', endPan);
+
+/* 双指捏合缩放（移动端） + 触摸板 pinch（ctrl+wheel） */
+let softZoom=0, zoomRAF=0;
+function setZoomSoft(z, src='pinch'){
+  softZoom = clamp(z, .6, 3.5);
+  if (!zoomRAF) zoomRAF = requestAnimationFrame(()=>{ zoomRAF=0; setZoom(softZoom, src); });
+}
+const pts = new Map(); let pinch = null, didPinch = false;
+els.wrap.addEventListener('pointerdown', e=>{
+  if (e.pointerType!=='touch') return;
+  pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (pts.size===2){
+    const [a,b]=[...pts.values()];
+    pinch = { d0: Math.hypot(a.x-b.x, a.y-b.y)||1, z0: state.zoom };
+    didPinch = true;
+  }
+});
+els.wrap.addEventListener('pointermove', e=>{
+  if (!pts.has(e.pointerId)) return;
+  pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (pinch && pts.size===2){
+    const [a,b]=[...pts.values()];
+    setZoomSoft(pinch.z0 * (Math.hypot(a.x-b.x, a.y-b.y)/pinch.d0));
+  }
+});
+const endPt = e=>{ pts.delete(e.pointerId); if (pts.size<2) pinch=null; if (!pts.size) setTimeout(()=>didPinch=false, 60); };
+els.wrap.addEventListener('pointerup', endPt);
+els.wrap.addEventListener('pointercancel', endPt);
+els.wrap.addEventListener('gesturestart', e=>e.preventDefault(), {passive:false});
+els.wrap.addEventListener('wheel', e=>{
+  if (!e.ctrlKey) return;   // 触摸板双指捏合在浏览器里表现为 ctrl+wheel
+  e.preventDefault();
+  setZoomSoft(state.zoom * Math.exp(-e.deltaY * 0.0022), 'trackpad');
+}, {passive:false});
+
+/* idle 隐藏工具栏 */
+let idleT;
+function wake(){
+  document.body.classList.remove('idle');
+  clearTimeout(idleT);
+  idleT = setTimeout(()=>{
+    if (!state.popupOpen && !state.panelOpen && getSelection().isCollapsed) document.body.classList.add('idle');
+  }, 3200);
+}
+['pointermove','pointerdown','keydown','wheel','touchstart'].forEach(ev=>document.addEventListener(ev, wake, {passive:true}));
+wake();
+
+/* resize / 全屏变化 → 重排 */
+let rsT;
+addEventListener('resize', ()=>{
+  clearTimeout(rsT);
+  rsT = setTimeout(()=>{ if (state.pdf){ const i=state.index; [i-1,i,i+1].forEach(j=>{ if(j>=0&&j<state.spreads.length) layoutSpread(els.stage.children[j]); }); } }, 160);
+});
+document.addEventListener('fullscreenchange', ()=>setTimeout(()=>dispatchEvent(new Event('resize')), 60));
+
+/* ══════════ 学习日志（本地统计，60s 心跳落盘） ══════════ */
+const Stats = {
+  KEY: 'mz.stats.v1', MAX_SESS: 60, MAX_PATH_PTS: 2400, ENGAGE_MS: 120000,
+  cur: null, _lastAct: 0, _pageEnter: 0, _pathT: 0, _histOpen: false,
+  deviceId: (()=>{ try{ let d = localStorage.getItem('mz.device'); if(!d){ d = 'dev-' + Math.random().toString(36).slice(2,10); localStorage.setItem('mz.device', d); } return d; }catch(e){ return 'dev-unknown'; } })(),
+  _sentLookupN: 0, _sending: false,
+  begin(){
+    const now = Date.now();
+    this.cur = { id: 's'+now.toString(36)+Math.random().toString(36).slice(2,6), start: now, end: now,
+      totalMs: 0, focusMs: 0, engagedMs: 0,
+      pageMs: {}, lookups: [], youdao: [], clicks: {}, turns: {}, turnN: 0,
+      zooms: {}, vocab: {add:0, del:0, export:0, clear:0}, path: [] };
+    this._lastAct = now; this._pageEnter = now;
+  },
+  bump(){ this._lastAct = Date.now(); },
+  click(label){ if(!this.cur) return; this.cur.clicks[label] = (this.cur.clicks[label]||0)+1; },
+  turn(method){
+    if(!this.cur) return;
+    this._settlePage(); this._pageEnter = Date.now();
+    this.cur.turnN++; this.cur.turns[method] = (this.cur.turns[method]||0)+1;
+  },
+  zoom(src){ if(!this.cur) return; this.cur.zooms[src] = (this.cur.zooms[src]||0)+1; },
+  lookup(w, hit){
+    if(!this.cur) return;
+    this.cur.lookups.push({ w: w.toLowerCase().slice(0,40), hit: !!hit, t: Date.now() });
+    if (this.cur.lookups.length > 500) this.cur.lookups.splice(0, this.cur.lookups.length-500);
+  },
+  youdao(w){ if(!this.cur) return; this.cur.youdao.push({ w:(w||'').slice(0,40), t:Date.now() }); },
+  vocabOp(k){ if(!this.cur) return; this.cur.vocab[k] = (this.cur.vocab[k]||0)+1; },
+  pathPt(x, y){
+    if(!this.cur) return;
+    const now = Date.now();
+    if (now - this._pathT < 250) return;
+    this._pathT = now;
+    const p = this.cur.path; p.push(Math.round(x), Math.round(y));
+    if (p.length > this.MAX_PATH_PTS*2){       // 封顶后隔点抽稀
+      const np = [];
+      for (let i=0; i<p.length; i+=4) np.push(p[i], p[i+1]);
+      this.cur.path = np;
+    }
+  },
+  _settlePage(){
+    if(!this.cur || !state.spreads.length) return;
+    const pages = state.spreads[state.index] || [];
+    const dt = Date.now() - this._pageEnter;
+    if (dt > 0) pages.forEach(no=>{ this.cur.pageMs[no] = (this.cur.pageMs[no]||0)+dt; });
+    this._pageEnter = Date.now();
+  },
+  tick(){   // 每秒：可见即计 APP 时长；焦点计专注时长；2 分钟内有交互计专注学习
+    if(!this.cur || document.visibilityState !== 'visible') return;
+    const now = Date.now();
+    this.cur.end = now;
+    this.cur.totalMs += 1000;
+    if (document.hasFocus()){
+      this.cur.focusMs += 1000;
+      if (!this._histOpen && now - this._lastAct <= this.ENGAGE_MS) this.cur.engagedMs += 1000;
+    }
+  },
+  load(){
+    try{ return JSON.parse(localStorage.getItem(this.KEY)) || {sessions:[]}; }
+    catch(e){ return {sessions:[]}; }
+  },
+  payload(snap){
+    return {
+      id: snap.id, device: this.deviceId, book: (state.fp || '').slice(0, 120),
+      start: snap.start, end: snap.end,
+      total_ms: snap.totalMs, focus_ms: snap.focusMs, engaged_ms: snap.engagedMs,
+      turn_count: snap.turnN,
+      pages: Object.fromEntries(Object.entries(snap.pageMs).slice(0, 200).map(([k,v])=>[k, Math.round(v)])),
+      clicks: snap.clicks, ways: { ...snap.turns, ...Object.fromEntries(Object.entries(snap.zooms).map(([k,v])=>['缩放·'+k, v])) },
+      vocab: snap.vocab, youdao: (snap.youdao||[]).length, path_pts: snap.path.length/2,
+      new_lookups: (snap.lookups||[]).slice(this._sentLookupN),
+    };
+  },
+  async report(){
+    if(!this.cur || this._sending) return;
+    this._sending = true;
+    try{
+      const p = this.payload(this.cur);
+      this._sentLookupN = (this.cur.lookups||[]).length;
+      const auth = (()=>{ try{ return JSON.parse(localStorage.getItem('gkb-auth-v1')) || null; }catch(e){ return null; } })();
+      if(!auth || !auth.token) return;   // 未登录和爸学：数据只留本地
+      const res = await fetch('api/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + auth.token },
+        body: JSON.stringify(p),
+      });
+      if (res.status === 401){
+        try{ localStorage.removeItem('gkb-auth-v1'); }catch(e){}
+      }
+    }catch(e){ /* 网络失败：下次心跳重传（new_lookups 增量已预扣，简单起见容忍少量丢失） */ }
+    finally{ this._sending = false; }
+  },
+  flush(){
+    if(!this.cur) return;
+    this._settlePage();
+    const snap = { ...this.cur, pagesVisited: Object.keys(this.cur.pageMs).length };
+    try{
+      const all = this.load();
+      const i = all.sessions.findIndex(s=>s.id===snap.id);
+      if (i >= 0) all.sessions[i] = snap; else all.sessions.push(snap);
+      if (all.sessions.length > this.MAX_SESS) all.sessions.splice(0, all.sessions.length - this.MAX_SESS);
+      localStorage.setItem(this.KEY, JSON.stringify(all));
+    }catch(e){ /* 配额满：静默丢弃最旧一半后重试一次 */
+      try{
+        const all = this.load();
+        all.sessions = all.sessions.slice(-Math.floor(this.MAX_SESS/2));
+        all.sessions = all.sessions.filter(s=>s.id!==snap.id); all.sessions.push(snap);
+        localStorage.setItem(this.KEY, JSON.stringify(all));
+      }catch(e2){}
+    }
+    this.report();
+  },
+};
+
+/* 全局点击埋点：按钮 + 有道链接 */
+document.addEventListener('click', e=>{
+  Stats.bump();
+  const a = e.target.closest('a[href*="youdao"]');
+  if (a){
+    try{ Stats.youdao(new URL(a.href).searchParams.get('word') || ''); }catch(_){}
+  }
+  const b = e.target.closest('button');
+  if (b){
+    const label = b.id || 'btn:' + (b.title || b.textContent.trim().slice(0,8) || '?');
+    Stats.click(label);
+  }
+}, true);
+
+/* 鼠标轨迹（舞台区域内，250ms 采样） */
+els.wrap.addEventListener('pointermove', e=>{
+  if (e.pointerType === 'touch') return;
+  Stats.pathPt(e.clientX, e.clientY);
+}, {passive:true});
+
+/* ── #history 展示 ── */
+function fmtDur(ms){
+  if (ms < 60000) return Math.max(1, Math.round(ms/1000)) + '秒';
+  const m = Math.round(ms/60000);
+  if (m < 60) return m + '分钟';
+  return Math.floor(m/60) + '小时' + (m%60 ? (m%60)+'分' : '');
+}
+function fmtClock(ts){ const d = new Date(ts); const p = n=>String(n).padStart(2,'0'); return `${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+
+function renderHistory(){
+  const sessions = Stats.load().sessions.slice().sort((a,b)=>a.start-b.start);
+  const body = els.histBody;
+  if (!sessions.length){
+    body.innerHTML = `<div class="empty-tip">还没有学习记录<br>回到阅读页（Esc），读一会儿再来吧</div>`;
+    return;
+  }
+  let totalMs=0, focusMs=0, engagedMs=0, turnN=0, vocabAdd=0, youdaoN=0;
+  const pageMs = {}, words = {}, clicks = {}, ways = {};
+  sessions.forEach(s=>{
+    totalMs += s.totalMs; focusMs += s.focusMs; engagedMs += s.engagedMs; turnN += s.turnN||0;
+    vocabAdd += (s.vocab&&s.vocab.add)||0; youdaoN += (s.youdao||[]).length;
+    Object.entries(s.pageMs||{}).forEach(([k,v])=>pageMs[k]=(pageMs[k]||0)+v);
+    (s.lookups||[]).forEach(l=>{ words[l.w] = words[l.w]||{n:0,miss:0}; words[l.w].n++; if(!l.hit) words[l.w].miss++; });
+    Object.entries(s.clicks||{}).forEach(([k,v])=>clicks[k]=(clicks[k]||0)+v);
+    Object.entries(s.turns||{}).forEach(([k,v])=>ways['翻页·'+k]=(ways['翻页·'+k]||0)+v);
+    Object.entries(s.zooms||{}).forEach(([k,v])=>ways['缩放·'+k]=(ways['缩放·'+k]||0)+v);
+  });
+  const lookupN = Object.values(words).reduce((a,b)=>a+b.n, 0);
+  const uniqWords = Object.keys(words).length;
+  const focusPct = totalMs ? Math.round(engagedMs/totalMs*100) : 0;
+  const pagesRead = Object.keys(pageMs).length;
+  const avgPage = pagesRead ? Object.values(pageMs).reduce((a,b)=>a+b,0)/pagesRead : 0;
+
+  const cards = [
+    ['总 APP 时间', fmtDur(totalMs), '页面可见即计入'],
+    ['专注学习时间', fmtDur(engagedMs), '窗口焦点 + 2 分钟内有交互'],
+    ['专注度', focusPct+'%', '专注学习 ÷ 总时长'],
+    ['翻页次数', turnN+' 次', '键盘/箭头/滑块/滑动'],
+    ['查词次数', lookupN+' 次', uniqWords+' 个不同单词'],
+    ['生词本加入', vocabAdd+' 次', ''],
+    ['有道跳转', youdaoN+' 次', '点击 ↗ 链接'],
+    ['读过页数', pagesRead+' 页', '平均停留 '+fmtDur(avgPage)],
+  ].map(([k,v,d])=>`<div class="stat-card"><div class="v">${v}</div><div class="k">${k}</div>${d?`<div class="d">${d}</div>`:''}</div>`).join('');
+
+  // 每日专注（14 天）
+  const days = [];
+  for (let i=13; i>=0; i--){
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-i);
+    days.push({ key: d.getTime(), label: `${d.getMonth()+1}/${d.getDate()}`, ms: 0 });
+  }
+  const day0 = days[0].key;
+  sessions.forEach(s=>{
+    const dk = new Date(s.start); dk.setHours(0,0,0,0);
+    const i = days.findIndex(x=>x.key===dk.getTime());
+    if (i >= 0) days[i].ms += s.engagedMs;
+    else if (dk.getTime() >= day0) {}
+  });
+  const maxDay = Math.max(...days.map(x=>x.ms), 1);
+  const dayBars = days.map(x=>`
+    <div class="hbar-row"><span class="lab">${x.label}</span>
+      <span class="bar"><i style="width:${Math.round(x.ms/maxDay*100)}%"></i></span>
+      <span class="num">${x.ms>=60000 ? Math.round(x.ms/60000)+' 分' : x.ms ? '<1 分' : '—'}</span></div>`).join('');
+
+  // 会话表（最近 20）
+  const rows = sessions.slice(-20).reverse().map(s=>{
+    const pct = s.totalMs ? Math.round(s.engagedMs/s.totalMs*100) : 0;
+    return `<tr><td class="hl">${fmtClock(s.start)}</td><td>${fmtDur(s.totalMs)}</td><td>${fmtDur(s.engagedMs)}</td>
+      <td>${pct}%</td><td>${Object.keys(s.pageMs||{}).length} 页</td><td>${(s.lookups||[]).length} 次</td><td>${s.turnN||0}</td></tr>`;
+  }).join('');
+
+  const topEntries = (obj, n) => Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n);
+  const maxOf = arr => Math.max(...arr.map(x=>x[1]), 1);
+  const barRows = (entries, unit) => { const m = maxOf(entries);
+    return entries.map(([k,v])=>`<div class="hbar-row"><span class="lab" title="${esc(k)}">${esc(k)}</span>
+      <span class="bar"><i style="width:${Math.round(v/m*100)}%"></i></span><span class="num">${v}${unit}</span></div>`).join(''); };
+
+  const pageBars = barRows(topEntries(pageMs, 10).map(([k,v])=>['第 '+k+' 页', v]), '');
+  const wordArr = topEntries(words, 20).map(([w,st])=>[st.miss ? w+' *'+st.miss : w, st.n]);
+  const wordBars = wordArr.length ? barRows(wordArr, ' 次') : `<div class="empty-tip">还没查过词</div>`;
+  const clickArr = topEntries(clicks, 12);
+  const wayArr = topEntries(ways, 8);
+
+  body.innerHTML = `
+    <div class="hist-grid">${cards}</div>
+    <div class="hist-sec" id="cloudStats"><h3>云端聚合<span class="note">所有设备 · 登录账号合并</span></h3>
+      <div class="dp-loading" style="padding:14px 16px"><div class="spin"></div>正在读取服务端数据…</div></div>
+    <div class="hist-sec"><h3>每日专注学习<span class="note">最近 14 天 · 分钟</span></h3>${dayBars}</div>
+    <div class="hist-sec"><h3>会话记录<span class="note">最近 20 次</span></h3>
+      <table class="hist-tb"><tr><th>开始</th><th>总时长</th><th>专注</th><th>专注度</th><th>页数</th><th>查词</th><th>翻页</th></tr>${rows}</table></div>
+    <div class="hist-2col">
+      <div class="hist-sec"><h3>单页停留 Top10<span class="note">跨会话累计</span></h3>${pageBars || '<div class="empty-tip">暂无</div>'}</div>
+      <div class="hist-sec"><h3>查词 Top20<span class="note">*n = 未收录次数</span></h3>${wordBars}</div>
+      <div class="hist-sec"><h3>按钮点击排行</h3>${clickArr.length ? barRows(clickArr, '') : '<div class="empty-tip">暂无</div>'}</div>
+      <div class="hist-sec"><h3>翻页 / 缩放方式</h3>${wayArr.length ? barRows(wayArr, '') : '<div class="empty-tip">暂无</div>'}</div>
+    </div>
+    <div class="hist-sec"><h3>鼠标轨迹<span class="note">最近 5 个会话叠加 · 视口坐标</span></h3>
+      <canvas id="pathCanvas"></canvas>
+      <div class="hist-tools">
+        <button class="btn" id="histExport">导出 JSON</button>
+        <button class="btn" id="histClear">清空全部统计</button>
+      </div></div>`;
+
+  // 云端聚合（登录后可用；失败静默保持本机视图）
+  (async ()=>{
+    const box = body.querySelector('#cloudStats');
+    if (!box) return;
+    try{
+      const auth = JSON.parse(localStorage.getItem('gkb-auth-v1'));
+      if (!auth || !auth.token){ box.innerHTML = '<h3>云端聚合</h3><div class="empty-tip">登录和爸学账号后，这里会合并你在所有设备上的阅读统计</div>'; return; }
+      const r = await fetch('api/stats', { headers: { Authorization: 'Bearer ' + auth.token } });
+      if (r.status === 401){ box.innerHTML = '<h3>云端聚合</h3><div class="empty-tip">登录已过期，重新登录和爸学后可看云端聚合</div>'; return; }
+      const j = await r.json();
+      const d = j.data || {};
+      const pct = d.focus_pct != null ? d.focus_pct + '%' : '—';
+      const dayMax = Math.max(...(d.days||[]).map(x=>x.engaged_ms||0), 1);
+      const dayBars = (d.days||[]).slice().reverse().map(x=>`
+        <div class="hbar-row"><span class="lab">${x.date}</span>
+          <span class="bar"><i style="width:${Math.round((x.engaged_ms||0)/dayMax*100)}%"></i></span>
+          <span class="num">${(x.engaged_ms||0)>=60000 ? Math.round((x.engaged_ms||0)/60000)+' 分' : (x.engaged_ms||0) ? '<1 分' : '—'}</span></div>`).join('');
+      const words = (d.top_words||[]).map(w=>`
+        <div class="hbar-row"><span class="lab">${esc(w.word)}</span>
+          <span class="bar"><i style="width:${Math.round(w.n/Math.max(...(d.top_words||[]).map(x=>x.n),1)*100)}%"></i></span>
+          <span class="num">${w.n} 次${w.miss?' · 未收录'+w.miss:''}</span></div>`).join('');
+      box.innerHTML = `<h3>云端聚合<span class="note">所有设备 · ${esc(auth.user||'')}</span></h3>
+        <div class="hist-grid">
+          <div class="stat-card"><div class="v">${fmtDur(d.total_ms||0)}</div><div class="k">总 APP 时间</div></div>
+          <div class="stat-card"><div class="v">${fmtDur(d.engaged_ms||0)}</div><div class="k">专注学习时间</div></div>
+          <div class="stat-card"><div class="v">${pct}</div><div class="k">专注度</div></div>
+          <div class="stat-card"><div class="v">${d.sessions||0}</div><div class="k">会话数</div></div>
+          <div class="stat-card"><div class="v">${d.lookup_total||0}</div><div class="k">查词次数</div></div>
+          <div class="stat-card"><div class="v">${d.vocab_add||0}</div><div class="k">生词本加入</div></div>
+        </div>
+        <div class="hist-2col" style="margin-top:14px">
+          <div><h3 style="font-size:13px;margin-bottom:10px">每日专注（最近 14 天）</h3>${dayBars||'<div class="empty-tip">暂无</div>'}</div>
+          <div><h3 style="font-size:13px;margin-bottom:10px">查词 Top20</h3>${words||'<div class="empty-tip">暂无</div>'}</div>
+        </div>`;
+    }catch(e){
+      box.innerHTML = '<h3>云端聚合</h3><div class="empty-tip">云端数据暂不可用（不影响本机统计）</div>';
+    }
+  })();
+
+  // 轨迹画布
+  const cv = body.querySelector('#pathCanvas');
+  const dpr = Math.min(devicePixelRatio||1, 2);
+  cv.width = cv.clientWidth * dpr; cv.height = 320 * dpr;
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  const recent = sessions.slice(-5);
+  recent.forEach((s, si)=>{
+    const p = s.path || [];
+    if (p.length < 4) return;
+    const hue = 18 + si*36;
+    ctx.strokeStyle = `hsla(${hue},85%,62%,.35)`; ctx.lineWidth = 1; ctx.beginPath();
+    for (let i=0; i<p.length; i+=2){
+      const x = p[i] * cv.clientWidth / innerWidth, y = p[i+1] * 320 / innerHeight;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+  });
+
+  body.querySelector('#histExport').onclick = ()=>{
+    navigator.clipboard.writeText(JSON.stringify(Stats.load(), null, 1))
+      .then(()=>toast('统计 JSON 已复制到剪贴板'), ()=>toast('复制失败'));
+  };
+  body.querySelector('#histClear').onclick = ()=>{
+    if (confirm('清空全部学习统计？（不可恢复）')){
+      localStorage.removeItem(Stats.KEY);
+      if (Stats.cur) Stats.cur = null, Stats.begin();
+      renderHistory();
+      toast('学习统计已清空');
+    }
+  };
+}
+
+function syncHashRoute(){
+  const open = location.hash === '#history';
+  Stats._histOpen = open;
+  if (open){ Stats.flush(); }
+  els.histOverlay.classList.toggle('show', open);
+  if (open) renderHistory();
+}
+$('histClose').onclick = ()=>{ location.hash = ''; };
+addEventListener('hashchange', syncHashRoute);
+
+setInterval(()=>Stats.tick(), 1000);
+setInterval(()=>Stats.flush(), 60000);          // 60s 心跳上报（本地落盘）
+document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState==='hidden') Stats.flush(); });
+addEventListener('pagehide', ()=>Stats.flush());
+
+/* ══════════ 启动 ══════════ */
+(function init(){
+  Stats.begin();
+  syncHashRoute();
+  const src = new URLSearchParams(location.search).get('src') || DEFAULT_PDF;
+  if (location.protocol === 'file:'){
+    els.dropHint.classList.add('show');
+    els.pageLabel.textContent = '请把 PDF 拖入窗口（file:// 下无法自动读取文件）';
+    toast('提示：把 PDF 文件拖进窗口即可开始阅读');
+    return;
+  }
+  loadPdf(src);
+})();
+</script>
+</body>
+</html>

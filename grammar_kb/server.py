@@ -225,6 +225,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
                    grammar_db_path=db_path)
     # 作业卷管理（grammar.db：题库 answer 列 + 历次逐题对错）
     from .homework_admin import HomeworkAdmin
+    from . import readingmore as _readingmore
     homework_admin = HomeworkAdmin()
     # 词汇级别考试：成绩登记（fce.db）；L0 恒开，L{n} 考试 ≥80 解锁 L{n+1}
     vocab_exam = VocabExamStore(fce_db_path)
@@ -280,7 +281,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     _AUTH_OPEN = frozenset({"/", "/api-info", "/docs", "/redoc", "/openapi.json", "/auth/login"})
     # 静态前端资源（web/dist 挂载时）：HTML/JS/CSS/字体免登录
     _STATIC_PREFIXES = ("/assets/", "/favicon", "/vite.svg",
-                        "/analytics-report.html")  # 学情静态报告（public 资源）
+                        "/analytics-report.html",  # 学情静态报告（public 资源）
+                        "/readingmore",)  # 杂志阅读器静态页（API 另走 Bearer 鉴权）
     # 学生角色可访问的 (method, path 前缀)：背单词所需数据 + 提交成绩 + FCE 真题练习
     _STUDENT_ALLOW = (
         ("GET", "/stats"),
@@ -325,6 +327,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("PUT", "/library/books/"),   # 放行 /{id}/progress（skip 端点内有 _require_teacher 兜底）
         # 录音音频二进制（<audio src> 直连；端点内校验只能听自己的）
         ("GET", "/reading/recordings/"),
+        # 阅读更多（杂志阅读器统计）：心跳上报 + 自己的聚合数据
+        ("POST", "/readingmore/api/session"),
+        ("GET", "/readingmore/api/stats"),
     )
 
     @app.middleware("http")
@@ -335,7 +340,11 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         if request.method == "OPTIONS":
             return await call_next(request)
         path = request.url.path.rstrip("/") or "/"
-        if path in _AUTH_OPEN or path.startswith(_STATIC_PREFIXES):
+        if path in _AUTH_OPEN or (
+            path.startswith(_STATIC_PREFIXES)
+            # 阅读更多：静态页免登录，但 /readingmore/api/* 必须走 Bearer 鉴权
+            and not path.startswith("/readingmore/api/")
+        ):
             return await call_next(request)
         auth_header = request.headers.get("Authorization", "")
         token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
@@ -374,6 +383,11 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         if role is None:
             raise HTTPException(status_code=401, detail="用户名或密码错误")
         return _ok({"user": rec.user, "role": role, "token": make_token(rec.user, role)})
+
+    # 阅读更多（杂志阅读器）：API 走统一 Bearer 鉴权，用户身份由
+    # _auth 中间件注入 request.state.user（模块内取，数据按用户隔离）
+    _readingmore._init_db()
+    app.include_router(_readingmore._router)
 
     # ---- 端点 ----
     @app.get("/api-info", include_in_schema=False)
