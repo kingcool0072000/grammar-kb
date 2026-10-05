@@ -32,3 +32,10 @@ export function todayIso() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+
+/** 每日有效学习时长目标（分钟）：周中（周一~周五）45，周末（周六/日）90 */
+export function studyGoalMin(dateIso) {
+  if (!dateIso) return 45
+  const dow = new Date(`${dateIso}T00:00:00`).getDay() // 0=周日
+  return dow === 0 || dow === 6 ? 90 : 45
+}

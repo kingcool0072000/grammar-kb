@@ -175,17 +175,20 @@ def _seed_watermark_bookcase(env):
     lib = sqlite3.connect(env / "library.db")
     lib.execute("CREATE TABLE IF NOT EXISTS books (id INTEGER PRIMARY KEY,"
                 " title TEXT, author TEXT, file_path TEXT, created_at TEXT)")
-    lib.execute("CREATE TABLE IF NOT EXISTS chapters (book_id INTEGER, idx INTEGER,"
-                " title TEXT, word_count INTEGER, spine_index INTEGER)")
     lib.execute("CREATE TABLE IF NOT EXISTS book_reading_config (book_id INTEGER,"
                 " user TEXT, chapters TEXT, vocabUnlock TEXT)")
     lib.execute("CREATE TABLE IF NOT EXISTS reading_progress (book_id INTEGER,"
                 " user TEXT, cfi TEXT, chapter_index INTEGER, percent REAL,"
                 " reading_seconds INTEGER, updated_at TEXT)")
-    lib.execute("INSERT INTO books (id, title) VALUES (1, 'TestBook')")
+    lib.execute("CREATE TABLE IF NOT EXISTS chapters (id INTEGER PRIMARY KEY"
+                " AUTOINCREMENT, book_id INTEGER, idx INTEGER, title TEXT,"
+                " text_content TEXT, word_count INTEGER, spine_index INTEGER,"
+                " skip_prep INTEGER)")
+    lib.execute("INSERT INTO books (id, title, file_path)"
+                " VALUES (1, 'TestBook', 'x.epub')")
     for i in range(10):
-        lib.execute("INSERT INTO chapters VALUES (1, ?, ?, 1000, ?)",
-                    (i, f"Ch{i}", i))
+        lib.execute("INSERT INTO chapters (book_id, idx, title, word_count)"
+                    " VALUES (1, ?, ?, 1000)", (i, f"Ch{i}"))
     lib.commit()
     lib.close()
 
@@ -404,3 +407,45 @@ def test_vocab_goal_base_exceeded(plan_env):
               headers=ht).json()["data"]
     dim = next(x for x in d["goal_progress"]["dims"] if x["name"] == "词汇")
     assert dim["done"] == dim["total"] and "周初已达成" in (dim.get("extra") or "")
+
+
+def test_daily_study_minutes(plan_env):
+    """每日有效学习时长：study_min = 专注会话 active_sec 全量（泛读+精读+专题）
+    + 背词 duration_sec；换日不串；week_view 与 my-week 同源透出。"""
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    _seed_watermark_bookcase(plan_env)
+    fce = sqlite3.connect(plan_env / "fce.db")
+    # 周中某天：泛读 20 分钟 + 精读 10 分钟 = 30 分专注
+    d1 = MON  # 周一
+    for i, (mod, sec) in enumerate((("library", 1200), ("reading", 600))):
+        fce.execute(
+            "INSERT INTO focus_sessions (id, session_id, user, book_id, book_title,"
+            " started_at, ended_at, total_sec, active_sec, module, created_at)"
+            " VALUES (?, ?, 'malin', 1, 'TestBook', ?, ?, ?, ?, ?, ?)",
+            (10 + i, f"d1s{i}", f"{d1}T10:00:00Z", f"{d1}T10:30:00Z",
+             sec + 30, sec, mod, f"{d1}T10:30:00Z"))
+    fce.commit()
+    fce.close()
+    # 同日背词 15 分钟（900 秒，total 10 词）→ study_min = 30 + 15 = 45
+    c.post("/recite/sessions", headers=hs, json={
+        "total": 10, "wrong": 1, "acc": 90, "duration_sec": 900,
+        "wrong_words": ["l0a"], "mode": "flip", "scope": "all",
+        "details": [{"word": "l0a", "correct": False},
+                    {"word": "l0b", "correct": True}],
+    })
+    con = sqlite3.connect(plan_env / "fce.db")
+    con.execute("UPDATE recite_sessions SET created_at = ? || 'T12:00:00Z'", (d1,))
+    con.commit()
+    con.close()
+
+    d = c.get(f"/plan/week-view?week_start={MON}&user=malin",
+              headers=_login(c, "teacher", "123456")).json()["data"]
+    monday = next(x for x in d["days"] if x["date"] == d1)
+    assert monday["acts"]["study_min"] == 45
+    assert monday["acts"]["focus_min"] == 30
+    assert monday["acts"]["vocab_min"] == 15
+    # 学生课程表同源
+    m = c.get("/plan/my-week", headers=hs).json()["data"]
+    m_mon = next(x for x in m["days"] if x["date"] == d1)
+    assert m_mon["acts"]["study_min"] == 45

@@ -2700,6 +2700,13 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
   margin-left: auto; font-style: normal; font-size: 11px; font-weight: 700;
   color: var(--ink-soft); font-variant-numeric: tabular-nums;
 }
+/* 每日有效学习时长徽标（周中45/周末90，达标绿）——教师周历/月历 */
+.pw-min {
+  font-style: normal; font-size: 10px; font-weight: 700;
+  color: var(--ink-faint); background: #f1f0eb; border-radius: 8px;
+  padding: 0 6px; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.pw-min.ok { color: #2e7d4f; background: #e3f2e8; }
 .pw-day.today { border-color: var(--brand); background: #f6efdd; }
 .pw-day.today .pw-day-head b { color: var(--brand-ink); }
 .pw-day.fulled { border-color: #2e7d4f66; background: #eef7f1; }
@@ -3279,6 +3286,13 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 .tt-day header b { font-size: 13.5px; color: var(--ink); }
 .tt-day-date { font-size: 11px; color: var(--ink-faint); }
 .tt-today-tag { font-style: normal; font-size: 10.5px; background: #0e7490; color: white; border-radius: 8px; padding: 0 6px; }
+/* 每日有效学习时长徽标（周中45/周末90，达标绿）——学生课程表 */
+.tt-min {
+  font-style: normal; font-size: 10.5px; font-weight: 700;
+  color: var(--ink-faint); background: #f1f0eb; border-radius: 8px;
+  padding: 0 6px; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.tt-min.ok { color: #2e7d4f; background: #e3f2e8; }
 .tt-day-count { margin-left: auto; font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
 .tt-task { display: flex; align-items: flex-start; gap: 5px; padding: 3px 0; font-size: 12px; color: var(--ink); line-height: 1.45; }
 .tt-task-ic { flex: none; }

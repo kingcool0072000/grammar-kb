@@ -1,5 +1,5 @@
 import { api } from '../api.js'
-import { escapeHtml, todayIso } from '../render.js'
+import { escapeHtml, todayIso, studyGoalMin } from '../render.js'
 
 // 学生版 · 课程表：教师计划看板-周计划的只读镜像（/plan/my-week，
 // week_view 同源数据）。只看自己 + 本周；展示周拆解汇总 + 周一至周日
@@ -89,6 +89,11 @@ export async function mountTimetable(el) {
     if (acts.vocab_n) statRows.push(`🔤 背单词 ${acts.vocab_n} 个${acts.vocab_min ? `（${acts.vocab_min} 分钟）` : ''}`)
     const statHtml = statRows.length
       ? `<div class="tt-acts">${statRows.map((s) => `<span>${escapeHtml(s)}</span>`).join('')}</div>` : ''
+    // 每日有效学习时长 vs 目标（周中45/周末90）：与教师计划看板同口径
+    const goalMin = studyGoalMin(day.date)
+    const studyMin = acts.study_min || 0
+    const minBadge = day.future ? '' :
+      `<i class="tt-min ${studyMin >= goalMin ? 'ok' : ''}" title="每日目标 ${goalMin} 分钟（周中45/周末90）">${studyMin ? `${studyMin}′` : '0′'}/${goalMin}′${studyMin >= goalMin ? ' ✓' : ''}</i>`
     const live = items || extraRows || statRows.length
     return `
       <section class="tt-day ${isToday ? 'today' : ''} ${day.future ? 'future' : ''}">
@@ -96,6 +101,7 @@ export async function mountTimetable(el) {
           <b>${WEEK_CN[i]}</b>
           <span class="tt-day-date">${day.date.slice(5)}</span>
           ${isToday ? '<i class="tt-today-tag">今天</i>' : ''}
+          ${minBadge}
           <span class="tt-day-count">${day.future ? '' : `${day.done}/${day.total}`}</span>
         </header>
         ${live ? items + extraRows + statHtml : `<p class="tt-day-empty">${day.future ? '未开始' : '还没有完成的学习'}</p>`}

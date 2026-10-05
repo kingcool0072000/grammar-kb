@@ -1,5 +1,5 @@
 import { api } from '../api.js'
-import { escapeHtml, todayIso } from '../render.js'
+import { escapeHtml, todayIso, studyGoalMin } from '../render.js'
 
 // 教师版 · 计划表：周历视图。本周大卡（今日任务）+ 月历式周网格往下排，
 // 学情分析并入为子 Tab（#/plan?tab=analytics / #/plan 切换）。
@@ -269,11 +269,18 @@ export async function mountPlan(el) {
       if (acts.vocab_n) statRows.push(`🔤 背单词 ${acts.vocab_n} 个${acts.vocab_min ? `（${acts.vocab_min} 分钟）` : ''}`)
       const statHtml = statRows.length
         ? `<div class="pw-acts">${statRows.map((s) => `<span>${escapeHtml(s)}</span>`).join('')}</div>` : ''
+      // 每日有效学习时长 vs 目标（周中45/周末90）：泛读+精读+专题专注秒数
+      // 与背词时长合计，达标绿√
+      const goalMin = studyGoalMin(d.date)
+      const studyMin = acts.study_min || 0
+      const minBadge = d.future ? '' :
+        `<i class="pw-min ${studyMin >= goalMin ? 'ok' : ''}" title="每日目标 ${goalMin} 分钟（周中45/周末90）">${studyMin ? `${studyMin}′` : '0′'}/${goalMin}′${studyMin >= goalMin ? ' ✓' : ''}</i>`
       const full = !d.future && d.total > 0 && d.done >= d.total
       const hasLive = Boolean(rows || extraRows || statRows.length)
       return `<div class="pw-day ${isToday ? 'today' : ''} ${d.future ? 'future' : ''} ${full ? 'fulled' : ''}">
         <div class="pw-day-head">
           <b>周${dayNames[i]}</b><span>${dd} 日</span>
+          ${minBadge}
           <em>${d.future ? '待来' : (d.done ? `${d.done} ✓` : '—')}</em>
         </div>
         <div class="pw-tasks">${hasLive ? rows + extraRows + statHtml : (d.future ? '' : '<i class="pw-none">无完成</i>')}</div>

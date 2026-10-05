@@ -972,6 +972,8 @@ class PlanStore:
             "readings": acts.get("readings", []),
             "vocab_n": acts.get("vocab_n", 0),
             "vocab_min": acts.get("vocab_min", 0),
+            "study_min": acts.get("study_min", 0),
+            "focus_min": round(acts.get("focus_sec", 0) / 60),
         }
         return auto, read_titles, acts_out
 
@@ -2354,7 +2356,8 @@ class PlanStore:
         out: dict[str, bool] = {}
         read_titles: list[str] = []
         self._day_acts = {"speak_articles": [], "readings": [],
-                          "vocab_n": 0, "vocab_min": 0}
+                          "vocab_n": 0, "vocab_min": 0, "focus_sec": 0,
+                          "recite_sec": 0, "study_min": 0}
         nxt = (date.fromisoformat(day) + timedelta(days=1)).isoformat()
         exam_path = self._exam_db()
         if exam_path and Path(exam_path).exists():
@@ -2404,6 +2407,18 @@ class PlanStore:
                         out.setdefault("wrong_words", True)
                         self._day_acts["vocab_n"] = row["w"]
                         self._day_acts["vocab_min"] = round(row["dur"] / 60)
+                        self._day_acts["recite_sec"] = row["dur"]
+                if "focus_sessions" in tabs:
+                    # 每日有效学习时长：泛读/精读/专题专注会话的 active_sec
+                    # 全量求和（不含离开时间，与批改中心学习日志口径一致）
+                    row = conn.execute(
+                        "SELECT COALESCE(SUM(active_sec),0) s"
+                        " FROM focus_sessions"
+                        " WHERE user = ? AND (created_at >= ? AND created_at < ?)",
+                        (user, day, nxt),
+                    ).fetchone()
+                    if row:
+                        self._day_acts["focus_sec"] = row["s"]
                 if "fce_submission" in tabs:
                     row = conn.execute(
                         "SELECT COUNT(*) n FROM fce_submission"
@@ -2478,6 +2493,10 @@ class PlanStore:
                         self._day_acts["readings"] = self._reading_day_detail(lib_rows)
         except sqlite3.Error:
             pass
+        # 每日有效学习总时长（分钟）= 专注会话有效秒数 + 背词练习秒数
+        self._day_acts["study_min"] = round(
+            (self._day_acts.get("focus_sec", 0)
+             + self._day_acts.get("recite_sec", 0)) / 60)
         return out, read_titles
 
 
