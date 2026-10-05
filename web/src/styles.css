@@ -2472,6 +2472,28 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
   .rc-eb-day span { font-size: 9px; }
 }
 
+/* ---- 批改中心：学习日志按日聚合 ---- */
+.gcard-head #gd-log-agg { margin-left: auto; }
+.gd-agg-day {
+  border: 1px solid var(--line); border-radius: 12px;
+  padding: 10px 14px; margin-bottom: 10px; background: var(--bg-soft);
+}
+.gd-agg-day.open { border-color: #b08d57; background: rgba(176, 141, 87, .05); }
+.gd-agg-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  cursor: pointer; user-select: none; margin-bottom: 6px;
+}
+.gd-agg-head b { font-size: 14px; color: var(--ink); }
+.gd-agg-head:hover b { color: #8a6d3b; }
+.gd-agg-sum { font-size: 12.5px; color: var(--ink-soft); }
+.gd-agg-line {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 13px; color: var(--ink); padding: 3px 0;
+}
+.gd-agg-line > span { color: var(--ink-soft); }
+.gd-agg-line .fce-his-score { font-size: 13px; }
+.gd-agg-detail { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 8px; }
+
 /* ---- 批改中心：专注力会话翻页 ---- */
 .gd-focus-pager { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
 .gd-focus-pager .gd-focus-page-no { font-size: 13px; color: var(--ink-soft); }

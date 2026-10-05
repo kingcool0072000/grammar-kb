@@ -100,6 +100,7 @@ export async function mountGrading(el) {
         <header class="gcard-head">
           <h2>📚 学习日志</h2>
           <b class="gcard-n">${focus.length + recite.length}</b>
+          <button class="reading-btn small" id="gd-log-agg" title="同一天的同类型日志合并为一条汇总">📅 按日聚合</button>
         </header>
         <p class="reading-hint">${parts.length ? `近 7 天：${parts.join(' · ')}` : '近 7 天暂无学习记录'}</p>
         <div id="gd-focus-list"><p class="reading-hint">加载中…</p></div>
@@ -107,6 +108,118 @@ export async function mountGrading(el) {
     `
     const host = el.querySelector('#gd-focus-list')
     if (!host) return
+
+    // 按日聚合：同一天同类型（泛读/精读/专题/背词）合并为一条汇总行。
+    // 纯前端聚合（focus+recite 已全量在手）；点击聚合行展开当天的原始明细。
+    let aggMode = false
+    const openDays = new Set()
+    const dayKey = (t) => (t || '').slice(0, 10)
+    function buildDayGroups() {
+      const groups = new Map() // date -> { modules: Map(mod -> rows) }
+      const push = (t, mod, row) => {
+        const k = dayKey(t)
+        if (!groups.has(k)) groups.set(k, new Map())
+        const mods = groups.get(k)
+        if (!mods.has(mod)) mods.set(mod, [])
+        mods.get(mod).push(row)
+      }
+      for (const s of focus) {
+        const mod = s.module === 'reading' ? '精读' : s.module === 'topics' ? '专题' : '泛读'
+        push(s.started_at || s.created_at, mod, s)
+      }
+      for (const r of recite) push(r.created_at, '背词', r)
+      return [...groups.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    }
+
+    function aggRowHtml(date, mods, expanded) {
+      const rows = []
+      const totalMin = { v: 0 }
+      for (const [mod, list] of mods) {
+        if (mod === '背词') {
+          const words = list.reduce((a, x) => a + (x.total || 0), 0)
+          const wrong = list.reduce((a, x) => a + (x.wrong || 0), 0)
+          const min = Math.round(list.reduce((a, x) => a + (x.duration_sec || 0), 0) / 60)
+          const acc = words ? Math.round((words - wrong) / words * 100) : 0
+          totalMin.v += min
+          rows.push(`<div class="gd-agg-line"><i class="gd-focus-mod vocab">背词</i>
+            <span>${list.length} 组 · ${words} 词 · 正确率 <b class="fce-his-score ${acc >= 80 ? 'ok' : acc >= 60 ? '' : 'bad'}">${acc}%</b> · ${min} 分钟</span></div>`)
+        } else {
+          const modCls = mod === '精读' ? 'gd-focus-mod reading' : 'gd-focus-mod'
+          const sec = list.reduce((a, x) => a + (x.active_sec || 0), 0)
+          const words = list.reduce((a, x) => a + ((x.rw && x.rw.words) || 0), 0)
+          const lookups = list.reduce((a, x) => a + (x.lookups || 0), 0)
+          const scored = list.filter((x) => typeof x.score === 'number')
+          const avg = scored.length ? Math.round(scored.reduce((a, x) => a + x.score, 0) / scored.length) : null
+          totalMin.v += Math.round(sec / 60)
+          rows.push(`<div class="gd-agg-line"><i class="${modCls}">${mod}</i>
+            <span>${list.length} 段 · ${Math.round(sec / 60)} 分钟${words ? ` · 新学 ${words} 词` : ''}${lookups ? ` · 查词 ${lookups}` : ''}${avg !== null ? ` · 专注 <b class="fce-his-score ${avg >= 80 ? 'ok' : avg >= 60 ? '' : 'bad'}">${avg}</b>` : ''}</span></div>`)
+        }
+      }
+      // 展开态：该日全部原始明细行（聚合行仍置顶）。recite 行无 module
+      // 字段，靠 kind 区分——mods 建组时用 raw 原行，module 在则 focus 行
+      const detailHtml = expanded
+        ? `<div class="gd-agg-detail">${[...mods.values()].flat()
+            .map((s) => (s.module ? focusRow(s) : reciteLogRow(s)))
+            .join('')}</div>`
+        : ''
+      const open = expanded ? '▾' : '▸'
+      return `
+        <div class="gd-agg-day ${expanded ? 'open' : ''}" data-agg-day="${date}">
+          <div class="gd-agg-head">
+            <b>${open} ${date}</b>
+            <span class="gd-agg-sum">${mods.size} 类 · 共 ${totalMin.v} 分钟</span>
+          </div>
+          ${rows.join('')}
+          ${detailHtml}
+        </div>`
+    }
+
+    function renderAgg() {
+      const groups = buildDayGroups()
+      if (!groups.length) {
+        host.innerHTML = '<p class="reading-hint">暂无学习记录——学生在泛读馆读书/背单词后自动生成</p>'
+        return
+      }
+      // 简单重渲染整组（不 diff）——outerHTML 替换后新节点没有监听，
+      // 收起→再点展开会失灵；数据量（≤7 天 ×几行）重渲染无感。
+      // 首次进入默认展开最近一天。
+      if (!openDays.size && groups.length) openDays.add(groups[0][0])
+      const paint = () => {
+        host.innerHTML = groups
+          .map(([date, mods]) => aggRowHtml(date, mods, openDays.has(date)))
+          .join('')
+        host.querySelectorAll('[data-agg-day]').forEach((dayEl) => {
+          dayEl.querySelector('.gd-agg-head').addEventListener('click', () => {
+            const d = dayEl.dataset.aggDay
+            openDays.has(d) ? openDays.delete(d) : openDays.add(d)
+            paint()
+          })
+        })
+      }
+      paint()
+    }
+
+    const aggBtn = el.querySelector('#gd-log-agg')
+    if (aggBtn) {
+      aggBtn.addEventListener('click', async () => {
+        aggMode = !aggMode
+        aggBtn.classList.toggle('primary', aggMode)
+        aggBtn.textContent = aggMode ? '📅 按日聚合（开）' : '📅 按日聚合'
+        if (aggMode) {
+          // 泛读词数：一次性批量拉全部会话 rw（逐页拉在聚合视图没有分页钩子）
+          const libAll = focus.filter((s) => s.module === 'library' && !s.rw)
+          if (libAll.length) {
+            try {
+              const wm = await api.focusWords(libAll.map((s) => s.id))
+              libAll.forEach((s) => { if (wm[s.id]) s.rw = wm[s.id] })
+            } catch { /* 词数缺失时聚合行省略词数 */ }
+          }
+          renderAgg()
+        } else {
+          renderFocusPage(0)
+        }
+      })
+    }
 
     // 会话列表：focus（泛读/精读/专题）+ recite（背词）混排分页
     const FOCUS_PAGE = 12
