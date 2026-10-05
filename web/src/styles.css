@@ -2421,6 +2421,18 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 }
 .rd-done-fold summary:hover { color: var(--ink); }
 .rd-done-fold[open] summary { margin-bottom: 6px; }
+
+/* 阅读练习：本周任务卡片标记 */
+.rd-week { border-color: #b08d57; background: rgba(176, 141, 87, .06); }
+.rd-week-tag {
+  font-size: 11px;
+  color: #8a6d3b;
+  background: rgba(176, 141, 87, .15);
+  border: 1px solid rgba(176, 141, 87, .4);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
 .rc-wb-word sup { font-size: 10px; color: #b3541e; margin-left: 2px; font-weight: 700; }
 /* 点词展开的释义卡：占满整行（flex 容器内 flex-basis:100% 换行） */
 .rc-wb-detail {

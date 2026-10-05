@@ -1114,6 +1114,11 @@ class PlanStore:
         return {
             "week_start": week_start, "tasks": t, "notes": w.get("notes") or "",
             "breakdown": breakdown, "days": days, "current_week": in_week,
+            # 精读任务补标题（学生课程表摘要显示文章名，不止「N 篇」）
+            "article_titles": [
+                {"id": aid, "title": self._article_title(aid)}
+                for aid in (t.get("articles") or [])
+            ],
             "goal_progress": self._week_goal_progress(t, days, user, week_start),
         }
 

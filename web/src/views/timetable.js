@@ -34,7 +34,14 @@ export async function mountTimetable(el) {
   if (tasks.hw_papers?.length) summary.push(`🗒 作业卷 ${tasks.hw_papers.length} 卷`)
   if (tasks.vocab_goal) summary.push(`🔤 词汇目标 ${tasks.vocab_goal} 词`)
   if (tasks.fce?.length) summary.push(`🎧 FCE真题 ${tasks.fce.length} 项`)
-  if (tasks.articles?.length) summary.push(`📄 精读 ${tasks.articles.length} 篇`)
+  // 精读：显示文章名（比「N 篇」信息量大；完成态在维度条里看）
+  const artTitles = (d.article_titles || []).filter((a) => a.title)
+  if (artTitles.length) {
+    const names = artTitles.map((a) => a.title.slice(0, 16)).join('、')
+    summary.push(`📄 精读 ${names}`)
+  } else if (tasks.articles?.length) {
+    summary.push(`📄 精读 ${tasks.articles.length} 篇`)
+  }
   const rItems = d.breakdown?.reading_items || []
   if (rItems.length) {
     for (const r of rItems) {

@@ -33,28 +33,34 @@ export async function mountReading(el, { role } = {}) {
   const auth = getAuth()
   const myRole = role || (auth && auth.role) || 'student'
   el.innerHTML = '<div class="view-head"><h1>阅读练习</h1><p>加载中…</p></div>'
-  let arts, recs
+  let arts, recs, myWeek
   try {
-    ;[arts, recs] = await Promise.all([
+    ;[arts, recs, myWeek] = await Promise.all([
       api.readingArticles(),
       api.readingRecordings(),
+      // 学生：本周计划的文章 id（卡片标「本周任务」；教师/失败静默忽略）
+      myRole === 'student'
+        ? api.planMyWeek().catch(() => null)
+        : Promise.resolve(null),
     ])
   } catch (e) {
     el.querySelector('p').innerHTML = `<span style="color:#b42318">加载失败：${escapeHtml(e.message)}</span>`
     return
   }
-  renderList(el, arts, recs, myRole)
+  const weekIds = new Set(
+    ((myWeek && myWeek.tasks && myWeek.tasks.articles) || []).map(Number))
+  renderList(el, arts, recs, myRole, weekIds)
 }
 
 // ---------- 列表 ----------
-function renderList(el, arts, recs, role) {
+function renderList(el, arts, recs, role, weekIds = new Set()) {
   if (!arts.length) {
     el.innerHTML = `
       <div class="view-head"><h1>阅读练习</h1></div>
       <p style="color:var(--ink-soft)">还没有派生文章。老师添加后会出现在这里。</p>`
     return
   }
-  // 按 base_key 分组展示；组内排序：未读 > 待批改 > 已有成绩
+  // 按 base_key 分组展示；组内排序：本周任务 > 未读 > 待批改 > 已有成绩
   // （新内容先见），已提交且有成绩的默认折叠（点标题行展开回看）
   const groups = new Map()
   for (const a of arts) {
@@ -63,22 +69,24 @@ function renderList(el, arts, recs, role) {
   }
   const artRank = (a) => {
     const mine = recs.filter((r) => r.article_id === a.id)
-    if (!mine.length) return 0                     // 未读
-    return mine.some((r) => r.status === 'graded') ? 2 : 1  // 已有成绩 / 待批改
+    if (weekIds.has(a.id)) return 0                    // 本周任务最优先
+    if (!mine.length) return 1                         // 未读
+    return mine.some((r) => r.status === 'graded') ? 3 : 2  // 已有成绩 / 待批改
   }
   const groupHtml = ([key, rawList]) => {
     const list = rawList.slice().sort((x, y) => artRank(x) - artRank(y))
-    const done = list.filter((a) => artRank(a) === 2)
-    const open = list.filter((a) => artRank(a) !== 2)
+    const done = list.filter((a) => artRank(a) === 3)
+    const open = list.filter((a) => artRank(a) !== 3)
+    const weekN = list.filter((a) => weekIds.has(a.id) && artRank(a) !== 3).length
     const doneHtml = done.length ? `
       <details class="rd-done-fold">
         <summary>✅ 已完成有成绩（${done.length} 篇）</summary>
-        <div class="reading-art-list">${done.map((a) => artCard(a, recs)).join('')}</div>
+        <div class="reading-art-list">${done.map((a) => artCard(a, recs, weekIds)).join('')}</div>
       </details>` : ''
     return `
       <section class="fce-group">
-        <div class="fce-group-title">${escapeHtml(keyLabel(key))}（${list.length} 篇${done.length ? ` · 待做 ${open.length}` : ''}）</div>
-        <div class="reading-art-list">${open.map((a) => artCard(a, recs)).join('')}</div>
+        <div class="fce-group-title">${escapeHtml(keyLabel(key))}（${list.length} 篇${weekN ? ` · 📌 本周 ${weekN}` : ''}${done.length ? ` · 待做 ${open.length}` : ''}）</div>
+        <div class="reading-art-list">${open.map((a) => artCard(a, recs, weekIds)).join('')}</div>
         ${doneHtml}
       </section>`
   }
@@ -135,7 +143,7 @@ function renderList(el, arts, recs, role) {
   })
 }
 
-function artCard(a, recs) {
+function artCard(a, recs, weekIds = new Set()) {
   const mine = recs.filter((r) => r.article_id === a.id)
   const best = mine
     .filter((r) => r.status === 'graded')
@@ -146,9 +154,10 @@ function artCard(a, recs) {
       ? '<b class="fce-his-score pend">待批改</b>'
       : ''
   return `
-    <div class="reading-card" data-id="${a.id}" role="button">
+    <div class="reading-card ${weekIds.has(a.id) ? 'rd-week' : ''}" data-id="${a.id}" role="button">
       <span class="reading-card-title">${escapeHtml(a.title || '未命名')}</span>
       <span class="reading-card-meta">
+        ${weekIds.has(a.id) ? '<b class="rd-week-tag">📌 本周任务</b>' : ''}
         <span class="tag" style="--cat-color:#8a6d3b">${a.words} 词</span>
         ${a.source ? `<span class="reading-card-src">${escapeHtml(a.source)}</span>` : ''}
         ${badge}
