@@ -183,6 +183,7 @@ export async function mountRecite(el, { vocab, role }) {
   `
 
   const state = { scope: 'all', size: 20, mode: 'flip' }
+  // 词库默认激活已解锁的最新级别（L0 只是兜底；解锁信息加载后校正）
   // 词库/云端进度加载完成前禁用开始钮：pool 为空时点击会静默无反应
   const startBtn = el.querySelector('#rc-start')
   startBtn.disabled = true
@@ -221,6 +222,10 @@ export async function mountRecite(el, { vocab, role }) {
       row.innerHTML = `<button class="chip active" data-scope="all">基础（哈一 ${vocab.length} 词）</button>`
       state.scope = 'all'
       return
+    }
+    // 默认激活已解锁的最新级别（首访；用户手动切过就不再自动跳）
+    if (!state.scopeTouched) {
+      state.scope = unlocked > 0 ? String(unlocked) : 'all'
     }
     const cur = state.scope === 'all' ? 0 : Number(state.scope)
     row.innerHTML = [0, 1, 2, 3, 4, 5]
@@ -367,7 +372,8 @@ export async function mountRecite(el, { vocab, role }) {
     const avgAcc = Math.round(recs.reduce((s, x) => s + (x.acc || 0), 0) / recs.length)
     const totalWords = recs.reduce((s, x) => s + (x.total || 0), 0)
     const totalMin = Math.round(recs.reduce((s, x) => s + (x.duration_sec || 0), 0) / 60)
-    // 易错词频次（最近 20 组）
+    // 明细只列最近 3 次（汇总仍按全量口径）；易错词频次取最近 20 组
+    const recent = recs.slice(0, 3)
     const freq = new Map()
     for (const s of recs.slice(0, 20)) {
       for (const w of s.wrong_words || []) freq.set(w, (freq.get(w) || 0) + 1)
@@ -376,7 +382,7 @@ export async function mountRecite(el, { vocab, role }) {
     $h.innerHTML = `
       <section class="fce-group">
         <div class="fce-group-title">📝 我的练习记录（${recs.length} 组 · 平均正确率 ${avgAcc}% · 累计 ${totalWords} 词次${totalMin ? ` / ${totalMin} 分钟` : ''}）</div>
-        ${recs.slice(0, 8).map((s) => `
+        ${recent.map((s) => `
           <div class="fce-his-row">
             <span class="fce-his-what">${scopeCn(s.scope)}${s.mode === 'flip' ? '（自评）' : ''}</span>
             <b class="fce-his-score ${s.acc >= 80 ? 'ok' : ''}">${s.acc}%</b>
@@ -573,7 +579,7 @@ export async function mountRecite(el, { vocab, role }) {
       if (!chip) return
       row.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c === chip))
       const d = chip.dataset
-      if (d.scope) state.scope = d.scope
+      if (d.scope) { state.scope = d.scope; state.scopeTouched = true }
       if (d.size) state.size = Number(d.size)
       if (d.scope) { renderScopeChips(); renderBoard() } // 切词库：chips 与看板随之切换
     })

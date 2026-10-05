@@ -2403,6 +2403,24 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
   cursor: pointer; transition: border-color .12s ease;
 }
 .rc-wb-word:hover { border-color: #b08d57; }
+
+/* ---- 阅读练习：已完成有成绩的折叠区 ---- */
+.rd-done-fold {
+  margin-top: 10px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 6px 12px;
+  background: var(--bg-soft);
+}
+.rd-done-fold summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ink-soft);
+  padding: 2px 0;
+  user-select: none;
+}
+.rd-done-fold summary:hover { color: var(--ink); }
+.rd-done-fold[open] summary { margin-bottom: 6px; }
 .rc-wb-word sup { font-size: 10px; color: #b3541e; margin-left: 2px; font-weight: 700; }
 /* 点词展开的释义卡：占满整行（flex 容器内 flex-basis:100% 换行） */
 .rc-wb-detail {

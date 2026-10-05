@@ -54,24 +54,40 @@ function renderList(el, arts, recs, role) {
       <p style="color:var(--ink-soft)">还没有派生文章。老师添加后会出现在这里。</p>`
     return
   }
-  // 按 base_key 分组展示
+  // 按 base_key 分组展示；组内排序：未读 > 待批改 > 已有成绩
+  // （新内容先见），已提交且有成绩的默认折叠（点标题行展开回看）
   const groups = new Map()
   for (const a of arts) {
     if (!groups.has(a.base_key)) groups.set(a.base_key, [])
     groups.get(a.base_key).push(a)
+  }
+  const artRank = (a) => {
+    const mine = recs.filter((r) => r.article_id === a.id)
+    if (!mine.length) return 0                     // 未读
+    return mine.some((r) => r.status === 'graded') ? 2 : 1  // 已有成绩 / 待批改
+  }
+  const groupHtml = ([key, rawList]) => {
+    const list = rawList.slice().sort((x, y) => artRank(x) - artRank(y))
+    const done = list.filter((a) => artRank(a) === 2)
+    const open = list.filter((a) => artRank(a) !== 2)
+    const doneHtml = done.length ? `
+      <details class="rd-done-fold">
+        <summary>✅ 已完成有成绩（${done.length} 篇）</summary>
+        <div class="reading-art-list">${done.map((a) => artCard(a, recs)).join('')}</div>
+      </details>` : ''
+    return `
+      <section class="fce-group">
+        <div class="fce-group-title">${escapeHtml(keyLabel(key))}（${list.length} 篇${done.length ? ` · 待做 ${open.length}` : ''}）</div>
+        <div class="reading-art-list">${open.map((a) => artCard(a, recs)).join('')}</div>
+        ${doneHtml}
+      </section>`
   }
   el.innerHTML = `
     <div class="view-head">
       <h1>阅读练习</h1>
       <p>选择一篇派生文章开始练习：阅读 → 选段录音 → 提交老师批改。共 ${arts.length} 篇。</p>
     </div>
-    ${[...groups.entries()].map(([key, list]) => `
-      <section class="fce-group">
-        <div class="fce-group-title">${escapeHtml(keyLabel(key))}（${list.length} 篇）</div>
-        <div class="reading-art-list">
-          ${list.map((a) => artCard(a, recs)).join('')}
-        </div>
-      </section>`).join('')}
+    ${[...groups.entries()].map(groupHtml).join('')}
     <div class="reading-hist-pop" id="rd-hist-pop" hidden>
       <div class="reading-hist-pop-mask" id="rd-hist-mask"></div>
       <div class="reading-hist-pop-body">
