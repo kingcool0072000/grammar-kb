@@ -197,9 +197,6 @@ export const api = {
   libraryDict: (word, context) =>
     req(`/library/dict/${encodeURIComponent(word)}`, { searchParams: { context } }),
   // 学情分析 · AI 周报（手动触发上一自然周，教师专属；模型配置复用泛读馆设置）
-  analyticsAiTrigger: () => reqJson('/analytics/ai/weekly', 'POST', {}),
-  analyticsAiReports: ({ limit = 12 } = {}) =>
-    req('/analytics/ai/reports', { searchParams: { limit } }),
   // 专注力（泛读馆阅读器行为采集；学生上报，教师批改中心查看）
   focusSubmit: (rec) => reqJson('/focus/sessions', 'POST', rec),
   focusSessions: ({ user, limit = 50, offset = 0 } = {}) =>
