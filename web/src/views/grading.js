@@ -141,18 +141,21 @@ export async function mountGrading(el) {
           const min = Math.round(list.reduce((a, x) => a + (x.duration_sec || 0), 0) / 60)
           const acc = words ? Math.round((words - wrong) / words * 100) : 0
           totalMin.v += min
-          rows.push(`<div class="gd-agg-line"><i class="gd-focus-mod vocab">背词</i>
-            <span>${list.length} 组 · ${words} 词 · 正确率 <b class="fce-his-score ${acc >= 80 ? 'ok' : acc >= 60 ? '' : 'bad'}">${acc}%</b> · ${min} 分钟</span></div>`)
+          rows.push(`<div class="gd-agg-line"><i class="gd-focus-mod vocab">${mod}</i>
+            <b class="gd-agg-min">${min}<u>分钟</u></b>
+            <span>${list.length} 组 · ${words} 词 · 正确率 <b class="fce-his-score ${acc >= 80 ? 'ok' : acc >= 60 ? '' : 'bad'}">${acc}%</b></span></div>`)
         } else {
           const modCls = mod === '精读' ? 'gd-focus-mod reading' : 'gd-focus-mod'
           const sec = list.reduce((a, x) => a + (x.active_sec || 0), 0)
+          const min = Math.round(sec / 60)
           const words = list.reduce((a, x) => a + ((x.rw && x.rw.words) || 0), 0)
           const lookups = list.reduce((a, x) => a + (x.lookups || 0), 0)
           const scored = list.filter((x) => typeof x.score === 'number')
           const avg = scored.length ? Math.round(scored.reduce((a, x) => a + x.score, 0) / scored.length) : null
-          totalMin.v += Math.round(sec / 60)
+          totalMin.v += min
           rows.push(`<div class="gd-agg-line"><i class="${modCls}">${mod}</i>
-            <span>${list.length} 段 · ${Math.round(sec / 60)} 分钟${words ? ` · 新学 ${words} 词` : ''}${lookups ? ` · 查词 ${lookups}` : ''}${avg !== null ? ` · 专注 <b class="fce-his-score ${avg >= 80 ? 'ok' : avg >= 60 ? '' : 'bad'}">${avg}</b>` : ''}</span></div>`)
+            <b class="gd-agg-min">${min}<u>分钟</u></b>
+            <span>${list.length} 段${words ? ` · 新学 ${words} 词` : ''}${lookups ? ` · 查词 ${lookups}` : ''}${avg !== null ? ` · 专注 <b class="fce-his-score ${avg >= 80 ? 'ok' : avg >= 60 ? '' : 'bad'}">${avg}</b>` : ''}</span></div>`)
         }
       }
       // 展开态：该日全部原始明细行（聚合行仍置顶）。recite 行无 module

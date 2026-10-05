@@ -2487,11 +2487,18 @@ li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
 .gd-agg-head:hover b { color: #8a6d3b; }
 .gd-agg-sum { font-size: 12.5px; color: var(--ink-soft); }
 .gd-agg-line {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   font-size: 13px; color: var(--ink); padding: 3px 0;
 }
 .gd-agg-line > span { color: var(--ink-soft); }
 .gd-agg-line .fce-his-score { font-size: 13px; }
+/* 类型行主数字：该类型当日总时长（大号加粗，一眼可见） */
+.gd-agg-min {
+  font-size: 20px; font-weight: 800; color: var(--ink);
+  font-variant-numeric: tabular-nums; line-height: 1;
+  min-width: 64px;
+}
+.gd-agg-min u { font-size: 11px; font-weight: 500; color: var(--ink-faint); margin-left: 2px; text-decoration: none; }
 .gd-agg-detail { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 8px; }
 
 /* ---- 批改中心：专注力会话翻页 ---- */
