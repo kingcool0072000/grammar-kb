@@ -375,7 +375,8 @@ class PlanStore:
             total_words = sum(c["word_count"] for c in chs)
             d["total_words"] = total_words
             d["chapters_count"] = len(chs) or (r["chapter_count"] or 0)
-            d["current_chapter"] = _chapter_at_words(chs, r["percent"] or 0.0, total_words)
+            ch_at = _chapter_at_words(chs, r["percent"] or 0.0, total_words)
+            d["current_chapter"] = ch_at["no"] if ch_at else None
             out.append(d)
         return out
 
@@ -866,12 +867,16 @@ class PlanStore:
 
         cur = _chapter_at_words(ch_list, pct, total)
         words_read = round(total * pct / 100)
+        # 展示章号（结构化重编号）；goal_ch 是 raw idx（max(cfg)），换算
+        first_idx = next((c["idx"] for c in ch_list
+                          if (c["word_count"] or 0) >= 200), ch_list[0]["idx"])
         return {
             "percent": round(pct, 1),
             "goal_percent": round(goal_pct_eff, 1),
             "configured_chapters": cfg_count,
-            "current_chapter": cur["idx"] if cur else None,
-            "goal_chapter": goal_ch,
+            "current_chapter": (cur["idx"] - first_idx + 1) if cur else None,
+            "goal_chapter": (goal_ch - first_idx + 1)
+                            if isinstance(goal_ch, int) else goal_ch,
             "words_read": words_read,
             "goal_words": goal_words,
             "remaining_words": max(0, goal_words - words_read),
@@ -2053,7 +2058,8 @@ class PlanStore:
 
         by_book: dict[int, list] = {}
         for r in rows:
-            if r["book_id"] is not None and self._reading_session_valid(r):
+            if (r["book_id"] is not None and self._reading_session_valid(r)
+                    and not self._zombie_reading(r)):
                 by_book.setdefault(r["book_id"], []).append(r)
         # 无效会话也计入分钟口径的「在场时长」提示？不——无效即无效，
         # 分钟与词数都只认有效会话（否则出现 0 分钟 N 词的矛盾展示）。
@@ -2085,9 +2091,44 @@ class PlanStore:
             words, counted = self._segs_words(segs, info["chs"], info["required"])
             entry["words"] = words
             if counted:
-                entry["from"], entry["to"] = min(counted), max(counted)
+                entry["from"], entry["to"] = self._display_chapter_nos(
+                    info["chs"], min(counted), max(counted))
             out.append(entry)
         return out
+
+    @staticmethod
+    def _zombie_reading(r) -> bool:
+        """泛读僵尸会话：泛读馆会话「时长够长被判有效」但零阅读证据——
+        无位置轨迹、起止零位移（0%→0%，阅读器恢复失败落书首后挂着不动）。
+        学习日志行/时长聚合/泛读分钟都剔（focus_words 的「无有效阅读」
+        flag 同口径；非泛读模块恒 False）。"""
+        if (r["module"] or "library") != "library" or r["book_id"] is None:
+            return False
+        # 注意：percent_track 存 JSON 字符串，空轨迹 '[]' 也是 truthy——
+        # 必须解析后看长度
+        try:
+            if json.loads(r["percent_track"] or "[]"):
+                return False
+        except (ValueError, TypeError):
+            pass
+        inter = ((r["lookups"] or 0) + (r["plays"] or 0)
+                 + (r["scroll_count"] or 0) + (r["chapter_navs"] or 0))
+        if inter:
+            return False
+        return (r["percent_end"] or 0) <= (r["percent_start"] or 0)
+
+    @staticmethod
+    def _display_chapter_nos(chs: list, lo_idx: int, hi_idx: int) -> tuple[int, int]:
+        """raw 章 idx → 展示章号（结构化重编号，与 focus_words 同口径）。
+
+        epub 的 raw idx 含封面/目录/版权等前置页（Percy 第 6 章=idx10），
+        对外章号一律「首个 ≥200 词内容章起算第 1 章」。"""
+        first_content = 0
+        for idx, wc in chs:
+            if (wc or 0) >= 200:
+                first_content = idx
+                break
+        return lo_idx - first_content + 1, hi_idx - first_content + 1
 
     @staticmethod
     def _book_meta(lib, ids) -> dict[int, dict]:
@@ -2316,6 +2357,9 @@ class PlanStore:
                 # 纯翻章/闪进闪出：词数 0 已说明问题，不再叠加速度标记
                 # （这类会话 active_sec 极小，raw 速度会是荒谬大数）。
                 flags.append("无有效阅读")
+            elif not words and not overlap and not track and e0 <= s0:
+                # 「有效」但零产出：泛读僵尸会话（_zombie_reading 同口径）
+                flags.append("无有效阅读")
             elif info and total > 0 and not transient:
                 # 有效会话的「异常快」按原始位移速度判（词数口径已按
                 # 400 词/分限速折算，被折算过的会话正是要暴露的对象）。
@@ -2529,15 +2573,21 @@ class PlanStore:
                         self._day_acts["recite_sec"] = row["dur"]
                 if "focus_sessions" in tabs:
                     # 每日有效学习时长：泛读/精读/专题专注会话的 active_sec
-                    # 全量求和（不含离开时间，与批改中心学习日志口径一致）
-                    row = conn.execute(
-                        "SELECT COALESCE(SUM(active_sec),0) s"
+                    # 全量求和（不含离开时间，与批改中心学习日志口径一致）。
+                    # 泛读僵尸会话（开着书页无任何阅读证据）不计——曾把
+                    # 0%→0% 挂机 27 分钟算进「有效学习」
+                    frows = conn.execute(
+                        "SELECT module, book_id, lookups, plays, scroll_count,"
+                        " chapter_navs, percent_start, percent_end,"
+                        " percent_track, active_sec"
                         " FROM focus_sessions"
                         " WHERE user = ? AND (created_at >= ? AND created_at < ?)",
                         (user, day, nxt),
-                    ).fetchone()
-                    if row:
-                        self._day_acts["focus_sec"] = row["s"]
+                    ).fetchall()
+                    if frows:
+                        self._day_acts["focus_sec"] = sum(
+                            r["active_sec"] or 0 for r in frows
+                            if not self._zombie_reading(r))
                 if "fce_submission" in tabs:
                     row = conn.execute(
                         "SELECT COUNT(*) n FROM fce_submission"
@@ -2648,25 +2698,31 @@ def fmt_w(n: int) -> str:
 def _chapter_at_words(chs: list[dict], percent: float, total_words: int) -> Optional[dict]:
     """全书百分比 → 落点章（按各章词数累计线性映射）。
 
-    返回 {idx, title, chapter_percent}：chapter_percent 为「到本章末读了多少」
-    的全书口径（词数累计/总词数），供前端拼「第X章 xx%~第Y章 xx%」区间。
-    percent 是视线带驱动的全书精确值，与词数口径有 ±1 章误差，够展示用。
+    返回 {idx, no, title, chapter_percent}：no 为对外展示章号（结构化
+    重编号——首个 ≥200 词内容章起算第 1 章；epub raw idx 含封面/目录等
+    前置页，直接展示会把「第 6 章」标成「第 10 章」）；idx 保留 raw 值
+    供内部匹配。percent 是视线带驱动的全书精确值，与词数口径有 ±1 章
+    误差，够展示用。
     """
     if not chs or total_words <= 0:
         return None
+    first_content = next((c["idx"] for c in chs
+                          if (c["word_count"] or 0) >= 200), chs[0]["idx"])
     words_seen = 0
     for c in chs:
         end_pct = round((words_seen + c["word_count"]) / total_words * 100, 1)
         if percent <= end_pct:
             return {
-                "idx": c["idx"], "title": c["title"],
+                "idx": c["idx"], "no": c["idx"] - first_content + 1,
+                "title": c["title"],
                 "start_percent": round(words_seen / total_words * 100, 1),
                 "end_percent": end_pct,
             }
         words_seen += c["word_count"]
     last = chs[-1]
     return {
-        "idx": last["idx"], "title": last["title"],
+        "idx": last["idx"], "no": last["idx"] - first_content + 1,
+        "title": last["title"],
         "start_percent": round((total_words - last["word_count"]) / total_words * 100, 1),
         "end_percent": 100.0,
     }

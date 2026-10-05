@@ -268,12 +268,20 @@ export async function mountGrading(el) {
           pageItems.forEach((s) => { if (s.kind === 'focus' && wm[s.raw.id]) s.raw.rw = wm[s.raw.id] })
         } catch { /* 词数接口失败时跳过 */ }
       }
-      if (!pageItems.length) {
+      // 剔除「无有效阅读」的泛读会话（闪进闪出/恢复失败落书首挂着不动：
+      // 0 词 0 位置 0 交互，对教师是纯噪音——0%→0% 27 分钟这类行不再显示）
+      const dropZombie = (list) => list.filter((s) => {
+        if (s.kind !== 'focus' || s.raw.module !== 'library') return true
+        const rw = s.raw.rw
+        return !(rw && (rw.flags || []).includes('无有效阅读') && !rw.words && !rw.overlap)
+      })
+      const visibleItems = dropZombie(pageItems)
+      if (!visibleItems.length) {
         host.innerHTML = page === 0
           ? '<p class="reading-hint">暂无学习记录——学生在泛读馆读书/背单词后自动生成</p>'
           : '<p class="reading-hint">没有更多记录了</p>'
       } else {
-        host.innerHTML = pageItems.map((s) => s.kind === 'recite' ? reciteLogRow(s.raw)
+        host.innerHTML = visibleItems.map((s) => s.kind === 'recite' ? reciteLogRow(s.raw)
           : s.kind === 'rm' ? rmLogRow(s.raw) : focusRow(s.raw)).join('')
         host.querySelectorAll('[data-focus-id]').forEach((row) => {
           row.addEventListener('click', () => openFocusDetail(Number(row.dataset.focusId)))

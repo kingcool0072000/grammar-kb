@@ -135,8 +135,8 @@ def test_plan_reading_actuals_full_book(plan_env, monkeypatch):
     assert r["title"] == "Wonder" and r["percent"] == 30.0
     assert r["reading_seconds"] == 900
     assert r["total_words"] > 0 and r["chapters_count"] == 2
-    ch = r["current_chapter"]
-    assert ch and 0 <= ch["start_percent"] <= 30 <= ch["end_percent"]
+    # current_chapter 已改为展示章号（结构化重编号：首个 ≥200 词内容章=第1章）
+    assert isinstance(r["current_chapter"], int) and r["current_chapter"] >= 1
 
 
 def _mini_epub_bytes(title: str) -> bytes:
@@ -419,12 +419,16 @@ def test_daily_study_minutes(plan_env):
     # 周中某天：泛读 20 分钟 + 精读 10 分钟 = 30 分专注
     d1 = MON  # 周一
     for i, (mod, sec) in enumerate((("library", 1200), ("reading", 600))):
+        # percent_track 带真实阅读位移（泛读会话无轨迹零位移会被判僵尸剔除）
+        track = ('[{"t": 5, "p": 20.0}, {"t": 600, "p": 22.0}]'
+                 if mod == "library" else None)
         fce.execute(
             "INSERT INTO focus_sessions (id, session_id, user, book_id, book_title,"
-            " started_at, ended_at, total_sec, active_sec, module, created_at)"
-            " VALUES (?, ?, 'malin', 1, 'TestBook', ?, ?, ?, ?, ?, ?)",
+            " started_at, ended_at, total_sec, active_sec, module, created_at,"
+            " percent_track)"
+            " VALUES (?, ?, 'malin', 1, 'TestBook', ?, ?, ?, ?, ?, ?, ?)",
             (10 + i, f"d1s{i}", f"{d1}T10:00:00Z", f"{d1}T10:30:00Z",
-             sec + 30, sec, mod, f"{d1}T10:30:00Z"))
+             sec + 30, sec, mod, f"{d1}T10:30:00Z", track))
     fce.commit()
     fce.close()
     # 同日背词 15 分钟（900 秒，total 10 词）→ study_min = 30 + 15 = 45
@@ -509,11 +513,17 @@ def test_vocab_quota_done_judgement(plan_env):
     d = c.get("/plan/today", headers=hs).json()["data"]
     vocab = next(t for t in d["tasks"] if t["type"] == "vocab")
     assert vocab["done"] is False
-    # 背 5 词（≥quota）→ 完成
+    # 背 5 词（≥quota）→ 完成。created_at 归一到本地今天 12:00Z——
+    # 凌晨跑测试时 UTC 串还是昨天，会跨日聚合不到（同 study_min 测试做法）
     c.post("/recite/sessions", headers=hs, json={
         "total": 5, "wrong": 0, "acc": 100, "duration_sec": 300,
         "wrong_words": [], "mode": "flip", "scope": "all", "details": [],
     })
+    con = sqlite3.connect(plan_env / "fce.db")
+    con.execute("UPDATE recite_sessions SET created_at = ? || 'T12:00:00Z'",
+                (date.today().isoformat(),))
+    con.commit()
+    con.close()
     d = c.get("/plan/today", headers=hs).json()["data"]
     vocab = next(t for t in d["tasks"] if t["type"] == "vocab")
     assert vocab["done"] is True and "✓" in (vocab.get("detail") or "")
