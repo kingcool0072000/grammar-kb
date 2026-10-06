@@ -1870,15 +1870,31 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             resp.headers["Cache-Control"] = "no-cache"
             return resp
 
+        # 杂志阅读器入口同理：无 hash 文件名的 HTML 由 _CachedStatic 统一
+        # no-cache（PDF/词典桶等带名资源仍长缓存），此处路由只为 /readingmore
+        # （无斜杠、无 index.html 后缀）提供与根路径一致的显式入口
+        @app.get("/readingmore", include_in_schema=False)
+        def _readingmore_index():
+            resp = _IndexFileResponse(web_dist / "readingmore" / "index.html")
+            resp.headers["Cache-Control"] = "no-cache"
+            return resp
+
         # 静态资源长缓存：vite 产物文件名带内容 hash（index-xxxx.js），
         # 内容变则名变——可安全 immutable 一年；index.html 已显式 no-cache
         from starlette.staticfiles import StaticFiles as _SM, NotModifiedResponse as _NMR  # noqa: F401
         _web_mount = StaticFiles(directory=web_dist, html=True)
 
         class _CachedStatic(_web_mount.__class__):
-            def file_response(self, *args, **kwargs):  # noqa: ANN002, ANN003
-                resp = super().file_response(*args, **kwargs)
-                resp.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
+            def file_response(self, full_path, *args, **kwargs):  # noqa: ANN002, ANN003
+                resp = super().file_response(full_path, *args, **kwargs)
+                # HTML 无 hash 文件名（含 /readingmore/、analytics-report.html），
+                # immutable 一年会让用户发版后一直加载旧页面——一律 no-cache；
+                # 带 hash 的 JS/CSS/PDF 等其余资源仍长缓存。304 无响应体，
+                # 缓存语义跟随首次 200，无需特判
+                if str(full_path).endswith(".html"):
+                    resp.headers["Cache-Control"] = "no-cache"
+                else:
+                    resp.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
                 return resp
 
         app.mount("/", _CachedStatic(directory=web_dist, html=True), name="web")

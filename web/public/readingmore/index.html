@@ -98,7 +98,7 @@ body.idle .textLayer{cursor:default}
   transition:all .22s ease}
 .nav:hover{color:var(--ink);background:rgba(34,34,42,.85);border-color:rgba(255,255,255,.18);transform:translateY(-50%) scale(1.07)}
 .nav.prev{left:14px}.nav.next{right:14px}
-.nav:disabled{opacity:.25;pointer-events:none}
+.nav:disabled{opacity:0;pointer-events:none;transition:opacity .2s}
 
 /* ── 底栏 ─────────────────────────── */
 #bottombar{position:fixed;left:0;right:0;bottom:0;height:46px;z-index:40;
@@ -300,6 +300,7 @@ table.hist-tb tr:hover td{background:rgba(255,255,255,.03)}
     <button class="btn icon hide-sm" id="btnZoomOut" title="缩小（−）">−</button>
     <span id="zoomLabel" title="点击恢复 100%">100%</span>
     <button class="btn icon hide-sm" id="btnZoomIn" title="放大（+）">+</button>
+    <button class="btn hide-sm" id="btnFitW" title="适配宽度（W）：页宽撑满屏幕，双页时自动切单页">适宽</button>
     <button class="btn icon" id="btnFull" title="全屏（F）"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
     <button class="btn" id="btnVocab" title="生词本">生词本</button>
   </div>
@@ -369,7 +370,7 @@ const els = {
   stage:$('stage'), wrap:$('stage-wrap'), track:$('stage'),
   navPrev:$('navPrev'), navNext:$('navNext'),
   pageLabel:$('pageLabel'), slider:$('slider'), zoomLabel:$('zoomLabel'),
-  btnZoomIn:$('btnZoomIn'), btnZoomOut:$('btnZoomOut'),
+  btnZoomIn:$('btnZoomIn'), btnZoomOut:$('btnZoomOut'), btnFitW:$('btnFitW'),
   btnMode:$('btnMode'), btnFull:$('btnFull'), btnVocab:$('btnVocab'),
   dropHint:$('dropHint'), loader:$('loader'), loaderTxt:$('loaderTxt'),
   progress:$('progress'), pill:$('selPill'), pop:$('dictPop'),
@@ -404,7 +405,9 @@ async function loadPdf(source, displayName){
     setBookName(displayName || (source instanceof File ? source.name : decodeURIComponent(source.split('/').pop())));
     const savedMode = localStorage.getItem(`mz.${state.fp}.mode`);
     state.mode = savedMode || (innerWidth < 760 ? 'single' : 'double');
-    state.zoom = 1; syncZoomUI();
+    // 缩放全局记忆（跨期复用：字号偏好不随刊物变化）；非法值兜底回 100%
+    state.zoom = clamp(+(localStorage.getItem('mz.zoom') || 1) || 1, .6, 3.5);
+    syncZoomUI();
     state.vocab = JSON.parse(localStorage.getItem(`mz.${state.fp}.vocab`) || '[]');
     renderVocabList();
     buildStage();
@@ -575,12 +578,12 @@ function renderAround(){
       sp.querySelectorAll('.page').forEach(pg=>{ if (pg.dataset.done){ pg.innerHTML=`<div class="ph">${pg.dataset.no}</div>`; pg.dataset.done=''; } });
     }
   });
-  // 超出视口的页定位到中间
+  // 超出视口的页：横向居中、纵向对齐页顶——翻页落页面中部会丢失阅读位置
   requestAnimationFrame(()=>{
     const cur = els.stage.children[i];
     if (cur && (cur.scrollWidth > cur.clientWidth || cur.scrollHeight > cur.clientHeight)){
       cur.scrollLeft = (cur.scrollWidth - cur.clientWidth)/2;
-      cur.scrollTop = (cur.scrollHeight - cur.clientHeight)/2;
+      cur.scrollTop = 0;
     }
   });
 }
@@ -597,16 +600,59 @@ function setMode(mode){
   syncModeUI();
 }
 function syncModeUI(){ els.btnMode.textContent = state.mode==='double' ? '双页' : '单页'; }
+/* 缩放档位：相邻档位 ≥1.15×（15~20% 一跳），
+   触控板/按钮/键盘/捏合全部吸附到同一阶梯，避免连续微缩放反复重渲染 */
+const ZOOM_STEPS = [.5, .6, .72, .85, 1, 1.2, 1.45, 1.75, 2.1, 2.5, 3, 3.5];
+function nearestStepIndex(z){
+  let best = 0, bd = Infinity;
+  ZOOM_STEPS.forEach((s, i)=>{ const d = Math.abs(s - z); if (d < bd){ bd = d; best = i; } });
+  return best;
+}
+function zoomStep(dir, src='button'){
+  const j = clamp(nearestStepIndex(state.zoom) + dir, 0, ZOOM_STEPS.length - 1);
+  if (ZOOM_STEPS[j] !== state.zoom) setZoom(ZOOM_STEPS[j], src);
+}
 function setZoom(z, src='button'){
   Stats.zoom(src);
+  // 记住当前阅读位置（相对比例），缩放后还原——放大不应把视图甩到页面中部
+  const cur = els.stage.children[state.index];
+  let anchor = null;
+  if (cur && (cur.scrollWidth > cur.clientWidth+2 || cur.scrollHeight > cur.clientHeight+2)){
+    anchor = { x: cur.scrollLeft / Math.max(1, cur.scrollWidth - cur.clientWidth),
+               y: cur.scrollTop / Math.max(1, cur.scrollHeight - cur.clientHeight) };
+  }
   state.zoom = clamp(z, .6, 3.5);
-  document.body.classList.toggle('zoomed', state.zoom > 1.001);
+  try{ localStorage.setItem('mz.zoom', String(state.zoom)); }catch(e){}
   syncZoomUI();
   const i = state.index;
   for (const sp of [i-1,i,i+1]) if (sp>=0 && sp<state.spreads.length) layoutSpread(els.stage.children[sp]);
   renderAround();
+  if (anchor) requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const c = els.stage.children[state.index];
+    if (!c || !anchor) return;
+    if (c.scrollWidth > c.clientWidth+2) c.scrollLeft = anchor.x * (c.scrollWidth - c.clientWidth);
+    if (c.scrollHeight > c.clientHeight+2) c.scrollTop = anchor.y * (c.scrollHeight - c.clientHeight);
+  }));
 }
-function syncZoomUI(){ els.zoomLabel.textContent = Math.round(state.zoom*100)+'%'; }
+function syncZoomUI(){
+  els.zoomLabel.textContent = Math.round(state.zoom*100)+'%';
+  document.body.classList.toggle('zoomed', state.zoom > 1.001);
+}
+/* 适配宽度：页宽撑满可视区（双页先切单页）——双列版面放大到一屏一页，字足够大 */
+async function fitWidth(){
+  if (state.mode !== 'single') setMode('single');
+  const spEl = els.stage.children[state.index]; if (!spEl) return;
+  const pg = spEl.querySelector('.page'); if (!pg) return;
+  const d = await getPageDims(+pg.dataset.no); if (!d) return;
+  const cs = getComputedStyle(spEl);
+  const availW = spEl.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const availH = spEl.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const fit = Math.min(availW / d.w, availH / d.h);
+  if (fit > 0 && availW / d.w / fit > 1.01) setZoom(availW / d.w / fit, 'fitwidth');
+  else setZoom(1, 'fitwidth');
+  // 适宽是通栏阅读：从页顶开始（renderAround 默认把溢出居中，会跳到页面中部）
+  requestAnimationFrame(()=>{ const cur = els.stage.children[state.index]; if (cur) cur.scrollTop = 0; });
+}
 
 /* ══════════ 查词（ECDICT 本地词典，纯离线） ══════════ */
 function pickWord(){
@@ -817,9 +863,10 @@ const esc = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','
 els.navPrev.onclick = ()=>goTo(state.index-1, true, 'arrow');
 els.navNext.onclick = ()=>goTo(state.index+1, true, 'arrow');
 els.btnMode.onclick = ()=>setMode(state.mode==='double'?'single':'double');
-els.btnZoomIn.onclick = ()=>setZoom(state.zoom*1.2, 'button');
-els.btnZoomOut.onclick = ()=>setZoom(state.zoom/1.2, 'button');
+els.btnZoomIn.onclick = ()=>zoomStep(1, 'button');
+els.btnZoomOut.onclick = ()=>zoomStep(-1, 'button');
 els.zoomLabel.onclick = ()=>setZoom(1, 'button');
+els.btnFitW.onclick = ()=>fitWidth();
 els.btnFull.onclick = ()=>{
   if (document.fullscreenElement) document.exitFullscreen();
   else document.documentElement.requestFullscreen().catch(()=>toast('浏览器拒绝了全屏'));
@@ -842,9 +889,10 @@ document.addEventListener('keydown', e=>{
     case 'ArrowLeft': case 'PageUp': goTo(state.index-1, true, 'key'); break;
     case 'Home': goTo(0, true, 'key'); break;
     case 'End': goTo(state.spreads.length-1, true, 'key'); break;
-    case '+': case '=': setZoom(state.zoom*1.2, 'key'); break;
-    case '-': setZoom(state.zoom/1.2, 'key'); break;
+    case '+': case '=': zoomStep(1, 'key'); break;
+    case '-': zoomStep(-1, 'key'); break;
     case '0': setZoom(1, 'key'); break;
+    case 'w': case 'W': fitWidth(); break;
     case 'f': case 'F': els.btnFull.click(); break;
     case 'd': case 'D': els.btnMode.click(); break;
     case 'Escape':
@@ -961,19 +1009,14 @@ const endPan = ()=>{ if (pan){ pan.el.classList.remove('panning'); pan=null; } }
 els.wrap.addEventListener('pointerup', endPan);
 els.wrap.addEventListener('pointercancel', endPan);
 
-/* 双指捏合缩放（移动端） + 触摸板 pinch（ctrl+wheel） */
-let softZoom=0, zoomRAF=0;
-function setZoomSoft(z, src='pinch'){
-  softZoom = clamp(z, .6, 3.5);
-  if (!zoomRAF) zoomRAF = requestAnimationFrame(()=>{ zoomRAF=0; setZoom(softZoom, src); });
-}
+/* 双指捏合缩放（移动端） + 触摸板 pinch（ctrl+wheel）→ 均按档位步进 */
 const pts = new Map(); let pinch = null, didPinch = false;
 els.wrap.addEventListener('pointerdown', e=>{
   if (e.pointerType!=='touch') return;
   pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
   if (pts.size===2){
     const [a,b]=[...pts.values()];
-    pinch = { d0: Math.hypot(a.x-b.x, a.y-b.y)||1, z0: state.zoom };
+    pinch = { d0: Math.hypot(a.x-b.x, a.y-b.y)||1, next: 1 };
     didPinch = true;
   }
 });
@@ -982,17 +1025,29 @@ els.wrap.addEventListener('pointermove', e=>{
   pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
   if (pinch && pts.size===2){
     const [a,b]=[...pts.values()];
-    setZoomSoft(pinch.z0 * (Math.hypot(a.x-b.x, a.y-b.y)/pinch.d0));
+    const r = Math.hypot(a.x-b.x, a.y-b.y) / pinch.d0;
+    while (r >= pinch.next * 1.15){ pinch.next *= 1.15; zoomStep(1, 'pinch'); }
+    while (r <= pinch.next / 1.15){ pinch.next /= 1.15; zoomStep(-1, 'pinch'); }
   }
 });
 const endPt = e=>{ pts.delete(e.pointerId); if (pts.size<2) pinch=null; if (!pts.size) setTimeout(()=>didPinch=false, 60); };
 els.wrap.addEventListener('pointerup', endPt);
 els.wrap.addEventListener('pointercancel', endPt);
 els.wrap.addEventListener('gesturestart', e=>e.preventDefault(), {passive:false});
+/* 触控板捏合在浏览器里表现为 ctrl+wheel：累计位移过阈值才进一档（约一档/一次果断捏合），
+   快速大捏合连续进档；停顿 300ms 清零，避免惯性残留触发意外缩放 */
+let wheelAcc = 0, wheelAt = 0;
 els.wrap.addEventListener('wheel', e=>{
-  if (!e.ctrlKey) return;   // 触摸板双指捏合在浏览器里表现为 ctrl+wheel
+  if (!e.ctrlKey) return;
   e.preventDefault();
-  setZoomSoft(state.zoom * Math.exp(-e.deltaY * 0.0022), 'trackpad');
+  const now = performance.now();
+  if (now - wheelAt > 300) wheelAcc = 0;
+  wheelAt = now;
+  wheelAcc += -e.deltaY;
+  while (Math.abs(wheelAcc) >= 120){
+    zoomStep(wheelAcc > 0 ? 1 : -1, 'trackpad');
+    wheelAcc -= Math.sign(wheelAcc) * 120;
+  }
 }, {passive:false});
 
 /* idle 隐藏工具栏 */
