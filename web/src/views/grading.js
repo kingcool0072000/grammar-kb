@@ -81,6 +81,24 @@ export async function mountGrading(el) {
       timed(api.rmSessions({ user: student })),
     ])
     focus = Array.isArray(focus) ? focus : []
+    // 泛读会话统一拉 rw（focus/words 同计划表公式）：僵尸会话（0%→0%
+    // 挂机，后端已标「无有效阅读」且 0 词 0 重合）在此一次性剔除——
+    // 近7天汇总/按日聚合/列表/专注均分全视图同口径，不再漏到聚合里
+    {
+      const libIds = focus.filter((s) => s.module === 'library').map((s) => s.id)
+      if (libIds.length) {
+        try {
+          const wm = await api.focusWords(libIds)
+          focus = focus.filter((s) => {
+            if (s.module !== 'library') return true
+            if (wm[s.id]) s.rw = wm[s.id]
+            const rw = s.rw
+            return !(rw && (rw.flags || []).includes('无有效阅读')
+              && !rw.words && !rw.overlap)
+          })
+        } catch { /* rw 接口失败时不过滤（保守展示） */ }
+      }
+    }
     // 杂志会话归一成学习日志行形状：module=rm；时长主数字=专注学习
     // engaged_sec（对齐 active_sec 语义）；total_ms_r 保留原始总时长
     // （rmLogRow 算专注占比用，不能被 total_sec 污染）；rw.words 复用
@@ -224,14 +242,7 @@ export async function mountGrading(el) {
         aggBtn.classList.toggle('primary', aggMode)
         aggBtn.textContent = aggMode ? '📅 按日聚合（开）' : '📅 按日聚合'
         if (aggMode) {
-          // 泛读词数：一次性批量拉全部会话 rw（逐页拉在聚合视图没有分页钩子）
-          const libAll = focus.filter((s) => s.module === 'library' && !s.rw)
-          if (libAll.length) {
-            try {
-              const wm = await api.focusWords(libAll.map((s) => s.id))
-              libAll.forEach((s) => { if (wm[s.id]) s.rw = wm[s.id] })
-            } catch { /* 词数缺失时聚合行省略词数 */ }
-          }
+          // rw 已在 mountLog 加载时统一拉好（含僵尸剔除），直接渲染
           renderAgg()
         } else {
           renderFocusPage(0)
@@ -260,28 +271,13 @@ export async function mountGrading(el) {
       focusPage = page
       const pageItems = items.slice(page * FOCUS_PAGE, (page + 1) * FOCUS_PAGE)
       const hasNext = items.length > (page + 1) * FOCUS_PAGE
-      // 泛读行逐会话词数+连续性/异常标记（与计划表日卡同一公式）
-      const libIds = pageItems.filter((s) => s.kind === 'focus' && s.raw.module === 'library').map((s) => s.raw.id)
-      if (libIds.length) {
-        try {
-          const wm = await api.focusWords(libIds)
-          pageItems.forEach((s) => { if (s.kind === 'focus' && wm[s.raw.id]) s.raw.rw = wm[s.raw.id] })
-        } catch { /* 词数接口失败时跳过 */ }
-      }
-      // 剔除「无有效阅读」的泛读会话（闪进闪出/恢复失败落书首挂着不动：
-      // 0 词 0 位置 0 交互，对教师是纯噪音——0%→0% 27 分钟这类行不再显示）
-      const dropZombie = (list) => list.filter((s) => {
-        if (s.kind !== 'focus' || s.raw.module !== 'library') return true
-        const rw = s.raw.rw
-        return !(rw && (rw.flags || []).includes('无有效阅读') && !rw.words && !rw.overlap)
-      })
-      const visibleItems = dropZombie(pageItems)
-      if (!visibleItems.length) {
+      // 泛读僵尸会话已在 mountLog 数据加载时统一剔除（rw 亦已带上）
+      if (!pageItems.length) {
         host.innerHTML = page === 0
           ? '<p class="reading-hint">暂无学习记录——学生在泛读馆读书/背单词后自动生成</p>'
           : '<p class="reading-hint">没有更多记录了</p>'
       } else {
-        host.innerHTML = visibleItems.map((s) => s.kind === 'recite' ? reciteLogRow(s.raw)
+        host.innerHTML = pageItems.map((s) => s.kind === 'recite' ? reciteLogRow(s.raw)
           : s.kind === 'rm' ? rmLogRow(s.raw) : focusRow(s.raw)).join('')
         host.querySelectorAll('[data-focus-id]').forEach((row) => {
           row.addEventListener('click', () => openFocusDetail(Number(row.dataset.focusId)))

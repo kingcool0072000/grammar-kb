@@ -2333,11 +2333,13 @@ class PlanStore:
                         s0 = max(s0, pt["p"])
                     prev = pt["p"]
             b = base.get(r["id"]) or {"prev_end": None, "watermark": 0.0}
+            # lo/hi 必须先初始化：无效会话（闪进闪出/挂机）走不到下面分支，
+            # 但 ch_rows 段引用它们——曾致 ids 只含这类会话时 500
+            lo: list = []
+            hi: list = []
             if valid and info and total > 0:
                 segs = self._row_segs(r, total)
                 wm = b["watermark"]
-                lo: list = []
-                hi: list = []
                 for s_pos, e_pos in segs:
                     if e_pos <= wm:
                         lo.append((s_pos, e_pos))
