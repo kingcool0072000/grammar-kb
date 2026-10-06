@@ -1870,14 +1870,11 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             resp.headers["Cache-Control"] = "no-cache"
             return resp
 
-        # 杂志阅读器入口同理：无 hash 文件名的 HTML 由 _CachedStatic 统一
-        # no-cache（PDF/词典桶等带名资源仍长缓存），此处路由只为 /readingmore
-        # （无斜杠、无 index.html 后缀）提供与根路径一致的显式入口
-        @app.get("/readingmore", include_in_schema=False)
-        def _readingmore_index():
-            resp = _IndexFileResponse(web_dist / "readingmore" / "index.html")
-            resp.headers["Cache-Control"] = "no-cache"
-            return resp
+        # /readingmore（无尾斜杠）不在此显式服务 HTML：页面内 assets/、dict/、
+        # PDF 全是相对路径，必须由 StaticFiles 原生 307 → /readingmore/ 后才
+        # 能正确解析（曾直接回 index.html 导致 /assets/pdf.min.js 404、
+        # pdfjsLib is not defined）。/readingmore/ 的 no-cache 由 _CachedStatic
+        # 的 .html 统一规则覆盖
 
         # 静态资源长缓存：vite 产物文件名带内容 hash（index-xxxx.js），
         # 内容变则名变——可安全 immutable 一年；index.html 已显式 no-cache
