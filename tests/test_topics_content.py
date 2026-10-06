@@ -1,7 +1,11 @@
 """v2 结构化专题：内容导入/展开行为。
 
-覆盖：JSON 文件导入校验通过、ref 引用题库能展开出题干与选项、
-qs_label 透传到展开结果（前端练习区标题）。
+覆盖：JSON 文件导入校验通过、题目全部自含展开、qs_label 透传到展开结果
+（前端练习区标题）。
+
+内容政策（2026-10-05 用户定调）：作业卷是对孩子的考试，专题里不允许出现
+作业卷真题——homework_question 表即作业卷题库，因此 ref 引用必须为 0；
+题目只允许讲义卷原题 / 基于讲义的自拟拓展。
 """
 from __future__ import annotations
 
@@ -26,34 +30,24 @@ def test_import_lecture29_json_and_expand(tmp_path):
     got = store.upsert_topic(data["meta"], data["content"])
     assert got["topic_id"] == "lecture-29-passive-1"
     keys = [n["key"] for n in got["nodes"]]
-    assert keys == ["what", "transitive", "steps", "tenses", "usage", "exam"]
+    assert keys == ["what", "transitive", "steps", "tenses", "usage", "final"]
 
-    # ref 引用题必须从 grammar.db 题库展开出题干与答案（lecture=29 均有货）
-    refs = [q for n in got["nodes"] for q in n["general_qs"]
-            if q["kind"] == "ref"]
-    assert refs, "应存在题库引用题"
-    for q in refs:
-        assert q["stem"], f"第{q['lecture']}讲第{q['qnum']}题未展开出题干"
-        assert q["answer"], f"第{q['lecture']}讲第{q['qnum']}题无答案"
-
-    # 选择题引用展开出选项（前端 qBlock 渲染 A/B/C/D 用）
-    mc = [q for q in refs if q["options"]]
-    assert mc and all(len(q["options"]) >= 2 for q in mc)
-
-    # 自含题原样透传（选项/解析/答案）
-    self_qs = [q for n in got["nodes"] for q in n["general_qs"]
-               if q["kind"] == "self"]
-    assert self_qs and all(q["stem"] for q in self_qs)
+    all_qs = [q for n in got["nodes"] for q in n["general_qs"]]
+    # 内容政策：不允许 ref 引用作业卷题库（homework_question），题目全部自含
+    refs = [q for q in all_qs if q["kind"] == "ref"]
+    assert refs == [], f"专题不得引用作业卷题库，发现 {len(refs)} 道 ref"
+    # 自含题必须有题干与答案
+    assert all(q["stem"] and q["answer"] for q in all_qs)
 
     # qs_label 透传（不丢字段）
     labels = {n["key"]: n["qs_label"] for n in got["nodes"]}
     assert labels["what"] == "热身自测（先想再点开）"
     assert all(labels.values()), "每个节点的练习区标题都应有值"
 
-    # 总题量：6 关共 56 题
+    # 总题量：6 关共 43 题
     total = sum(len(n["wrong_qs"]) + len(n["general_qs"])
                 for n in got["nodes"])
-    assert total == 56
+    assert total == 43
 
 
 def test_student_visibility_and_progress(tmp_path):
