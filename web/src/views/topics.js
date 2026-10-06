@@ -403,10 +403,14 @@ export async function mountTopics(el, { role } = {}) {
           <button class="topic-reveal-btn">先想再看答案</button>
         </div>
         <p class="topic-q-stem">${escapeHtml(q.stem || '（题目缺失）')}</p>
+        ${(q.options || []).length ? `
+          <ol class="topic-q-options">${q.options.map((o, j) =>
+            `<li><b>${String.fromCharCode(65 + j)}.</b> ${escapeHtml(o)}</li>`).join('')}</ol>` : ''}
         <div class="topic-q-answer">
           <b>答案：${escapeHtml(q.answer || '—')}</b>
           ${q.explain ? `<p>${escapeHtml(q.explain)}</p>` : ''}
         </div>
+        <button class="topic-reveal-btn reopen">再想一遍，收起答案</button>
       </li>`
 
     const nodeHtml = (n, depth) => `
@@ -419,7 +423,7 @@ export async function mountTopics(el, { role } = {}) {
           <h3 class="topic-sub">错题讲解回顾（先想再点开）</h3>
           <ul class="topic-replay">${n.wrong_qs.map((q, i) => qBlock(q, i, 'wrong')).join('')}</ul>` : ''}
         ${(n.general_qs || []).length ? `
-          <h3 class="topic-sub">泛化题学习（换马甲的同款题）</h3>
+          <h3 class="topic-sub">${escapeHtml(n.qs_label || '泛化题学习（换马甲的同款题）')}</h3>
           <ul class="topic-drill">${n.general_qs.map((q, i) => qBlock(q, i, 'general')).join('')}</ul>` : ''}
         <div class="topic-done-row">
           <button class="topic-done-btn ${doneSet.has(n.key) ? 'done' : ''}" data-key="${n.key}">
@@ -449,7 +453,10 @@ export async function mountTopics(el, { role } = {}) {
       location.hash = '/topics'
     })
     el.querySelectorAll('.topic-reveal-btn').forEach((btn) => {
-      btn.addEventListener('click', () => btn.closest('li').classList.add('open'))
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('reopen')) btn.closest('li').classList.remove('open')  // 收起重想
+        else btn.closest('li').classList.add('open')
+      })
     })
     const barI = el.querySelector('#topic-bar-i')
     const label = el.querySelector('#topic-progress-label')

@@ -280,6 +280,7 @@ class TopicStore:
                 "key": str(n.get("key") or ""),
                 "title": str(n.get("title") or ""),
                 "explain": str(n.get("explain") or ""),
+                "qs_label": str(n.get("qs_label") or ""),
                 "wrong_qs": self._expand_qs(n.get("wrong_qs") or []),
                 "general_qs": self._expand_qs(n.get("general_qs") or []),
                 "children": self._expand_nodes(n.get("children") or []),

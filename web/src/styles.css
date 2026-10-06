@@ -2203,13 +2203,13 @@ mark[data-lib-anchor] {
 .topic-callout.good { border-left-color: #2e7d4f; background: #e9f5ee; }
 .topic-callout b.tag { display: block; margin-bottom: 3px; }
 
-/* 题目列表 */
+/* 题目列表（选项 li 是题干内嵌列表，须从题卡样式里豁免） */
 .topic-replay, .topic-drill { list-style: none; margin: 0; padding: 0; }
-.topic-replay li {
+.topic-replay > li, .topic-drill > li {
   background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--tc);
   border-radius: var(--radius); padding: 14px 18px; margin: 10px 0; box-shadow: var(--shadow);
 }
-.topic-drill li {
+.topic-drill > li {
   background: var(--bg-soft); border: 1px dashed #d5cab0; border-left: 4px solid var(--tc);
   border-radius: var(--radius); padding: 13px 18px; margin: 10px 0;
 }
@@ -2248,6 +2248,13 @@ li.open .topic-reveal-btn { display: none; }
 }
 .topic-q-head .topic-reveal-btn { margin-left: auto; padding: 3px 14px; font-size: 12.5px; }
 .topic-q-stem { margin: 8px 0 0; font-size: 15px; line-height: 1.75; }
+.topic-q-options {
+  margin: 6px 0 0; padding: 0; list-style: none;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 3px 18px; font-size: 14.5px; line-height: 1.65;
+  background: none; border: none; border-radius: 0; box-shadow: none;
+}
+.topic-q-options li b { color: var(--tc); margin-right: 4px; font-family: Georgia, "Times New Roman", serif; }
 .topic-q-answer {
   display: none; margin-top: 10px; padding: 10px 14px;
   background: #e9f5ee; border: 1px solid #c8e2d2; border-radius: 11px; font-size: 14.5px;
@@ -2255,6 +2262,8 @@ li.open .topic-reveal-btn { display: none; }
 .topic-q-answer b { color: #2e7d4f; font-size: 15px; }
 .topic-q-answer p { color: #48705c; font-size: 13.5px; margin: 4px 0 0; }
 li.open .topic-q-answer { display: block; animation: topicFadeUp .25s ease; }
+.topic-reveal-btn.reopen { display: none; margin-top: 8px; padding: 2px 12px; font-size: 11.5px; opacity: .75; }
+li.open .topic-reveal-btn.reopen { display: inline-block; }
 
 /* 教师端专题管理 */
 .ta-import textarea {

@@ -1,0 +1,328 @@
+{
+  "meta": {
+    "topic_id": "lecture-29-passive-1",
+    "title": "第29讲 · 被动语态① 自学",
+    "subtitle": "自学一遍再上课：什么是被动 → 及物动词才能被动 → 三步转换口诀 → 八种时态 be done → 什么时候用被动 → 作业卷真题实战（共 6 关 · 56 题）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "what",
+        "title": "① 什么是被动语态？",
+        "explain": "<p>英语的<b>语态</b>有两种：</p><p>· <b>主动语态</b>：主语是动作的<b>执行者</b>（谁在做）<br>· <b>被动语态</b>：主语是动作的<b>承受者</b>（谁被怎么样）</p><table><tr><th>主动（执行者作主语）</th><th>被动（承受者作主语）</th></tr><tr><td>We talk about the accident.<br>我们讨论这个事故。</td><td>The accident <b>is talked about</b> (by us).<br>这个事故被我们讨论。</td></tr><tr><td>John read the book.<br>约翰读了这本书。</td><td>The book <b>was read</b> (by John).<br>这本书被约翰读了。</td></tr></table><p><b>定义</b>：主语是动作的承受者，就叫被动语态。中文里的「被、由、受到、得到」往往对应英文的被动句。</p><p>观察上面的例子：被动句其实就是<b>换座位</b>——原来的宾语升格当主语，原来的主语退到 <b>by</b> 后面（有时干脆不出现）。谓语动词则变成 <b>be + 过去分词</b>。</p><p>自学方法：先读讲解 → 盖住答案做下面的热身题 → 点「先想再看答案」核对 → 全懂了就点「我学完了」，进入下一关。</p>",
+        "qs_label": "热身自测（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "下列哪一句是被动语态？",
+            "options": ["Grandpa waters the flowers every morning.", "The flowers are watered every morning."],
+            "answer": "B",
+            "explain": "B 的主语 the flowers 是浇水动作的承受者（花被浇），谓语 are watered = be + 过去分词，是被动。A 的主语 Grandpa 是执行者（爷爷浇花），是主动。"
+          },
+          {
+            "stem": "这张桌子是去年做的。The table __________ __________ last year.（用 make 的适当形式）",
+            "answer": "was made",
+            "explain": "桌子是「被做」的承受者 → 用被动；last year 是过去时间 → be 用过去式 was。The table was made last year."
+          },
+          {
+            "stem": "找出这句话里动作的执行者：The window was broken by my little brother.",
+            "answer": "my little brother",
+            "explain": "by 后面引出的就是执行者。注意被动句里 by 短语经常整个省略——不知道是谁、或不必说是谁的时候：My bike was stolen last night.（我的自行车昨晚被偷了——小偷是谁不知道。）"
+          }
+        ]
+      },
+      {
+        "key": "transitive",
+        "title": "② 只有及物动词才能变被动：rise/raise、sit/seat",
+        "explain": "<p><b>规则</b>：只有<b>及物动词</b>（后面能接宾语）才有被动形式；<b>不及物动词</b>（主语自己动，不接宾语）没有被动。本讲最爱考两对易混词：</p><table><tr><th>动词</th><th>及物/不及物</th><th>意思</th><th>能不能被动</th></tr><tr><td><b>raise</b></td><td>及物（接宾语）</td><td>举起、提高、增加</td><td>能：The price <b>is raised</b>. 价格被提高。✓</td></tr><tr><td><b>rise</b></td><td>不及物（自己升）</td><td>上升、起床、升起</td><td>不能：The price rises. 价格上涨。✗ 无被动</td></tr><tr><td><b>seat</b></td><td>及物（接宾语）</td><td>使……就座</td><td>能：I <b>was seated</b> in the first row. 我被安排在第一排。✓</td></tr><tr><td><b>sit</b></td><td>不及物（自己坐）</td><td>坐</td><td>不能：I sat down. 我坐下了。✗ 无被动</td></tr></table><p><b>记法</b>：rise / sit 是「自己动」——太阳自己升、自己坐下，没人摆布它，所以没有被动；raise / seat 是「摆布别人」——把价格提上去、把客人安排到座位上，有宾语可换位，所以能被动。</p><p>变形式也要背熟：</p><table><tr><th>原形</th><th>过去式</th><th>过去分词</th></tr><tr><td>rise</td><td>rose</td><td>risen</td></tr><tr><td>raise</td><td>raised</td><td>raised</td></tr><tr><td>sit</td><td>sat</td><td>sat</td></tr><tr><td>seat</td><td>seated</td><td>seated</td></tr></table><p>注意这两个坑：①「价格上涨」用 has risen（rise 主动完成时），「工资被提高」用 has been raised（raise 被动完成时）；② seat yourself（把自己安顿到座位上）里 seat 也是及物——宾语是 yourself。</p>",
+        "qs_label": "课堂练习：从 rise / raise / sit / seat 中选词并填入正确形式（作业卷 I）",
+        "general_qs": [
+          {
+            "ref": { "lecture": 29, "qnum": 1 },
+            "explain": "「起床」＝自己起来，主语 I 自己动 → 不及物 rise；usually 表经常 → 一般现在时，主语是 I → 原形 rise。"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 2 },
+            "explain": "太阳「自己升起」→ rise；and sets 并列的一般现在时；主语 the sun 是第三人称单数 → rises。"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 3 },
+            "explain": "「提高嗓门」——your voice 是宾语，把嗓门提上去 → 及物 raise；Please 开头的祈使句 → 原形 raise。"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 4 },
+            "explain": "has been ___ 已经给出「现在完成时的被动」骨架 → 直接填过去分词 raised；工资是「被提高」的，by 10% 说明幅度。"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 5 },
+            "explain": "句意是房价「上涨」→ rise（不及物，自己涨，不用被动）；has ___ → 现在完成时主动 has risen。题目末尾的 sit seat 是干扰提示，别被带偏。"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 6 },
+            "explain": "「坐在花园里看书」＝自己坐 → sit；like to do → 后接原形 sit。"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 7 },
+            "explain": "sit down 是固定搭配，「自己坐下」→ 不及物 sit；祈使句用原形。"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 8 },
+            "explain": "seat yourself＝把你自己安顿到座位上，yourself 是宾语 → 及物 seat；祈使句原形。"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 9 },
+            "explain": "were ___ by the host：by 短语出现 → 一定被动；客人「被主人安排」在长桌 → were seated。"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 10 },
+            "explain": "主语 the teacher，宾语 us——老师把「我们」安排到第一排 → 及物 seat；just now → 一般过去时 → seated。"
+          }
+        ]
+      },
+      {
+        "key": "steps",
+        "title": "③ 主动变被动只要三步（附口诀）",
+        "explain": "<p>以 <b>I use a pen. → A pen is used by me.</b> 为例：</p><table><tr><th>步骤</th><th>做什么</th><th>例子</th></tr><tr><td>步骤 1</td><td>原句的<b>宾语</b> → 变成被动句的<b>主语</b></td><td>I use <b>a pen</b>. → <b>A pen</b> …（宾变主）</td></tr><tr><td>步骤 2</td><td>谓语动词 → <b>be + 过去分词</b>（be 的新人称、数随新主语；<b>时态保持原句不变</b>）</td><td>use → <b>is used</b>（谓变 be done）</td></tr><tr><td>步骤 3</td><td>原句的<b>主语</b> → 放到 <b>by</b> 后面（主格变宾格：I → me）</td><td>… <b>by me</b>（主变宾）</td></tr></table><p style=\"font-size:1.05em\"><b>口诀</b>：宾变主，主变宾，谓变 be done，时不变，数格必须随被变。</p><p>两个易错点：① by 后面用宾格（by me / by him / by us）；② be 的单复数看<b>新主语</b>——A pen <b>is</b> used…，The pens <b>are</b> used…。</p><p>下面的练习用同一对主角（猫追老鼠）把八种时态各变一遍——做完你就会发现，被动转换唯一的变化就是 be 的形状，正好给第 ④ 关热身。</p>",
+        "qs_label": "课堂练习 1：把主动句改成被动句（注意每题不止一格一词）",
+        "general_qs": [
+          {
+            "stem": "The cat chases the mouse.\n= The mouse __________ __________ __________.",
+            "answer": "The mouse is chased by the cat.",
+            "explain": "chases 一般现在时（三单）→ 被动 be 用 is；the mouse 单数。宾变主：mouse 当主语；chase → chased。"
+          },
+          {
+            "stem": "The cat chased the mouse.\n= The mouse __________ __________ __________.",
+            "answer": "The mouse was chased by the cat.",
+            "explain": "chased 一般过去时 → 被动 be 用过去式 was（新主语 the mouse 单数）。"
+          },
+          {
+            "stem": "The cat will chase the mouse.\n= The mouse __________ __________ __________.",
+            "answer": "The mouse will be chased by the cat.",
+            "explain": "will chase 一般将来时 → will be chased。注意 will 后面必须有 be，不能丢（×will chased）。"
+          },
+          {
+            "stem": "The cat would chase the mouse.\n= The mouse __________ __________ __________.",
+            "answer": "The mouse would be chased by the cat.",
+            "explain": "would chase 过去将来时 → would be chased，同样保留 be。"
+          },
+          {
+            "stem": "The cat is chasing the mouse.\n= The mouse __________ __________ __________.",
+            "answer": "The mouse is being chased by the cat.",
+            "explain": "is chasing 现在进行时 → is being chased。进行时被动最易错：being 不能丢（×is chased / ×is been chased）。"
+          },
+          {
+            "stem": "The cat was chasing the mouse.\n= The mouse __________ __________ __________.",
+            "answer": "The mouse was being chased by the cat.",
+            "explain": "was chasing 过去进行时 → was being chased。"
+          },
+          {
+            "stem": "The cat has chased the mouse.\n= The mouse __________ __________ __________.",
+            "answer": "The mouse has been chased by the cat.",
+            "explain": "has chased 现在完成时 → has been chased。完成时被动的 been 不能丢（×has chased / ×has being chased）。"
+          },
+          {
+            "stem": "The cat had chased the mouse.\n= The mouse __________ __________ __________.",
+            "answer": "The mouse had been chased by the cat.",
+            "explain": "had chased 过去完成时 → had been chased。"
+          }
+        ]
+      },
+      {
+        "key": "tenses",
+        "title": "④ 八种时态的被动：一张 be done 万能表",
+        "explain": "<p>被动语态的<b>基本构成：be + 过去分词（done）</b>。be 本身没有词义，但要随时态、人称、数变化。把这张表背熟，所有被动题都是填表题：</p><table><tr><th>时态</th><th>主动</th><th>被动</th></tr><tr><td>一般现在时</td><td>do / does</td><td><b>am/is/are</b> + done</td></tr><tr><td>一般过去时</td><td>did</td><td><b>was/were</b> + done</td></tr><tr><td>一般将来时</td><td>will do</td><td><b>will be</b> + done</td></tr><tr><td>过去将来时</td><td>would do</td><td><b>would be</b> + done</td></tr><tr><td>现在进行时</td><td>am/is/are doing</td><td>am/is/are + <b>being</b> + done</td></tr><tr><td>过去进行时</td><td>was/were doing</td><td>was/were + <b>being</b> + done</td></tr><tr><td>现在完成时</td><td>have/has done</td><td>have/has + <b>been</b> + done</td></tr><tr><td>过去完成时</td><td>had done</td><td>had + <b>been</b> + done</td></tr></table><p><b>三个最容易错的格子</b>：① 将来时的 be 不能丢（will <b>be</b> done）；② 进行时的 being 不能丢（is <b>being</b> done）；③ 完成时的 been 不能丢（has <b>been</b> done）。</p><p>做题套路：先在原句里<b>圈出时态标志</b>（every day / yesterday / tomorrow / now / so far / before + 过去时……），确定 be 的形状；再看新主语的单复数（is / are，has / have）；最后把动词换成过去分词。</p>",
+        "qs_label": "课堂练习：句型转换（作业卷 II——八种时态各一题）",
+        "general_qs": [
+          {
+            "ref": { "lecture": 29, "qnum": 11 },
+            "explain": "repairs 是一般现在时 → be 用 is（the bike 单数）；repair → repaired。答案：is repaired。"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 12 },
+            "explain": "caught 是一般过去时 → be 用 was（the thief 单数）；catch → caught（不规则）。答案：was caught。"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 13 },
+            "explain": "will clean 一般将来时 → will be + done。三格依次是：will / be / cleaned。"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 14 },
+            "explain": "would prepare 过去将来时 → would be + done。三格：would / be / prepared。"
+          },
+          {
+            "stem": "My brother is washing the clothes.\nThe clothes __________ __________ __________ by my brother.",
+            "answer": "are being washed",
+            "explain": "is washing 现在进行时 → be being done；新主语 the clothes 是复数 → are。三格：are / being / washed。（此题为作业卷第 15 题的修复版，题库原题扫描混入了水印。）"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 16 },
+            "explain": "was writing 过去进行时 → was being done；新主语 a letter 单数 → was。三格：was / being / written（write → written 不规则）。"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 17 },
+            "explain": "have delivered 现在完成时 → has been done；新主语 the package 单数 → has（不是 have！）。三格：has / been / delivered。原句主语 they 泛指，by 短语可省。"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 18 },
+            "explain": "had broken 过去完成时（在 arrived 之前更早发生）→ had been done。三格：had / been / broken。注意时间从句 when we arrived 保持不变。"
+          }
+        ]
+      },
+      {
+        "key": "usage",
+        "title": "⑤ 什么时候用被动：常见用法",
+        "explain": "<p>什么时候该用被动？常见六种情况：</p><table><tr><th>用法</th><th>例句</th></tr><tr><td>不知道或不必说执行者（省略 by）</td><td>My bike <b>was stolen</b> last night. 我的自行车昨晚被偷了。<br>You <b>will be punished</b> if you cut down a tree.</td></tr><tr><td>强调执行者（用 by 短语）</td><td>The book <b>was written</b> by Jane Austen. 这本书是简·奥斯汀写的。</td></tr><tr><td>执行者是泛指（people、one 等）</td><td>The boy <b>is called</b> Tom. 这个男孩叫汤姆。</td></tr><tr><td>强调承受者</td><td>She <b>is liked</b> by everyone in our class. 班里每个人都喜欢她。</td></tr><tr><td>陈述客观事实（科技、新闻报道）</td><td>Oil <b>is found</b> deep in the ground. 在地下深处发现石油。<br>Drinking tea <b>is seen as</b> a healthy lifestyle in China.</td></tr><tr><td>习惯上只用于被动</td><td>He <b>was born</b> in Hubei in 1518. 他 1518 年出生在湖北。<br>Rome was not built in a day. 罗马不是一天建成的。</td></tr></table><p><b>记住</b>：be born（出生）永远是被动——「被生下来」，考频极高。</p>",
+        "qs_label": "课堂练习 2：选择最佳答案（讲义原题）",
+        "general_qs": [
+          {
+            "stem": "You ________ on the phone.",
+            "options": ["are wanted", "were want", "want", "wanted"],
+            "answer": "A. are wanted",
+            "explain": "打电话找人惯用被动：「有人找你接电话」。主语 you 是「被找」的承受者，现在时 → are wanted。B 形式错（want 的过去分词是 wanted）。"
+          },
+          {
+            "stem": "Everything ________ away.",
+            "options": ["has been taken", "has taken", "was took", "were taken"],
+            "answer": "A. has been taken",
+            "explain": "everything 是单数 → has；东西「被拿走」→ 被动 has been taken。B 主动方向错；C took 是过去式不是过去分词；D were 数错。"
+          },
+          {
+            "stem": "These books ________ for children.",
+            "options": ["has been written", "are written", "will write", "were writing"],
+            "answer": "B. are written",
+            "explain": "books 复数 + 表用途的一般现在 → are written（这些书是写给儿童看的）。A has 数错；C/D 主动方向错。"
+          },
+          {
+            "stem": "You ________ many times not to make the same mistakes.",
+            "options": ["have told", "have been told", "had told", "had been told"],
+            "answer": "B. have been told",
+            "explain": "many times 到现在为止 → 现在完成时；you 是「被提醒」的 → 被动 have been told。"
+          },
+          {
+            "stem": "The first electric railway ________ in 1890.",
+            "options": ["is opened", "has been open", "has been opened", "was opened"],
+            "answer": "D. was opened",
+            "explain": "in 1890 明确过去时间 → 一般过去时被动 was opened。A 时态错；B 缺过去分词；C 完成时不能与具体过去时间连用。"
+          },
+          {
+            "stem": "A new hospital ________ in our city soon.",
+            "options": ["will build", "was built", "will be built", "has been built"],
+            "answer": "C. will be built",
+            "explain": "soon → 将来时；医院是「被建」的 → will be built。A 主动方向错。"
+          },
+          {
+            "stem": "When and where ________ you ________?",
+            "options": ["was born", "were born", "are born", "is born"],
+            "answer": "B. were born",
+            "explain": "be born 惯用被动；主语 you → be 用 were。出生是过去的事，用 were born。"
+          },
+          {
+            "stem": "You ________ if you cut down a tree.",
+            "options": ["will punish", "will be punished", "punish", "are punished"],
+            "answer": "B. will be punished",
+            "explain": "if 从句用一般现在时，主句用将来时（主将从现）；you「被惩罚」→ will be punished。"
+          },
+          {
+            "stem": "The computer ________ now.",
+            "options": ["is repaired", "is repairing", "being repaired", "is being repaired"],
+            "answer": "D. is being repaired",
+            "explain": "now → 现在进行时；电脑「正在被修」→ is being repaired。C 缺 is；A 不是进行时。"
+          },
+          {
+            "stem": "All the work ________ before his parents arrived.",
+            "options": ["have been finished", "has been finished", "had been finished", "was finished"],
+            "answer": "C. had been finished",
+            "explain": "before his parents arrived 是过去时，工作完成在它<b>之前</b>（过去的过去）→ 过去完成时被动 had been finished。work 不可数，谓语单数。"
+          }
+        ]
+      },
+      {
+        "key": "exam",
+        "title": "⑥ 实战检验：作业卷 17 道真题",
+        "explain": "<p>最后用作业卷的三道大题里的 17 道选择题检验自己。做题三步：</p><p>① <b>圈时态标志词</b>：now / so far / yesterday / in 1909 / soon / since last year / when I arrived / said that……<br>② <b>判断主语与动词的关系</b>：主语是执行者 → 主动；是承受者 → 被动（看到 by、看到「被/由/受到」的语感，几乎都是被动）。<br>③ <b>按第 ④ 关的万能表写出 be done</b>，再对照选项。</p><p>两个加餐提醒：· <b>A, as well as B</b> 作主语时，谓语的单复数看 A（去掉 as well as B 再看）；· <b>yet</b> 常和完成时否定连用（hasn't been done <b>yet</b>）。</p><p style=\"color:#8a6410\">目标：17 题至少对 14 题。做错也没关系——点开解析看懂，过两天回来重做一遍。</p>",
+        "qs_label": "作业卷真题（先想再点开）",
+        "general_qs": [
+          {
+            "ref": { "lecture": 29, "qnum": 19 },
+            "explain": "主句 told 是过去时，宾语从句里 robots「被用来」干活 → 过去范畴的被动；robots 复数 → would be used。（D）"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 20 },
+            "explain": "in the near future → 将来时；our lives 被 new technology 改变 → will be changed。（D）"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 21 },
+            "explain": "Today + 经常性状态 → 一般现在时；he（美猴王）「被人们喜爱」→ is loved。（C）"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 22 },
+            "explain": "now → 现在进行时；房子「正在被刷漆」所以才借住叔叔家 → is being painted。（B）"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 23 },
+            "explain": "yet 常搭完成时否定；医生「还没被派去」→ hasn't been sent。（B）"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 24 },
+            "explain": "if 条件句（一般现在时）+ 主句将来时（主将从现）；你「将被处罚」→ will be punished。（A）"
+          },
+          {
+            "stem": "China Panda Train from Chengdu to Zunyi ________ to use on March 28, 2021.",
+            "options": ["is put", "was put", "will be put", "puts"],
+            "answer": "B. was put",
+            "explain": "on March 28, 2021 是明确过去时间 → 一般过去时；列车「被投入使用」be put to use → was put。（此题为作业卷第 25 题修复版，原题扫描件题干带水印。）"
+          },
+          {
+            "stem": "So far, this book ________ into many languages. And it is very popular among the young all over the world.",
+            "options": ["was translated", "was translating", "has translated", "has been translated"],
+            "answer": "D. has been translated",
+            "explain": "So far → 现在完成时；this book 单数、被翻译 → has been translated。（此题为作业卷第 26 题修复版，原题库选项错乱。）"
+          },
+          {
+            "stem": "The cake ________ when I arrived at the bakery.",
+            "options": ["has been baked", "had baked", "is being baked", "was being baked"],
+            "answer": "D. was being baked",
+            "explain": "when I arrived 过去的时间点，蛋糕当时「正在被烤」→ 过去进行时被动 was being baked。（此题为作业卷第 27 题修复版，原题库选项错乱。）"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 28 },
+            "explain": "He said → 宾语从句用过去将来时；trade center 单数、被建 → would be built。（B）"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 29 },
+            "explain": "very soon → 将来时；stricter rules「被制定」→ will be made。（D）"
+          },
+          {
+            "stem": "The famous musician, as well as his students, ________ to perform at the opening ceremony of the 2012 Taipei Flower Expo.",
+            "options": ["were invited", "was invited", "have been invited", "has been invited"],
+            "answer": "B. was invited",
+            "explain": "as well as his students 不影响主谓一致——谓语看前面的 the famous musician（单数）；2012 过去 + 被邀 → was invited。（此题为作业卷第 30 题修复版，原题库选项错乱。）"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 31 },
+            "explain": "since last year → 现在完成时；we 被 offer 了很多支持 → have been offered。（B）"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 32 },
+            "explain": "was angry（过去）的原因发生在更早——钢笔在那之前「已经被弄坏」→ 过去完成时被动 had been broken。（C）"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 33 },
+            "explain": "whether 宾语从句表将来；books「被互联网取代」→ will be replaced。（C）"
+          },
+          {
+            "ref": { "lecture": 29, "qnum": 34 },
+            "explain": "in 1909 过去；the idea 单数；raise 及物「提出」→ was raised。（A。C/D 的 rise 是不及物动词，没有被动形式——正是第 ② 关的知识点。）"
+          },
+          {
+            "stem": "Too many people were absent. The chairperson warned that the meeting ________ if necessary.",
+            "options": ["would be cancelled", "will be cancelled", "has been cancelled", "had been cancelled"],
+            "answer": "A. would be cancelled",
+            "explain": "warned that → 宾语从句用过去将来时；会议「被取消」→ would be cancelled。（此题为作业卷第 35 题修复版，原题扫描件题干带水印。）"
+          }
+        ]
+      }
+    ]
+  }
+}
