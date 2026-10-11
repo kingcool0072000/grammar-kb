@@ -71,10 +71,22 @@ def monday_of(d: date) -> date:
     return d - timedelta(days=d.weekday())
 
 
+def cn_dt(col: str) -> str:
+    """UTC 时间戳列 → 北京时区 datetime 表达式（julianday +8h）。
+
+    created_at/updated_at 均按 UTC 落库，按本地日/周切分比较时必须先
+    转时区（与 _MP_DATE 同口径）：否则北京时间 08:00 前的活动会被
+    归到前一天，当天计划表显示 0 分钟。注意比较边界是本地零点的
+    naive 串（如 '2026-10-08 00:00:00'），datetime() 转换后同为 naive，
+    字典序比较成立。"""
+    return f"datetime(julianday({col}) + 8.0/24)"
+
+
 def week_bounds(week_start: str) -> tuple[str, str]:
-    """[周一 00:00, 下周一 00:00) 的 ISO 串（UTC 简化口径）。"""
+    """[周一 00:00, 下周一 00:00) 本地日期串（配合 cn_dt 做窗口比较）。"""
     ws = date.fromisoformat(week_start)
-    return (ws.isoformat(), (ws + timedelta(days=7)).isoformat())
+    return (f"{ws.isoformat()} 00:00:00",
+            f"{(ws + timedelta(days=7)).isoformat()} 00:00:00")
 
 
 class PlanStore:
@@ -321,7 +333,8 @@ class PlanStore:
             with self._connect() as conn:
                 rows = conn.execute(
                     "SELECT test_id, paper, part FROM fce_submission"
-                    " WHERE user = ? AND created_at >= ? AND created_at < ?",
+                    f" WHERE user = ? AND {cn_dt('created_at')} >= ?"
+                    f" AND {cn_dt('created_at')} < ?",
                     (user, lo, hi),
                 ).fetchall()
             return sorted({
@@ -350,7 +363,8 @@ class PlanStore:
                     "SELECT b.id AS book_id, b.title, b.chapter_count,"
                     " p.percent, p.reading_seconds, p.updated_at"
                     " FROM reading_progress p JOIN books b ON b.id = p.book_id"
-                    " WHERE p.user = ? AND p.updated_at >= ? AND p.updated_at < ?",
+                    f" WHERE p.user = ? AND {cn_dt('p.updated_at')} >= ?"
+                    f" AND {cn_dt('p.updated_at')} < ?",
                     (user, lo, hi),
                 ).fetchall()
                 if not rows:
@@ -568,11 +582,13 @@ class PlanStore:
         # ---- 截至 ref（含）的已完成——欠账重摊的基数 ----
         lo, _ = week_bounds(week_start)
         upto = (rd + timedelta(days=1)).isoformat()
-        done_lecs = {r["lecture"] for r in self._exam_actuals(lo, upto, "lecture")}
+        done_lecs = ({r["lecture"] for r in self._exam_actuals(lo, upto, "lecture")}
+                     | self._topic_done_lectures(lo, upto, user))
         done_hw = {r["lecture"] for r in self._exam_actuals(lo, upto, "hw")}
         # 今天已完成的讲次/卷——保留出行为（完成信号会点亮 ✓，
         # 当天清单=今天做完的 ✓ + 今天新分配的灰）
-        today_lecs = {r["lecture"] for r in self._exam_actuals(ref, upto, "lecture")}
+        today_lecs = ({r["lecture"] for r in self._exam_actuals(ref, upto, "lecture")}
+                      | self._topic_done_lectures(ref, upto, user))
         today_hw = {r["lecture"] for r in self._exam_actuals(ref, upto, "hw")}
         vocab_done = self._vocab_actuals(lo, upto, user)
         fce_done = set(self._fce_actuals(lo, upto, user))
@@ -634,6 +650,20 @@ class PlanStore:
                     })
             for book_key, pct in (t.get("reading") or {}).items():
                 tasks.append(self._reading_task(book_key, pct, user, days_left))
+            # 周中已提前提交朗读的精读篇目：当天清单补 ✓ 行（否则只进
+            # 「计划外朗读」实录，计划内完成度看不见——孩子提前做完
+            # 反而显示没完成）
+            today_arts = self._done_article_ids(ref, upto, user)
+            for aid in (t.get("articles") or []):
+                if aid in today_arts:
+                    title = self._article_title(aid)
+                    if title:
+                        tasks.append({
+                            "type": "article", "article_id": aid,
+                            "key": f"article:{aid}",
+                            "text": f"精读+朗读《{_short(title, 14)}》",
+                            "detail": "今天已提交朗读 ✓",
+                        })
         elif dow == 5:
             # ---- 周六：FCE 大题 + 精读朗读（模板：周六整块给输出型任务）----
             fce_rest = [x for x in (t.get("fce") or []) if x not in fce_done]
@@ -679,7 +709,8 @@ class PlanStore:
             # 周日泛读兜底：周六前（含周六）仍未读完的剩余量周日一天清
             for book_key, pct in (t.get("reading") or {}).items():
                 tasks.append(self._reading_task(book_key, pct, user, 1))
-        # 讲次/FCE 剩余但本日类型无槽位（如 ref 已周六、讲次还没排完）→ 兜底行
+        # 讲次/FCE 剩余但本日类型无槽位（如 ref 已周六、讲次还没排完）→ 兜底行；
+        # 今天考过的讲次/作业卷在周末也要有 ✓ 行（完成即视，不再隐形）
         if dow >= 5:
             lec_rest = [x for x in (t.get("lectures") or []) if x not in done_lecs]
             for lec in lec_rest[:1]:
@@ -688,6 +719,18 @@ class PlanStore:
                     "text": f"第{lec}讲 学+测（补）",
                     "detail": "本周剩余讲次，周末补上",
                 })
+            have = {x.get("key") for x in tasks}
+            for lec in sorted(today_lecs | today_hw):
+                if f"lecture:{lec}" in have or f"hw:{lec}" in have:
+                    continue
+                if lec in today_lecs:
+                    tasks.append({
+                        "type": "lecture", "key": f"lecture:{lec}",
+                        "text": f"第{lec}讲 学+测",
+                        "detail": "今天已完成 ✓",
+                    })
+                if lec in today_hw:
+                    tasks.append(hw_row(lec))
         return tasks
 
     def _wrong_words_count(self, user: str) -> int:
@@ -1331,8 +1374,10 @@ class PlanStore:
                 with self._connect() as conn:
                     rows = conn.execute(
                         "SELECT test_id, paper, part FROM fce_submission"
-                        " WHERE user = ? AND created_at >= ? AND created_at < ?",
-                        (user, week_start, add_days(week_start, 7))).fetchall()
+                        f" WHERE user = ? AND {cn_dt('created_at')} >= ?"
+                        f" AND {cn_dt('created_at')} < ?",
+                        (user, f"{week_start} 00:00:00",
+                         f"{add_days(week_start, 7)} 00:00:00")).fetchall()
                     got = {f"Test {r['test_id']} · {_paper_short(r['paper'])} P{r['part']}"
                            for r in rows}
                 done_fce = sum(1 for x in fce if x in got)
@@ -2087,12 +2132,12 @@ class PlanStore:
             segs: list[tuple[float, float]] = []
             for r in srows:
                 segs.extend(self._row_segs(r, total))
-            # 去重合并（段可能跨会话重叠），再逐章计词
-            words, counted = self._segs_words(segs, info["chs"], info["required"])
+            # 去重合并（段可能跨会话重叠），再逐章计词。
+            # 章区间不再输出（from/to 恒 None）：线性词数映射的落点章
+            # 与真实 CFI 翻页位置误差可达 ±10+ 章（各章篇幅不均），
+            # 展示出来误导；学习日志只保留时长 + 词数。
+            words, _counted = self._segs_words(segs, info["chs"], info["required"])
             entry["words"] = words
-            if counted:
-                entry["from"], entry["to"] = self._display_chapter_nos(
-                    info["chs"], min(counted), max(counted))
             out.append(entry)
         return out
 
@@ -2512,6 +2557,66 @@ class PlanStore:
         s_pos = lo_p / 100 * total_words
         return [(s_pos, s_pos + span)]
 
+    def _topic_done_lectures(self, lo: str, hi: str, user: str) -> set[int]:
+        """[lo, hi) 内学完的自学专题对应讲次号（topic_id 形如
+        lecture-29-passive-1；完成=done_keys 覆盖全部节点 key）。
+        讲次「学+测」的完成信号除成绩登记外补此口径——孩子在专题里
+        学完并做完题，但没有线下卷面成绩时，周计划也应点亮。"""
+        try:
+            with self._connect() as conn:
+                tabs = {r[0] for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'")}
+                if "topic_progress" not in tabs or "topic_content" not in tabs:
+                    return set()
+                rows = conn.execute(
+                    "SELECT topic_id, done_keys FROM topic_progress"
+                    " WHERE user = ? AND completed_at != ''"
+                    " AND date(julianday(COALESCE(NULLIF(completed_at,''),"
+                    " updated_at)) + 8.0/24) >= ?"
+                    " AND date(julianday(COALESCE(NULLIF(completed_at,''),"
+                    " updated_at)) + 8.0/24) < ?",
+                    (user, lo, hi),
+                ).fetchall()
+                out: set[int] = set()
+                for r in rows:
+                    m = re.match(r"lecture-(\d+)", r["topic_id"] or "")
+                    if not m:
+                        continue
+                    try:
+                        done_set = set(json.loads(r["done_keys"] or "[]"))
+                    except (ValueError, TypeError):
+                        continue
+                    need = self._topic_node_keys(conn, r["topic_id"])
+                    if need and done_set >= need:
+                        out.add(int(m.group(1)))
+                return out
+        except sqlite3.Error:
+            return set()
+
+    def _topic_node_keys(self, conn: sqlite3.Connection,
+                         topic_id: str) -> set[str]:
+        """专题内容全部节点 key 集合（内容缺失/坏 JSON 返回空集=不可判定）。"""
+        try:
+            row = conn.execute(
+                "SELECT content FROM topic_content WHERE topic_id = ?",
+                (topic_id,)).fetchone()
+            if not row:
+                return set()
+            data = json.loads(row["content"] or "{}")
+            keys: set[str] = set()
+
+            def walk(nodes: list) -> None:
+                for n in nodes or []:
+                    if isinstance(n, dict):
+                        k = str(n.get("key") or "").strip()
+                        if k:
+                            keys.add(k)
+                        walk(n.get("children"))
+            walk(data.get("nodes"))
+            return keys
+        except (sqlite3.Error, ValueError, TypeError):
+            return set()
+
     def _auto_done(self, user: str, day: str) -> tuple[dict[str, bool], list[str]]:
         """当天活动信号 → (task_key 完成表, 当日阅读书名列表)。
 
@@ -2548,6 +2653,11 @@ class PlanStore:
                     out["lecture"] = True
             except sqlite3.Error:
                 pass
+        # 自学专题学完 = 对应讲次「学+测」的完成信号（口径见
+        # _topic_done_lectures；孩子在专题学完但没有线下卷面成绩时点亮）
+        for lec_no in self._topic_done_lectures(day, nxt, user):
+            out[f"lecture:{lec_no}"] = True
+            out["lecture"] = True
         try:
             with self._connect() as conn:
                 tabs = {r[0] for r in conn.execute(
@@ -2565,8 +2675,9 @@ class PlanStore:
                         "SELECT COUNT(*) n, COALESCE(SUM(total),0) w,"
                         " COALESCE(SUM(duration_sec),0) dur"
                         " FROM recite_sessions"
-                        " WHERE user = ? AND (created_at >= ? AND created_at < ?)",
-                        (user, day, nxt),
+                        f" WHERE user = ? AND ({cn_dt('created_at')} >= ?"
+                        f" AND {cn_dt('created_at')} < ?)",
+                        (user, f"{day} 00:00:00", f"{nxt} 00:00:00"),
                     ).fetchone()
                     if row and row["n"]:
                         out.setdefault("wrong_words", True)
@@ -2583,8 +2694,9 @@ class PlanStore:
                         " chapter_navs, percent_start, percent_end,"
                         " percent_track, active_sec"
                         " FROM focus_sessions"
-                        " WHERE user = ? AND (created_at >= ? AND created_at < ?)",
-                        (user, day, nxt),
+                        f" WHERE user = ? AND ({cn_dt('created_at')} >= ?"
+                        f" AND {cn_dt('created_at')} < ?)",
+                        (user, f"{day} 00:00:00", f"{nxt} 00:00:00"),
                     ).fetchall()
                     if frows:
                         self._day_acts["focus_sec"] = sum(
@@ -2593,8 +2705,9 @@ class PlanStore:
                 if "fce_submission" in tabs:
                     row = conn.execute(
                         "SELECT COUNT(*) n FROM fce_submission"
-                        " WHERE user = ? AND (created_at >= ? AND created_at < ?)",
-                        (user, day, nxt),
+                        f" WHERE user = ? AND ({cn_dt('created_at')} >= ?"
+                        f" AND {cn_dt('created_at')} < ?)",
+                        (user, f"{day} 00:00:00", f"{nxt} 00:00:00"),
                     ).fetchone()
                     if row and row["n"]:
                         out["fce"] = True
@@ -2635,8 +2748,9 @@ class PlanStore:
                 if "reading_recordings" in tabs:
                     rows = conn.execute(
                         "SELECT article_id FROM reading_recordings"
-                        " WHERE user = ? AND (created_at >= ? AND created_at < ?)",
-                        (user, day, nxt),
+                        f" WHERE user = ? AND ({cn_dt('created_at')} >= ?"
+                        f" AND {cn_dt('created_at')} < ?)",
+                        (user, f"{day} 00:00:00", f"{nxt} 00:00:00"),
                     ).fetchall()
                     if rows:
                         out["speak"] = True
@@ -2650,9 +2764,10 @@ class PlanStore:
                         " percent_start, percent_end, lookups, plays,"
                         " scroll_count, chapter_navs, percent_track"
                         " FROM focus_sessions"
-                        " WHERE user = ? AND (created_at >= ? AND created_at < ?)"
+                        f" WHERE user = ? AND ({cn_dt('created_at')} >= ?"
+                        f" AND {cn_dt('created_at')} < ?)"
                         " AND book_title IS NOT NULL",
-                        (user, day, nxt),
+                        (user, f"{day} 00:00:00", f"{nxt} 00:00:00"),
                     ).fetchall()
                     read_titles = [r["book_title"] for r in rows]
                     for r in rows:

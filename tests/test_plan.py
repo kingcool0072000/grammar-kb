@@ -262,6 +262,8 @@ def test_my_week_student_only(plan_env):
     assert c.get("/plan/my-week", headers=t).status_code == 403
 
 
+@pytest.mark.skipif(date.today().weekday() >= 5,
+                    reason="周末模板无讲次/背词排程（口径=工作日）")
 def test_hw_paper_dimension_split(plan_env):
     """课程/作业卷拆分：hw_papers 独立维度；kind=hw 成绩只点亮作业卷，
     kind=lecture 成绩只点亮语法课程；两维度互不串。"""
@@ -462,6 +464,8 @@ def _put_week(c, ht, tasks):
     assert r.status_code == 200, r.text
 
 
+@pytest.mark.skipif(date.today().weekday() >= 5,
+                    reason="周末模板无讲次/背词排程（口径=工作日）")
 def test_daily_spread_weekday_template(plan_env):
     """工作日均摊：讲次摊工作日、背词配额=剩余词÷剩余工作日。"""
     c = _client(plan_env)
@@ -478,6 +482,8 @@ def test_daily_spread_weekday_template(plan_env):
     assert len(lecs) == 1 and "25" in lecs[0]["text"] or "26" in lecs[0]["text"]
 
 
+@pytest.mark.skipif(date.today().weekday() >= 5,
+                    reason="周末模板无讲次/背词排程（口径=工作日）")
 def test_daily_spread_future_days_carry_plan(plan_env):
     """未来日带出均摊计划：week_view 的 future days 不再是空 tasks。"""
     c = _client(plan_env)
@@ -504,6 +510,8 @@ def test_daily_spread_future_days_carry_plan(plan_env):
         assert any(t["type"] == "vocab" for t in wd[0]["tasks"])
 
 
+@pytest.mark.skipif(date.today().weekday() >= 5,
+                    reason="周末模板无讲次/背词排程（口径=工作日）")
 def test_vocab_quota_done_judgement(plan_env):
     """背词配额完成判定：当天背词词数 ≥ quota 即点亮。"""
     c = _client(plan_env)
@@ -527,3 +535,126 @@ def test_vocab_quota_done_judgement(plan_env):
     d = c.get("/plan/today", headers=hs).json()["data"]
     vocab = next(t for t in d["tasks"] if t["type"] == "vocab")
     assert vocab["done"] is True and "✓" in (vocab.get("detail") or "")
+
+
+def test_teacher_exam_student_attribution(plan_env):
+    """教师替孩子登记成绩：?student= 归属学生；学生登录永远记自己。"""
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    hs = _login(c, "malin", "123456")
+    today = date.today().isoformat()
+    # 教师登记（带 student）→ 归 malin
+    r = c.post("/exams", headers=ht, json={
+        "lecture": 29, "date": today, "score": 74,
+        "wrong": [1, 2], "kind": "hw", "student": "malin"})
+    assert r.status_code == 200
+    rec = c.get("/exams", headers=ht,
+                params={"user": "malin"}).json()["data"]
+    assert any(x["lecture"] == 29 and x["user"] == "malin" for x in rec)
+    # 教师不带 student → 记教师名下（旧行为保留）
+    c.post("/exams", headers=ht, json={
+        "lecture": 30, "date": today, "score": 80, "wrong": [], "kind": "hw"})
+    rec = c.get("/exams", headers=ht, params={"user": "teacher"}).json()["data"]
+    assert any(x["lecture"] == 30 and x["user"] == "teacher" for x in rec)
+    # 学生登录提交（伪造 student 字段）→ 强制记自己
+    c.post("/exams", headers=hs, json={
+        "lecture": 31, "date": today, "score": 90, "wrong": [],
+        "kind": "lecture", "student": "teacher"})
+    rec = c.get("/exams", headers=ht, params={"user": "malin"}).json()["data"]
+    assert any(x["lecture"] == 31 and x["user"] == "malin" for x in rec)
+
+
+def test_topic_completion_lights_lecture(plan_env):
+    """自学专题学完 = 讲次「学+测」完成：排程不再重排 + 日信号点亮。"""
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    hs = _login(c, "malin", "123456")
+    _put_week(c, ht, {"lectures": [29]})
+    # 造专题内容（2 节点）+ 学完的进度（updated_at 归一今天，UTC+8 口径）
+    con = sqlite3.connect(plan_env / "fce.db")
+    con.execute("""CREATE TABLE IF NOT EXISTS topic_content (
+        topic_id TEXT PRIMARY KEY, title TEXT NOT NULL DEFAULT '',
+        subtitle TEXT NOT NULL DEFAULT '', emoji TEXT NOT NULL DEFAULT '',
+        assigned_to TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '{}',
+        published INTEGER NOT NULL DEFAULT 1, kind TEXT NOT NULL DEFAULT 'topic',
+        updated_at TEXT DEFAULT '')""")
+    con.execute("""CREATE TABLE IF NOT EXISTS topic_progress (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT NOT NULL,
+        topic_id TEXT NOT NULL, assigned_user TEXT NOT NULL DEFAULT '',
+        done_keys TEXT NOT NULL DEFAULT '[]', completed_at TEXT DEFAULT '',
+        updated_at TEXT DEFAULT '', UNIQUE(user, topic_id))""")
+    content = ('{"nodes": [{"key": "final", "title": "A"},'
+               ' {"key": "steps", "title": "B"}]}')
+    con.execute("INSERT OR REPLACE INTO topic_content"
+                " (topic_id, title, content) VALUES ('lecture-29-passive-1',"
+                " '第29讲·被动语态', ?)", (content,))
+    con.execute("INSERT OR REPLACE INTO topic_progress"
+                " (user, topic_id, done_keys, completed_at, updated_at)"
+                " VALUES ('malin', 'lecture-29-passive-1', ?, ?, ?)",
+                ('["final", "steps"]',
+                 f"{date.today().isoformat()}T12:00:00+00:00",
+                 f"{date.today().isoformat()}T12:00:00+00:00"))
+    con.commit()
+    con.close()
+    # 当天日信号：专题学完点亮 lecture:29（_auto_done 直接断言，
+    # 不依赖当日模板排不排讲次行——周日模板不出讲次是设计行为）
+    from grammar_kb.plan import PlanStore
+    ps = PlanStore(str(plan_env / "fce.db"))
+    auto, _ = ps._auto_done("malin", date.today().isoformat())
+    assert auto.get("lecture:29") is True
+    # 排程口径：周窗口内 29 讲已算完成 → 工作日不再重排「第29讲 学+测」
+    from grammar_kb.plan import week_bounds
+    lo, _ = week_bounds(MON)
+    upto = (date.today() + timedelta(days=1)).isoformat()
+    assert 29 in ps._topic_done_lectures(lo, upto, "malin")
+    # 学到一半（只完成 1/2 节点）不点亮
+    con = sqlite3.connect(plan_env / "fce.db")
+    con.execute("UPDATE topic_progress SET done_keys = '[\"final\"]'")
+    con.commit()
+    con.close()
+    assert 29 not in ps._topic_done_lectures(lo, upto, "malin")
+    assert "lecture:29" not in ps._auto_done(
+        "malin", date.today().isoformat())[0]
+
+
+def test_weekday_speak_completion_visible(plan_env):
+    """周中提前提交朗读：工作日当天清单出「今天已提交朗读 ✓」行，
+    且周六排程把它从剩余里剔除（不再重复排未完成）。"""
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    hs = _login(c, "malin", "123456")
+    _put_week(c, ht, {"articles": [61]})
+    con = sqlite3.connect(plan_env / "fce.db")
+    con.execute("""CREATE TABLE IF NOT EXISTS reading_article (
+        id INTEGER PRIMARY KEY, title TEXT, source TEXT DEFAULT '',
+        text TEXT DEFAULT '', cefr TEXT DEFAULT '', created_at TEXT DEFAULT '')""")
+    con.execute("INSERT OR REPLACE INTO reading_article (id, title, text)"
+                " VALUES (61, 'Too Many Climbers on Mt. Fuji', 'x')")
+    con.execute("""CREATE TABLE IF NOT EXISTS reading_recordings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT, article_id INTEGER,
+        file TEXT DEFAULT '', note TEXT DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT '')""")
+    today = date.today()
+    # 录音落在本周周六之前（如周三）——验证周六排程的剩余剔除
+    wed = date.fromisoformat(MON) + timedelta(days=2)
+    rec_day = wed if wed <= today else date.fromisoformat(MON)  # 越界退周一
+    con.execute("INSERT INTO reading_recordings (user, article_id, created_at)"
+                " VALUES ('malin', 61, ?)",
+                (f"{rec_day.isoformat()}T12:00:00+00:00",))
+    con.commit()
+    con.close()
+    today = date.today()
+    if today.weekday() < 5:  # 工作日：当天清单应见 ✓ 行
+        d = c.get("/plan/today", headers=hs).json()["data"]
+        arts = [t for t in d["tasks"] if t.get("type") == "article"]
+        assert any(t.get("done") for t in arts), \
+            f"周中提交朗读的计划内文章应显示完成: {d['tasks']}"
+    # 周六排程：已提交的 61 不再出现在周六清单（剩余剔除）
+    sat = date.fromisoformat(MON) + timedelta(days=5)
+    from grammar_kb.plan import PlanStore
+    ps = PlanStore(str(plan_env / "fce.db"))
+    sat_tasks = ps.week_daily_tasks(MON, for_date=sat.isoformat(), user="malin")
+    sat_arts = [t for t in sat_tasks
+                if t.get("type") == "article" and not t.get("done")]
+    assert all(61 != t.get("article_id") for t in sat_arts), \
+        f"已提交朗读的文章不应再排周六未完成: {sat_arts}"

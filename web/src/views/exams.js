@@ -1,5 +1,5 @@
 import { escapeHtml, todayIso } from '../render.js'
-import { api } from '../api.js'
+import { api, getAuth } from '../api.js'
 
 // 哈一作业成绩记录：每讲一份作业卷（35 题，1~5 每题 2 分、6~35 每题 3 分，满分 100）。
 // 孩子每卷会做多次：全部记录存 localStorage，错题按「讲次+题号」汇总方便回查。
@@ -62,6 +62,9 @@ export function mountExams(el, { lectures }) {
               <option value="lecture">📚 课程测验</option>
             </select>
           </label>
+          <label id="ex-student-wrap" hidden>学生
+            <select id="ex-student"></select>
+          </label>
           <label>日期 <input type="date" id="ex-date" /></label>
           <label>得分 <input type="number" id="ex-score" min="0" max="100" step="1" /></label>
           <div class="ex-live" id="ex-live"></div>
@@ -97,6 +100,21 @@ export function mountExams(el, { lectures }) {
   const $live = el.querySelector('#ex-live')
   const $score = el.querySelector('#ex-score')
   $date.value = todayIso()
+
+  // 教师替孩子登记：显示「学生」选择，成绩归属所选学生（学生登录不显示，
+  // 永远记自己）——曾把 29 讲作业卷记到 teacher 名下，计划表判定不认
+  const $stuWrap = el.querySelector('#ex-student-wrap')
+  const $stu = el.querySelector('#ex-student')
+  if (getAuth()?.role === 'teacher') {
+    api.users().then((r) => {
+      const students = (r.users || []).filter((u) => u.role === 'student').map((u) => u.user)
+      if (!students.length) return
+      $stu.innerHTML = students
+        .map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`)
+        .join('')
+      $stuWrap.hidden = false
+    }).catch(() => { /* 用户接口不可用则退回「记到登录人」旧行为 */ })
+  }
 
   // 35 题按钮
   $grid.innerHTML = Array.from({ length: TOTAL }, (_, i) => i + 1)
@@ -173,6 +191,7 @@ export function mountExams(el, { lectures }) {
       wrong: [...wrong].sort((a, b) => a - b),
       kind: el.querySelector('#ex-kind')?.value || 'hw',
     }
+    if (!$stuWrap.hidden) rec.student = $stu.value || undefined
     const btn = el.querySelector('#ex-save')
     btn.disabled = true
     try {

@@ -53,6 +53,9 @@ try:
         score: int = Field(default=0, ge=0, le=100)
         wrong: list[int] = Field(default_factory=list, description="错题题号")
         kind: str = Field(default="lecture", description="类型：lecture=课程测验 / hw=作业卷")
+        # 成绩归属学生：教师替孩子登记时传（缺省=登记人自己）；学生
+        # 自己登录提交则始终记自己，防止伪造他人记录
+        student: Optional[str] = Field(default=None, max_length=32)
 
     class LoginIn(BaseModel):
         """登录请求体。"""
@@ -1584,11 +1587,19 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     def exams_add(rec: ExamRecordIn, request: "fastapi.Request"):
         payload = rec.model_dump()
         payload.pop("user", None)  # user 只认登录态，不收客户端声明
-        return _ok(exams.add(user=_request_user(request), **payload))
+        # 归属学生：学生登录只能记自己；教师替孩子登记时可选 ?student=
+        owner = _request_user(request)
+        if getattr(request.state, "role", "") == "teacher" and payload.get("student"):
+            owner = payload["student"]
+        payload.pop("student", None)
+        return _ok(exams.add(user=owner, **payload))
 
     @app.put("/exams/{exam_id}")
     def exams_update(exam_id: int, rec: ExamRecordIn):
-        updated = exams.update(exam_id, **rec.model_dump())
+        payload = rec.model_dump()
+        # 归属学生随编辑可改（教师修正记错名下的记录）；置空则不动
+        owner = payload.pop("student", None) or None
+        updated = exams.update(exam_id, **payload, user=owner)
         if updated is None:
             raise HTTPException(status_code=404, detail=f"成绩记录 id={exam_id} 不存在")
         return _ok(updated)

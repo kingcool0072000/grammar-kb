@@ -121,15 +121,25 @@ class ExamStore:
         score: int = 0,
         wrong: list[int] | None = None,
         kind: str = "lecture",
+        user: Optional[str] = None,
     ) -> Optional[dict[str, Any]]:
-        """整条更新；记录不存在返回 None。"""
+        """整条更新；记录不存在返回 None。user 传值时同步改归属
+        （教师把记到自己名下的成绩改回学生）。"""
         kind = kind if kind in ("lecture", "hw") else "lecture"
         with self._tx() as con:
-            cur = con.execute(
-                "UPDATE exam_records SET lecture = ?, date = ?, score = ?, wrong = ?,"
-                " kind = ?, updated_at = datetime('now') WHERE id = ?",
-                (lecture, date, score, json.dumps(sorted(set(wrong or []))), kind, id),
-            )
+            if user is not None:
+                cur = con.execute(
+                    "UPDATE exam_records SET lecture = ?, date = ?, score = ?, wrong = ?,"
+                    " kind = ?, user = ?, updated_at = datetime('now') WHERE id = ?",
+                    (lecture, date, score, json.dumps(sorted(set(wrong or []))),
+                     kind, (user or "malin")[:60], id),
+                )
+            else:
+                cur = con.execute(
+                    "UPDATE exam_records SET lecture = ?, date = ?, score = ?, wrong = ?,"
+                    " kind = ?, updated_at = datetime('now') WHERE id = ?",
+                    (lecture, date, score, json.dumps(sorted(set(wrong or []))), kind, id),
+                )
             if cur.rowcount == 0:
                 return None
             row = con.execute("SELECT * FROM exam_records WHERE id = ?", (id,)).fetchone()
