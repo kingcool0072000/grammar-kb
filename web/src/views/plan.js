@@ -91,9 +91,11 @@ export async function mountPlan(el) {
       </div>
       ${'' /* 目标卡容器：周/总切换内容由 renderGoalCard 填充 */}
       <div id="goal-card"></div>
+      <div id="rules-card"></div>
       <div id="plan-view"></div>
     `
     renderGoalCard()
+    renderRulesCard()
     body.querySelector('#pw-cfg-goal').addEventListener('click', () => {
       sessionStorage.setItem('gkb-open-goal', state.student)
       const t = el.querySelector('[data-ptab="students"]')
@@ -193,6 +195,65 @@ export async function mountPlan(el) {
       })
       const editCur = host.querySelector('[data-edit-cur]')
       if (editCur) editCur.addEventListener('click', () => openEditor(viewWeek))
+    }
+
+    // ---- 完成判定规则卡：规则白纸黑字展示 + 开关即改即存 ----
+    // 规则本体（人话描述与默认值）在后端 RULES 注册表，这里只渲染与回写。
+    // 曾因「第N讲完成了吗」多处各写一套口径而反复出错——现在判定统一
+    // 走后端内核，此卡是教师看得见、可调整的唯一入口。
+    async function renderRulesCard() {
+      const host = body.querySelector('#rules-card')
+      if (!host) return
+      let rules = null
+      try {
+        rules = (await api.planRules({ user: state.student })).rules
+      } catch { rules = null }
+      if (!rules || !rules.length) { host.innerHTML = ''; return }
+      const open = sessionStorage.getItem('gkb-rules-open') === '1'
+      host.innerHTML = `
+        <div class="gp-card pw-rules">
+          <div class="pw-rules-head">
+            <b>📐 完成判定规则</b>
+            <span class="muted">「算不算完成」在此一目了然；改动立即生效</span>
+            <span class="pw-flex"></span>
+            <button class="chip" id="pw-rules-toggle">${open ? '收起' : '展开'}</button>
+          </div>
+          ${open ? `<div class="pw-rules-list">
+            ${rules.map((r) => `
+              <div class="pw-rule">
+                <label class="pw-rule-name">
+                  <input type="checkbox" data-rule="${escapeHtml(r.id)}" ${r.value ? 'checked' : ''} />
+                  ${escapeHtml(r.name)}
+                </label>
+                <span class="muted">${escapeHtml(r.desc)}</span>
+              </div>`).join('')}
+          </div>` : ''}
+        </div>`
+      host.querySelector('#pw-rules-toggle').addEventListener('click', () => {
+        sessionStorage.setItem('gkb-rules-open', open ? '0' : '1')
+        renderRulesCard()
+      })
+      host.querySelectorAll('[data-rule]').forEach((chk) =>
+        chk.addEventListener('change', async () => {
+          const id = chk.dataset.rule
+          try {
+            await api.planRuleSet(id, { value: chk.checked ? 1 : 0, user: state.student })
+            // 规则变化直接影响完成度：刷新目标卡与当前视图
+            try {
+              const [gp, wv] = await Promise.all([
+                api.planGoalProgress({ user: state.student }),
+                api.planWeekView({ weekStart: viewWeek, user: state.student }),
+              ])
+              goalProg = gp
+              weekProg = { ...(wv.goal_progress || null), week_label: weekLabel(wv.week_start) }
+            } catch { /* 刷新失败保留旧值 */ }
+            renderGoalCard()
+            renderView()
+          } catch (e) {
+            alert(`规则保存失败：${e.message}`)
+            chk.checked = !chk.checked
+          }
+        }))
     }
 
     // ---- 周历视图：← 本周 → 翻周，7 天格子逐日任务 ----

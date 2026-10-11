@@ -50,7 +50,32 @@ CREATE TABLE IF NOT EXISTS plan_history_days (
     created_at TEXT,
     PRIMARY KEY (user, date)
 );
+CREATE TABLE IF NOT EXISTS plan_rule_flags (
+    user       TEXT NOT NULL,        -- 规则按学生配置
+    rule_id    TEXT NOT NULL,
+    value      INTEGER NOT NULL DEFAULT 1,   -- 1=开 0=关
+    updated_at TEXT,
+    PRIMARY KEY (user, rule_id)
+);
 """
+
+# 完成判定规则注册表：单一事实源——后端各判定路径读它执行，
+# 前端「计划看板 · 完成判定规则」卡读它展示/配置。改判定逻辑必须
+# 先在这里立项（写明人话规则），杜绝同一问题多处各写一套口径。
+RULES: list[dict] = [
+    {"id": "topic_counts_lecture", "name": "专题学完＝讲次完成", "default": 1,
+     "desc": "计划讲次若配有自学专题（如「第29讲·被动语态」），专题全部知识点"
+             "完成后即视为该讲「学+测」完成，无需等卷面成绩"},
+    {"id": "speak_early_credit", "name": "朗读提前完成即点亮", "default": 1,
+     "desc": "精读朗读默认排在周六；周中任意一天提交录音即算该篇完成，"
+             "当天清单显示 ✓"},
+    {"id": "zombie_filter", "name": "剔除泛读挂机会话", "default": 1,
+     "desc": "无轨迹、无交互、无位移的阅读会话（开着书页人不在）不计入"
+             "有效学习时长与泛读词数"},
+    {"id": "exam_user_scope", "name": "成绩只认该学生名下", "default": 1,
+     "desc": "完成判定只统计归属为该学生的成绩登记（教师替孩子登记时"
+             "请选对「学生」）；关闭则不过滤归属（兼容遗留数据）"},
+]
 
 # tasks JSON 结构（全部字段可缺省）：
 # {
@@ -117,6 +142,90 @@ class PlanStore:
             with self._connect() as conn:
                 conn.executescript(SCHEMA)
                 self._migrate_plan_weeks(conn)
+
+    # ---- 完成判定规则（注册表 + 按学生开关） ----
+
+    def _flag(self, user: str, rule_id: str) -> int:
+        """读某学生某规则的开关值（缺行=注册表默认）。"""
+        for r in RULES:
+            if r["id"] == rule_id:
+                dft = int(r["default"])
+                break
+        else:
+            return 0
+        try:
+            with self._connect() as conn:
+                conn.executescript(SCHEMA)  # 老库懒补 plan_rule_flags
+                row = conn.execute(
+                    "SELECT value FROM plan_rule_flags"
+                    " WHERE user = ? AND rule_id = ?",
+                    (user, rule_id)).fetchone()
+                return int(row["value"]) if row else dft
+        except sqlite3.Error:
+            return dft
+
+    def get_rules(self, user: str) -> list[dict]:
+        """规则清单（含当前值）——教师版配置面板与前端展示共用。"""
+        return [dict(r, value=self._flag(user, r["id"])) for r in RULES]
+
+    def set_rule(self, user: str, rule_id: str, value: int) -> Optional[dict]:
+        """教师改某学生某规则；未知规则返回 None。"""
+        if not any(r["id"] == rule_id for r in RULES):
+            return None
+        v = 1 if value else 0
+        now = datetime.now().isoformat(timespec="seconds")
+        with self._connect() as conn:
+            conn.executescript(SCHEMA)
+            conn.execute(
+                "INSERT OR REPLACE INTO plan_rule_flags"
+                " (user, rule_id, value, updated_at) VALUES (?,?,?,?)",
+                (user, rule_id, v, now))
+        return next(dict(r, value=v) for r in RULES if r["id"] == rule_id)
+
+    # ---- 讲次完成判定内核：成绩 ∪ 自学专题（全系统唯一定义处） ----
+    # 之前同一问题（第 N 讲完成了吗）散在 _auto_done / week_daily_tasks /
+    # _week_goal_progress / _completion_status 四处各写一套，口径漂移是
+    # 「计划表老不对」的根源。现在全部改走这里。
+
+    def _exam_done_lectures(self, lo: Optional[str], hi: Optional[str],
+                            user: str, kind: str = "lecture") -> set[int]:
+        """某窗口内（None=不限时）有成绩登记的讲次集合。
+        kind: lecture=课程测验 / hw=作业卷。按学生过滤（可关）。"""
+        path = self._exam_db()
+        if not path or not Path(path).exists():
+            return set()
+        scope = self._flag(user, "exam_user_scope")
+        try:
+            with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
+                cols = {r[1] for r in conn.execute(
+                    "PRAGMA table_info(exam_records)")}
+                kind_col = ("COALESCE(kind, 'lecture')" if "kind" in cols
+                            else "'lecture'")
+                sql = (f"SELECT DISTINCT lecture FROM exam_records"
+                       f" WHERE {kind_col} = ?")
+                args: list = [kind]
+                if "user" in cols and scope:
+                    sql += " AND user = ?"
+                    args.append(user)
+                if lo is not None:
+                    sql += " AND date >= ?"
+                    args.append(lo)
+                if hi is not None:
+                    sql += " AND date < ?"
+                    args.append(hi)
+                return {r[0] for r in conn.execute(sql, args)}
+        except sqlite3.Error:
+            return set()
+
+    def lecture_done(self, lo: Optional[str], hi: Optional[str], user: str,
+                     kind: str = "lecture") -> set[int]:
+        """讲次完成集合（唯一口径）：成绩登记 ∪ 自学专题学完（后者仅
+        lecture 口径且规则开启时）。hw 口径只认作业卷成绩。"""
+        out = self._exam_done_lectures(lo, hi, user, kind)
+        if kind == "lecture" and self._flag(user, "topic_counts_lecture"):
+            out |= self._topic_done_lectures(lo or "0000-01-01",
+                                             hi or "9999-12-31", user)
+        return out
 
     @staticmethod
     def _migrate_plan_weeks(conn):
@@ -582,14 +691,12 @@ class PlanStore:
         # ---- 截至 ref（含）的已完成——欠账重摊的基数 ----
         lo, _ = week_bounds(week_start)
         upto = (rd + timedelta(days=1)).isoformat()
-        done_lecs = ({r["lecture"] for r in self._exam_actuals(lo, upto, "lecture")}
-                     | self._topic_done_lectures(lo, upto, user))
-        done_hw = {r["lecture"] for r in self._exam_actuals(lo, upto, "hw")}
+        done_lecs = self.lecture_done(lo, upto, user, "lecture")
+        done_hw = self.lecture_done(lo, upto, user, "hw")
         # 今天已完成的讲次/卷——保留出行为（完成信号会点亮 ✓，
         # 当天清单=今天做完的 ✓ + 今天新分配的灰）
-        today_lecs = ({r["lecture"] for r in self._exam_actuals(ref, upto, "lecture")}
-                      | self._topic_done_lectures(ref, upto, user))
-        today_hw = {r["lecture"] for r in self._exam_actuals(ref, upto, "hw")}
+        today_lecs = self.lecture_done(ref, upto, user, "lecture")
+        today_hw = self.lecture_done(ref, upto, user, "hw")
         vocab_done = self._vocab_actuals(lo, upto, user)
         fce_done = set(self._fce_actuals(lo, upto, user))
         tasks: list[dict] = []
@@ -1315,43 +1422,14 @@ class PlanStore:
 
         lecs = t.get("lectures") or []
         if lecs:
-            try:
-                with sqlite3.connect(
-                        f"file:{self._exam_db()}?mode=ro", uri=True) as conn:
-                    cols = {r[1] for r in conn.execute(
-                        "PRAGMA table_info(exam_records)")}
-                    kind_col = ("COALESCE(kind, 'lecture')" if "kind" in cols
-                                else "'lecture'")
-                    ph = ",".join("?" * len(lecs))
-                    n = conn.execute(
-                        f"SELECT COUNT(DISTINCT lecture) n FROM exam_records"
-                        f" WHERE lecture IN ({ph}) AND {kind_col} != 'hw'"
-                        f" AND date >= ? AND date <= ?",
-                        [*lecs, week_start, add_days(week_start, 6)]).fetchone()
-                    done_lec = n[0] if n else 0
-            except sqlite3.Error:
-                done_lec = 0
+            done_lec = len(set(lecs) & self.lecture_done(
+                week_start, add_days(week_start, 7), user, "lecture"))
             dim("📚", "语法课程", done_lec, len(lecs))
 
         hw_papers = t.get("hw_papers") or []
         if hw_papers:
-            try:
-                with sqlite3.connect(
-                        f"file:{self._exam_db()}?mode=ro", uri=True) as conn:
-                    cols = {r[1] for r in conn.execute(
-                        "PRAGMA table_info(exam_records)")}
-                    if "kind" in cols:
-                        ph = ",".join("?" * len(hw_papers))
-                        n = conn.execute(
-                            f"SELECT COUNT(DISTINCT lecture) n FROM exam_records"
-                            f" WHERE lecture IN ({ph}) AND kind = 'hw'"
-                            f" AND date >= ? AND date <= ?",
-                            [*hw_papers, week_start, add_days(week_start, 6)]).fetchone()
-                        done_hw = n[0] if n else 0
-                    else:
-                        done_hw = 0
-            except sqlite3.Error:
-                done_hw = 0
+            done_hw = len(set(hw_papers) & self.lecture_done(
+                week_start, add_days(week_start, 7), user, "hw"))
             dim("📝", "作业卷", done_hw, len(hw_papers))
 
         # 词汇差额口径（级别内增量）：分母 = 目标词数 − 周初该级别已掌握
@@ -1762,24 +1840,9 @@ class PlanStore:
         done: dict[str, list] = {"lectures": [], "fce_parts": [],
                                  "articles": [], "vocab_levels": [],
                                  "books": [], "hw_papers": []}
-        exam_path = self._exam_db()
-        if exam_path and Path(exam_path).exists():
-            try:
-                with sqlite3.connect(f"file:{exam_path}?mode=ro", uri=True) as conn:
-                    conn.row_factory = sqlite3.Row
-                    cols = {r[1] for r in conn.execute(
-                        "PRAGMA table_info(exam_records)")}
-                    kind_col = ("COALESCE(kind, 'lecture')" if "kind" in cols
-                                else "'lecture'")
-                    for r in conn.execute(
-                            "SELECT DISTINCT lecture, " + kind_col + " AS kind"
-                            " FROM exam_records"):
-                        if r["kind"] == "hw":
-                            done["hw_papers"].append(r["lecture"])
-                        else:
-                            done["lectures"].append(r["lecture"])
-            except sqlite3.Error:
-                pass
+        # 讲次/作业卷走统一判定内核（成绩 ∪ 专题，按学生过滤）
+        done["lectures"] = sorted(self.lecture_done(None, None, user, "lecture"))
+        done["hw_papers"] = sorted(self.lecture_done(None, None, user, "hw"))
         try:
             with self._connect() as conn:
                 conn.row_factory = sqlite3.Row
@@ -2629,35 +2692,29 @@ class PlanStore:
                           "vocab_n": 0, "vocab_min": 0, "focus_sec": 0,
                           "recite_sec": 0, "study_min": 0}
         nxt = (date.fromisoformat(day) + timedelta(days=1)).isoformat()
+        # 成绩与专题统一走 lecture_done 内核（含 user 过滤与规则开关）
+        for lec_no in self.lecture_done(day, nxt, user, "lecture"):
+            out[f"lecture:{lec_no}"] = True
+            out["lecture"] = True
+        for lec_no in self.lecture_done(day, nxt, user, "hw"):
+            out[f"hw:{lec_no}"] = True
+            out.setdefault("lecture", True)
+        # 微练习：当天有该讲成绩（任意 kind）即点亮（沿用成绩口径，带 user）
         exam_path = self._exam_db()
         if exam_path and Path(exam_path).exists():
             try:
                 with sqlite3.connect(f"file:{exam_path}?mode=ro", uri=True) as conn:
-                    conn.row_factory = sqlite3.Row
-                    # kind 区分：lecture=课程测验 / hw=作业卷（老库无 kind 列
-                    # 视为 lecture——ExamStore 初始化已补列，这里双保险）
                     cols = {r[1] for r in conn.execute(
                         "PRAGMA table_info(exam_records)")}
-                    kind_col = "COALESCE(kind, 'lecture')" if "kind" in cols else "'lecture'"
-                    rows = conn.execute(
-                        f"SELECT lecture, {kind_col} AS kind FROM exam_records"
-                        " WHERE date = ?", (day,),
-                    ).fetchall()
-                for r in rows:
-                    out[f"micro:{r['lecture']}"] = True
-                    if r["kind"] == "hw":
-                        out[f"hw:{r['lecture']}"] = True
-                    else:
-                        out[f"lecture:{r['lecture']}"] = True
-                if rows:
-                    out["lecture"] = True
+                    sql = "SELECT DISTINCT lecture FROM exam_records WHERE date = ?"
+                    args: list = [day]
+                    if "user" in cols and self._flag(user, "exam_user_scope"):
+                        sql += " AND user = ?"
+                        args.append(user)
+                    for r in conn.execute(sql, args):
+                        out[f"micro:{r[0]}"] = True
             except sqlite3.Error:
                 pass
-        # 自学专题学完 = 对应讲次「学+测」的完成信号（口径见
-        # _topic_done_lectures；孩子在专题学完但没有线下卷面成绩时点亮）
-        for lec_no in self._topic_done_lectures(day, nxt, user):
-            out[f"lecture:{lec_no}"] = True
-            out["lecture"] = True
         try:
             with self._connect() as conn:
                 tabs = {r[0] for r in conn.execute(

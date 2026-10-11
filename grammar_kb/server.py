@@ -313,6 +313,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("GET", "/plan/today"),
         ("GET", "/plan/week-todo"),
         ("GET", "/plan/my-week"),  # 学生课程表（只读自己本周计划）
+        ("GET", "/plan/rules"),  # 完成判定规则（学生只读自己的）
         ("POST", "/plan/day-check"),
         ("POST", "/focus/sessions"),
         ("GET", "/focus/sessions"),  # /{id} 详情学生仍被端点内 _require_teacher 拦 403
@@ -1371,6 +1372,25 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         from datetime import date as _date, timedelta as _td
         week_start = (_date.today() - _td(days=_date.today().weekday())).isoformat()
         return _ok(plan.week_view(week_start, user=request.state.user))
+
+    @app.get("/plan/rules")
+    def plan_rules(request: "fastapi.Request", user: str = "malin"):
+        """完成判定规则清单（师生可读；学生只能读自己的）。"""
+        if (getattr(request.state, "role", "") != "teacher"
+                and request.state.user != user):
+            user = request.state.user
+        return _ok({"user": user, "rules": plan.get_rules(user)})
+
+    @app.put("/plan/rules/{rule_id}")
+    def plan_rule_set(rule_id: str, rec: dict, request: "fastapi.Request"):
+        """教师修改某学生的完成判定规则开关。body: {value: 0|1, user}"""
+        _require_teacher(request)
+        val = int((rec or {}).get("value", 1))
+        target = (rec or {}).get("user") or "malin"
+        updated = plan.set_rule(target, rule_id, val)
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"未知规则 {rule_id}")
+        return _ok(updated)
 
     # ---- 作业卷管理（教师）：题目 + 答案（爱问云已批改测验的逐题对错） ----
 

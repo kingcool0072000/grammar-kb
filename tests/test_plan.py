@@ -658,3 +658,104 @@ def test_weekday_speak_completion_visible(plan_env):
                 if t.get("type") == "article" and not t.get("done")]
     assert all(61 != t.get("article_id") for t in sat_arts), \
         f"已提交朗读的文章不应再排周六未完成: {sat_arts}"
+
+
+def test_rules_registry_and_switch(plan_env):
+    """完成判定规则：默认值生效 + 教师可开关 + 关闭后专题不再点亮讲次。"""
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    hs = _login(c, "malin", "123456")
+    # 造专题内容 + 学完进度
+    con = sqlite3.connect(plan_env / "fce.db")
+    con.execute("""CREATE TABLE IF NOT EXISTS topic_content (
+        topic_id TEXT PRIMARY KEY, title TEXT NOT NULL DEFAULT '',
+        subtitle TEXT NOT NULL DEFAULT '', emoji TEXT NOT NULL DEFAULT '',
+        assigned_to TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '{}',
+        published INTEGER NOT NULL DEFAULT 1, kind TEXT NOT NULL DEFAULT 'topic',
+        updated_at TEXT DEFAULT '')""")
+    con.execute("""CREATE TABLE IF NOT EXISTS topic_progress (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT NOT NULL,
+        topic_id TEXT NOT NULL, assigned_user TEXT NOT NULL DEFAULT '',
+        done_keys TEXT NOT NULL DEFAULT '[]', completed_at TEXT DEFAULT '',
+        updated_at TEXT DEFAULT '', UNIQUE(user, topic_id))""")
+    content = '{"nodes": [{"key": "a"}, {"key": "b"}]}'
+    now = f"{date.today().isoformat()}T12:00:00+00:00"
+    con.execute("INSERT OR REPLACE INTO topic_content (topic_id, content)"
+                " VALUES ('lecture-29-passive-1', ?)", (content,))
+    con.execute("INSERT OR REPLACE INTO topic_progress"
+                " (user, topic_id, done_keys, completed_at, updated_at)"
+                " VALUES ('malin', 'lecture-29-passive-1', ?, ?, ?)",
+                ('["a", "b"]', now, now))
+    con.commit()
+    con.close()
+
+    # 1. 规则清单：默认全开（教师与学生各可读）
+    rules = c.get("/plan/rules", headers=ht,
+                  params={"user": "malin"}).json()["data"]["rules"]
+    by_id = {r["id"]: r for r in rules}
+    assert set(by_id) == {"topic_counts_lecture", "speak_early_credit",
+                          "zombie_filter", "exam_user_scope"}
+    assert all(r["value"] == 1 for r in rules)  # 默认开
+    assert len(c.get("/plan/rules", headers=hs).json()["data"]["rules"]) == 4
+
+    # 2. 内核：默认（开）专题点亮 29 讲
+    from grammar_kb.plan import PlanStore
+    ps = PlanStore(str(plan_env / "fce.db"))
+    assert 29 in ps.lecture_done(None, None, "malin", "lecture")
+
+    # 3. 教师关掉规则 → 内核立即不再点亮（成绩也没有 29 → 空）
+    r = c.put("/plan/rules/topic_counts_lecture", headers=ht,
+              json={"value": 0, "user": "malin"})
+    assert r.status_code == 200 and r.json()["data"]["value"] == 0
+    assert 29 not in ps.lecture_done(None, None, "malin", "lecture")
+
+    # 4. 未知规则 404；学生改规则 403
+    assert c.put("/plan/rules/nope", headers=ht,
+                 json={"value": 1}).status_code == 404
+    assert c.put("/plan/rules/topic_counts_lecture", headers=hs,
+                 json={"value": 1}).status_code == 403
+    # 5. 恢复默认（开）
+    c.put("/plan/rules/topic_counts_lecture", headers=ht,
+          json={"value": 1, "user": "malin"})
+    assert 29 in ps.lecture_done(None, None, "malin", "lecture")
+
+
+def test_week_goal_progress_counts_topic(plan_env):
+    """「语法课程 0/1」修复：周目标进度卡的讲次维度计入专题完成。"""
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    _put_week(c, ht, {"lectures": [29]})
+    con = sqlite3.connect(plan_env / "fce.db")
+    con.execute("""CREATE TABLE IF NOT EXISTS topic_content (
+        topic_id TEXT PRIMARY KEY, title TEXT NOT NULL DEFAULT '',
+        subtitle TEXT NOT NULL DEFAULT '', emoji TEXT NOT NULL DEFAULT '',
+        assigned_to TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '{}',
+        published INTEGER NOT NULL DEFAULT 1, kind TEXT NOT NULL DEFAULT 'topic',
+        updated_at TEXT DEFAULT '')""")
+    con.execute("""CREATE TABLE IF NOT EXISTS topic_progress (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT NOT NULL,
+        topic_id TEXT NOT NULL, assigned_user TEXT NOT NULL DEFAULT '',
+        done_keys TEXT NOT NULL DEFAULT '[]', completed_at TEXT DEFAULT '',
+        updated_at TEXT DEFAULT '', UNIQUE(user, topic_id))""")
+    content = '{"nodes": [{"key": "a"}, {"key": "b"}]}'
+    now = f"{date.today().isoformat()}T12:00:00+00:00"
+    con.execute("INSERT OR REPLACE INTO topic_content (topic_id, content)"
+                " VALUES ('lecture-29-passive-1', ?)", (content,))
+    con.execute("INSERT OR REPLACE INTO topic_progress"
+                " (user, topic_id, done_keys, completed_at, updated_at)"
+                " VALUES ('malin', 'lecture-29-passive-1', ?, ?, ?)",
+                ('["a", "b"]', now, now))
+    # 干扰行：别的学生的完成专题不应点亮 malin 的讲次（user 过滤）
+    con.execute("INSERT OR REPLACE INTO topic_progress"
+                " (user, topic_id, done_keys, completed_at, updated_at)"
+                " VALUES ('mxy', 'lecture-30-x', ?, ?, ?)",
+                ('["a", "b"]', now, now))
+    con.execute("INSERT OR REPLACE INTO topic_content (topic_id, content)"
+                " VALUES ('lecture-30-x', ?)", (content,))
+    con.commit()
+    con.close()
+    d = c.get(f"/plan/week-view?week_start={MON}&user=malin",
+              headers=ht).json()["data"]
+    dim = next(x for x in d["goal_progress"]["dims"]
+               if x["name"] == "语法课程")
+    assert dim["done"] == 1 and dim["total"] == 1, dim

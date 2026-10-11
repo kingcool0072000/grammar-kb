@@ -270,6 +270,10 @@ export const api = {
   planOverview: ({ user } = {}) => req('/plan/overview', { searchParams: user ? { user } : {} }),
   planWeekView: ({ weekStart, user } = {}) =>
     req('/plan/week-view', { searchParams: { ...(weekStart ? { week_start: weekStart } : {}), ...(user ? { user } : {}) } }),
+  // 完成判定规则（RULES 注册表；教师可改，学生只读）
+  planRules: ({ user } = {}) => req('/plan/rules', { searchParams: { user } }),
+  planRuleSet: (ruleId, { value, user } = {}) =>
+    reqJson(`/plan/rules/${encodeURIComponent(ruleId)}`, 'PUT', { value, user }),
   // 词汇级别考试（成绩登记驱动解锁；≥80 解锁下一级）
   vocabPaperGenerate: (level, save = true) =>
     reqJson('/vocab-papers/generate', 'POST', { level, save }),
