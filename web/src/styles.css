@@ -2737,6 +2737,8 @@ li.open .topic-reveal-btn.reopen { display: inline-block; }
 /* 未来日计划行（均摊后的当日目标，灰显不划线） */
 .pw-task.plan { color: var(--ink-faint); }
 .pw-task.plan span { color: inherit; text-decoration: none; }
+.pw-task.link { color: inherit; }
+.pw-task.link:hover span { color: var(--brand); text-decoration: underline; }
 .pw-task em { font-style: normal; color: #2e7d4f; font-weight: 800; flex: none; }
 .pw-none { font-style: normal; font-size: 10.5px; color: var(--ink-faint); }
 .pw-acts { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--line); }
@@ -3308,6 +3310,8 @@ li.open .topic-reveal-btn.reopen { display: inline-block; }
 .tt-min.ok { color: #2e7d4f; background: #e3f2e8; }
 .tt-day-count { margin-left: auto; font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
 .tt-task { display: flex; align-items: flex-start; gap: 5px; padding: 3px 0; font-size: 12px; color: var(--ink); line-height: 1.45; }
+.tt-task.link { color: inherit; text-decoration: none; }
+.tt-task.link:hover .tt-task-text { color: var(--brand); text-decoration: underline; }
 .tt-task-ic { flex: none; }
 .tt-task-text { flex: 1; min-width: 0; word-break: break-word; }
 .tt-task.ok { color: var(--ink-faint); text-decoration: line-through; text-decoration-color: rgba(107,114,128,.5); }

@@ -50,6 +50,10 @@ export async function mountReading(el, { role } = {}) {
   const weekIds = new Set(
     ((myWeek && myWeek.tasks && myWeek.tasks.articles) || []).map(Number))
   renderList(el, arts, recs, myRole, weekIds)
+  // 课程表/计划卡「精读+朗读」行直达：#/reading?art=ID 自动进详情
+  const m = location.hash.match(/[?&]art=(\d+)/)
+  if (m && arts.some((a) => a.id === Number(m[1])))
+    renderDetail(el, Number(m[1]), myRole)
 }
 
 // ---------- 列表 ----------

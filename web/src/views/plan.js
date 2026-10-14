@@ -310,17 +310,22 @@ export async function mountPlan(el) {
       // 单日卡片显示当天完成的工作；未来日/今天显示均摊后的当日计划
       // （今天有完成时只显示已完成——完成度视角优先，空了才亮当日计划）。
       // 计划外的工作（朗读/泛读/背单词量化实录）由 acts 补充显示。
-      const rows = (d.tasks || []).filter((x) => x.done).map((x) => `
-        <div class="pw-task done">
+      const taskRow = (x, ok) => {
+        const inner = `
           <i>${icon[x.type] || '•'}</i>
           <span title="${escapeHtml(x.text)}">${escapeHtml(x.text)}</span>
-          <em>✓</em>
-        </div>`).join('')
-      const planRows = (d.tasks || []).filter((x) => !x.done).map((x) => `
-        <div class="pw-task plan ${isToday ? 'today' : ''}" title="${escapeHtml(x.detail || '')}">
-          <i>${icon[x.type] || '•'}</i>
-          <span title="${escapeHtml(x.text)}">${escapeHtml(x.text)}</span>
-        </div>`).join('')
+          ${ok ? '<em>✓</em>' : ''}`
+        // 精读篇目可点：直达阅读训练详情（教师备课可顺手看正文；
+        // #/reading 学生专属，教师走阅读内容管理页）
+        if (x.type === 'article' && x.article_id)
+          return `<a class="pw-task link ${ok ? 'done' : `plan ${isToday ? 'today' : ''}`}"
+            href="#/readingAdmin"
+            title="${escapeHtml(x.detail || '阅读内容里查看/管理这篇文章')}">${inner}</a>`
+        return `<div class="pw-task ${ok ? 'done' : `plan ${isToday ? 'today' : ''}`}"
+          title="${escapeHtml(x.detail || '')}">${inner}</div>`
+      }
+      const rows = (d.tasks || []).filter((x) => x.done).map((x) => taskRow(x, true)).join('')
+      const planRows = (d.tasks || []).filter((x) => !x.done).map((x) => taskRow(x, false)).join('')
       const acts = d.acts || {}
       const extraRows = (acts.extra_speaks || []).map((x) => `
         <div class="pw-task done">
@@ -603,9 +608,9 @@ export async function mountPlan(el) {
         </button>`).join('')
       const fcePartsPool = (pool) => pool.map((x) => `
         <button type="button" class="pe-part ${fceSel.has(x.label) ? 'on' : ''}" data-fce="${escapeHtml(x.label)}" title="${escapeHtml(x.label)}">${escapeHtml(x.label.split(' · ').slice(1).join('·'))}<i>${x.questions}</i></button>`).join('')
-      const artChipsPool = (pool) => pool.map((a) => `
+      const artChipsPool = (pool) => pool.filter((a) => a.kind !== 'base').map((a) => `
         <button type="button" class="pe-part ${artSel.has(a.id) ? 'on' : ''}" data-art="${a.id}" title="${escapeHtml(a.title)} ${a.words} 词">
-          ${a.kind === 'base' ? '📄' : '✍️'} ${escapeHtml(a.title.slice(0, 18))}<i>${a.words}</i>
+          ✍️ ${escapeHtml(a.title.slice(0, 18))}<i>${a.words}</i>
         </button>`).join('')
       const paperChipsPool = (pool) => pool.map((x) => `
         <button type="button" class="pe-part ${paperSel.has(x.paper_id) ? 'on' : ''}" data-paper="${escapeHtml(x.paper_id)}">L${x.level} · ${x.paper_id.slice(-8)}<i>${(x.created_at || '').slice(5, 10)}</i></button>`).join('')

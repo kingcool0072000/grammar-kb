@@ -1356,6 +1356,7 @@ class PlanStore:
                                "text": x.get("text", ""),
                                "detail": x.get("detail"),
                                "type": x.get("type", "plan"),
+                               "article_id": x.get("article_id"),
                                "done": False} for x in fut],
                 })
                 continue
@@ -1384,6 +1385,7 @@ class PlanStore:
                 "done": td["done"], "total": td["total"],
                 "tasks": [{"key": x["key"], "text": x["text"],
                            "detail": x.get("detail"), "type": x["type"],
+                           "article_id": x.get("article_id"),
                            "done": x["done"]} for x in td["tasks"]],
                 "acts": td.get("acts") or {},
             })
@@ -1710,14 +1712,16 @@ class PlanStore:
                         })
             except sqlite3.Error:
                 pass
-        # 精读文章（阅读训练：base 原文段落 + derived 派生文；课文级绑定）
+        # 精读文章（只给派生文：学生端阅读练习只见派生文，base 原文是
+        # 教师备课素材、对学生不可读——混进计划池会被选上，孩子无处可看
+        # 也永远完不成）
         articles = []
         try:
             with self._connect() as conn:
                 conn.row_factory = sqlite3.Row
                 arows = conn.execute(
                     "SELECT id, kind, base_key, title, words FROM reading_article"
-                    " ORDER BY kind, id"
+                    " WHERE kind = 'derived' ORDER BY id"
                 ).fetchall()
                 articles = [{"id": r["id"], "kind": r["kind"],
                              "title": (r["title"] or "")[:40],

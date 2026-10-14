@@ -517,14 +517,16 @@ def test_vocab_quota_done_judgement(plan_env):
     c = _client(plan_env)
     hs = _login(c, "malin", "123456")
     ht = _login(c, "teacher", "123456")
-    _put_week(c, ht, {"vocab_goal": 20})  # 周一跑：quota=4
+    _put_week(c, ht, {"vocab_goal": 20})
     d = c.get("/plan/today", headers=hs).json()["data"]
     vocab = next(t for t in d["tasks"] if t["type"] == "vocab")
     assert vocab["done"] is False
-    # 背 5 词（≥quota）→ 完成。created_at 归一到本地今天 12:00Z——
-    # 凌晨跑测试时 UTC 串还是昨天，会跨日聚合不到（同 study_min 测试做法）
+    # 背满周目标 20 词（≥任何工作日的均摊 quota——quota=ceil(剩余/剩余
+    # 工作日)，周中任何一天跑都成立）→ 完成。created_at 归一到本地今天
+    # 12:00Z——凌晨跑测试时 UTC 串还是昨天，会跨日聚合不到（同 study_min
+    # 测试做法）
     c.post("/recite/sessions", headers=hs, json={
-        "total": 5, "wrong": 0, "acc": 100, "duration_sec": 300,
+        "total": 20, "wrong": 0, "acc": 100, "duration_sec": 300,
         "wrong_words": [], "mode": "flip", "scope": "all", "details": [],
     })
     con = sqlite3.connect(plan_env / "fce.db")
@@ -759,3 +761,54 @@ def test_week_goal_progress_counts_topic(plan_env):
     dim = next(x for x in d["goal_progress"]["dims"]
                if x["name"] == "语法课程")
     assert dim["done"] == 1 and dim["total"] == 1, dim
+
+
+def test_editor_data_excludes_base_articles(plan_env):
+    """周计划编辑器文章池只给派生文：base 原文是教师备课素材、
+    学生端阅读练习不可见（detail 403）——混进池会被选上，孩子无处
+    可看也永远完不成（10-14 本周 2 篇精读排了 base id 2/3 的事故）。"""
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    con = sqlite3.connect(plan_env / "fce.db")
+    con.execute("""CREATE TABLE IF NOT EXISTS reading_article (
+        id INTEGER PRIMARY KEY, kind TEXT DEFAULT 'derived',
+        base_key TEXT DEFAULT '', title TEXT, words INTEGER DEFAULT 0,
+        source TEXT DEFAULT '', text TEXT DEFAULT '', cefr TEXT DEFAULT '',
+        created_at TEXT DEFAULT '')""")
+    # base id 1-3（学生端不可见） + derived id 52/53
+    for i in (1, 2, 3):
+        con.execute("INSERT OR REPLACE INTO reading_article (id, kind, title, text)"
+                    " VALUES (?, 'base', ?, 'x')", (i, f"base-{i}"))
+    for i in (52, 53):
+        con.execute("INSERT OR REPLACE INTO reading_article (id, kind, title, text)"
+                    " VALUES (?, 'derived', ?, 'x')", (i, f"derived-{i}"))
+    con.commit()
+    con.close()
+    arts = c.get("/plan/editor-data?user=malin", headers=ht).json()["data"]["articles"]
+    ids = {a["id"] for a in arts}
+    assert ids == {52, 53}, f"编辑器文章池应只含派生文: {arts}"
+
+
+def test_saturday_article_rows_carry_id_for_link(plan_env):
+    """周六排程的精读行带 article_id：学生课程表/教师计划卡据此渲染
+    「直达阅读练习」链接（#/reading?art=ID 自动进详情）。"""
+    con = sqlite3.connect(plan_env / "fce.db")
+    con.execute("""CREATE TABLE IF NOT EXISTS reading_article (
+        id INTEGER PRIMARY KEY, kind TEXT DEFAULT 'derived',
+        base_key TEXT DEFAULT '', title TEXT, words INTEGER DEFAULT 0,
+        source TEXT DEFAULT '', text TEXT DEFAULT '', cefr TEXT DEFAULT '',
+        created_at TEXT DEFAULT '')""")
+    con.execute("INSERT OR REPLACE INTO reading_article (id, kind, title, text)"
+                " VALUES (58, 'derived', 'The Secret Sense in Elephant Trunks', 'x')")
+    con.commit()
+    con.close()
+    from grammar_kb.plan import PlanStore
+    ps = PlanStore(str(plan_env / "fce.db"))
+    ps.put_week(MON, {"articles": [58]}, "", user="malin")
+    sat = date.fromisoformat(MON) + timedelta(days=5)
+    rows = [t for t in ps.week_daily_tasks(MON, for_date=sat.isoformat(),
+                                           user="malin")
+            if t.get("type") == "article"]
+    assert rows and all(r.get("article_id") for r in rows), rows
+    # 标题在文案里被截到 14 字符（The Secret Sen…），断言截断前缀
+    assert any("Secret Sen" in (r.get("text") or "") for r in rows), rows

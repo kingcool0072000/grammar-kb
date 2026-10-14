@@ -66,23 +66,25 @@ export async function mountTimetable(el) {
 
   const dayCell = (day, i) => {
     const isToday = day.date === today
+    // 任务行：精读篇目可点——直达阅读练习（列表里本周任务置顶标 📌）
+    const ttTask = (t, ok) => {
+      const inner = `
+        <span class="tt-task-ic">${TYPE_ICON[t.type] || '•'}</span>
+        <span class="tt-task-text">${escapeHtml(t.text || t.key)}</span>
+        ${ok ? '<span class="tt-task-check">✓</span>' : ''}`
+      if (t.type === 'article')
+        return `<a class="tt-task link ${ok ? 'ok' : 'plan'}" href="#/reading"
+          title="${escapeHtml(t.detail || '去阅读练习读全文 + 提交朗读')}">${inner}</a>`
+      return `<div class="tt-task ${ok ? 'ok' : 'plan'}" title="${escapeHtml(t.detail || '')}">${inner}</div>`
+    }
     // 已完成的学习（课程表=学习记录视角）：完成计划任务 +
     // 计划外朗读 + 泛读/背单词实录统计（与教师计划看板日卡同口径）
     const doneTasks = (day.tasks || []).filter((t) => t.done)
-    const items = doneTasks.map((t) => `
-      <div class="tt-task ok">
-        <span class="tt-task-ic">${TYPE_ICON[t.type] || '•'}</span>
-        <span class="tt-task-text">${escapeHtml(t.text || t.key)}</span>
-        <span class="tt-task-check">✓</span>
-      </div>`).join('')
+    const items = doneTasks.map((t) => ttTask(t, true)).join('')
     // 未来日/今天（尚无完成时）：展示均摊后的当日计划（灰显「今天/那天该做什么」）
     const planTasks = (day.future || isToday) && !doneTasks.length
       ? (day.tasks || []).filter((t) => !t.done) : []
-    const planItems = planTasks.map((t) => `
-      <div class="tt-task plan" title="${escapeHtml(t.detail || '')}">
-        <span class="tt-task-ic">${TYPE_ICON[t.type] || '•'}</span>
-        <span class="tt-task-text">${escapeHtml(t.text || t.key)}</span>
-      </div>`).join('')
+    const planItems = planTasks.map((t) => ttTask(t, false)).join('')
     const acts = day.acts || {}
     const extraRows = (acts.extra_speaks || []).map((x) => `
       <div class="tt-task ok">
