@@ -86,8 +86,9 @@ def test_plan_actuals_aggregate(plan_env):
     c = _client(plan_env)
     hs = _login(c, "malin", "123456")
     ht = _login(c, "teacher", "123456")
-    # 本周一条成绩（今天必在本周窗口）
-    c.post("/exams", headers=hs, json={"lecture": 29, "date": date.today().isoformat(),
+    # 本周一条成绩。日期用周一：week_bounds 下界是「周一 00:00:00」，
+    # 纯日期串必须仍算在窗口内（周一跑测试时今天恰好踩在这条边上）。
+    c.post("/exams", headers=hs, json={"lecture": 29, "date": MON,
                                        "score": 82, "wrong": []})
     # 本周新掌握一个词
     c.post("/recite/sessions", headers=hs, json={
@@ -604,6 +605,9 @@ def test_topic_completion_lights_lecture(plan_env):
     lo, _ = week_bounds(MON)
     upto = (date.today() + timedelta(days=1)).isoformat()
     assert 29 in ps._topic_done_lectures(lo, upto, "malin")
+    # 完成日当天的 00:00:00 下界（week_bounds 形态）不能把当天记录比丢
+    assert 29 in ps._topic_done_lectures(
+        date.today().isoformat() + " 00:00:00", upto, "malin")
     # 学到一半（只完成 1/2 节点）不点亮
     con = sqlite3.connect(plan_env / "fce.db")
     con.execute("UPDATE topic_progress SET done_keys = '[\"final\"]'")

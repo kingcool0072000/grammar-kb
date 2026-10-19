@@ -108,7 +108,12 @@ def cn_dt(col: str) -> str:
 
 
 def week_bounds(week_start: str) -> tuple[str, str]:
-    """[周一 00:00, 下周一 00:00) 本地日期串（配合 cn_dt 做窗口比较）。"""
+    """[周一 00:00, 下周一 00:00) 本地日期串（配合 cn_dt 做窗口比较）。
+
+    返回值带时分秒。和纯日期（exam_records.date、date() 的结果）比较时
+    必须先 date() 归一：否则 '2026-10-19' < '2026-10-19 00:00:00'，
+    周一当天的记录会被排除在本周窗口之外。
+    """
     ws = date.fromisoformat(week_start)
     return (f"{ws.isoformat()} 00:00:00",
             f"{(ws + timedelta(days=7)).isoformat()} 00:00:00")
@@ -208,10 +213,10 @@ class PlanStore:
                     sql += " AND user = ?"
                     args.append(user)
                 if lo is not None:
-                    sql += " AND date >= ?"
+                    sql += " AND date >= date(?)"
                     args.append(lo)
                 if hi is not None:
-                    sql += " AND date < ?"
+                    sql += " AND date < date(?)"
                     args.append(hi)
                 return {r[0] for r in conn.execute(sql, args)}
         except sqlite3.Error:
@@ -342,7 +347,7 @@ class PlanStore:
                 kind_col = ("COALESCE(kind, 'lecture')" if "kind" in cols
                             else "'lecture'")
                 sql = (f"SELECT lecture, date, score, {kind_col} AS kind"
-                       " FROM exam_records WHERE date >= ? AND date < ?")
+                       " FROM exam_records WHERE date >= date(?) AND date < date(?)")
                 args: list = [lo, hi]
                 if kind is not None:
                     sql += f" AND {kind_col} = ?"
@@ -395,16 +400,16 @@ class PlanStore:
                 if words is None:
                     row = conn.execute(
                         f"SELECT COUNT(*) n FROM recite_word_progress"
-                        f" WHERE user = ? AND {self._MP_DATE} >= ?"
-                        f" AND {self._MP_DATE} < ?",
+                        f" WHERE user = ? AND {self._MP_DATE} >= date(?)"
+                        f" AND {self._MP_DATE} < date(?)",
                         (user, lo, hi),
                     ).fetchone()
                 else:
                     ph = ",".join("?" * len(words)) or "NULL"
                     row = conn.execute(
                         f"SELECT COUNT(*) n FROM recite_word_progress"
-                        f" WHERE user = ? AND {self._MP_DATE} >= ?"
-                        f" AND {self._MP_DATE} < ?"
+                        f" WHERE user = ? AND {self._MP_DATE} >= date(?)"
+                        f" AND {self._MP_DATE} < date(?)"
                         f" AND word IN ({ph})",
                         (user, lo, hi, *words),
                     ).fetchone()
@@ -421,14 +426,14 @@ class PlanStore:
                     row = conn.execute(
                         "SELECT COUNT(*) n FROM recite_word_progress"
                         f" WHERE user = ? AND mastered_at IS NOT NULL"
-                        f" AND {self._MP_DATE} < ?",
+                        f" AND {self._MP_DATE} < date(?)",
                         (user, day)).fetchone()
                 else:
                     ph = ",".join("?" * len(words)) or "NULL"
                     row = conn.execute(
                         "SELECT COUNT(*) n FROM recite_word_progress"
                         f" WHERE user = ? AND mastered_at IS NOT NULL"
-                        f" AND {self._MP_DATE} < ?"
+                        f" AND {self._MP_DATE} < date(?)"
                         f" AND word IN ({ph})",
                         (user, day, *words),
                     ).fetchone()
@@ -613,7 +618,7 @@ class PlanStore:
                 conn.row_factory = sqlite3.Row
                 rows = conn.execute(
                     "SELECT lecture, date, wrong FROM exam_records"
-                    " WHERE date >= ? AND date < ? ORDER BY date",
+                    " WHERE date >= date(?) AND date < date(?) ORDER BY date",
                     (lo, hi),
                 ).fetchall()
         except sqlite3.Error:
@@ -2638,9 +2643,9 @@ class PlanStore:
                     "SELECT topic_id, done_keys FROM topic_progress"
                     " WHERE user = ? AND completed_at != ''"
                     " AND date(julianday(COALESCE(NULLIF(completed_at,''),"
-                    " updated_at)) + 8.0/24) >= ?"
+                    " updated_at)) + 8.0/24) >= date(?)"
                     " AND date(julianday(COALESCE(NULLIF(completed_at,''),"
-                    " updated_at)) + 8.0/24) < ?",
+                    " updated_at)) + 8.0/24) < date(?)",
                     (user, lo, hi),
                 ).fetchall()
                 out: set[int] = set()

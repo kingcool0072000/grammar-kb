@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sqlite3
+from pathlib import Path
 
 import pytest
 
@@ -36,7 +37,32 @@ def _login(c, user, password):
     return {"Authorization": f"Bearer {r.json()['data']['token']}"}
 
 
-def test_exam_unlock_flow(vex_env):
+def _require_level_words(monkeypatch):
+    """考卷/词级统计依赖仓库 data/grammar.db 的 vocab_word。
+
+    该库是本地 ingest 产物，不入库。CI 把 GRAMMAR_KB_DB 指到空的 tmp
+    库（防止裸 create_app 在 data/ 下造空库），load_level_words 会跟
+    环境变量走——有真库时改指过去，没有则跳过，与 taxonomy 用例同口径。
+    """
+    db = Path(__file__).resolve().parent.parent / "data" / "grammar.db"
+    if not db.is_file():
+        pytest.skip("data/grammar.db 不存在（本地构建产物，未入库），跳过依赖词表的用例")
+    try:
+        with sqlite3.connect(str(db)) as con:
+            has = con.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='vocab_word'"
+            ).fetchone()
+            n = (con.execute("SELECT COUNT(*) FROM vocab_word WHERE level = 0").fetchone()[0]
+                 if has else 0)
+    except sqlite3.Error:
+        pytest.skip("data/grammar.db 无法读取 vocab_word，跳过依赖词表的用例")
+    if n < 50:
+        pytest.skip(f"data/grammar.db L0 词不足 50（现有 {n}），跳过依赖词表的用例")
+    monkeypatch.setenv("GRAMMAR_KB_DB", str(db))
+
+
+def test_exam_unlock_flow(vex_env, monkeypatch):
+    _require_level_words(monkeypatch)
     """L0 恒开 → L0 考 82 分解锁 L1 → 查询/词汇级数联动。"""
     c = _client(vex_env)
     hs = _login(c, "malin", "123456")
@@ -86,8 +112,9 @@ def test_exam_validation_and_perm(vex_env):
     assert c.delete("/vocab-exams/999", headers=ht).status_code == 404
 
 
-def test_paper_generation(vex_env):
+def test_paper_generation(vex_env, monkeypatch):
     """考卷：50 词四部分 + HTML 结构 + seed 复现。"""
+    _require_level_words(monkeypatch)
     c = _client(vex_env)
     ht = _login(c, "teacher", "123456")
     r = c.get("/vocab-exams/paper?level=0&seed=42", headers=ht)
