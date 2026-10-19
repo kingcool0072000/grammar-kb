@@ -1166,8 +1166,10 @@ class PlanStore:
             # 量化实录（泛读/背单词/计划外朗读）仍从活动表按日算
             out = []
             for t in derived:
-                t2 = dict(t); t2["key"] = _task_key(t2)
-                t2["auto_done"] = True; t2["done"] = True
+                t2 = dict(t)
+                t2["key"] = _task_key(t2)
+                t2["auto_done"] = True
+                t2["done"] = True
                 out.append(t2)
             _, _, acts_out = self._signals_and_acts(user, d, planned_articles)
             return {"date": d, "week_start": ws, "tasks": out,
@@ -1414,8 +1416,6 @@ class PlanStore:
         - 试卷：计划卷数 vs 登记考试数
         """
         dims = []
-        wk_done = sum(d.get("done") or 0 for d in days)
-        wk_total = sum(d.get("total") or 0 for d in days)
 
         def dim(icon, name, ok, total, extra=""):
             if total:
@@ -1507,7 +1507,6 @@ class PlanStore:
                                         sel.append(c)  # 边界章算入
                             if not sel:
                                 continue
-                            sel_w = sum(c["word_count"] or 0 for c in sel)
                             prog = lib.execute(
                                 "SELECT percent FROM reading_progress"
                                 " WHERE book_id = ? AND user = ?",

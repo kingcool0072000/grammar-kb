@@ -11,7 +11,12 @@
       结构 { "apple": {"w":..,"p":..,"t":..,"d":..,"c":..,"o":..}, ... }
       浏览器端按需 fetch 对应桶，本地离线查词、无需任何外部 API。
 """
-import json, math, os, re, sqlite3, sys, unicodedata
+import json
+import os
+import re
+import sqlite3
+import sys
+import unicodedata
 
 SRC = sys.argv[1] if len(sys.argv) > 1 else '/tmp/ecdict/ecdict.sqlite'
 OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dict')
