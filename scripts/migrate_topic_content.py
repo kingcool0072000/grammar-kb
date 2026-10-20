@@ -9,7 +9,6 @@ explain，保留原 HTML）；assignedTo → assigned_to。幂等：重复执行
 from __future__ import annotations
 
 import json
-import re
 import sys
 from pathlib import Path
 

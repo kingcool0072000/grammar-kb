@@ -1411,7 +1411,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         """单题答案编辑（教师人工补录）。教师专属。"""
         _require_teacher(request)
         body = rec if isinstance(rec, dict) else {}
-        lecture = body.get("lecture"); qnum = body.get("qnum"); answer = body.get("answer")
+        lecture = body.get("lecture")
+        qnum = body.get("qnum")
+        answer = body.get("answer")
         if not isinstance(lecture, int) or not isinstance(qnum, int) or answer is None:
             raise HTTPException(status_code=422, detail="lecture/qnum/answer 必填")
         if not homework_admin.put_answer(lecture, qnum, str(answer)):

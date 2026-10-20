@@ -86,8 +86,9 @@ def test_plan_actuals_aggregate(plan_env):
     c = _client(plan_env)
     hs = _login(c, "malin", "123456")
     ht = _login(c, "teacher", "123456")
-    # 本周一条成绩（今天必在本周窗口）
-    c.post("/exams", headers=hs, json={"lecture": 29, "date": date.today().isoformat(),
+    # 本周一条成绩。日期用周一：week_bounds 下界是「周一 00:00:00」，
+    # 纯日期串必须仍算在窗口内（周一跑测试时今天恰好踩在这条边上）。
+    c.post("/exams", headers=hs, json={"lecture": 29, "date": MON,
                                        "score": 82, "wrong": []})
     # 本周新掌握一个词
     c.post("/recite/sessions", headers=hs, json={
@@ -108,8 +109,6 @@ def test_plan_actuals_aggregate(plan_env):
 
 def test_plan_reading_actuals_full_book(plan_env, monkeypatch):
     """阅读实况：全书口径要素（总词数/落点章区间），供「第X章xx%~xx%」文案。"""
-    import zipfile, io
-
     # 独立 library.db：一本书两章（各 100 词），malin 读到 30%
     lib_path = plan_env / "library.db"
     from grammar_kb.library import LibraryStore
@@ -473,7 +472,6 @@ def test_daily_spread_weekday_template(plan_env):
     ht = _login(c, "teacher", "123456")
     _put_week(c, ht, {"lectures": [25, 26], "vocab_goal": 100})
     d = c.get("/plan/today", headers=hs).json()["data"]
-    types = [t["type"] for t in d["tasks"]]
     # 背词配额行存在且 quota 量化（周一跑：5 工作日 → 100/5=20）
     vocab = next((t for t in d["tasks"] if t["type"] == "vocab"), None)
     assert vocab is not None and vocab.get("quota")
@@ -498,7 +496,6 @@ def test_daily_spread_future_days_carry_plan(plan_env):
         # 未来日任务全部 done=False（灰显计划，不是完成记录）
         assert all(not t["done"] for t in x["tasks"])
     # 周六未来日应排 FCE（模板：周六=FCE 大题+精读）
-    sat = next((x for x in futures if x["date"] > MON), None)
     sat_all = [x for x in d["days"]
                if x["future"] and date.fromisoformat(x["date"]).weekday() == 5]
     if sat_all:
@@ -570,7 +567,6 @@ def test_topic_completion_lights_lecture(plan_env):
     """自学专题学完 = 讲次「学+测」完成：排程不再重排 + 日信号点亮。"""
     c = _client(plan_env)
     ht = _login(c, "teacher", "123456")
-    hs = _login(c, "malin", "123456")
     _put_week(c, ht, {"lectures": [29]})
     # 造专题内容（2 节点）+ 学完的进度（updated_at 归一今天，UTC+8 口径）
     con = sqlite3.connect(plan_env / "fce.db")
@@ -609,6 +605,9 @@ def test_topic_completion_lights_lecture(plan_env):
     lo, _ = week_bounds(MON)
     upto = (date.today() + timedelta(days=1)).isoformat()
     assert 29 in ps._topic_done_lectures(lo, upto, "malin")
+    # 完成日当天的 00:00:00 下界（week_bounds 形态）不能把当天记录比丢
+    assert 29 in ps._topic_done_lectures(
+        date.today().isoformat() + " 00:00:00", upto, "malin")
     # 学到一半（只完成 1/2 节点）不点亮
     con = sqlite3.connect(plan_env / "fce.db")
     con.execute("UPDATE topic_progress SET done_keys = '[\"final\"]'")

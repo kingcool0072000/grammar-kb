@@ -125,7 +125,7 @@ def test_listening_vocab(tmp_path, monkeypatch):
     """听力预习词表：transcript 分词 → 未掌握词三档排序（L2+ 优先）。"""
     import sqlite3 as sq
     from grammar_kb.fce_query import FcePaperStore
-    from grammar_kb import fce_transcript, reading
+    from grammar_kb import reading
 
     db = tmp_path / "fce.db"
     con = sq.connect(db)
@@ -156,7 +156,8 @@ def test_listening_vocab(tmp_path, monkeypatch):
     g.executemany("INSERT INTO vocab_word (word, level) VALUES (?, ?)",
                   [("student", 0), ("way", 0), ("power", 2), ("queue", 2),
                    ("local", 2), ("freezer", 3), ("invent", 2)])
-    g.commit(); g.close()
+    g.commit()
+    g.close()
     monkeypatch.setenv("GRAMMAR_KB_DB", str(gdb))
     reading._vocab_map_cache.clear()
     reading._pos_map_cache.clear()
