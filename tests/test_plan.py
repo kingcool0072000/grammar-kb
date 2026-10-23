@@ -4,7 +4,7 @@ from __future__ import annotations
 import io
 import sqlite3
 import zipfile
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import pytest
 
@@ -12,10 +12,25 @@ pytest.importorskip("fastapi")
 pytest.importorskip("httpx")
 from fastapi.testclient import TestClient  # noqa: E402
 
+from grammar_kb.clock import CN_TZ, freeze_clock, monday_of, today_cn  # noqa: E402
 from grammar_kb.server import create_app  # noqa: E402
 
-MON = (date.today() - timedelta(days=date.today().weekday())).isoformat()
-PREV = (date.today() - timedelta(days=date.today().weekday() + 7)).isoformat()
+# 与计划表同一北京日历。周末跑测试时，工作日模板用例用 weekday_clock 钉到周三。
+MON = monday_of(today_cn()).isoformat()
+PREV = (monday_of(today_cn()) - timedelta(days=7)).isoformat()
+
+
+@pytest.fixture()
+def weekday_clock():
+    """周六日把「今天」钉在当周周三，工作日排程用例不必整段跳过。"""
+    real = datetime.now(CN_TZ)
+    if real.weekday() < 5:
+        yield
+        return
+    wed = monday_of(real.date()) + timedelta(days=2)
+    when = datetime(wed.year, wed.month, wed.day, 12, 0, tzinfo=CN_TZ)
+    with freeze_clock(when):
+        yield
 
 
 @pytest.fixture()
@@ -62,7 +77,7 @@ def test_plan_put_get_roundtrip(plan_env):
 def test_plan_validates_monday(plan_env):
     c = _client(plan_env)
     ht = _login(c, "teacher", "123456")
-    today = date.today().isoformat()
+    today = today_cn().isoformat()
     r = c.put(f"/plan/weeks/{today}", headers=ht, json={"tasks": {}, "notes": ""})
     if today == MON:
         pytest.skip("今天恰好是周一")
@@ -119,7 +134,7 @@ def test_plan_reading_actuals_full_book(plan_env, monkeypatch):
     con = sqlite3.connect(lib_path)
     con.execute(
         "UPDATE reading_progress SET updated_at=? WHERE book_id=? AND user='malin'",
-        (date.today().isoformat() + " 12:00:00", book_id))
+        (today_cn().isoformat() + " 12:00:00", book_id))
     con.commit()
     con.close()
 
@@ -261,15 +276,13 @@ def test_my_week_student_only(plan_env):
     assert c.get("/plan/my-week", headers=t).status_code == 403
 
 
-@pytest.mark.skipif(date.today().weekday() >= 5,
-                    reason="周末模板无讲次/背词排程（口径=工作日）")
-def test_hw_paper_dimension_split(plan_env):
+def test_hw_paper_dimension_split(plan_env, weekday_clock):
     """课程/作业卷拆分：hw_papers 独立维度；kind=hw 成绩只点亮作业卷，
     kind=lecture 成绩只点亮语法课程；两维度互不串。"""
     c = _client(plan_env)
     hs = _login(c, "malin", "123456")
     ht = _login(c, "teacher", "123456")
-    today = date.today().isoformat()
+    today = today_cn().isoformat()
     # 一份作业卷成绩（第 26 讲）+ 一份课程测验成绩（第 25 讲）
     c.post("/exams", headers=hs, json={"lecture": 26, "date": today,
                                        "score": 88, "wrong": [], "kind": "hw"})
@@ -346,7 +359,7 @@ def test_vocab_goal_within_level_semantics(plan_env):
     con2.commit()
     con2.close()
     # l1a 上周就会了（拨 mastered_at 进基线）
-    old = (date.today() - timedelta(days=7)).isoformat() + "T00:00:00+00:00"
+    old = (today_cn() - timedelta(days=7)).isoformat() + "T00:00:00+00:00"
     con2b = sqlite3.connect(plan_env / "fce.db")
     con2b.execute("UPDATE recite_word_progress SET mastered_at=? WHERE word='l1a'", (old,))
     con2b.commit()
@@ -396,7 +409,7 @@ def test_vocab_goal_base_exceeded(plan_env):
         "wrong_words": [], "mode": "flip", "scope": "all",
         "details": [{"word": "l0a", "correct": True}, {"word": "l0b", "correct": True}],
     })
-    old = (date.today() - timedelta(days=14)).isoformat()
+    old = (today_cn() - timedelta(days=14)).isoformat()
     con2 = sqlite3.connect(plan_env / "fce.db")
     con2.execute("UPDATE recite_word_progress SET level=0, mastered_at=?", (old,))
     con2.commit()
@@ -463,9 +476,7 @@ def _put_week(c, ht, tasks):
     assert r.status_code == 200, r.text
 
 
-@pytest.mark.skipif(date.today().weekday() >= 5,
-                    reason="周末模板无讲次/背词排程（口径=工作日）")
-def test_daily_spread_weekday_template(plan_env):
+def test_daily_spread_weekday_template(plan_env, weekday_clock):
     """工作日均摊：讲次摊工作日、背词配额=剩余词÷剩余工作日。"""
     c = _client(plan_env)
     hs = _login(c, "malin", "123456")
@@ -478,15 +489,13 @@ def test_daily_spread_weekday_template(plan_env):
     # 讲次按「剩余讲次 / 剩余工作日」向上取整摊到今天。
     # 周一 2/5 → 1 讲；周五 2/1 → 两讲都在今天。不能写死「恰好 1 讲」，
     # 也不能写成 `len==1 and … or "26" in text`（or 优先级会让多讲也误过）。
-    wd_left = 5 - date.today().weekday()
+    wd_left = 5 - today_cn().weekday()
     per = max(1, -(-2 // wd_left))  # 与 plan.week_daily_tasks 同一向上取整
     lecs = [t for t in d["tasks"] if t["type"] == "lecture"]
     assert [t["text"] for t in lecs] == [f"第{n}讲 学+测" for n in (25, 26)[:per]]
 
 
-@pytest.mark.skipif(date.today().weekday() >= 5,
-                    reason="周末模板无讲次/背词排程（口径=工作日）")
-def test_daily_spread_future_days_carry_plan(plan_env):
+def test_daily_spread_future_days_carry_plan(plan_env, weekday_clock):
     """未来日带出均摊计划：week_view 的 future days 不再是空 tasks。"""
     c = _client(plan_env)
     ht = _login(c, "teacher", "123456")
@@ -511,9 +520,7 @@ def test_daily_spread_future_days_carry_plan(plan_env):
         assert any(t["type"] == "vocab" for t in wd[0]["tasks"])
 
 
-@pytest.mark.skipif(date.today().weekday() >= 5,
-                    reason="周末模板无讲次/背词排程（口径=工作日）")
-def test_vocab_quota_done_judgement(plan_env):
+def test_vocab_quota_done_judgement(plan_env, weekday_clock):
     """背词配额完成判定：当天背词词数 ≥ quota 即点亮。"""
     c = _client(plan_env)
     hs = _login(c, "malin", "123456")
@@ -532,7 +539,7 @@ def test_vocab_quota_done_judgement(plan_env):
     })
     con = sqlite3.connect(plan_env / "fce.db")
     con.execute("UPDATE recite_sessions SET created_at = ? || 'T12:00:00Z'",
-                (date.today().isoformat(),))
+                (today_cn().isoformat(),))
     con.commit()
     con.close()
     d = c.get("/plan/today", headers=hs).json()["data"]
@@ -545,7 +552,7 @@ def test_teacher_exam_student_attribution(plan_env):
     c = _client(plan_env)
     ht = _login(c, "teacher", "123456")
     hs = _login(c, "malin", "123456")
-    today = date.today().isoformat()
+    today = today_cn().isoformat()
     # 教师登记（带 student）→ 归 malin
     r = c.post("/exams", headers=ht, json={
         "lecture": 29, "date": today, "score": 74,
@@ -594,24 +601,24 @@ def test_topic_completion_lights_lecture(plan_env):
                 " (user, topic_id, done_keys, completed_at, updated_at)"
                 " VALUES ('malin', 'lecture-29-passive-1', ?, ?, ?)",
                 ('["final", "steps"]',
-                 f"{date.today().isoformat()}T12:00:00+00:00",
-                 f"{date.today().isoformat()}T12:00:00+00:00"))
+                 f"{today_cn().isoformat()}T12:00:00+00:00",
+                 f"{today_cn().isoformat()}T12:00:00+00:00"))
     con.commit()
     con.close()
     # 当天日信号：专题学完点亮 lecture:29（_auto_done 直接断言，
     # 不依赖当日模板排不排讲次行——周日模板不出讲次是设计行为）
     from grammar_kb.plan import PlanStore
     ps = PlanStore(str(plan_env / "fce.db"))
-    auto, _ = ps._auto_done("malin", date.today().isoformat())
+    auto, _ = ps._auto_done("malin", today_cn().isoformat())
     assert auto.get("lecture:29") is True
     # 排程口径：周窗口内 29 讲已算完成 → 工作日不再重排「第29讲 学+测」
     from grammar_kb.plan import week_bounds
     lo, _ = week_bounds(MON)
-    upto = (date.today() + timedelta(days=1)).isoformat()
+    upto = (today_cn() + timedelta(days=1)).isoformat()
     assert 29 in ps._topic_done_lectures(lo, upto, "malin")
     # 完成日当天的 00:00:00 下界（week_bounds 形态）不能把当天记录比丢
     assert 29 in ps._topic_done_lectures(
-        date.today().isoformat() + " 00:00:00", upto, "malin")
+        today_cn().isoformat() + " 00:00:00", upto, "malin")
     # 学到一半（只完成 1/2 节点）不点亮
     con = sqlite3.connect(plan_env / "fce.db")
     con.execute("UPDATE topic_progress SET done_keys = '[\"final\"]'")
@@ -619,7 +626,7 @@ def test_topic_completion_lights_lecture(plan_env):
     con.close()
     assert 29 not in ps._topic_done_lectures(lo, upto, "malin")
     assert "lecture:29" not in ps._auto_done(
-        "malin", date.today().isoformat())[0]
+        "malin", today_cn().isoformat())[0]
 
 
 def test_weekday_speak_completion_visible(plan_env):
@@ -639,7 +646,7 @@ def test_weekday_speak_completion_visible(plan_env):
         id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT, article_id INTEGER,
         file TEXT DEFAULT '', note TEXT DEFAULT '',
         created_at TEXT NOT NULL DEFAULT '')""")
-    today = date.today()
+    today = today_cn()
     # 录音落在本周周六之前（如周三）——验证周六排程的剩余剔除。
     # 周三还没到（周一、周二）则退到周一。✓ 行只挂在提交日
     # （「今天已提交朗读」），不能拿日历今天去对：周二查 /plan/today
@@ -687,7 +694,7 @@ def test_rules_registry_and_switch(plan_env):
         done_keys TEXT NOT NULL DEFAULT '[]', completed_at TEXT DEFAULT '',
         updated_at TEXT DEFAULT '', UNIQUE(user, topic_id))""")
     content = '{"nodes": [{"key": "a"}, {"key": "b"}]}'
-    now = f"{date.today().isoformat()}T12:00:00+00:00"
+    now = f"{today_cn().isoformat()}T12:00:00+00:00"
     con.execute("INSERT OR REPLACE INTO topic_content (topic_id, content)"
                 " VALUES ('lecture-29-passive-1', ?)", (content,))
     con.execute("INSERT OR REPLACE INTO topic_progress"
@@ -746,7 +753,7 @@ def test_week_goal_progress_counts_topic(plan_env):
         done_keys TEXT NOT NULL DEFAULT '[]', completed_at TEXT DEFAULT '',
         updated_at TEXT DEFAULT '', UNIQUE(user, topic_id))""")
     content = '{"nodes": [{"key": "a"}, {"key": "b"}]}'
-    now = f"{date.today().isoformat()}T12:00:00+00:00"
+    now = f"{today_cn().isoformat()}T12:00:00+00:00"
     con.execute("INSERT OR REPLACE INTO topic_content (topic_id, content)"
                 " VALUES ('lecture-29-passive-1', ?)", (content,))
     con.execute("INSERT OR REPLACE INTO topic_progress"

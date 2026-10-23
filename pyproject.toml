@@ -25,7 +25,10 @@ server = [
 ]  # HTTP 服务（可选；python-multipart 供 epub 上传）
 
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = [
+    "pytest>=8.0",
+    "ruff==0.17.2",  # 钉死：CI 用 uv run ruff，不再 uvx 浮动版本
+]
 
 [project.scripts]
 grammar-kb = "grammar_kb.cli:main"

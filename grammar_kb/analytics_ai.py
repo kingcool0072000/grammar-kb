@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from . import glm
+from .clock import CN_TZ, now_cn, today_cn
 
 REPORT_SCHEMA = """
 CREATE TABLE IF NOT EXISTS ai_weekly_reports (
@@ -50,7 +51,7 @@ def last_week_window(today: Optional[date] = None) -> tuple[date, date]:
 
     返回 (start, end) 且 start 恒为周一、end 恒为周日。
     """
-    d = today or date.today()
+    d = today or today_cn()
     # 周一=0 … 周日=6
     monday = d - timedelta(days=d.weekday())
     if d.weekday() == 6:  # 周日：本周数据已完整
@@ -78,8 +79,8 @@ def _parse_ts(ts: Optional[str]) -> Optional[datetime]:
         except ValueError:
             return None
     if t.tzinfo is not None:
-        # 库里混存 +00:00 后缀（FCE/背单词）与 naive（本地 now），统一按本地墙钟比较
-        t = t.astimezone().replace(tzinfo=None)
+        # 库里混存 +00:00 后缀（FCE/背单词）与 naive 墙钟，统一按北京时间比较
+        t = t.astimezone(CN_TZ).replace(tzinfo=None)
     return t
 
 
@@ -245,7 +246,7 @@ class AnalyticsAI:
         content = glm.chat_prose(api_key, model, SYSTEM_PROMPT, user_prompt)
 
         start, end = win
-        now = datetime.now().isoformat(timespec="seconds")
+        now = now_cn().replace(tzinfo=None).isoformat(timespec="seconds")
         with self._conn() as con:
             con.execute(
                 "INSERT OR REPLACE INTO ai_weekly_reports "

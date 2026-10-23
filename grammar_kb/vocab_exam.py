@@ -21,6 +21,7 @@ from datetime import datetime, timezone as _tz
 from pathlib import Path
 from typing import Optional
 
+from .clock import today_cn
 from .fce_query import _default_db_path
 
 SCHEMA = """
@@ -253,7 +254,7 @@ def render_paper_html(paper: dict, student: str = "") -> str:
     lvl = paper["level"]
     rng = random.Random((paper.get("seed") or 0) + 7)
     s = paper["sections"]
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = today_cn().isoformat()
     esc = html.escape
 
     def rows(items, inner):

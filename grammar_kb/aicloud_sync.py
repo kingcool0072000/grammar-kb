@@ -68,15 +68,17 @@ class AiCloudClient:
             }
             if self.token:
                 headers["access-token"] = self.token
+            # 登录体含密码的 MD5（爱问云把 md5 当口令）。走 stdin，避免出现在
+            # curl 的 argv 里（ps / 审计日志能看到参数）。
             cmd = [
                 "curl", "-sS", "--max-time", "40",
                 "--resolve", f"{BASE_HOST}:443:{ip}",
                 "-X", "POST", f"https://{BASE_HOST}/{path}",
-                "--data-binary", body.decode(),
+                "--data-binary", "@-",
             ]
             for k, v in headers.items():
                 cmd += ["-H", f"{k}: {v}"]
-            proc = subprocess.run(cmd, capture_output=True)
+            proc = subprocess.run(cmd, input=body, capture_output=True)
             if proc.returncode == 0 and proc.stdout.strip().startswith(b"{"):
                 return json.loads(proc.stdout)
             last_err = f"rc={proc.returncode}"

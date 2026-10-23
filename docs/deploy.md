@@ -40,6 +40,9 @@ After=network.target
 WorkingDirectory=/opt/grammar-kb
 ExecStart=/opt/grammar-kb/.venv/bin/uvicorn grammar_kb.server:app --host 0.0.0.0 --port 8000
 Restart=on-failure
+# 计划表「今天」由代码固定为北京时间；TZ 让 cron 的 date、以及
+# 尚未改掉的个别本地时间戳跟同一日历。
+Environment=TZ=Asia/Shanghai
 # 数据库路径：默认解析 环境变量 → iCloud → data/
 # Environment=GRAMMAR_KB_DB=/data/grammar.db
 # Environment=GRAMMAR_KB_EXAM_DB=/data/exam.db
@@ -156,6 +159,16 @@ sqlite3 /opt/grammar-kb/data/exam.db "VACUUM INTO '/backup/exam-$(date +%F).db'"
 **公网安全清单**：HTTPS（Caddy 自动证书，方案 B）· 师生强密码 ·
 `GRAMMAR_KB_CORS_ORIGINS` 收紧到你的域名 · 云防火墙只放 80/443 ·
 录音入库依赖 ffmpeg（云上 `apt install ffmpeg`）。
+
+## 时区
+
+「今天」和周一起点以北京时间（UTC+8）为准，由 `grammar_kb.clock` 计算，
+不看进程时区。systemd、容器和跑备份的 shell 仍设置 `TZ=Asia/Shanghai`：
+下面 cron 里的 `date +%F` 才会落在北京日历上。
+
+```ini
+Environment=TZ=Asia/Shanghai
+```
 
 ## 数据说明
 
