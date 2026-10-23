@@ -825,3 +825,47 @@ def test_saturday_article_rows_carry_id_for_link(plan_env):
     assert rows and all(r.get("article_id") for r in rows), rows
     # 标题在文案里被截到 14 字符（The Secret Sen…），断言截断前缀
     assert any("Secret Sen" in (r.get("text") or "") for r in rows), rows
+
+
+def test_day_completion_is_the_done_exit(plan_env, weekday_clock):
+    """清单行的 done/why 全部来自 day_completion，不再各写一套。"""
+    from grammar_kb.plan import PlanStore
+
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    ht = _login(c, "teacher", "123456")
+    _put_week(c, ht, {"vocab_goal": 20, "lectures": [29]})
+    ps = PlanStore(
+        str(plan_env / "fce.db"), exam_db_path=str(plan_env / "exam.db"))
+    day = today_cn().isoformat()
+    derived = ps.week_daily_tasks(MON, for_date=day, user="malin")
+    comp = ps.day_completion("malin", day, derived)
+    td = ps.today_tasks("malin", day)
+    for t in td["tasks"]:
+        assert comp["keys"][t["key"]]["done"] is t["done"]
+        assert t["why"] == comp["keys"][t["key"]]["why"]
+    vocab = next(t for t in td["tasks"] if t["type"] == "vocab")
+    assert vocab["done"] is False and vocab["why"] == "below_quota"
+    # 按章文案「已读完」与百分比文案「目标已达成」同一完成原因
+    finished = ps.day_completion("malin", day, [{
+        "type": "reading", "book": "percy", "key": "reading:percy",
+        "text": "泛读《Percy》第1章已读完",
+    }])
+    assert finished["keys"]["reading:percy"] == {"done": True, "why": "goal_reached"}
+    c.post("/recite/sessions", headers=hs, json={
+        "total": 20, "wrong": 0, "acc": 100, "duration_sec": 300,
+        "wrong_words": [], "mode": "flip", "scope": "all", "details": [],
+    })
+    con = sqlite3.connect(plan_env / "fce.db")
+    con.execute(
+        "UPDATE recite_sessions SET created_at = ? || 'T12:00:00Z'", (day,))
+    con.commit()
+    con.close()
+    td = ps.today_tasks("malin", day)
+    vocab = next(t for t in td["tasks"] if t["type"] == "vocab")
+    assert vocab["done"] is True and vocab["why"] == "quota_met"
+    c.post("/exams", headers=hs, json={
+        "lecture": 29, "date": day, "score": 90, "wrong": [], "kind": "lecture"})
+    td = ps.today_tasks("malin", day)
+    lec = next(t for t in td["tasks"] if t.get("key") == "lecture:29")
+    assert lec["done"] is True and lec["why"] == "signal"

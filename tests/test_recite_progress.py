@@ -10,6 +10,7 @@ pytest.importorskip("fastapi")
 pytest.importorskip("httpx")
 from fastapi.testclient import TestClient  # noqa: E402
 
+from grammar_kb.clock import CN_TZ, freeze_clock, today_cn  # noqa: E402
 from grammar_kb.server import create_app  # noqa: E402
 
 
@@ -134,7 +135,7 @@ def test_wrongbook_with_gloss(recite_env):
     assert w["wrong_count"] == 1 and w["stage"] == 0
     # 新鲜路径：next_review = 答错日+1（明天），今天未到期
     assert w["due"] is False
-    assert w["next_review"] == (datetime.now(_tz.utc).date() + timedelta(days=1)).isoformat()
+    assert w["next_review"] == (today_cn() + timedelta(days=1)).isoformat()
     # 上报词大小写不一致（Bad vs bad）也要能匹配到释义
     assert w["gloss"] == "坏的"
     assert w["meanings"] == ["adj. 坏的", "n. 坏事"]
@@ -182,7 +183,7 @@ def test_ebbinghaus_cycle(recite_env):
         # 把 next_review 拉到今天模拟到期，再提交复习
         con.execute(
             "UPDATE recite_review SET next_review = ? WHERE user='malin' AND word='bad'",
-            (datetime.now(_tz.utc).date().isoformat(),),
+            (today_cn().isoformat(),),
         )
         con.commit()
         r = _submit(c, h, [{"word": "bad", "correct": True}], scope="wrongbook")
@@ -239,3 +240,22 @@ def test_review_backfill_from_history(recite_env):
     w = d["in_cycle"][0]
     assert w["word"] == "oldword" and w["wrong_count"] == 1
     assert w["due"] is True  # 3 天前错的，D+1 早已过期
+
+
+def test_wrongbook_today_is_beijing_not_utc(recite_env):
+    """答错日 / 下次复习按北京日历。UTC 仍是 10-23 时，今天必须是 10-24。"""
+    c = _client(recite_env)
+    h = _login(c, "malin", "123456")
+    when = datetime(2026, 10, 24, 1, 30, tzinfo=CN_TZ)
+    with freeze_clock(when):
+        r = c.post("/recite/sessions", headers=h, json={
+            "total": 1, "wrong": 1, "acc": 0, "duration_sec": 5,
+            "wrong_words": ["late"], "mode": "flip", "scope": "all",
+            "details": [{"word": "late", "correct": False}],
+        })
+        assert r.status_code == 200
+        w = _wb(c, h)["in_cycle"][0]
+    assert w["word"] == "late"
+    assert w["first_wrong_at"] == "2026-10-24"
+    assert w["next_review"] == "2026-10-25"
+    assert w["due"] is False

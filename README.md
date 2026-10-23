@@ -6,8 +6,8 @@
   自动去水印、还原表格、切分知识点、抽取关键词与关系，存入本地 SQLite（FTS5 全文检索），
   提供 CLI、HTTP API 与 MCP 服务。
 - **`web/`（Vite 前端）**：面向学生的学习界面——初中语法课 / 词汇表 / 背单词 / 初中英语知识体系 / FCE 真题练习 / 阅读训练 / 泛读馆（整本书英文泛读），
-  外加哈一作业成绩记录（增删改查，持久化于 iCloud Drive，跨设备同步）。
-  学生版与教师版按账号区分功能与权限（教师版含批改中心 / 备课中心 / 学情分析）。
+  外加哈一作业成绩记录（增删改查，存在独立的 `data/exam.db`）。
+  学生版与教师版按账号区分功能与权限（教师版含批改中心 / 备课中心 / 计划表）。
 
 适用于任何"版式相对统一、带页眉页脚水印、含表格"的教学/技术 PDF。
 
@@ -80,7 +80,7 @@ PDF ──► pdf_parser   去水印（字体+方向过滤）+ 重排行 + 还�
 | `db.py`         | schema + CRUD + FTS5(trigram, external-content)，无截断 |
 | `query.py`      | 面向调用的查询 API |
 | `ingest.py`     | PDF → 落库（目录导入 = 全量重建，id 可复现） |
-| `exam_store.py` | 哈一作业成绩独立 SQLite 库（增删改查；默认放 iCloud Drive） |
+| `exam_store.py` | 哈一作业成绩独立 SQLite 库（`$GRAMMAR_KB_EXAM_DB`，否则 `data/exam.db`） |
 | `auth.py`       | 学生/教师双角色认证（HMAC token，30 天有效） |
 | `fce_paper.py`  | FCE 青少版模拟卷 OCR（macOS Vision）→ 解析 → 入库 `data/fce.db`（4 Test × 87 题） |
 | `fce_query.py`  | FCE 真题只读查询 + 练习提交/自动批改（fce_submission 表） |
@@ -92,14 +92,14 @@ PDF ──► pdf_parser   去水印（字体+方向过滤）+ 重排行 + 还�
 | `epub_parse.py` | EPUB 解析（zipfile + ElementTree：元数据 / 封面 / 按 spine 拆章，zip 路径防逃逸） |
 | `glm.py`        | 智谱 GLM 调用层（OpenAI 兼容接口；超时 / 重试 / JSON 容错提取） |
 | `prep_queue.py` | AI 预习批量任务（进程内线程池并发 2 + prep_jobs 行驱动） |
-| `recite.py`     | 背单词成绩上报（recite_session 表，随 iCloud 同步到教师端） |
+| `recite.py`     | 背单词成绩上报（recite_session 表，与 FCE/阅读同在 `data/fce.db`） |
 | `focus.py`      | 泛读专注力采集与评分（focus_session 表：活跃/互动/推进加权 − 离开/乱晃惩罚） |
 | `analytics_ai.py` | AI 学情周报（四类作业按周聚合 + 前四周基线对比，存 ai_weekly_reports 表） |
 | `theme_notes.py` | 主题讲义：每个语法主题的结构化总结（例句取教材原文） |
 | `wordfreq.py`   | 困难词粗筛（google-10000 高频词表，三档阈值教师可调） |
 | `aicloud_sync.py` | 爱问云测验平台成绩拉取入库（`sync-aicloud`，按讲次+日期幂等） |
 | `cli.py`        | 命令行 |
-| `server.py`     | HTTP 服务（可选 extra） |
+| `server/`       | HTTP 服务（可选 extra；入口 `grammar_kb.server:app`） |
 | `mcp_server.py` | MCP 服务（可选 extra） |
 | `web/`          | 学习前端（Vite，详见下文「Web 学习前端」与 `web/README.md`） |
 
@@ -193,13 +193,12 @@ uv run grammar-kb-server --host 0.0.0.0 --port 8000
 
 ### 哈一作业成绩数据存在哪
 
-成绩存在**独立**的 SQLite 库（与讲义库 `data/grammar.db` 分开），路径按顺序解析：
+成绩存在**独立**的 SQLite 库（与讲义库 `data/grammar.db` 分开）。进程不再探测 iCloud，路径按顺序解析：
 
 1. 环境变量 `GRAMMAR_KB_EXAM_DB`
-2. **iCloud Drive**：`~/Library/Mobile Documents/com~apple~CloudDocs/grammar-kb/exam.db`（macOS 且 iCloud 可用时）——数据量小，放云端由 iCloud 在多台设备间同步
-3. 兜底 `data/exam.db`
+2. 当前工作目录下的 `data/exam.db`（在仓库根目录启动时就是项目里的 `data/exam.db`）
 
-库刻意不用 WAL 模式（单文件自包含，iCloud 整文件同步更可靠）；其他设备装好本仓库、登录同一 iCloud 账号后启动服务，读到的就是同一份成绩。
+多设备要看同一份成绩，就指向同一台服务（或同一份库文件的路径），不要靠本机云盘同步。旧安装如果还把库放在 iCloud 目录里，用环境变量显式指过去即可，代码里没有这条默认分支。
 
 ### FCE 真题数据（`fce.db`）
 
@@ -210,10 +209,9 @@ FCE 青少版（For Schools）模拟卷，源 PDF 为纯扫描图，经 macOS Vi
   （已 OCR 的页文本可缓存复用：`--ocr-dir <目录>`，格式为 `pNNN.txt` 三列坐标行）
 - **练习记录**：`fce_submission` 表存每次大题提交（作答明细、自动批改结果、用时、作文批改）
 - **OCR 依赖**：macOS 系统自带 Vision 框架（无需安装 tesseract），脚本内嵌于 `fce_paper.py`
-- **存哪**：与哈一作业成绩库同一套路径解析（环境变量 `GRAMMAR_KB_FCE_DB` → iCloud Drive
-  `~/Library/Mobile Documents/com~apple~CloudDocs/grammar-kb/fce.db` → 项目 `data/fce.db`）。
-  放 iCloud 的意义：**学生端提交的练习与朗读录音随 iCloud 同步到教师端设备**（首次启用自动
-  把本地库整文件迁上云；单文件 journal 模式，iCloud 整文件同步可靠）
+- **存哪**：环境变量 `GRAMMAR_KB_FCE_DB`，否则仓库 `data/fce.db`（相对 `grammar_kb` 包的上一级，
+  与 `paths.data_path` 相同）。练习提交、朗读录音、背单词进度都在这个文件里。
+  教师端看到学生提交，是因为师生打的是同一个后端，不是因为本机 iCloud 同步。
 
 ### 阅读训练数据（同 `data/fce.db`）
 
@@ -310,7 +308,7 @@ cd web && npm install && npm run dev     # http://localhost:5180
 - **🎯 考点信号（双向）**：知识点 ↔ 标志词/时态 双向跳转——「看到这个词，就是在考哪些知识点」
 - **📝 哈一作业成绩**：每讲一份作业卷（35 题，满分 100）。点题号记对错、分数自动算；
   多次作答全部保留、可修改可删除；错题本按「讲次+题号」汇总错误次数；
-  数据经后端 `/exams` 存 iCloud（见上文），跨浏览器/设备不丢，旧 localStorage 记录首次打开自动迁移
+  数据经后端 `/exams` 写入 `data/exam.db`（见上文），跨浏览器不丢；旧 localStorage 记录首次打开自动迁移
 - **泛读馆**：整本书英文泛读（epubjs 阅读器，epub 上传由教师管理）。AI 章节预习（智谱 GLM）、
   划词查词（ECDICT 全量 + AI 兜底）、阅读进度云同步；教师管控学生阅读主题（学生仅可调字号）。
   专注模式下压制系统弹窗/长按菜单，阅读行为静默采集为专注力评分（教师端轨迹详情弹窗）

@@ -17,6 +17,7 @@ from ..fce_query import _default_db_path
 from .schema import SCHEMA
 from .util import _week_out
 from .actuals import ActualsMixin
+from .completion import CompletionMixin
 from .books import BooksMixin
 from .focus import FocusMixin
 from .focus_meta import FocusMetaMixin
@@ -35,6 +36,7 @@ class PlanStore(
     ActualsMixin,
     ReviewMixin,
     ScheduleMixin,
+    CompletionMixin,
     BooksMixin,
     ViewsMixin,
     GoalsMixin,

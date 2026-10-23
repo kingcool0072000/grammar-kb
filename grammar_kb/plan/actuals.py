@@ -5,7 +5,7 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
-from ..clock import cn_dt, week_bounds
+from ..clock import cn_date, cn_dt, week_bounds
 from ..paths import data_path
 from .util import _chapter_at_words, _paper_short
 class ActualsMixin:
@@ -84,10 +84,9 @@ class ActualsMixin:
             return None
 
 
-    # mastered_at 是 UTC isoformat（2026-10-04T16:13:52+00:00），而周窗口
-    # lo/hi 是本地日期——中国时区每天 0-8 点（UTC 前一天 16-24 点）字符串
-    # 比较会晚一天，把本周新掌握词算进上周。按 UTC+8 取日期再比。
-    _MP_DATE = "date(julianday(mastered_at) + 8.0/24)"
+    # mastered_at 是 UTC isoformat（2026-10-04T16:13:52+00:00）。周窗口和
+    # 「今天」都是北京日历，走 clock.cn_date，避免 0–8 点被算进前一天。
+    _MP_DATE = cn_date("mastered_at")
 
     def _vocab_actuals(self, lo: str, hi: str, user: str,
                        words: Optional[set[str]] = None) -> int:
