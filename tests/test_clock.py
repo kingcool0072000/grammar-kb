@@ -1,11 +1,12 @@
 """北京时间时钟：不跟进程时区，测试可以钉死。"""
 from datetime import datetime, timedelta, timezone
 
-from grammar_kb.clock import CN_TZ, cn_dt, current_monday, freeze_clock, now_cn, today_cn
+from grammar_kb.clock import CN_TZ, cn_date, cn_dt, current_monday, freeze_clock, now_cn, today_cn
 
 
 def test_cn_dt_expression():
     assert cn_dt("created_at") == "datetime(julianday(created_at) + 8.0/24)"
+    assert cn_date("mastered_at") == "date(julianday(mastered_at) + 8.0/24)"
 
 
 def test_today_follows_beijing_not_utc():

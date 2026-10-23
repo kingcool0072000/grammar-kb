@@ -43,7 +43,7 @@ Restart=on-failure
 # 计划表「今天」由代码固定为北京时间；TZ 让 cron 的 date、以及
 # 尚未改掉的个别本地时间戳跟同一日历。
 Environment=TZ=Asia/Shanghai
-# 数据库路径：默认解析 环境变量 → iCloud → data/
+# 数据库路径：环境变量，否则项目 data/（不探测 iCloud）
 # Environment=GRAMMAR_KB_DB=/data/grammar.db
 # Environment=GRAMMAR_KB_EXAM_DB=/data/exam.db
 # Environment=GRAMMAR_KB_FCE_DB=/data/fce.db
@@ -109,9 +109,8 @@ CMD ["python", "-m", "uvicorn", "grammar_kb.server:app", "--host", "0.0.0.0", "-
 
 > 关键认知：**SQLite 没有"多节点同步"，正确模式是收敛为单一事实源。**
 
-局域网模式是"每台设备各自跑服务 + iCloud 同步库文件"；一旦部署到云，
-云上的库与 iCloud 的库会形成**两个事实源**互相分叉。解法不是同步，
-而是**迁移后全员只访问云**，本机/iCloud 库退役为备份来源：
+进程只认环境变量或项目 `data/` 里的库，不会自己去 iCloud 里找文件。
+旧机器上如果还有一份拷在 iCloud 目录，那只是历史备份：部署后全员只访问云上这一份，避免两份库各写各的。
 
 ```
 部署后：云服务器 ══ 唯一的库
@@ -134,7 +133,7 @@ cp data/grammar.db /tmp/migrate-grammar.db   # 讲义库只读，直接拷
 scp /tmp/migrate-*.db user@server:/opt/grammar-kb/data/
 scp data/users.json data/auth_secret.key user@server:/opt/grammar-kb/data/
 
-# 3) 云上环境变量写死路径（Linux 不命中 iCloud 分支，显式更稳）
+# 3) 云上环境变量写死路径（不写则落在 WorkingDirectory/data/）
 #    systemd 里：
 Environment=GRAMMAR_KB_DB=/opt/grammar-kb/data/grammar.db
 Environment=GRAMMAR_KB_EXAM_DB=/opt/grammar-kb/data/exam.db
@@ -143,7 +142,7 @@ Environment=GRAMMAR_KB_FCE_DB=/opt/grammar-kb/data/fce.db
 # 4) 全员改用云 URL；教师 Mac 上本机 server 不再启动
 ```
 
-**云上的备份方向反转**（原 iCloud 同步退役）：
+**备份**：
 
 ```bash
 # 云上 cron：每天快照三个库（保留 30 天）
@@ -172,10 +171,10 @@ Environment=TZ=Asia/Shanghai
 
 ## 数据说明
 
-- 三个 SQLite 库的路径解析顺序均为：环境变量 → iCloud（macOS）→ `data/`
-  - `GRAMMAR_KB_DB`（grammar.db 讲义库，只读）
-  - `GRAMMAR_KB_EXAM_DB`（exam.db 哈一成绩）
-  - `GRAMMAR_KB_FCE_DB`（fce.db FCE/阅读/背单词/录音）
+- 三个 SQLite 库的路径都是：环境变量优先，否则项目 `data/`（在仓库根目录启动）。代码不探测 iCloud。
+  - `GRAMMAR_KB_DB` → `data/grammar.db`（讲义库；相对当前工作目录）
+  - `GRAMMAR_KB_EXAM_DB` → `data/exam.db`（哈一成绩；相对当前工作目录）
+  - `GRAMMAR_KB_FCE_DB` → `data/fce.db`（FCE / 阅读 / 背单词 / 录音；相对仓库根）
 - 库为单文件 journal 模式，可直接整文件备份/搬迁（rsync/scp 即可）
 - 录音经 ffmpeg 转 m4a 入库，部署机需装 ffmpeg（未装则原样存 webm，教师端 Chrome 可播）
 

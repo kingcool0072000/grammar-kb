@@ -17,6 +17,7 @@ from datetime import date, datetime, timedelta, timezone as _tz
 from pathlib import Path
 from typing import Optional
 
+from .clock import CN_TZ, today_cn
 from .fce_query import _default_db_path
 
 # 艾宾浩斯复习节点（天）：D 为本轮周期首次答错日
@@ -65,11 +66,32 @@ CREATE INDEX IF NOT EXISTS idx_rr_due ON recite_review(user, next_review);
 """
 
 
+def _calendar_today() -> str:
+    """艾宾浩斯「今天」：北京日历，和计划表 today_cn 同一天。"""
+    return today_cn().isoformat()
+
+
+def _cn_day_of(ts: str) -> str:
+    """把库存 UTC 时间戳归一成北京日历日。纯日期原样返回。"""
+    raw = (ts or "").strip()
+    if not raw:
+        return ""
+    if len(raw) <= 10:
+        return raw[:10]
+    try:
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return raw[:10]
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=_tz.utc)
+    return dt.astimezone(CN_TZ).date().isoformat()
+
+
 def _add_days(day_iso: str, n: int) -> str:
     try:
         return (date.fromisoformat(day_iso) + timedelta(days=n)).isoformat()
     except ValueError:
-        return datetime.now(_tz.utc).date().isoformat()
+        return _calendar_today()
 
 
 class ReciteStore:
@@ -173,7 +195,7 @@ class ReciteStore:
                 clean[w] = 1 if d.get("correct") else 0
         if not clean:
             return {}
-        today = datetime.now(_tz.utc).date().isoformat()
+        today = _calendar_today()
         levels = self._vocab_levels(list(clean))
         stats = {"entered": 0, "advanced": 0, "conquered": 0, "due_now": 0}
         for w, correct in clean.items():
@@ -383,7 +405,7 @@ class ReciteStore:
         立即进入复习流）。
         """
         user = (user or "").strip()[:60]
-        today = datetime.now(_tz.utc).date().isoformat()
+        today = _calendar_today()
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT wrong_words, created_at FROM recite_sessions"
@@ -411,7 +433,7 @@ class ReciteStore:
                 if missing:
                     levels = self._vocab_levels(missing)
                     for w in missing:
-                        last_day = (wrong_at.get(w) or "")[:10] or today
+                        last_day = _cn_day_of(wrong_at.get(w) or "") or today
                         conn.execute(
                             "INSERT INTO recite_review (user, word, level, wrong_count,"
                             " stage, first_wrong_at, next_review, last_review_at)"

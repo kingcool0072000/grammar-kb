@@ -7,7 +7,7 @@ import sqlite3
 from datetime import date, timedelta
 from pathlib import Path
 
-from ..clock import cn_dt, monday_of
+from ..clock import cn_date, cn_dt, monday_of
 from ..topics import node_keys_from_content
 
 
@@ -104,9 +104,13 @@ class SignalsMixin:
                 tabs = {r[0] for r in conn.execute(
                     "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
                 if "recite_word_progress" in tabs:
+                    # mastered_at 是 UTC ISO。和背词周窗口同一北京日切，
+                    # 否则北京时间凌晨新掌握的词不会点亮当天的错词信号。
+                    mastered_day = cn_date("mastered_at")
                     row = conn.execute(
                         "SELECT COUNT(*) n FROM recite_word_progress"
-                        " WHERE user = ? AND (mastered_at >= ? AND mastered_at < ?)",
+                        f" WHERE user = ? AND {mastered_day} >= date(?)"
+                        f" AND {mastered_day} < date(?)",
                         (user, day, nxt),
                     ).fetchone()
                     if row and row["n"]:

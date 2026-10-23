@@ -1,5 +1,6 @@
 import { api } from '../api.js'
-import { escapeHtml, todayIso, studyGoalMin } from '../render.js'
+import { escapeHtml, escAttr, todayIso, studyGoalMin } from '../render.js'
+import { PLAN_ADD_TYPES, appendPlanItem } from './planAdd.js'
 
 // 教师版 · 计划表：周历视图。本周大卡（今日任务）+ 月历式周网格往下排，
 // 学情分析并入为子 Tab（#/plan?tab=analytics / #/plan 切换）。
@@ -284,6 +285,7 @@ export async function mountPlan(el) {
               <h3>${isCur ? '本周' : '周'} · ${weekLabel(wv.week_start)}${wv.current_week ? '' : wv.week_start > curWeek ? '（未开始）' : '（已结束）'}</h3>
             </div>
             <button class="chip" data-wk="next" ${wv.week_start >= '2027-01-25' ? 'disabled' : ''}>下一周 →</button>
+            <button class="chip" data-add="${wv.week_start}">＋ 加一项</button>
             <button class="chip" data-edit="${wv.week_start}">✏️ 编辑本周</button>
             ${isCur ? '' : '<button class="chip" data-wk="cur">回到本周</button>'}
           </header>
@@ -301,6 +303,304 @@ export async function mountPlan(el) {
         }))
       host.querySelectorAll('[data-edit]').forEach((b) =>
         b.addEventListener('click', () => openEditor(b.dataset.edit)))
+      host.querySelectorAll('[data-add]').forEach((b) =>
+        b.addEventListener('click', () => openAddWizard(b.dataset.add)))
+    }
+
+    async function openAddWizard(ws) {
+      const w = byStart.get(ws) || { week_start: ws, tasks: {}, notes: '' }
+      const ed = await getEditorData()
+      const tasks0 = w.tasks || {}
+      const lectures = ed.lectures || []
+      const hwPapers = (ed.goal_assets?.lectures || []).filter((l) => l.has_paper)
+      const articles = ed.articles || []
+      const fceParts = ed.fce_parts || []
+      const books = ed.books || []
+      const papers = ed.goal_assets?.vocab_papers || []
+      const vLevels = ed.goal_assets?.vocab_levels || []
+      const have = {
+        lecture: new Set(tasks0.lectures || []),
+        hw_paper: new Set(tasks0.hw_papers || []),
+        focus_kp: new Set(tasks0.focus_kps || []),
+        article: new Set(tasks0.articles || []),
+        fce: new Set(tasks0.fce || []),
+        paper: new Set(tasks0.vocab_papers || []),
+        reading: new Set(Object.keys(tasks0.reading || {})),
+      }
+      const dlg = document.createElement('div')
+      dlg.className = 'plan-editor'
+      document.body.appendChild(dlg)
+      const close = () => dlg.remove()
+      const draft = { type: '', chapters: [] }
+      let step = 1
+
+      const typeMeta = (id) => PLAN_ADD_TYPES.find((x) => x.id === id)
+
+      function lecLabel(n) {
+        const l = lectures.find((x) => x.number === n)
+        return l ? `第${n}讲 ${l.title || ''}` : `第${n}讲`
+      }
+
+      function paint() {
+        const meta = typeMeta(draft.type)
+        dlg.innerHTML = `
+          <div class="plan-editor-mask"></div>
+          <div class="plan-editor-body card pe-body pe-wizard">
+            <h3>加一项 <i>· ${weekLabel(ws)} · ${escapeHtml(state.student)}</i></h3>
+            <div class="pe-steps">
+              <span class="${step === 1 ? 'on' : ''}">1 类型</span>
+              <span class="${step === 2 ? 'on' : ''}">2 内容</span>
+              <span class="${step === 3 ? 'on' : ''}">3 确认</span>
+            </div>
+            <div id="pe-wiz-body"></div>
+            <div class="chip-row">
+              ${step > 1 ? '<button class="chip" id="pe-wiz-back" type="button">上一步</button>' : ''}
+              <button class="chip" id="pe-wiz-cancel" type="button">取消</button>
+              ${step === 3 ? '<button class="btn-primary" id="pe-wiz-save" type="button">加入本周</button>' : ''}
+            </div>
+          </div>`
+        dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
+        dlg.querySelector('#pe-wiz-cancel').addEventListener('click', close)
+        const back = dlg.querySelector('#pe-wiz-back')
+        if (back) back.addEventListener('click', () => { step -= 1; paint() })
+        const host = dlg.querySelector('#pe-wiz-body')
+        if (step === 1) paintTypes(host)
+        else if (step === 2) paintPick(host, meta)
+        else paintConfirm(host, meta)
+        const save = dlg.querySelector('#pe-wiz-save')
+        if (save) save.addEventListener('click', () => saveItem())
+      }
+
+      function paintTypes(host) {
+        host.innerHTML = `<div class="pe-type-grid">${PLAN_ADD_TYPES.map((t) => `
+          <button type="button" class="pe-type ${draft.type === t.id ? 'on' : ''}" data-type="${t.id}">
+            <b>${t.label}</b><i>${t.hint}</i>
+          </button>`).join('')}</div>`
+        host.querySelectorAll('[data-type]').forEach((b) =>
+          b.addEventListener('click', () => {
+            draft.type = b.dataset.type
+            draft.lecture = null
+            draft.article_id = null
+            draft.label = ''
+            draft.paper_id = ''
+            draft.book_id = ''
+            draft.chapters = []
+            draft.level = vLevels[0]?.level ?? 0
+            draft.pct = tasks0.vocab_pct || 80
+            draft.n = tasks0.speak || 2
+            step = 2
+            paint()
+          }))
+      }
+
+      function paintPick(host, meta) {
+        if (draft.type === 'vocab') {
+          host.innerHTML = `
+            <p class="pe-wiz-hint">${meta.hint}</p>
+            <div class="pe-vocab-row">
+              <select id="wiz-lv">
+                ${vLevels.map((v) => `<option value="${v.level}" ${Number(draft.level) === v.level ? 'selected' : ''}>L${v.level}（${v.words} 词 · 已会 ${v.mastered ?? 0}）</option>`).join('')
+                  || '<option value="0">L0</option>'}
+              </select>
+              <label>完成 <input id="wiz-pct" type="number" min="1" max="100" value="${draft.pct || 80}" style="width:56px"/>%</label>
+            </div>
+            <p id="wiz-vocab-hint" class="pe-wiz-hint"></p>
+            <button class="btn-primary" id="wiz-next" type="button">下一步</button>`
+          const sync = () => {
+            draft.level = Number(host.querySelector('#wiz-lv').value)
+            draft.pct = Math.min(100, Math.max(1, Number(host.querySelector('#wiz-pct').value) || 1))
+            const v = vLevels.find((x) => x.level === draft.level)
+            const words = v?.words || 0
+            draft.goal = Math.round(words * draft.pct / 100)
+            host.querySelector('#wiz-vocab-hint').textContent =
+              `目标 L${draft.level} 内掌握 ${draft.goal} 词（该级已会 ${v?.mastered || 0}）。保存后覆盖本周词汇目标。`
+          }
+          host.querySelector('#wiz-lv').addEventListener('change', sync)
+          host.querySelector('#wiz-pct').addEventListener('input', sync)
+          sync()
+          host.querySelector('#wiz-next').addEventListener('click', () => { step = 3; paint() })
+          return
+        }
+        if (draft.type === 'speak') {
+          host.innerHTML = `
+            <p class="pe-wiz-hint">本周安排朗读篇数。学生提交录音后自动进批改。</p>
+            <label>每周 <input id="wiz-n" type="number" min="1" max="7" value="${draft.n || 2}" style="width:56px"/> 篇</label>
+            <div style="margin-top:12px"><button class="btn-primary" id="wiz-next" type="button">下一步</button></div>`
+          host.querySelector('#wiz-next').addEventListener('click', () => {
+            draft.n = Math.min(7, Math.max(1, Number(host.querySelector('#wiz-n').value) || 1))
+            step = 3
+            paint()
+          })
+          return
+        }
+        if (draft.type === 'reading') {
+          host.innerHTML = `
+            <p class="pe-wiz-hint">先选书，下一步勾选章节。会覆盖该书本周已经选过的章。</p>
+            <select id="wiz-book">
+              <option value="">选择书目…</option>
+              ${books.map((b) => `<option value="${b.id}" ${String(draft.book_id) === String(b.id) ? 'selected' : ''}>${escapeHtml((b.title || '').slice(0, 40))}${have.reading.has(String(b.id)) ? '（本周已有）' : ''}</option>`).join('')}
+            </select>
+            <div style="margin-top:12px"><button class="btn-primary" id="wiz-next" type="button">下一步</button></div>`
+          host.querySelector('#wiz-next').addEventListener('click', () => {
+            const id = host.querySelector('#wiz-book').value
+            if (!id) return
+            draft.book_id = id
+            const b = books.find((x) => String(x.id) === String(id))
+            if (!draft.chapters.length) draft.chapters = (b?.chapter_opts || []).map((c) => c.idx)
+            step = 3
+            paint()
+          })
+          return
+        }
+        const rows = pickRows()
+        host.innerHTML = rows.length
+          ? `<div class="pe-wiz-picks">${rows.join('')}</div>`
+          : '<p class="muted">没有可选项。先到备课里准备内容，或改用「编辑本周」。</p>'
+        host.querySelectorAll('[data-pick]').forEach((b) =>
+          b.addEventListener('click', () => {
+            if (b.disabled) return
+            applyPick(b.dataset.pick)
+            step = 3
+            paint()
+          }))
+      }
+
+      function pickRows() {
+        if (draft.type === 'lecture' || draft.type === 'focus_kp') {
+          const set = draft.type === 'lecture' ? have.lecture : have.focus_kp
+          return lectures.map((l) => pickBtn(String(l.number), lecLabel(l.number), set.has(l.number)))
+        }
+        if (draft.type === 'hw_paper') {
+          return hwPapers.map((l) => pickBtn(String(l.number), lecLabel(l.number), have.hw_paper.has(l.number)))
+        }
+        if (draft.type === 'article') {
+          return articles.map((a) => pickBtn(String(a.id), `${a.title || ('#' + a.id)}`, have.article.has(a.id)))
+        }
+        if (draft.type === 'fce') {
+          return fceParts.map((p) => pickBtn(p.label, p.label, have.fce.has(p.label)))
+        }
+        if (draft.type === 'paper') {
+          return papers.map((p) => pickBtn(p.paper_id, `${p.paper_id} · L${p.level}`, have.paper.has(p.paper_id)))
+        }
+        return []
+      }
+
+      function pickBtn(value, label, taken) {
+        return `<button type="button" class="pe-pick ${taken ? 'taken' : ''}" data-pick="${escAttr(value)}" ${taken ? 'disabled' : ''}>${escapeHtml(label)}${taken ? ' · 已在本周' : ''}</button>`
+      }
+
+      function applyPick(value) {
+        if (draft.type === 'lecture' || draft.type === 'hw_paper' || draft.type === 'focus_kp') {
+          draft.lecture = Number(value)
+        } else if (draft.type === 'article') {
+          draft.article_id = Number(value)
+        } else if (draft.type === 'fce') {
+          draft.label = value
+        } else if (draft.type === 'paper') {
+          draft.paper_id = value
+        }
+      }
+
+      function itemFromDraft() {
+        if (draft.type === 'lecture' || draft.type === 'hw_paper' || draft.type === 'focus_kp') {
+          return { type: draft.type, lecture: draft.lecture }
+        }
+        if (draft.type === 'article') return { type: 'article', article_id: draft.article_id }
+        if (draft.type === 'fce') return { type: 'fce', label: draft.label }
+        if (draft.type === 'paper') return { type: 'paper', paper_id: draft.paper_id }
+        if (draft.type === 'vocab') {
+          return { type: 'vocab', level: draft.level, pct: draft.pct, goal: draft.goal }
+        }
+        if (draft.type === 'speak') return { type: 'speak', n: draft.n }
+        if (draft.type === 'reading') {
+          return { type: 'reading', book_id: draft.book_id, chapters: draft.chapters }
+        }
+        return null
+      }
+
+      function summaryText() {
+        if (draft.type === 'lecture') return lecLabel(draft.lecture)
+        if (draft.type === 'hw_paper') return `作业卷 · ${lecLabel(draft.lecture)}`
+        if (draft.type === 'focus_kp') return `微练习 · ${lecLabel(draft.lecture)}`
+        if (draft.type === 'article') {
+          const a = articles.find((x) => x.id === draft.article_id)
+          return `精读《${a?.title || draft.article_id}》`
+        }
+        if (draft.type === 'fce') return draft.label
+        if (draft.type === 'paper') return `试卷 ${draft.paper_id}`
+        if (draft.type === 'vocab') return `L${draft.level} 掌握 ${draft.goal} 词（${draft.pct}%）`
+        if (draft.type === 'speak') return `每周朗读 ${draft.n} 篇`
+        if (draft.type === 'reading') {
+          const b = books.find((x) => String(x.id) === String(draft.book_id))
+          return `泛读《${(b?.title || draft.book_id).slice(0, 24)}》${draft.chapters.length} 章`
+        }
+        return ''
+      }
+
+      function paintConfirm(host, meta) {
+        if (draft.type === 'reading') {
+          const b = books.find((x) => String(x.id) === String(draft.book_id))
+          const opts = b?.chapter_opts || []
+          host.innerHTML = `
+            <p class="pe-wiz-hint">${escapeHtml(summaryText())}。点章节可取消；至少留 1 章。</p>
+            <div class="pe-chchips">
+              ${opts.map((c) => `<button type="button" class="chip pe-chchip ${draft.chapters.includes(c.idx) ? 'primary' : ''}" data-ch="${c.idx}">第${c.no}章</button>`).join('')
+                || '<p class="muted">这本书没有可选章节。</p>'}
+            </div>`
+          host.querySelectorAll('[data-ch]').forEach((chip) =>
+            chip.addEventListener('click', () => {
+              const idx = Number(chip.dataset.ch)
+              const i = draft.chapters.indexOf(idx)
+              if (i >= 0) draft.chapters.splice(i, 1)
+              else draft.chapters.push(idx)
+              draft.chapters.sort((a, c) => a - c)
+              paint()
+            }))
+          return
+        }
+        host.innerHTML = `
+          <p class="pe-wiz-hint">将追加到 ${weekLabel(ws)} 的周计划，其它项目不动。</p>
+          <p class="pe-wiz-sum"><b>${escapeHtml(meta?.label || '')}</b> · ${escapeHtml(summaryText())}</p>`
+      }
+
+      async function saveItem() {
+        const item = itemFromDraft()
+        if (!item) return
+        if (item.type === 'reading' && !(item.chapters || []).length) {
+          alert('至少选 1 章')
+          return
+        }
+        if ((item.type === 'lecture' || item.type === 'hw_paper' || item.type === 'focus_kp') && !item.lecture) {
+          alert('还没选内容')
+          return
+        }
+        let tasks
+        try {
+          tasks = appendPlanItem(tasks0, item)
+        } catch (e) {
+          alert(e.message)
+          return
+        }
+        if (JSON.stringify(tasks) === JSON.stringify(tasks0)) {
+          toast('这项已经在本周计划里')
+          close()
+          return
+        }
+        try {
+          await api.planWeekPut(ws, { tasks, notes: w.notes || '', user: state.student })
+          close()
+          const fresh = await api.planWeeks({ user: state.student })
+          byStart.clear()
+          fresh.weeks.forEach((x) => byStart.set(x.week_start, x))
+          editorDataCache = null
+          toast('已加入本周计划')
+          renderView()
+        } catch (e) {
+          alert('保存失败：' + e.message)
+        }
+      }
+
+      paint()
     }
 
     function dayCell(d, i, dayNames) {

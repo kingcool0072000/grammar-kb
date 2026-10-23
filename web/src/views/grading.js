@@ -2,11 +2,9 @@ import { api, getAuth } from '../api.js'
 import { escapeHtml, todayIso } from '../render.js'
 import { renderReadingReview } from './readingReview.js'
 
-// 教师版 · 批改中心（首页）：学生提交的作业按三大板块归类——
-//   FCE 听说读写（朗读录音批改 / 作文批改 / 练习明细）
-//   哈1 语法（哈一作业成绩 / 背单词记录）
-//   专注力 · 泛读阅读（泛读馆阅读器行为采集，点会话行看详情弹窗）
-// 每个分区：待办数字 + 最近动态 + 一键跳到对应工具。
+// 教师版 · 批改中心。打开默认是待办队列：
+//   待批录音 → 待批作文 → 异常专注
+// 已批改 / 已自动阅卷 / 正常专注收进折叠区，不和队列抢位置。
 export async function mountGrading(el) {
   // 三子 Tab：批改看板（默认）/ 学习日志 / 学情分析（原计划表子 Tab 迁入）
   const subTab = new URLSearchParams(location.hash.split('?')[1] || '').get('tab') || 'board'
@@ -343,6 +341,8 @@ export async function mountGrading(el) {
           timed(api.examsList(student)),
           timed(api.focusSessions({ limit: 50, user: student })),
         ])
+        focus = Array.isArray(focus) ? focus : []
+        await attachFocusRw(focus)
         boardSnapshots.set(student, { recs, fceSubs, recite, exams, focus })
       } catch (e) {
         el.querySelector('p').innerHTML = `<span style="color:#b42318">加载失败：${escapeHtml(e.message)}</span>`
@@ -350,77 +350,127 @@ export async function mountGrading(el) {
       }
     }
 
-  // ---- 待办汇总 ----
+  recs = Array.isArray(recs) ? recs : []
+  fceSubs = Array.isArray(fceSubs) ? fceSubs : []
+  exams = Array.isArray(exams) ? exams : []
+  focus = Array.isArray(focus) ? focus : []
+  recite = Array.isArray(recite) ? recite : []
+
   const pendRec = recs.filter((r) => r.status === 'pending')
   const pendEssay = fceSubs.filter((s) => s.status === 'pending')
+  const abnormal = focus.filter(isAbnormalFocus)
+  const doneRec = recs.filter((r) => r.status !== 'pending')
+  const doneEssay = fceSubs.filter((s) => s.status !== 'pending')
+  const calmFocus = focus.filter((s) => !isAbnormalFocus(s) && !isZombieFocus(s))
+  const handledN = doneRec.length + doneEssay.length + calmFocus.length + exams.length
 
-  // ---- 按作业类型的独立卡片（每卡 Top5 + 查看全部进全量列表） ----
-  const cards = [
-    {
-      key: 'recording', icon: '🎙', title: '精读朗读录音', list: recs,
-      pending: pendRec.length,
-      row: (r) => recRow(r),
-      empty: '暂无录音提交',
-    },
-    {
-      key: 'essay', icon: '✍️', title: 'FCE 作文与练习', list: fceSubs,
-      pending: pendEssay.length,
-      row: (x) => fceRow(x),
-      empty: '暂无 FCE 练习',
-    },
-    {
-      key: 'haya-exam', icon: '📊', title: '哈一作业成绩', list: exams,
-      row: (e) => `
-        <div class="fce-his-row">
-          <span class="fce-his-what">${escapeHtml(e.user || '')} · 第 ${e.lecture} 讲</span>
-          <b class="fce-his-score ${e.score >= 90 ? 'ok' : e.score >= 70 ? '' : 'bad'}">${e.score}</b>
-          <span class="fce-his-date">${e.date}${e.wrong && e.wrong.length ? ` · 错 ${e.wrong.length} 题` : ''}</span>
-        </div>`,
-      empty: '暂无成绩',
-      tool: 'exams',
-    },
-  ]
+  const queueBlock = (key, title, n, rows, empty, more) => `
+    <section class="g-queue-block ${n ? 'has-pend' : ''}" data-card="${key}">
+      <header class="gcard-head">
+        <h2>${title}</h2>
+        ${n ? `<b class="gcard-pend">待处理 ${n}</b>` : '<b class="gcard-n">0</b>'}
+      </header>
+      <div class="gcard-list">
+        ${rows || `<p class="reading-hint">${empty}</p>`}
+      </div>
+      ${more || ''}
+    </section>`
 
   el.innerHTML = `
-    <div class="gcard-grid">
-      ${cards.map((c) => `
-        <section class="gcard ${c.pending ? 'has-pend' : ''}" data-card="${c.key}">
-          <header class="gcard-head">
-            <h2>${c.icon} ${c.title}</h2>
-            ${c.pending ? `<b class="gcard-pend">待批 ${c.pending}</b>` : `<b class="gcard-n">${c.list.length}</b>`}
-          </header>
-          <div class="gcard-list">
-            ${c.list.slice(0, 5).map((x) => c.row(x)).join('') || `<p class="reading-hint">${c.empty}</p>`}
-          </div>
-          <button class="gcard-more" data-all="${c.key}">查看全部（${c.list.length}）→</button>
-        </section>`).join('')}
-    </div>
-    <section class="gcard gd-exam-grading" id="gd-exam-grading" style="grid-column: 1 / -1">
+    <section class="g-queue">
+      <header class="g-queue-head">
+        <h2>待处理</h2>
+        <p class="g-queue-note">待批录音 → 待批作文 → 异常专注。已处理的收在下面。</p>
+      </header>
+      ${queueBlock(
+        'recording',
+        '1 · 待批录音',
+        pendRec.length,
+        pendRec.map((r) => recRow(r)).join(''),
+        '没有待批录音',
+        pendRec.length ? `<button class="gcard-more" data-all="recording">去批改录音（${pendRec.length}）→</button>` : '',
+      )}
+      ${queueBlock(
+        'essay',
+        '2 · 待批作文',
+        pendEssay.length,
+        pendEssay.map((s) => fceRow(s)).join(''),
+        '没有待批作文',
+        pendEssay.length ? `<button class="gcard-more" data-all="essay">去批改作文（${pendEssay.length}）→</button>` : '',
+      )}
+      ${queueBlock(
+        'focus',
+        '3 · 异常专注',
+        abnormal.length,
+        abnormal.map((s) => abnormalFocusRow(s)).join(''),
+        '最近没有需要看的异常专注',
+        abnormal.length ? `<button class="gcard-more" data-all="focus">打开学习日志 →</button>` : '',
+      )}
+    </section>
+    <section class="gcard gd-exam-grading" id="gd-exam-grading">
       <header class="gcard-head">
         <h2>📝 考试打分 <i>单词试卷 · 线下考完手动登记</i></h2>
         <b class="gcard-n" id="geg-count">…</b>
       </header>
       <div class="gcard-list"><p class="reading-hint">加载试卷…</p></div>
     </section>
+    <details class="g-handled">
+      <summary>已处理（${handledN}）<i>已批录音、已阅练习、正常专注、哈一成绩</i></summary>
+      <div class="g-handled-grid">
+        <section class="gcard" data-card="recording-done">
+          <header class="gcard-head"><h2>已批录音</h2><b class="gcard-n">${doneRec.length}</b></header>
+          <div class="gcard-list">${doneRec.slice(0, 6).map((r) => recRow(r)).join('') || '<p class="reading-hint">暂无</p>'}</div>
+          ${doneRec.length ? `<button class="gcard-more" data-all="recording">查看全部录音 →</button>` : ''}
+        </section>
+        <section class="gcard">
+          <header class="gcard-head"><h2>已阅作文与练习</h2><b class="gcard-n">${doneEssay.length}</b></header>
+          <div class="gcard-list">${doneEssay.slice(0, 6).map((s) => fceRow(s)).join('') || '<p class="reading-hint">暂无</p>'}</div>
+          ${doneEssay.length ? `<button class="gcard-more" data-all="essay">查看 FCE 记录 →</button>` : ''}
+        </section>
+        <section class="gcard">
+          <header class="gcard-head"><h2>正常专注</h2><b class="gcard-n">${calmFocus.length}</b></header>
+          <div class="gcard-list">${calmFocus.slice(0, 4).map((s) => focusRow(s)).join('') || '<p class="reading-hint">暂无</p>'}</div>
+          <button class="gcard-more" data-all="focus">学习日志 →</button>
+        </section>
+        <section class="gcard">
+          <header class="gcard-head"><h2>哈一成绩</h2><b class="gcard-n">${exams.length}</b></header>
+          <div class="gcard-list">${exams.slice(0, 6).map((e) => `
+            <div class="fce-his-row">
+              <span class="fce-his-what">${escapeHtml(e.user || '')} · 第 ${e.lecture} 讲</span>
+              <b class="fce-his-score ${e.score >= 90 ? 'ok' : e.score >= 70 ? '' : 'bad'}">${e.score}</b>
+              <span class="fce-his-date">${e.date}${e.wrong && e.wrong.length ? ` · 错 ${e.wrong.length} 题` : ''}</span>
+            </div>`).join('') || '<p class="reading-hint">暂无成绩</p>'}</div>
+          ${exams.length ? `<button class="gcard-more" data-all="haya-exam">成绩页 →</button>` : ''}
+        </section>
+      </div>
+      ${recite.length ? `<p class="reading-hint">背词记录 ${recite.length} 条在学习日志里。</p>` : ''}
+    </details>
   `
   mountExamGrading(el.querySelector('#gd-exam-grading'), students)
 
-  // 各卡「查看全部」→ 全量列表视图（页内切换）
   const showAll = {
     recording: async () => openRecordingReview(),
     essay: () => go('essay'),
     'haya-exam': () => go('haya-exam'),
+    focus: () => { state.tab = 'log'; render() },
   }
   el.querySelectorAll('[data-all]').forEach((b) =>
     b.addEventListener('click', () => {
       const fn = showAll[b.dataset.all]
       if (fn) fn()
     }))
-  // 录音卡内行点击 → 批改视图
-  el.querySelector('[data-card="recording"] .gcard-list').addEventListener('click', (e) => {
+  const recList = el.querySelector('[data-card="recording"] .gcard-list')
+  if (recList) recList.addEventListener('click', (e) => {
     if (e.target.closest('[data-rec-del],[data-rec-edit],audio,a')) return
+    if (!e.target.closest('.fce-his-row')) return
     openRecordingReview()
   })
+  const essayList = el.querySelector('[data-card="essay"] .gcard-list')
+  if (essayList) essayList.addEventListener('click', (e) => {
+    if (e.target.closest('.fce-his-row')) go('essay')
+  })
+  el.querySelectorAll('[data-focus-id]').forEach((row) =>
+    row.addEventListener('click', () => openFocusDetail(Number(row.dataset.focusId))))
   // readingAdmin 跳转联动：自动展开批改视图
   if (sessionStorage.getItem('gkb-open-review') === '1') {
     sessionStorage.removeItem('gkb-open-review')
@@ -1082,6 +1132,56 @@ function drawFocusTrail(canvas, session) {
   const last = pts[pts.length - 1]
   ctx.arc(gx(last[0]), gy(last[1]), 2.5, 0, Math.PI * 2)
   ctx.fill()
+}
+
+function isZombieFocus(s) {
+  const flags = (s.rw && s.rw.flags) || []
+  return flags.includes('无有效阅读') && !(s.rw && s.rw.words) && !(s.rw && s.rw.overlap)
+}
+
+function isAbnormalFocus(s) {
+  if (isZombieFocus(s)) return false
+  const flags = ((s.rw && s.rw.flags) || []).filter((f) => f !== '无有效阅读')
+  if (flags.length) return true
+  const link = s.rw && s.rw.link
+  if (link && link !== 'next' && link !== 'first') return true
+  if (typeof s.score === 'number' && s.score < 60) return true
+  if ((s.fast_scroll_flags || 0) > 0) return true
+  const start = Number(s.percent_start)
+  const end = Number(s.percent_end)
+  if (Number.isFinite(start) && Number.isFinite(end) && end + 1 < start) return true
+  return false
+}
+
+async function attachFocusRw(focus) {
+  const libIds = focus
+    .filter((s) => (s.module || 'library') === 'library')
+    .map((s) => s.id)
+  if (!libIds.length) return
+  try {
+    const wm = await api.focusWords(libIds.slice(0, 50))
+    if (!wm || typeof wm !== 'object') return
+    for (const s of focus) {
+      const hit = wm[s.id] || wm[String(s.id)]
+      if (hit) s.rw = hit
+    }
+  } catch { /* 没有逐会话标记时仍按分数 / 快滚判断 */ }
+}
+
+function abnormalFocusRow(s) {
+  const flags = ((s.rw && s.rw.flags) || []).filter((f) => f !== '无有效阅读')
+  const link = s.rw && s.rw.link && s.rw.link !== 'next' && s.rw.link !== 'first'
+    ? (s.rw.link_note || s.rw.link) : ''
+  const bits = [...flags]
+  if (link) bits.push(link)
+  if (typeof s.score === 'number' && s.score < 60) bits.push(`专注 ${Math.round(s.score)}`)
+  if (s.fast_scroll_flags) bits.push(`快滚 ${s.fast_scroll_flags}`)
+  return `
+    <div class="fce-his-row gd-focus-row" data-focus-id="${s.id}">
+      <span class="fce-his-what">${escapeHtml(focusTitle(s))}</span>
+      <b class="fce-his-score bad">异常</b>
+      <span class="fce-his-date">${bits.map((b) => escapeHtml(String(b))).join(' · ') || '需要看一眼'}</span>
+    </div>`
 }
 
 function recRow(r) {

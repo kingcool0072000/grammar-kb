@@ -38,6 +38,15 @@ def current_monday() -> date:
     return monday_of(today_cn())
 
 
+def cn_date(col: str) -> str:
+    """UTC 时间戳列 → 北京日历日期（``date(...)``）。
+
+    与 :func:`cn_dt` 同一 +8 小时。``mastered_at`` 这类带时区的 ISO
+    串不能和 ``YYYY-MM-DD`` 直接比：北京时间 0–8 点落在 UTC 的前一天。
+    """
+    return f"date(julianday({col}) + 8.0/24)"
+
+
 def cn_dt(col: str) -> str:
     """UTC 时间戳列 → 北京时区 datetime 表达式（julianday +8h）。
 

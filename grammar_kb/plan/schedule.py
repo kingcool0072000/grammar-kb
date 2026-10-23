@@ -251,53 +251,30 @@ class ScheduleMixin:
         """学生某日的任务清单（内循环核心）。
 
         任务由本周 plan_weeks.tasks 派生（与教师驾驶舱「每日任务展开」
-        同一规则）。完成态只认自动检测——学生做了（做题/背词/阅读）即亮，
+        同一规则）。完成态只认 ``day_completion``——学生做了即亮，
         不提供手动打卡（plan_day_checks 保留给教师端干预，不进 done）。
         """
         d = day or today_cn().isoformat()
         ws = monday_of(date.fromisoformat(d)).isoformat()
         historical = self.history_day(user, d)
         derived = historical if historical is not None else self.week_daily_tasks(ws, for_date=d, user=user)
-        planned_articles = {t.get("article_id") for t in (derived or [])
-                            if t.get("article_id") is not None}
-        if historical is not None:
-            # 回填快照里的任务即完成，不再依赖当前活动表；
-            # 量化实录（泛读/背单词/计划外朗读）仍从活动表按日算
-            out = []
-            for t in derived:
-                t2 = dict(t)
-                t2["key"] = _task_key(t2)
-                t2["auto_done"] = True
-                t2["done"] = True
-                out.append(t2)
-            _, _, acts_out = self._signals_and_acts(user, d, planned_articles)
-            return {"date": d, "week_start": ws, "tasks": out,
-                    "done": len(out), "total": len(out), "acts": acts_out}
-        auto, read_titles, acts_out = self._signals_and_acts(user, d, planned_articles)
+        comp = self.day_completion(
+            user, d, derived, historical=historical is not None)
+        acts_out = comp["acts"]
         out = []
         for t in derived:
             key = _task_key(t)
+            info = comp["keys"].get(key) or {"done": False, "why": "no_signal"}
             t2 = dict(t)
             t2["key"] = key
-            if t.get("type") == "reading":
-                # 完成判定：任务文案已是达成态（goal_percent 口径在后端算好），
-                # 或当天有该书的阅读会话（按书名模糊匹配）
-                reached = "目标已达成" in t.get("text", "")
-                matched = any(
-                    all(w in (title or "").lower() for w in self._key_words(t.get("book") or ""))
-                    for title in read_titles
-                ) if self._key_words(t.get("book") or "") else False
-                t2["auto_done"] = reached or matched
-            elif t.get("type") == "vocab" and t.get("quota"):
-                # 背词日配额：当天背词会话词数 ≥ 配额即完成（量化判定）
-                t2["auto_done"] = acts_out.get("vocab_n", 0) >= int(t["quota"])
-                if t2["auto_done"]:
-                    t2["detail"] = f"已背 {acts_out.get('vocab_n', 0)} 词 ✓"
-            else:
-                t2["auto_done"] = auto.get(key, False)
+            t2["auto_done"] = bool(info["done"])
             t2["done"] = t2["auto_done"]
-            # 朗读任务完成时带上实际读的文章名（通用文案「朗读 1 篇」看不出读了什么）
-            if t.get("type") == "speak" and t2["done"]:
+            t2["why"] = info["why"]
+            # 展示用的补充文案不是完成规则，留在清单出口。
+            # 历史回填只认快照，不改写 detail。
+            if historical is None and t.get("type") == "vocab" and t.get("quota") and t2["done"]:
+                t2["detail"] = f"已背 {acts_out.get('vocab_n', 0)} 词 ✓"
+            if historical is None and t.get("type") == "speak" and t2["done"]:
                 names = []
                 for aid in acts_out.get("all_speak_articles", []):
                     ti = self._article_title(aid)
@@ -307,7 +284,6 @@ class ScheduleMixin:
                     t2["detail"] = "读了：" + "、".join(dict.fromkeys(names))
             out.append(t2)
         done_n = sum(1 for x in out if x["done"])
-        # ---- 当日实录（教师周历单日卡补充显示，构建逻辑见 _signals_and_acts）----
         return {"date": d, "week_start": ws, "tasks": out,
                 "done": done_n, "total": len(out), "acts": acts_out}
 
