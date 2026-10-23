@@ -460,10 +460,11 @@ async function mountExamGrading(host, students) {
   const today = todayIso()
   const rowHtml = (p) => {
     const graded = (p.exams || [])
+    const isMix = p.level < 0
     return `
     <div class="geg-row ${graded.length ? 'graded' : ''}" data-pid="${escapeHtml(p.paper_id)}">
       <div class="geg-info">
-        <b>L${p.level} 卷 ${escapeHtml(p.paper_id)}</b>
+        <b>${isMix ? '🧩 已学混合卷' : `L${p.level} 卷`} ${escapeHtml(p.paper_id)}</b>
         <span>${p.count} 词 · ${escapeHtml((p.created_at || '').slice(0, 10))}</span>
       </div>
       <div class="geg-grades">
@@ -475,6 +476,10 @@ async function mountExamGrading(host, students) {
         <select class="geg-user" data-pid="${escapeHtml(p.paper_id)}">
           ${students.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
         </select>
+        ${isMix ? `
+        <select class="geg-lv" data-pid="${escapeHtml(p.paper_id)}" title="混合卷跨级，按哪个级别登记/解锁">
+          ${[0, 1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${n === 1 ? 'selected' : ''}>L${n}</option>`).join('')}
+        </select>` : ''}
         <input class="geg-score" type="number" min="0" max="100" placeholder="分数" data-pid="${escapeHtml(p.paper_id)}">
         <input class="geg-date" type="date" value="${today}" data-pid="${escapeHtml(p.paper_id)}">
         <button class="reading-btn small primary" data-geg="${escapeHtml(p.paper_id)}" data-lv="${p.level}">登记</button>
@@ -488,7 +493,7 @@ async function mountExamGrading(host, students) {
     const btn = e.target.closest('[data-geg]')
     if (!btn) return
     const pid = btn.dataset.geg
-    const lv = Number(btn.dataset.lv)
+    let lv = Number(btn.dataset.lv)
     const row = list.querySelector(`.geg-row[data-pid="${CSS.escape(pid)}"]`)
     const user = row.querySelector('.geg-user').value
     const score = Number(row.querySelector('.geg-score').value)
@@ -496,6 +501,12 @@ async function mountExamGrading(host, students) {
     if (!user) return alert('请选择学生')
     if (!(score >= 0 && score <= 100)) return alert('分数须为 0-100')
     if (!date) return alert('请选择考试日期')
+    // 混合卷（lv<0）：以行内选择的级别登记（决定是否解锁该级）
+    const lvSel = row.querySelector('.geg-lv')
+    if (lvSel) {
+      lv = Number(lvSel.value)
+      if (!(lv >= 0 && lv <= 5)) return alert('混合卷须选择登记级别（L0-L5）')
+    }
     btn.disabled = true
     btn.textContent = '登记中…'
     try {

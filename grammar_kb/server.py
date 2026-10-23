@@ -597,15 +597,27 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     @app.post("/vocab-papers/generate")
     def vocab_paper_generate(rec: dict, request: "fastapi.Request"):
-        """生成一份级别考试卷（三题型+历史去重）。save=0 仅预览。教师专属。"""
+        """生成一份考试卷（三题型+历史去重）。save=0 仅预览。教师专属。
+
+        scope="level"（默认）本级出题；scope="learned" 针对某学生的
+        全部已学词跨级别混合出题（须带 user）。
+        """
         _require_teacher(request)
         from .vocab_paper import generate_paper, render_new_paper_html
         level = rec.get("level") if isinstance(rec, dict) else None
         if not isinstance(level, int) or not (0 <= level <= 7):
             raise HTTPException(status_code=422, detail="level 须为 0-7 整数")
         save = bool(rec.get("save", True)) if isinstance(rec, dict) else True
+        scope = str(rec.get("scope") or "level") if isinstance(rec, dict) else "level"
+        user = str(rec.get("user") or "").strip() if isinstance(rec, dict) else ""
+        if scope not in ("level", "learned"):
+            raise HTTPException(status_code=422, detail="scope 须为 level 或 learned")
+        if scope == "learned" and not user:
+            raise HTTPException(status_code=422, detail="learned 范围须指定 user（学生账号）")
         try:
-            paper = generate_paper(level, save=save)
+            paper = generate_paper(level, save=save, scope=scope,
+                                   user=user or None,
+                                   fce_db_path=fce_db_path)
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
         return _ok({"paper": paper,
@@ -617,7 +629,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         _require_teacher(request)
         from .vocab_paper import save_paper
         try:
-            return _ok(save_paper(rec if isinstance(rec, dict) else {}))
+            return _ok(save_paper(rec if isinstance(rec, dict) else {},
+                               fce_db_path=fce_db_path))
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
 
@@ -626,7 +639,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         """删除一份试卷资产。教师专属。"""
         _require_teacher(request)
         from .vocab_paper import delete_paper
-        if not delete_paper(paper_id):
+        if not delete_paper(paper_id, fce_db_path=fce_db_path):
             raise HTTPException(status_code=404, detail="试卷不存在")
         return _ok({"deleted": paper_id})
 
@@ -635,7 +648,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         """预览一份历史卷（完整 HTML）。教师专属。"""
         _require_teacher(request)
         from .vocab_paper import get_paper, render_new_paper_html
-        paper = get_paper(paper_id)
+        paper = get_paper(paper_id, fce_db_path=fce_db_path)
         if not paper:
             raise HTTPException(status_code=404, detail="试卷不存在")
         return _ok({"paper": {
@@ -651,7 +664,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         """已生成试卷历史（去重追溯/复用）。教师专属。"""
         _require_teacher(request)
         from .vocab_paper import list_paper_history
-        items = list_paper_history(None if level < 0 else level, limit=limit)
+        items = list_paper_history(None if level < 0 else level, limit=limit,
+                                   fce_db_path=fce_db_path)
         return _ok({"papers": items})
 
     @app.get("/vocab-exams/unlock")
@@ -717,7 +731,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         """批改中心·考试打分：已存档试卷 + 每卷已登记成绩（教师专属）。"""
         _require_teacher(request)
         from .vocab_paper import list_paper_history
-        papers = list_paper_history(None if level < 0 else level, limit=50)
+        papers = list_paper_history(None if level < 0 else level, limit=50,
+                                   fce_db_path=fce_db_path)
         by_paper = vocab_exam.exams_for_papers([p["paper_id"] for p in papers])
         out = []
         for p in papers:

@@ -128,3 +128,65 @@ def test_paper_generation(vex_env, monkeypatch):
     assert [w["word"] for w in p1["words"]] == [w["word"] for w in p2["words"]]
     assert len(p1["words"]) == 50
     assert render_paper_html(p1).startswith("<!DOCTYPE html>")
+
+
+def test_paper_generate_learned_scope(vex_env, monkeypatch):
+    """learned 范围：按学生已学词（recite_word_progress）跨级混合出题。
+
+    全链路：造进度 → 生成（MIX- 卷号/level=-1/词全部来自已学）→ 存档
+    → 预览重建（跨级词面回填）→ 无 user/无进度 422。
+    """
+    _require_level_words(monkeypatch)
+    c = _client(vex_env)
+    ht = _login(c, "teacher", "123456")
+    # 造 malin 的已学词：直接写 fce.db 的 recite_word_progress（L0/L1 各 30+）
+    db = Path(str(vex_env)) / "fce.db"
+    gdb = Path(__file__).resolve().parent.parent / "data" / "grammar.db"
+    with sqlite3.connect(str(gdb)) as gcon:
+        rows = gcon.execute(
+            "SELECT word, level FROM vocab_word"
+            " WHERE level IN (0, 1) AND gloss != '[]' LIMIT 130").fetchall()
+    assert len(rows) >= 100, "词库 L0/L1 词量不足（fixture 前置条件）"
+    with sqlite3.connect(str(db)) as con:
+        con.execute(
+            "CREATE TABLE IF NOT EXISTS recite_word_progress ("
+            " user TEXT NOT NULL, word TEXT NOT NULL, level INTEGER,"
+            " right INTEGER NOT NULL DEFAULT 0, wrong INTEGER NOT NULL DEFAULT 0,"
+            " mastered_at TEXT, last_seen TEXT, PRIMARY KEY (user, word))")
+        con.executemany(
+            "INSERT OR REPLACE INTO recite_word_progress"
+            " (user, word, level, right, wrong, last_seen) VALUES (?,?,?,?,?,datetime('now'))",
+            [("malin", w, lv, 2, 0) for w, lv in rows])
+    # 生成混合卷
+    r = c.post("/vocab-papers/generate", headers=ht, json={
+        "level": 1, "save": False, "scope": "learned", "user": "malin"})
+    assert r.status_code == 200, r.text
+    p = r.json()["data"]["paper"]
+    assert p["paper_id"].startswith("MIX-") and p["level"] == -1
+    assert p["scope"] == "learned" and p["user"] == "malin"
+    assert len(p["words"]) == 50
+    learned = {w for w, _ in rows}
+    assert set(p["words"]) <= learned, "混合卷必须全部来自已学词"
+    assert "已学全部混合卷" in r.json()["data"]["html"]
+    # 存档 → 预览重建（跨级别回填词条）
+    r2 = c.post("/vocab-papers/save", headers=ht, json=p)
+    assert r2.status_code == 200
+    r3 = c.get(f"/vocab-papers/{p['paper_id']}/preview", headers=ht)
+    assert r3.status_code == 200
+    pv = r3.json()["data"]
+    assert pv["paper"]["words"] == 50 and "已学全部混合卷" in pv["html"]
+    # 历史列表含混合卷
+    r4 = c.get("/vocab-papers/history", headers=ht)
+    assert any(x["paper_id"] == p["paper_id"] and x["level"] == -1
+               for x in r4.json()["data"]["papers"])
+    # 校验：learned 缺 user 422；scope 非法 422；无进度学生 422
+    assert c.post("/vocab-papers/generate", headers=ht, json={
+        "level": 1, "scope": "learned"}).status_code == 422
+    assert c.post("/vocab-papers/generate", headers=ht, json={
+        "level": 1, "scope": "mixed"}).status_code == 422
+    assert c.post("/vocab-papers/generate", headers=ht, json={
+        "level": 1, "scope": "learned", "user": "ghost"}).status_code == 422
+    # 学生无权限生成
+    hs = _login(c, "malin", "123456")
+    assert c.post("/vocab-papers/generate", headers=hs, json={
+        "level": 1, "scope": "learned", "user": "malin"}).status_code == 403

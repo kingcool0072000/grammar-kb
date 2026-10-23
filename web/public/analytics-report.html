@@ -1,4 +1,4 @@
-<!-- 学情分析静态报告（快照 2026-10-05：malin 2025.06–2026.10 全量周/月复盘）-->
+<!-- 学情分析静态报告（快照 2026-10-21：malin 2025.06–2026.10 全量周/月复盘）-->
 <!-- 生成方式：本地数据脚本产出，手动更新本文件随代码推送；无需 API -->
 <style>
 .ana-report { --paper:#f7f1e3; --card:#fffdf8; --ink:#2f2a20; --ink-soft:#6b6353; --line:#e5dcc8;
@@ -11,8 +11,8 @@ header.hero { background:linear-gradient(135deg,#8a6d1f,#b08d2e); color:#fff; bo
   padding:30px 28px; margin-bottom:22px; }
 header.hero h1 { font-size:26px; margin-bottom:6px; }
 header.hero p { opacity:.92; font-size:14px; }
-.cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:26px; }
-.stat { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; text-align:center; }
+.cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:26px; }
+.stat { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 12px; text-align:center; }
 .stat b { display:block; font-size:26px; color:var(--brand-ink); font-variant-numeric:tabular-nums; }
 .stat span { font-size:12.5px; color:var(--ink-soft); }
 section { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px 22px; margin-bottom:22px; }
@@ -38,141 +38,105 @@ footer { text-align:center; font-size:12px; color:var(--ink-soft); margin-top:8p
 
 <header class="hero">
   <h1>📊 malin 学情分析报告</h1>
-  <p>2025.06 – 2026.10 · 历史周/月维度全量复盘 · 数据快照静态生成（2026-10-05）</p>
+  <p>2025.06 – 2026.10 · 历史周/月维度全量复盘 · 数据快照静态生成（2026-10-21，学习数据覆盖至 10-20）</p>
 </header>
 
 <div class="cards">
-  <div class="stat"><b>49</b><span>哈一作业（次）</span></div>
+  <div class="stat"><b>52</b><span>哈一作业（次）</span></div>
   <div class="stat"><b>74</b><span>历史均分</span></div>
   <div class="stat"><b>92</b><span>最高分</span></div>
-  <div class="stat"><b>311</b><span>错题累计</span></div>
-  <div class="stat"><b>569</b><span>累计掌握词</span></div>
-  <div class="stat"><b>19,061</b><span>泛读词数（累计）</span></div>
-  <div class="stat"><b>20</b><span>朗读提交（条）</span></div>
-  <div class="stat"><b>260</b><span>泛读分钟（有效）</span></div>
+  <div class="stat"><b>345</b><span>错题累计</span></div>
+  <div class="stat"><b>982</b><span>累计掌握词</span></div>
+  <div class="stat"><b>23</b><span>朗读提交（条）</span></div>
+  <div class="stat"><b>≈39,600</b><span>泛读词数（累计）</span></div>
+  <div class="stat"><b>823</b><span>泛读分钟（有效）</span></div>
 </div>
 
 <section>
   <h2>一、月度学情</h2>
-  <p class="sub">哈一作业成绩按月聚合。10 月尚无新作业（最新一次为 9-30 第 26 讲 88 分）。</p>
+  <p class="sub">哈一作业成绩按月聚合。10 月已登记 3 卷（27/29/28 讲），均分 71，其中第 28 讲综合卷 68 分为近 5 卷最低。</p>
   <table><tr><th>月份</th><th>次数</th><th>均分</th><th>最高/最低</th><th>错题</th><th>覆盖讲次</th></tr>
-  <tr><td><b>2025-06</b></td><td>1</td>
-      <td class="barcell"><div class="bar"><i style="width:65%;background:#c77928"></i></div><span class="score">65</span></td>
-      <td>65 / 65</td><td>12</td><td class="lecs">1</td></tr>
-  <tr><td><b>2025-07</b></td><td>3</td>
-      <td class="barcell"><div class="bar"><i style="width:73%;background:#c77928"></i></div><span class="score">73</span></td>
-      <td>82 / 55</td><td>28</td><td class="lecs">2、3、4</td></tr>
-  <tr><td><b>2025-08</b></td><td>5</td>
-      <td class="barcell"><div class="bar"><i style="width:77%;background:#2e7d4f"></i></div><span class="score">77</span></td>
-      <td>82 / 68</td><td>39</td><td class="lecs">5、6、7、8、9</td></tr>
-  <tr><td><b>2025-09</b></td><td>9</td>
-      <td class="barcell"><div class="bar"><i style="width:78%;background:#2e7d4f"></i></div><span class="score">78</span></td>
-      <td>91 / 55</td><td>40</td><td class="lecs">1–5、10–13</td></tr>
-  <tr><td><b>2025-10</b></td><td>13</td>
-      <td class="barcell"><div class="bar"><i style="width:80%;background:#2e7d4f"></i></div><span class="score">80</span></td>
-      <td>92 / 57</td><td>39</td><td class="lecs">4、6–17</td></tr>
-  <tr><td><b>2025-11</b></td><td>4</td>
-      <td class="barcell"><div class="bar"><i style="width:53%;background:#b42318"></i></div><span class="score bad">53</span></td>
-      <td>69 / 39</td><td>67</td><td class="lecs">18、19、20、21</td></tr>
-  <tr><td><b>2026-05</b></td><td>1</td>
-      <td class="barcell"><div class="bar"><i style="width:49%;background:#b42318"></i></div><span class="score bad">49</span></td>
-      <td>49 / 49</td><td>0</td><td class="lecs">21</td></tr>
-  <tr><td><b>2026-06</b></td><td>1</td>
-      <td class="barcell"><div class="bar"><i style="width:81%;background:#2e7d4f"></i></div><span class="score">81</span></td>
-      <td>81 / 81</td><td>0</td><td class="lecs">21</td></tr>
-  <tr><td><b>2026-07</b></td><td>3</td>
-      <td class="barcell"><div class="bar"><i style="width:83%;background:#2e7d4f"></i></div><span class="score">83</span></td>
-      <td>85 / 82</td><td>5</td><td class="lecs">20、22</td></tr>
-  <tr><td><b>2026-08</b></td><td>6</td>
-      <td class="barcell"><div class="bar"><i style="width:72%;background:#c77928"></i></div><span class="score">72</span></td>
-      <td>87 / 47</td><td>53</td><td class="lecs">23–27</td></tr>
-  <tr><td><b>2026-09</b></td><td>3</td>
-      <td class="barcell"><div class="bar"><i style="width:69%;background:#c77928"></i></div><span class="score">69</span></td>
-      <td>88 / 55</td><td>28</td><td class="lecs">25、26、28</td></tr>
-  <tr><td><b>2026-10</b></td><td>0</td>
-      <td class="barcell">—</td>
-      <td>—</td><td>—</td><td class="lecs">月度重心转向词汇/泛读（见第四节）</td></tr></table>
-  <div class="callout">
-    <b>月度要点：</b>最佳月份 <b>2026-07</b>（均分 83）；最需关注 <b>2025-11</b>（均分 53，从句区）。
-    9 月末第 26 讲重考 88 分（前次 47），时态补课见效。2025-11 至 2026-04 为学习空窗期。
-  </div>
+  <tr><td><b>2025-06</b></td><td>1</td><td class="barcell"><div class="bar"><i style="width:65%;background:#c77928"></i></div><span class="score">65</span></td><td>65 / 65</td><td>12</td><td class="lecs">1</td></tr>
+  <tr><td><b>2025-07</b></td><td>3</td><td class="barcell"><div class="bar"><i style="width:73%;background:#c77928"></i></div><span class="score">73</span></td><td>82 / 55</td><td>28</td><td class="lecs">2、3、4</td></tr>
+  <tr><td><b>2025-08</b></td><td>5</td><td class="barcell"><div class="bar"><i style="width:77%;background:#2e7d4f"></i></div><span class="score">77</span></td><td>82 / 68</td><td>39</td><td class="lecs">5、6、7、8、9</td></tr>
+  <tr><td><b>2025-09</b></td><td>9</td><td class="barcell"><div class="bar"><i style="width:78%;background:#2e7d4f"></i></div><span class="score">78</span></td><td>91 / 55</td><td>40</td><td class="lecs">1–5、10–13</td></tr>
+  <tr><td><b>2025-10</b></td><td>13</td><td class="barcell"><div class="bar"><i style="width:80%;background:#2e7d4f"></i></div><span class="score">80</span></td><td>92 / 57</td><td>39</td><td class="lecs">4、6–17</td></tr>
+  <tr><td><b>2025-11</b></td><td>4</td><td class="barcell"><div class="bar"><i style="width:53%;background:#b42318"></i></div><span class="score bad">53</span></td><td>69 / 39</td><td>67</td><td class="lecs">18、19、20、21</td></tr>
+  <tr><td><b>2026-05</b></td><td>1</td><td class="barcell"><div class="bar"><i style="width:49%;background:#b42318"></i></div><span class="score bad">49</span></td><td>49 / 49</td><td>0</td><td class="lecs">21</td></tr>
+  <tr><td><b>2026-06</b></td><td>1</td><td class="barcell"><div class="bar"><i style="width:81%;background:#2e7d4f"></i></div><span class="score">81</span></td><td>81 / 81</td><td>0</td><td class="lecs">21</td></tr>
+  <tr><td><b>2026-07</b></td><td>3</td><td class="barcell"><div class="bar"><i style="width:83%;background:#2e7d4f"></i></div><span class="score">83</span></td><td>85 / 82</td><td>5</td><td class="lecs">20、22</td></tr>
+  <tr><td><b>2026-08</b></td><td>6</td><td class="barcell"><div class="bar"><i style="width:72%;background:#c77928"></i></div><span class="score">72</span></td><td>87 / 47</td><td>53</td><td class="lecs">23–27</td></tr>
+  <tr><td><b>2026-09</b></td><td>3</td><td class="barcell"><div class="bar"><i style="width:69%;background:#c77928"></i></div><span class="score">69</span></td><td>88 / 55</td><td>28</td><td class="lecs">25、26、28</td></tr>
+  <tr><td><b>2026-10</b></td><td>3</td><td class="barcell"><div class="bar"><i style="width:71%;background:#c77928"></i></div><span class="score warn">71</span></td><td>74 / 68</td><td>30</td><td class="lecs">27、29、28（时态5→被动1→综合）</td></tr></table>
+  <div class="callout"><b>月度要点：</b>最佳月份 <b>2026-07</b>（均分 83）；最需关注 <b>2025-11</b>（均分 53，从句区）。10 月三卷 72 → 74 → 68，<b>时态混排与被动语态双弱</b>：错题集中在完成时标志词（since / by the end of / It is the first time）与被动转换本身。</div>
 </section>
 
 <section>
   <h2>二、薄弱讲次诊断（错题聚类）</h2>
-  <p class="sub">按错题累计量与均分定位最需要补课的讲次。</p>
+  <p class="sub">按错题累计量与均分定位最需要补课的讲次（含 10 月新成绩）。</p>
   <table><tr><th>讲次</th><th>考试次数</th><th>均分</th><th>最高</th><th>错题累计</th></tr>
-  <tr><td><b>第 21 讲</b></td><td>3</td><td><span class="score bad">56</span></td><td>81</td>
-      <td class="barcell"><div class="bar"><i style="width:100%;background:#b42318"></i></div><span>22</span></td></tr>
-  <tr><td><b>第 25 讲</b></td><td>2</td><td><span class="score">70</span></td><td>76</td>
-      <td class="barcell"><div class="bar"><i style="width:91%;background:#b42318"></i></div><span>20</span></td></tr>
-  <tr><td><b>第 26 讲</b></td><td>2</td><td><span class="score warn">68</span></td><td>88</td>
-      <td class="barcell"><div class="bar"><i style="width:86%;background:#b42318"></i></div><span>19</span></td></tr>
-  <tr><td><b>第 19 讲</b></td><td>1</td><td><span class="score bad">49</span></td><td>49</td>
-      <td class="barcell"><div class="bar"><i style="width:82%;background:#b42318"></i></div><span>18</span></td></tr>
-  <tr><td><b>第 4 讲</b></td><td>3</td><td><span class="score">71</span></td><td>80</td>
-      <td class="barcell"><div class="bar"><i style="width:73%;background:#b42318"></i></div><span>16</span></td></tr>
-  <tr><td><b>第 20 讲</b></td><td>2</td><td><span class="score warn">68</span></td><td>82</td>
-      <td class="barcell"><div class="bar"><i style="width:73%;background:#b42318"></i></div><span>16</span></td></tr>
-  <tr><td><b>第 28 讲</b></td><td>1</td><td><span class="score bad">55</span></td><td>55</td>
-      <td class="barcell"><div class="bar"><i style="width:73%;background:#b42318"></i></div><span>16</span></td></tr>
-  <tr><td><b>第 13 讲</b></td><td>2</td><td><span class="score warn">62</span></td><td>70</td>
-      <td class="barcell"><div class="bar"><i style="width:68%;background:#b42318"></i></div><span>15</span></td></tr></table>
-  <div class="callout"><b>诊断结论：</b>从句（18–21）与时态（25–28）两大区域仍是系统性弱点。
-  好消息：第 26 讲重考从 47 → 88，时态专题补课已见效；<b>第 28 讲（55 分/16 错）尚未重考</b>，建议作为下一次作业卷；
-  从句区第 19/21 讲建议配合《时态手册》模式建从句专题。</div>
+  <tr><td><b>第 28 讲</b>（综合复习六）</td><td>2</td><td><span class="score warn">62</span></td><td>68</td><td class="barcell"><div class="bar"><i style="width:100%;background:#b42318"></i></div><span>27</span></td></tr>
+  <tr><td><b>第 27 讲</b>（时态5）</td><td>2</td><td><span class="score warn">66</span></td><td>72</td><td class="barcell"><div class="bar"><i style="width:89%;background:#b42318"></i></div><span>24</span></td></tr>
+  <tr><td><b>第 26 讲</b>（时态4）</td><td>2</td><td><span class="score warn">68</span></td><td>88</td><td class="barcell"><div class="bar"><i style="width:85%;background:#b42318"></i></div><span>23</span></td></tr>
+  <tr><td><b>第 21 讲</b>（从句）</td><td>3</td><td><span class="score bad">56</span></td><td>81</td><td class="barcell"><div class="bar"><i style="width:81%;background:#b42318"></i></div><span>22</span></td></tr>
+  <tr><td><b>第 25 讲</b>（时态3）</td><td>2</td><td><span class="score">71</span></td><td>76</td><td class="barcell"><div class="bar"><i style="width:74%;background:#b42318"></i></div><span>20</span></td></tr>
+  <tr><td><b>第 19 讲</b>（从句）</td><td>1</td><td><span class="score bad">49</span></td><td>49</td><td class="barcell"><div class="bar"><i style="width:67%;background:#b42318"></i></div><span>18</span></td></tr>
+  <tr><td><b>第 20 讲</b>（从句）</td><td>2</td><td><span class="score warn">68</span></td><td>82</td><td class="barcell"><div class="bar"><i style="width:59%;background:#b42318"></i></div><span>16</span></td></tr>
+  <tr><td><b>第 29 讲</b>（被动1）</td><td>1</td><td><span class="score warn">74</span></td><td>74</td><td class="barcell"><div class="bar"><i style="width:59%;background:#b42318"></i></div><span>16</span></td></tr></table>
+  <div class="callout"><b>诊断结论：</b><b>时态区 25–28 讲四讲全部进入前六</b>，是当前最大系统性弱点（错题模式：完成时/过去完成时标志词判断）；第 28 讲重考 55 → 68 有进步但仍在低位。第 29 讲被动语态首考 74 分、9 错中 7 个是被动转换本身，新知未内化。从句区 19–21 讲为历史欠账，待时态巩固后启动从句专题。</div>
 </section>
 
 <section>
-  <h2>三、周度学情（近 8 个有记录周）</h2>
-  <p class="sub">作业与背词联动；10 月起周计划体系上线（词汇目标/泛读章/精读/FCE）。</p>
+  <h2>三、周度学情（近 6 个有记录周）</h2>
+  <p class="sub">作业与背词联动；10 月起周计划体系上线（课程/作业卷/词汇/泛读/精读/FCE 六维度）。</p>
   <table><tr><th>周（周一）</th><th>作业次数</th><th>讲次</th><th>均分</th><th>各次分数</th><th>背单词</th></tr>
-  <tr><td><b>26-10-05</b></td><td>0</td><td>—</td><td>—</td><td>—</td><td>109 词 / 12 分（L1 开背 + 错题复习）</td></tr>
-  <tr><td><b>26-10-29→26-09</b></td><td colspan="5" class="lecs">国庆假期周：10-01~10-04 背单词 20 组（错题本上线，L0 收尾 95 词 → 509 全掌握）</td></tr>
-  <tr><td>26-09-28</td><td>2</td><td>25、26</td><td><span class="score">76</span></td><td>65, 88</td><td>95 词 / 9 分</td></tr>
-  <tr><td>26-09-21</td><td>1</td><td>28</td><td><span class="score bad">55</span></td><td>55</td><td>170 词 / 23 分</td></tr>
-  <tr><td>26-08-31</td><td>3</td><td>26、24、27</td><td><span class="score">63</span></td><td>47, 82, 60</td><td>—</td></tr>
-  <tr><td>26-08-24</td><td>2</td><td>24、25</td><td><span class="score">78</span></td><td>81, 76</td><td>—</td></tr>
-  <tr><td>26-08-17</td><td>1</td><td>23</td><td><span class="score">87</span></td><td>87</td><td>—</td></tr>
-  <tr><td>26-08-10</td><td>1</td><td>22</td><td><span class="score">85</span></td><td>85</td><td>—</td></tr></table>
-  <div class="callout"><b>本周（10-05）计划：</b>L1 词汇 104 词 · Percy 第 6–7 章 · 精读《Too Many Climbers on Mt. Fuji》· FCE 听力 Test1 List P2 · 第 26 讲（已完成 88 分）。</div>
+  <tr><td><b>26-10-19</b>（本周）</td><td>0</td><td>计划：30 讲 + 25 卷</td><td>—</td><td>—</td><td>进行中（L1 目标 60% / 623 词）</td></tr>
+  <tr><td><b>26-10-12</b></td><td>1</td><td>28</td><td><span class="score warn">68</span></td><td>68</td><td>837 词 / 165 错（正确率 88%）</td></tr>
+  <tr><td><b>26-10-05</b></td><td>2</td><td>27、29</td><td><span class="score">73</span></td><td>72, 74</td><td>947 词 / 212 错（正确率 81%）</td></tr>
+  <tr><td><b>26-09-28</b></td><td>2</td><td>25、26</td><td><span class="score">76</span></td><td>65, 88</td><td>428 词 / 79 错（L0 收官 → L1 启动）</td></tr>
+  <tr><td><b>26-09-21</b></td><td>1</td><td>28</td><td><span class="score bad">55</span></td><td>55</td><td>170 词 / 23 分</td></tr>
+  <tr><td><b>26-08-31</b></td><td>3</td><td>26、24、27</td><td><span class="score">63</span></td><td>47, 82, 60</td><td>—</td></tr></table>
+  <div class="callout"><b>本周（10-19）计划：</b>第 30 讲被动语态② · 25 讲作业卷 · L1 词汇至 60%（623 词）· FCE RUE P2 + 听力 P3 · Percy 第 13–14 章复习 · 精读两篇（大象鼻子/白鲸）已交 ✓</div>
 </section>
 
 <section>
-  <h2>四、2026-10 月学习行为分析（截至 10-05）</h2>
-  <p class="sub">假期五天的多维度行为：L0 收官、L1 启动、错题本上线、FCE 破冰。</p>
+  <h2>四、近三周学习行为分析（09-28 – 10-20）</h2>
+  <p class="sub">课程进入被动语态区、L1 词汇爬坡、泛读提速、FCE 三线并行的三周。</p>
   <ul class="insights">
-    <li><b>🔤 背单词：</b>28 组 / 469 词次，平均正确率 87%（低于 9 月的 97%——L1 生词难度上升所致）。
-        里程碑：<b>L0 509 词全部掌握</b>（10-04 收官）；L1 已背 60 词；错题本（艾宾浩斯）10-04 上线，
-        79 词进入复习周期、已完成 3 轮复习（53 词到期清口中）。</li>
-    <li><b>📖 泛读：</b>Percy Jackson 推进至全书 <b>20.5%</b>（约 19,061/92,982 词）——假期从 15.1% 连读 7 个有效段
-        共 66 分钟，10-04 单日 3 段 23 分钟推进 1.4 个百分点。按当前节奏读完必读章约需 6-8 周。</li>
-    <li><b>🎧 FCE：</b><b>破冰</b>——10 月完成首次提交（Test 1 听力），FCE 备考正式启动；此前为 0。</li>
-    <li><b>🎤 朗读：</b>10 月 2 条提交（含本周精读任务《Too Many Climbers on Mt. Fuji》）。</li>
-    <li><b>👁 专注：</b>累计 100 段会话平均专注分 70（9 月末 68 → 略升）。</li>
-    <li><b>🎯 周计划体系：</b>10-05 起六维度周目标（课程/作业卷/词汇/泛读/精读/FCE）开始运转，本周目标已配置。</li>
+    <li><b>🔤 背单词：</b>133 组 / 2212 词次，平均正确率约 85%。里程碑：<b>L0 509 词收官（测验 82 分），L1 已掌握 473/1039（45.5%）</b>，累计掌握 982 词。除 10-16 一天外每日不断线。<b>⚠️ 复习积压：艾宾浩斯周期内 278 词，10-21 到期 172 个</b>（stage 0 有 69 词卡在首复习节点）——新词摄入速度超过复习消化速度，顽固词 regard 错 8 次、separate/praise/convenient 各 5 次。</li>
+    <li><b>📖 泛读：</b>Percy Jackson 从 20.5% 推进至 <b>42.6%（第 27 章 / 全书 36 章）</b>，近三周有效阅读 380 分钟，专注分稳定 82–86；<b>10‑20 单日 62 分钟连推 2 章</b>，节奏明显加快（约提前于周计划一倍）。</li>
+    <li><b>🎤 精读朗读：</b>7 篇计划内文章全部按时提交、全部完成批改（$730 校服 / Coldplay / 鲨鱼牙齿 / 棕色鞋子 / 富士山 / 大象鼻子 / 白鲸）。</li>
+    <li><b>🎧 FCE：</b>三场提交——听力 P1 3/8（10-03）、阅读语用 P1 4/8（10-11）、听力 P2 4/10（10-17）。听力暴露两个具体问题：<b>3 题空着未填、拼写出错</b>（tour guide → "tore gide"）。</li>
+    <li><b>🔍 查词行为：</b>Percy 阅读中 AI 兜底查词 41 条，其中 <b>39% 是常见动词的 -ing/-ed 形态</b>（shuffling/weaving/retreating 等，词根多为中频词）——词形自动解码不熟，与语法卷时态失分同源；真正高难生词很少。</li>
+    <li><b>⏱ 节奏画像：</b>平时以背词+泛读等输入型任务为主，<b>FCE/朗读/作业卷登记集中堆到周六日</b>（上周 FCE 周六做、精读周六日交）。⚠️ 学习日志 topics 板块 10-10/10-11 有两条各 3.8 小时的挂机会话（专注分 0），时长数据需剔除水分。</li>
   </ul>
 </section>
 
 <section>
-  <h2>五、泛读逐日明细（2026-10，有效会话）</h2>
-  <p class="sub">有效口径：单段 ≥60 秒；推进区间为全书百分比。</p>
-  <table><tr><th>日期</th><th>书目</th><th>分钟</th><th>推进区间</th></tr>
-  <tr><td>2026-10-02</td><td>Percy Jackson</td><td>10 + 26</td><td>15.1% → 17.5%</td></tr>
-  <tr><td>2026-10-03</td><td>Percy Jackson</td><td>6 + 2</td><td>14.8% → 18.2%</td></tr>
-  <tr><td>2026-10-04</td><td>Percy Jackson</td><td>8 + 9 + 6</td><td>18.2% → 20.5%</td></tr></table>
-  <div class="callout"><b>对照 9 月：</b>9 月有效 21 段 / 194 分钟（9-19 单日 68 分钟最长）。10 月假期日均节奏（约 16 分钟/天）好于 9 月（约 7 分钟/天），保持即可按周计划推进第 6–7 章。</div>
+  <h2>五、泛读推进里程碑（2026-10）</h2>
+  <p class="sub">Percy Jackson Book 1（全书 36 章 / 约 92,982 词）；分钟数为当日有效会话合计。</p>
+  <table><tr><th>日期</th><th>里程碑</th><th>当日有效分钟（约）</th></tr>
+  <tr><td>2026-10-04</td><td>L0 收官日 · 泛读 20.5%（第 6 章）</td><td>23</td></tr>
+  <tr><td>2026-10-05</td><td>假期长读（单段 44 分钟）</td><td>44</td></tr>
+  <tr><td>2026-10-02 ~ 10-15</td><td>日均 10–25 分钟稳步推进</td><td>36 / 8 / 22 / 25 / 20 / 12 / 10 / 8 / 19</td></tr>
+  <tr><td>2026-10-17</td><td>周末加量</td><td>49</td></tr>
+  <tr><td>2026-10-18</td><td>周末加量</td><td>42</td></tr>
+  <tr><td><b>2026-10-19</b></td><td><b>37.9%（第 25 章）· 累计 521 分钟</b></td><td>3</td></tr>
+  <tr><td><b>2026-10-20</b></td><td><b>42.6%（第 27 章）· 累计 583 分钟 · 单日连推 2 章</b></td><td>62</td></tr></table>
+  <div class="callout"><b>对照：</b>10 月日均有效泛读约 17 分钟，显著高于 9 月（约 7 分钟/天）；按当前节奏必读章约 4–5 周内完成。查词记录显示卡点集中在词形层（-ing/-ed），生词层无压力。</div>
 </section>
 
 <section>
   <h2>六、结论与建议</h2>
   <ul class="insights">
-    <li><b>阶段转换完成：</b>L0 词汇收官（509/509）、L1 启动（60/1039）、FCE 破冰——从「语法课主导」转入「词汇+泛读+FCE 三线并行」，与周计划体系上线同频。</li>
-    <li><b>错题管理进入正轨：</b>艾宾浩斯错题本 79 词在周期，53 词到期待复习——<b>建议每天先清「复习今日到期」（每轮 20 词）再开新词</b>，避免积压滚大。</li>
-    <li><b>语法收尾清单：</b>第 28 讲尚未重考（55 分/16 错，现在完成时延续性转换仍是最大失分点）；第 19/21 讲（从句）建议建从句专题手册。</li>
-    <li><b>泛读稳速：</b>假期 20.5% 的推进速度符合周计划（每周 2 章）；关键是返校后保持——泛读天数占比是下个观察点。</li>
-    <li><b>FCE 节奏：</b>首份听力已提交，建议每周固定 1 个 Part（本周 Test1 List P2），配合听力预习词表降低生词密度。</li>
+    <li><b>一句话画像：</b>输入自律（背词不断线、泛读提速）、输出薄弱（作业卷三连降、FCE 听力低位、复习拖欠）——缺的是「输入 → 产出」转化环节。</li>
+    <li><b>时态区是当前主战场：</b>25–28 讲错题全在完成时/过去完成时标志词；时态专题 10-03 学完后 10-18 综合卷仍 68 分，<b>建议本周「错题再练」二刷 27/28 讲错题</b>，被动语态随 30 讲推进中同步补短语动词被动（send for 类）。</li>
+    <li><b>复习清欠：</b>连续 3–5 天优先清「今日到期」（现积压 172 词，每轮 20 词），把 regard 等 ≥5 次错词单独列卡强化，避免滚动积压。</li>
+    <li><b>FCE 听力改听写模式：</b>Part 2 逐题回看拼写、听不出也要猜写；本周 P3 做完看正确率趋势。</li>
+    <li><b>计划编排前移：</b>FCE/朗读截止日从周末挪到周中（如周三），打破「平时输入、周末赶工」模式。</li>
+    <li><b>杂志阅读（readingmore）10-10 起中断：</b>要么恢复每周固定 1–2 次，要么从计划中拿掉。</li>
+    <li><b>数据卫生：</b>topics 挂机会话两条（3.8h × 2，专注分 0）看学习日志时剔除；泛读馆查词命中 ECDICT 无日志、屈折形态空释义短路词形归一（工程侧待修）。</li>
   </ul>
 </section>
 
-<footer>和爸学 · 学情分析静态报告 · 基于生产数据快照生成（2026-10-05）· 无需 API</footer>
+<footer>和爸学 · 学情分析静态报告 · 基于生产数据快照生成（2026-10-21）· 无需 API</footer>

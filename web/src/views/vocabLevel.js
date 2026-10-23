@@ -57,15 +57,20 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
         <div class="vl-pager" id="vl-pager"></div>
       </section>
 
-      <!-- 2.2 单词考试 · 试卷生成（考试资产，与学生无关） -->
+      <!-- 2.2 单词考试 · 试卷生成（考试资产，与学生无关；混合卷除外） -->
       <section class="vl-sec card">
         <header class="vl-head">
           <h3>📝 单词考试 · 试卷生成</h3>
           <div class="vl-tools">
+            <label class="vl-scope"><input type="radio" name="vl-scope" value="level" checked>本级（L${lv}）</label>
+            <label class="vl-scope"><input type="radio" name="vl-scope" value="learned">全部已学词</label>
+            <select id="vl-scope-user" style="display:none" title="混合卷按学生的学习轨迹出题">
+              ${studs.map((u) => `<option value="${escapeHtml(u.user)}">${escapeHtml(u.user)}</option>`).join('') || '<option value="">（无学生账号）</option>'}
+            </select>
             <button class="btn-primary" id="vl-gen">🎲 生成试卷</button>
           </div>
         </header>
-        <p class="muted">随机选词（不同首字母/词性，自动规避人名/地名）· 中译英 20 + 英译中 20 + 拼写挖空 10 · 每题带词性提示 · 与历史试卷重复 ≤10 词。流程：生成 → 预览 → 满意后保存存档。</p>
+        <p class="muted">随机选词（不同首字母/词性，自动规避人名/地名）· 中译英 20 + 英译中 20 + 拼写挖空 10 · 每题带词性提示 · 与历史试卷重复 ≤10 词。<b>本级</b>=L${lv} 词库；<b>全部已学词</b>=所选学生背过的所有词跨级别混合（阶段总复习用，卷号 MIX-）。流程：生成 → 预览 → 满意后保存存档。</p>
         <div id="vl-paper-out"></div>
         <div id="vl-paper-history"></div>
       </section>
@@ -151,18 +156,31 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
       dlg.querySelector('#vl-dlg-close').addEventListener('click', close)
     }
     // 试卷生成：三步流程 生成（未存档）→ 预览 → 保存
+    // 范围：本级（L{n} 词库） / 全部已学词（按学生的学习轨迹混合出题）
+    const scopeRadios = body.querySelectorAll('input[name="vl-scope"]')
+    const scopeUser = body.querySelector('#vl-scope-user')
+    scopeRadios.forEach((r) => r.addEventListener('change', () => {
+      scopeUser.style.display =
+        body.querySelector('input[name="vl-scope"]:checked').value === 'learned' ? '' : 'none'
+    }))
     async function genPaper() {
       const out = body.querySelector('#vl-paper-out')
+      const scope = body.querySelector('input[name="vl-scope"]:checked').value
+      const user = scope === 'learned' ? scopeUser.value : ''
+      if (scope === 'learned' && !user) {
+        out.innerHTML = '<p style="color:#b42318">请先选择学生（混合卷按学生的学习轨迹出题）。</p>'
+        return
+      }
       out.innerHTML = '<p class="muted">生成中…</p>'
       try {
-        const r = await api.vocabPaperGenerate(lv, false) // 先不存档
+        const r = await api.vocabPaperGenerate(lv, false, { scope, user }) // 先不存档
         const p = r.paper
         let saved = false
         out.innerHTML = `
           <div class="vl-paper-card">
             <div class="vl-paper-meta">
               <b>卷号 ${escapeHtml(p.paper_id)}</b>
-              <span>中译英 ${p.zh2en.length} · 英译中 ${p.en2zh.length} · 拼写 ${p.spell.length} · 与历史重复 ${p.overlap_with_history} 词</span>
+              <span>${p.scope === 'learned' ? `已学全部混合卷 · ${escapeHtml(p.user || '')} · ` : ''}中译英 ${p.zh2en.length} · 英译中 ${p.en2zh.length} · 拼写 ${p.spell.length} · 与历史重复 ${p.overlap_with_history} 词</span>
               <i class="vl-paper-state">${saved ? '已存档' : '未存档（预览态）'}</i>
             </div>
             <details class="vl-paper-preview">
@@ -212,14 +230,15 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
     async function loadHistory() {
       const host = body.querySelector('#vl-paper-history')
       try {
-        const r = await api.vocabPaperHistory(lv)
-        const items = r.papers || []
+        // 历史含本级卷与混合卷（混合卷 level=-1，接口按本级过滤会漏）
+        const r = await api.vocabPaperHistory(null)
+        const items = (r.papers || []).filter((x) => x.level === lv || x.level < 0)
         host.innerHTML = items.length ? `
           <div class="vl-hist">
-            <b>📚 已生成 ${items.length} 卷（考试资产）</b>
+            <b>📚 已生成 ${items.length} 卷（本级 + 混合）</b>
             ${items.slice(0, 8).map((x) => `
               <span class="vl-hist-item">
-                ${escapeHtml(x.paper_id)} · ${x.count} 词 · ${x.created_at.slice(0, 10)}
+                ${x.level < 0 ? '🧩 已学混合' : `L${x.level}`} · ${x.count} 词 · ${x.created_at.slice(0, 10)} · ${escapeHtml(x.paper_id.slice(0, 14))}…
                 <button class="chip vl-hist-op" data-hprev="${escapeHtml(x.paper_id)}">👁</button>
                 <button class="chip vl-hist-op del" data-hdel="${escapeHtml(x.paper_id)}">🗑</button>
               </span>`).join('')}
