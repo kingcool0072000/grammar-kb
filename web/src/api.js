@@ -218,6 +218,9 @@ export const api = {
     }),
   wrongbook: ({ user, limit = 500 } = {}) =>
     req('/recite/wrongbook', { searchParams: { user, limit } }),
+  // 复习闭环摘要：到期 / 逾期 / 近 7 日攻克 / 新词额度 / 教师告警
+  reviewSummary: ({ user } = {}) =>
+    req('/recite/review-summary', { searchParams: { user } }),
   // 专题学习（学生自学手册进度；谁登录记谁的行，跨设备同步）
   topicsProgress: () => req('/topics/progress'),
   // v2 结构化专题：学生列表/详情（题库引用已展开）+ 教师管理

@@ -65,6 +65,16 @@ def register_study(app, ctx):
             raise HTTPException(status_code=422, detail="须指定 user")
         return _ok({"user": user, "deleted": recite.clear_progress(user)})
 
+    @app.get("/recite/review-summary")
+    def recite_review_summary(request: "fastapi.Request", user: Optional[str] = None):
+        """复习闭环摘要：到期 / 逾期 / 在周期 / 近 7 日与累计攻克 / 最近错词活动。
+
+        学生只看自己的；教师可带 user。口径与 /recite/wrongbook 相同。
+        逾期未清时附带今日新词 new_used / new_cap。
+        """
+        u = user if (request.state.role == "teacher" and user) else request.state.user
+        return _ok(recite.review_summary(u))
+
     @app.get("/recite/wrongbook")
     def recite_wrongbook(request: "fastapi.Request", user: Optional[str] = None, limit: int = 500):
         """背单词错词本（艾宾浩斯口径）：在周期词 + 已攻克词本 + 统计，

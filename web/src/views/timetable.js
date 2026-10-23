@@ -127,6 +127,7 @@ export async function mountTimetable(el) {
       <h1>课程表</h1>
       <p>本周（${d.week_start || ''} 起）已完成的学习记录 · 每天做了什么一目了然</p>
     </div>
+    <div id="tt-loop"></div>
     ${summary.length ? `<div class="tt-summary">${summary.map((s) => `<span>${s}</span>`).join('')}</div>` : ''}
     ${dims.length ? `
       <section class="tt-goalcard card">
@@ -138,6 +139,45 @@ export async function mountTimetable(el) {
     </div>
     ${(d.notes || '').trim() ? `<section class="tt-notes card"><h3>📌 老师的话</h3><p>${escapeHtml(d.notes).replace(/\n/g, '<br>')}</p></section>` : ''}
   `
+  renderReviewStrip(el.querySelector('#tt-loop'))
+}
+
+async function renderReviewStrip(host) {
+  if (!host) return
+  let s
+  try {
+    s = await api.reviewSummary()
+  } catch {
+    host.innerHTML = ''
+    return
+  }
+  const due = Number(s.due_today || 0)
+  const over = Number(s.overdue || 0)
+  const d7 = Number((s.conquered_n && s.conquered_n.d7) || 0)
+  const go = (which) => {
+    if (which === 'conquered') {
+      location.hash = '/conquered'
+      return
+    }
+    if ((which === 'overdue' ? over : due) <= 0) return
+    sessionStorage.setItem('gkb-recite-review', which === 'overdue' ? 'overdue' : 'due')
+    location.hash = '/recite'
+  }
+  host.innerHTML = `
+    <div class="rc-loop tt-loop">
+      <button type="button" class="rc-loop-card due" ${due ? '' : 'disabled'} data-go="due">
+        <b>${due}</b><span>到期</span><small>去复习</small>
+      </button>
+      <button type="button" class="rc-loop-card over" ${over ? '' : 'disabled'} data-go="overdue">
+        <b>${over}</b><span>逾期</span><small>去复习</small>
+      </button>
+      <button type="button" class="rc-loop-card cq" data-go="conquered">
+        <b>${d7}</b><span>近7日攻克</span><small>打开词本</small>
+      </button>
+    </div>`
+  host.querySelectorAll('[data-go]').forEach((btn) => {
+    btn.addEventListener('click', () => go(btn.dataset.go))
+  })
 }
 
 function round1(n) {

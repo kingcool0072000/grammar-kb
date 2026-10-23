@@ -163,7 +163,8 @@ export async function mountRecite(el, { vocab, role }) {
       <h1>背单词</h1>
       <p>基于词汇表（${vocab.length} 词）的全屏卡片：中译英、英译中、拼写挖空。翻面自动发音，答错的词按艾宾浩斯记忆法复习（1、2、4、7、15、30 天），直到攻克。</p>
     </div>
-    <div class="card recite-dash" id="rc-dash"></div>
+    <div id="rc-loop"></div>
+    <div class="card recite-dash recite-dash-secondary" id="rc-dash"></div>
     <div class="recite-setup card">
       <div class="recite-field">
         <label>词库</label>
@@ -183,6 +184,8 @@ export async function mountRecite(el, { vocab, role }) {
   `
 
   const state = { scope: 'all', size: 20, mode: 'flip' }
+  let reviewSummary = null
+  let wbCache = null
   // 词库默认激活已解锁的最新级别（L0 只是兜底；解锁信息加载后校正）
   // 词库/云端进度加载完成前禁用开始钮：pool 为空时点击会静默无反应
   const startBtn = el.querySelector('#rc-start')
@@ -326,9 +329,115 @@ export async function mountRecite(el, { vocab, role }) {
     return byLevel(Number(state.scope))
   }
 
-  /** 出题池：当前层中「云端未掌握」的词（新词优先；已掌握的不再进组）。 */
+  /** 出题池：当前层中「云端未掌握」的词。逾期未清时，首次见到的新词受 new_cap 限制。 */
   function freshPool() {
-    return pool().filter((e) => !masteredSet.has(e.word.toLowerCase()))
+    const all = pool().filter((e) => !masteredSet.has((e.word || '').toLowerCase()))
+    const cap = reviewSummary ? reviewSummary.new_cap : null
+    if (cap == null) return all
+    let room = Math.max(0, Number(cap) - Number(reviewSummary.new_used || 0))
+    const seen = new Set((cloudProgress.words || []).map((w) => (w.word || '').toLowerCase()))
+    const kept = []
+    for (const e of all) {
+      const w = (e.word || '').toLowerCase()
+      if (seen.has(w)) kept.push(e)
+      else if (room > 0) {
+        kept.push(e)
+        room -= 1
+      }
+    }
+    return kept
+  }
+
+  function entryFor(word) {
+    const e = levelVocab.find((x) => x.word === word)
+      || vocab.find((x) => x.word === word)
+      || { word, pos: [], meanings: [], gloss: '', level: -1, example: {}, extra: {} }
+    const cached = wbCache && (
+      (wbCache.in_cycle || []).find((x) => x.word === word)
+      || (wbCache.conquered || []).find((x) => x.word === word)
+    )
+    const gloss = e.gloss || (cached && cached.gloss) || ''
+    const meanings = (e.meanings && e.meanings.length) ? e.meanings : ((cached && cached.meanings) || [])
+    return {
+      ...e,
+      gloss,
+      meanings,
+      display: '',
+      examples: e.example && e.example.en ? [e.example] : (e.examples || []),
+    }
+  }
+
+  // 攻克：只背错词本（到期 / 逾期 / 在周期），不掺新词。答对走原有艾宾浩斯节点。
+  function startConquer(words) {
+    const ordered = (words || []).filter(Boolean).slice(0, 20)
+    const entries = shuffle(ordered.map((w) => entryFor(w)))
+    if (!entries.length) return
+    startSession(el, {
+      pool: entries,
+      size: entries.length,
+      mode: 'conquer',
+      scope: 'wrongbook',
+      onFinish: () => {
+        refreshFromCloud()
+        setTimeout(renderWrongbook, 800)
+      },
+    })
+  }
+
+  function renderReviewLoop() {
+    const host = el.querySelector('#rc-loop')
+    if (!host) return
+    const s = reviewSummary
+    if (!s) {
+      host.innerHTML = ''
+      return
+    }
+    const due = Number(s.due_today || 0)
+    const over = Number(s.overdue || 0)
+    const d7 = Number((s.conquered_n && s.conquered_n.d7) || 0)
+    const totalCq = Number((s.conquered_n && s.conquered_n.total) || 0)
+    const cap = s.new_cap
+    const used = Number(s.new_used || 0)
+    const capNote = cap == null
+      ? ''
+      : Number(cap) === 0
+        ? ` · 逾期还没清完，今天先不背新词（已见 ${used}）`
+        : ` · 逾期未清，今日新词 ${used}/${cap}`
+    host.innerHTML = `
+      <div class="rc-loop">
+        <button type="button" class="rc-loop-card due" id="rc-loop-due" ${due ? '' : 'disabled'}>
+          <b>${due}</b>
+          <span>到期</span>
+          <small>今天该复习</small>
+        </button>
+        <button type="button" class="rc-loop-card over" id="rc-loop-over" ${over ? '' : 'disabled'}>
+          <b>${over}</b>
+          <span>逾期</span>
+          <small>过了复习日</small>
+        </button>
+        <button type="button" class="rc-loop-card cq" id="rc-loop-cq">
+          <b>${d7}</b>
+          <span>近7日攻克</span>
+          <small>累计 ${totalCq} 词</small>
+        </button>
+      </div>
+      <p class="rc-loop-sub">在周期 ${Number(s.in_cycle || 0)} 词${capNote}</p>`
+    const dueBtn = host.querySelector('#rc-loop-due')
+    if (dueBtn) dueBtn.addEventListener('click', () => startConquer(s.due_words || []))
+    const overBtn = host.querySelector('#rc-loop-over')
+    if (overBtn) overBtn.addEventListener('click', () => startConquer(s.overdue_words || []))
+    const cqBtn = host.querySelector('#rc-loop-cq')
+    if (cqBtn) cqBtn.addEventListener('click', () => { location.hash = '/conquered' })
+  }
+
+  function maybeAutoReview() {
+    const jump = sessionStorage.getItem('gkb-recite-review')
+    if (!jump || !reviewSummary) return
+    sessionStorage.removeItem('gkb-recite-review')
+    const words = jump === 'overdue'
+      ? (reviewSummary.overdue_words || [])
+      : (reviewSummary.due_words || [])
+    if (words.length) startConquer(words)
   }
 
   // 完成一组后重拉云端进度并刷新看板（单词词状态已由上报更新）
@@ -340,7 +449,11 @@ export async function mountRecite(el, { vocab, role }) {
       masteredSet.clear()
       ;(cloudProgress.words || []).filter((w) => w.mastered).forEach((w) => masteredSet.add(w.word))
     } catch { /* 离线：保留旧快照 */ }
+    try {
+      reviewSummary = await api.reviewSummary()
+    } catch { /* 摘要失败时沿用上一次 */ }
     renderBoard()
+    renderReviewLoop()
   }
 
 
@@ -384,7 +497,7 @@ export async function mountRecite(el, { vocab, role }) {
         <div class="fce-group-title">📝 我的练习记录（${recs.length} 组 · 平均正确率 ${avgAcc}% · 累计 ${totalWords} 词次${totalMin ? ` / ${totalMin} 分钟` : ''}）</div>
         ${recent.map((s) => `
           <div class="fce-his-row">
-            <span class="fce-his-what">${scopeCn(s.scope)}${s.mode === 'flip' ? '（自评）' : ''}</span>
+            <span class="fce-his-what">${scopeCn(s.scope)}${s.mode === 'conquer' ? '（攻克）' : (s.mode === 'flip' ? '（自评）' : '')}</span>
             <b class="fce-his-score ${s.acc >= 80 ? 'ok' : ''}">${s.acc}%</b>
             <span class="fce-his-date">${s.total} 词 · 错 ${s.wrong} · ${(s.created_at || '').slice(5, 10)}</span>
           </div>`).join('')}
@@ -404,6 +517,7 @@ export async function mountRecite(el, { vocab, role }) {
       host.innerHTML = ''
       return
     }
+    wbCache = data || null
     const inCycle = (data && data.in_cycle) || []
     const dueToday = (data && data.due_today) || []
     const conquered = (data && data.conquered) || []
@@ -537,23 +651,8 @@ export async function mountRecite(el, { vocab, role }) {
         }
       })
     })
-    const startReview = (list, label) => {
-      const entries = shuffle(list.map((w) => findEntry(w.word))).slice(0, 20).map((e) => ({
-        ...e,
-        display: '',
-        examples: e.example && e.example.en ? [e.example] : (e.examples || []),
-      }))
-      if (!entries.length) return
-      startSession(el, {
-        pool: entries,
-        size: entries.length,
-        mode: 'flip',
-        scope: 'wrongbook', // 复习会话：答对推进艾宾浩斯节点
-        onFinish: () => {
-          refreshFromCloud()
-          setTimeout(renderWrongbook, 800)
-        },
-      })
+    const startReview = (list) => {
+      startConquer((list || []).map((w) => w.word))
     }
     const dueBtn = host.querySelector('#rc-wb-due')
     if (dueBtn) {
@@ -565,11 +664,16 @@ export async function mountRecite(el, { vocab, role }) {
           ...inCycle.filter((w) => w.due && !overdueSet.has(w.word)),
           ...inCycle.filter((w) => overdueSet.has(w.word)),
         ]
-        startReview(list, '到期')
+        startReview(list)
       })
     }
     const drill = host.querySelector('#rc-wb-drill')
-    if (drill) drill.addEventListener('click', () => startReview(inCycle, '全部'))
+    if (drill) drill.addEventListener('click', () => {
+      const poolWords = (reviewSummary && reviewSummary.conquer_pool && reviewSummary.conquer_pool.length)
+        ? reviewSummary.conquer_pool
+        : inCycle.map((w) => w.word)
+      startConquer(poolWords)
+    })
   }
   renderWrongbook()
 
@@ -586,16 +690,22 @@ export async function mountRecite(el, { vocab, role }) {
   })
 
   el.querySelector('#rc-start').addEventListener('click', () => {
-    // 出题池=当前层「云端未掌握」的词；全部掌握时提示去错题本/换层级
+    // 出题池=当前层「云端未掌握」的词；逾期未清时新词被额度截断
+    const uncapped = pool().filter((e) => !masteredSet.has((e.word || '').toLowerCase()))
     const p = freshPool()
     if (!p.length) {
       const $hint = el.querySelector('#rc-stats')
+      const blocked = uncapped.length && reviewSummary && reviewSummary.new_cap != null
       if ($hint)
-        $hint.innerHTML = `
-          <div class="card recite-stats-card">
-            <h3>当前词库已全部背完 🎉</h3>
-            <p class="muted">可以换更高一级词库，或到下方错题本巩固易错词。</p>
-          </div>`
+        $hint.innerHTML = blocked
+          ? `<div class="card recite-stats-card">
+              <h3>今日新词额度已用完</h3>
+              <p class="muted">逾期还没清。先点上面的「逾期 / 到期」把复习做完，再背新词。</p>
+            </div>`
+          : `<div class="card recite-stats-card">
+              <h3>当前词库已全部背完 🎉</h3>
+              <p class="muted">可以换更高一级词库，或到下方错题本巩固易错词。</p>
+            </div>`
       return
     }
     startSession(el, {
@@ -611,7 +721,14 @@ export async function mountRecite(el, { vocab, role }) {
     })
   })
 
+  try {
+    reviewSummary = await api.reviewSummary()
+  } catch {
+    reviewSummary = null
+  }
+  renderReviewLoop()
   renderBoard()
+  maybeAutoReview()
 }
 
 // ---- 全屏会话 -------------------------------------------------------------- //
@@ -636,13 +753,15 @@ function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
     queue.splice(at, 0, makeQuestion(entry))
   }
 
-  function finish() {
+  async function finish() {
     const total = done
     // 注意：wrongEntries 只记首答错；重现答对不影响它
     const uniqWrong = [...new Set(wrongEntries.map((e) => e.word))]
     const sec = Math.round((Date.now() - t0) / 1000)
-    // 成绩 + 逐词明细一并静默上报云端（尽力而为：失败不影响本地流程）
-    uploadSession(total, uniqWrong, sec, details)
+    // 先上报再刷新摘要，新词额度才对得上这一组
+    try {
+      await uploadSession(total, uniqWrong, sec, details)
+    } catch { /* 离线/未登录时静默丢弃 */ }
     overlay.remove()
     overlay = null
     mountResult(rootEl, {
@@ -659,18 +778,16 @@ function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
   }
 
   function uploadSession(total, uniqWrong, sec, wordDetails) {
-    import('../api.js').then(({ api }) => {
-      return api.reciteSubmit({
-        total,
-        wrong: uniqWrong.length,
-        acc: Math.round(((total - uniqWrong.length) / total) * 100),
-        duration_sec: sec,
-        wrong_words: uniqWrong,
-        mode,
-        scope,
-        details: wordDetails,
-      })
-    }).catch(() => { /* 离线/未登录时静默丢弃 */ })
+    return import('../api.js').then(({ api }) => api.reciteSubmit({
+      total,
+      wrong: uniqWrong.length,
+      acc: Math.round(((total - uniqWrong.length) / total) * 100),
+      duration_sec: sec,
+      wrong_words: uniqWrong,
+      mode,
+      scope,
+      details: wordDetails,
+    }))
   }
 
   overlay = document.createElement('div')
