@@ -17,13 +17,12 @@ async function mountContent(el) {
   // 已上架专题数（topics-admin/list；失败显示 — 不阻塞备课中心）
   let topicCount = '—'
   try { topicCount = (await api.topicsAdminList()).length } catch { /* 忽略 */ }
-  let papers = null, bases = null, derived = null, vex = null, lib = null, vlevels = null, topicsProg = null
+  let papers = null, bases = null, derived = null, lib = null, vlevels = null, topicsProg = null
   try {
-    ;[papers, bases, derived, vex, lib, vlevels, topicsProg] = await Promise.all([
+    ;[papers, bases, derived, lib, vlevels, topicsProg] = await Promise.all([
       api.fcePapers().catch(() => null),
       api.readingArticles({ kind: 'base' }).catch(() => null),
       api.readingArticles().catch(() => null),
-      api.vocabExams().catch(() => null),
       api.libraryBooks().catch(() => null),
       api.vocabLevels({ maxLevel: 5, countsOnly: true }).catch(() => null),
       api.topicsProgress().catch(() => null),
@@ -31,7 +30,6 @@ async function mountContent(el) {
   } catch { /* FCE 数据不可用时仍展示哈1板块 */ }
   const libCount = lib?.books?.length ?? 0
   const vocabCounts = vlevels?.counts || {}
-  const vocabUnlocked = vex?.unlocked_level ?? vlevels?.unlocked ?? 0
 
   const lecCount = stats ? stats.lectures : '—'
   const kpCount = stats ? stats.knowledge_points : '—'
@@ -80,7 +78,7 @@ async function mountContent(el) {
               </button>`
             }).join('')}
           </div>
-          <p class="reading-hint">点开级别管理词库、生成考卷、配置解锁（当前生效解锁到 L${vocabUnlocked}）；学生端 L${vocabUnlocked} 以上仍锁定。</p>
+          <p class="reading-hint">点开级别可管理词库、生成考卷，并为每个学生设置单词级别（直接指定，不要求考试 80 分）。考试成绩的登记、修改、删除在级别页的「考试成绩」。</p>
         </div>
       </section>
 

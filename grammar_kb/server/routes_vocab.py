@@ -100,38 +100,56 @@ def register_vocab(app, ctx):
 
     @app.get("/vocab-exams/unlock")
     def vocab_unlock_get(request: "fastapi.Request"):
-        """手动解锁配置：{学生: 级别}。教师专属。"""
+        """已单独设定的单词级别：{学生: 级别}。未出现的学生表示还没设定。教师专属。"""
         _require_teacher(request)
         return _ok(vocab_exam.list_unlock_all())
 
     @app.put("/vocab-exams/unlock")
     def vocab_unlock_put(rec: dict, request: "fastapi.Request"):
-        """设置某学生的手动解锁级别（0-5；与考试解锁取 max）。教师专属。"""
+        """设置某学生的单词级别（0-5）。教师专属。
+
+        设定后立即生效，不要求该生词汇考试达到 80 分，
+        也可以设得比考试推算更低或更高。
+        """
         _require_teacher(request)
         body = rec if isinstance(rec, dict) else {}
         user = str(body.get("user") or "").strip()
         level = body.get("level")
-        if not user or not isinstance(level, int) or not (0 <= level <= 5):
+        if not user or not isinstance(level, int) or isinstance(level, bool) or not (0 <= level <= 5):
             raise HTTPException(status_code=422, detail="user 必填且 level 须为 0-5 整数")
         vocab_exam.put_unlock(user, level)
         return _ok({"user": user, "level": level,
-                    "unlocked": vocab_exam.unlocked_level(user)})
+                    "unlocked": vocab_exam.unlocked_level(user),
+                    "configured": True})
 
     @app.get("/vocab-exams")
-    def vocab_exams_list(request: "fastapi.Request", user: Optional[str] = None):
-        """词汇考试记录（师生可见：学生看自己的，教师看全部/指定 user）。"""
+    def vocab_exams_list(request: "fastapi.Request", user: Optional[str] = None,
+                         include_all: int = 0):
+        """词汇考试记录。
+
+        学生只看自己的。教师默认看自己的；?user= 看指定学生；
+        ?include_all=1 看全部学生（学生传这个参数无效）。
+        """
+        if request.state.role == "teacher" and include_all:
+            return _ok({
+                "exams": vocab_exam.list(None),
+                "pass_score": 80,
+            })
         u = user if (request.state.role == "teacher" and user) else request.state.user
         return _ok({
             "exams": vocab_exam.list(u),
             "passed_levels": sorted(vocab_exam.passed_levels(u)),
             "unlocked_level": vocab_exam.unlocked_level(u),
+            "level_configured": vocab_exam.level_configured(u),
             "pass_score": 80,
         })
 
     @app.post("/vocab-exams")
     def vocab_exam_add(payload: dict, request: "fastapi.Request"):
-        """登记一次词汇考试成绩（教师专属）。≥80 分自动解锁下一级。
+        """登记一次词汇考试成绩（教师专属）。
 
+        该生若已由教师单独设定单词级别，成绩只作记录，不改写级别。
+        尚未单独设定时，≥80 分仍会解锁下一级。
         paper_id 可选：从批改中心考试打分卡登记时带上，关联具体试卷。
         """
         _require_teacher(request)
@@ -153,8 +171,61 @@ def register_vocab(app, ctx):
         return _ok({
             "exam": rec,
             "unlocked_level": vocab_exam.unlocked_level(user),
+            "level_configured": vocab_exam.level_configured(user),
             "passed": score >= 80,
         })
+
+    @app.put("/vocab-exams/{exam_id}")
+    def vocab_exam_update(exam_id: int, payload: dict, request: "fastapi.Request"):
+        """修改一条词汇考试记录（教师专属）。未提交的字段保持原值。"""
+        _require_teacher(request)
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=422, detail="请求体须为对象")
+        current = vocab_exam.get(exam_id)
+        if current is None:
+            raise HTTPException(status_code=404, detail=f"记录 id={exam_id} 不存在")
+        fields = ("user", "level", "score", "exam_date", "note", "paper_id")
+        if not any(k in payload for k in fields):
+            raise HTTPException(status_code=422, detail="至少提供一项要修改的字段")
+        merged = {
+            "user": current["user"],
+            "level": current["level"],
+            "score": current["score"],
+            "exam_date": current["exam_date"],
+            "note": current.get("note") or "",
+            "paper_id": current.get("paper_id") or "",
+        }
+        for key in fields:
+            if key in payload:
+                merged[key] = payload[key]
+        try:
+            user = str(merged["user"] or "").strip()
+            level = int(merged["level"])
+            score = int(merged["score"])
+            exam_date = str(merged["exam_date"] or "").strip()
+            note = str(merged["note"] or "")
+            paper_id = str(merged["paper_id"] or "").strip()
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=422, detail="user/level/score/exam_date 须合法")
+        if not user:
+            raise HTTPException(status_code=422, detail="user 须指定学生账号")
+        try:
+            rec = vocab_exam.update(
+                exam_id, user, level, score, exam_date, note, paper_id)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        if rec is None:
+            raise HTTPException(status_code=404, detail=f"记录 id={exam_id} 不存在")
+        out = {
+            "exam": rec,
+            "unlocked_level": vocab_exam.unlocked_level(rec["user"]),
+            "level_configured": vocab_exam.level_configured(rec["user"]),
+            "passed": int(rec["score"]) >= 80,
+        }
+        if rec["user"] != current["user"]:
+            out["previous_user"] = current["user"]
+            out["previous_unlocked_level"] = vocab_exam.unlocked_level(current["user"])
+        return _ok(out)
 
     @app.get("/vocab-papers/grading")
     def vocab_papers_grading(request: "fastapi.Request", level: int = -1):

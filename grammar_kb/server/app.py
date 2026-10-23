@@ -67,7 +67,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from ..homework_admin import HomeworkAdmin
     from .. import readingmore as _readingmore
     homework_admin = HomeworkAdmin()
-    # 词汇级别考试：成绩登记（fce.db）；L0 恒开，L{n} 考试 ≥80 解锁 L{n+1}
+    # 词汇级别考试：成绩登记（fce.db）。单词级别可由教师直接设定；
+    # 未设定时 L0 恒开，L{n} 考试 ≥80 解锁 L{n+1}
     vocab_exam = VocabExamStore(fce_db_path)
     # 泛读馆（整本书英文泛读）：路径解析沿 fce_query 模式
     # （GRAMMAR_KB_LIBRARY_DB/GRAMMAR_KB_LIBRARY_DIR → data/）
@@ -127,7 +128,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     _STUDENT_ALLOW = (
         ("GET", "/stats"),
         ("GET", "/vocabulary"),
-        ("GET", "/vocab-levels"),  # 分层词库（背单词 L0-L7；解锁由词汇考试驱动）
+        ("GET", "/vocab-levels"),  # 分层词库（背单词；学生可见范围=教师设定的单词级别）
         ("GET", "/vocab-exams"),  # 学生看自己的考试状态（已过级别/解锁到哪级）
         ("GET", "/dict/"),
         ("GET", "/exams"),
