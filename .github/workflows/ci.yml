@@ -24,7 +24,8 @@ jobs:
         run: uv sync --extra server --dev
 
       - name: Ruff lint
-        run: uvx ruff check .
+        # 版本钉在 uv.lock（dev 依赖），不用浮动的 uvx ruff。
+        run: uv run ruff check .
 
       - name: Pytest
         # CI 无真实库（data/*.db 均为本地构建产物，被 .gitignore 排除）：

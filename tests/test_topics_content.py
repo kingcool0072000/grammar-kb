@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from pathlib import Path
 
 from grammar_kb.topics import TopicStore
@@ -59,8 +60,58 @@ def test_student_visibility_and_progress(tmp_path):
     assert "lecture-29-passive-1" in ids
     ids_other = [t["topic_id"] for t in store.list_topics(viewer="mxy", role="student")]
     assert "lecture-29-passive-1" not in ids_other
-    # 进度落行
+    # 进度落行：只做了一部分不算完成
     rec = store.put("malin", "lecture-29-passive-1", ["what", "steps"],
                     assigned_user="malin")
     assert rec["done_keys"] == ["steps", "what"]
-    assert rec["completed_at"]
+    assert rec["completed_at"] == ""
+    all_keys = ["what", "transitive", "steps", "tenses", "usage", "final"]
+    done = store.put("malin", "lecture-29-passive-1", all_keys,
+                     assigned_user="malin")
+    assert done["completed_at"]
+    stamp = done["completed_at"]
+    again = store.put("malin", "lecture-29-passive-1", all_keys,
+                      assigned_user="malin")
+    assert again["completed_at"] == stamp
+    partial = store.put("malin", "lecture-29-passive-1", all_keys[:-1],
+                        assigned_user="malin")
+    assert partial["completed_at"] == ""
+    redone = store.put("malin", "lecture-29-passive-1", all_keys,
+                       assigned_user="malin")
+    # 清空后再盖满会重新记时间（同一秒内两次 now 可能相同，只要求非空）
+    assert redone["completed_at"]
+
+
+def test_legacy_partial_stamp_cleared_full_stamp_kept(tmp_path):
+    """旧行：只做一部分却有 completed_at 的，打开库时清掉。
+
+    已经做完全部节点的行保留原时间戳，周学分不搬家。
+    """
+    data = json.loads(_TOPIC_JSON.read_text(encoding="utf-8"))
+    store = _store(tmp_path)
+    store.upsert_topic(data["meta"], data["content"])
+    all_keys = ["what", "transitive", "steps", "tenses", "usage", "final"]
+    old_full = "2026-09-01T08:00:00+00:00"
+    old_partial = "2026-09-02T08:00:00+00:00"
+    con = sqlite3.connect(tmp_path / "fce.db")
+    con.execute(
+        "INSERT INTO topic_progress"
+        " (user, topic_id, done_keys, completed_at, updated_at)"
+        " VALUES ('malin', 'lecture-29-passive-1', ?, ?, ?)",
+        (json.dumps(all_keys), old_full, old_full),
+    )
+    con.execute(
+        "INSERT INTO topic_progress"
+        " (user, topic_id, done_keys, completed_at, updated_at)"
+        " VALUES ('mxy', 'lecture-29-passive-1', ?, ?, ?)",
+        (json.dumps(["what"]), old_partial, old_partial),
+    )
+    con.commit()
+    con.close()
+
+    reopened = _store(tmp_path)
+    kept = reopened.get("malin", "lecture-29-passive-1")
+    cleared = reopened.get("mxy", "lecture-29-passive-1")
+    assert kept["completed_at"] == old_full
+    assert cleared["completed_at"] == ""
+    assert cleared["done_keys"] == ["what"]

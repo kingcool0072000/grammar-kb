@@ -1078,7 +1078,8 @@ const Stats = {
   _sentLookupN: 0, _sending: false,
   begin(){
     const now = Date.now();
-    this.cur = { id: 's'+now.toString(36)+Math.random().toString(36).slice(2,6), start: now, end: now,
+    // 新会话用 UUID。服务端仍接受旧的「s+时间戳」id，进行中的会话可以继续心跳。
+    this.cur = { id: (globalThis.crypto && typeof crypto.randomUUID === 'function') ? crypto.randomUUID() : ('s'+now.toString(36)+Math.random().toString(36).slice(2,10)), start: now, end: now,
       totalMs: 0, focusMs: 0, engagedMs: 0,
       pageMs: {}, lookups: [], youdao: [], clicks: {}, turns: {}, turnN: 0,
       zooms: {}, vocab: {add:0, del:0, export:0, clear:0}, path: [] };

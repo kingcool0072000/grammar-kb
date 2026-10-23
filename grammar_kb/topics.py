@@ -3,7 +3,8 @@
 设计意图：
 - 专题内容（手册 HTML/讲解）在前端静态打包，后端只管「谁在哪个专题学完了
   哪些主题」。一条 (user, topic_id) 一行，done_keys 存主题 key 的 JSON 数组，
-  PUT 幂等覆盖；历史 key 不丢（completed_at 记首次时间，重置后可再学）。
+  PUT 幂等覆盖。completed_at 只表示「全部节点都完成」的首次时间；
+  少做任一节点则清空，再次全部完成会记新时间。
 - 专题对学生的可见性由表内 assignment 决定：assigned_user 为空＝全学生可见，
   指定用户＝仅该用户（本专题绑定 malin）。学生 GET 只能看到自己的专题；
   教师可看全部，用于跟进。
@@ -45,6 +46,23 @@ CREATE INDEX IF NOT EXISTS idx_topic_progress_user ON topic_progress(user, topic
 """
 
 
+def node_keys_from_content(content_json: str) -> set[str]:
+    """专题内容全部节点 key。坏 JSON 抛 ValueError/TypeError，由调用方决定。"""
+    data = json.loads(content_json or "{}")
+    keys: set[str] = set()
+
+    def walk(nodes) -> None:
+        for n in nodes or []:
+            if isinstance(n, dict):
+                k = str(n.get("key") or "").strip()
+                if k:
+                    keys.add(k)
+                walk(n.get("children"))
+
+    walk(data.get("nodes"))
+    return keys
+
+
 class TopicStore:
     """topic_progress 读写 + topic_content（v2 结构化专题）读写。"""
 
@@ -61,6 +79,9 @@ class TopicStore:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         conn.executescript(SCHEMA)
+        if self._migrate_completed_meaning(conn):
+            # __init__ 只 close() 不进 with，不提交的话迁移会回滚
+            conn.commit()
         return conn
 
     # ---- 读取 ----
@@ -101,8 +122,10 @@ class TopicStore:
     ) -> dict:
         """幂等覆盖某用户某专题的已完成主题集合。
 
-        done_keys 去重排序后存 JSON；全部主题完成时记 completed_at
-        （已有值不覆盖，重置后再学完会更新为新一轮时间）。
+        done_keys 去重排序后存 JSON。completed_at 表示全部节点已完成：
+        覆盖全部节点且原先为空时记 now；已有时间戳不覆盖（已完成的行留在
+        原来的完成周，避免周学分搬家）；任一节点未完成则清空，下次再盖满
+        会记新时间。没有专题内容、无法知道节点全集时不记 completed_at。
         assigned_user 仅在首次落行时写入（内容归属由前端静态清单声明，
         后端不重复维护）。
         """
@@ -119,9 +142,11 @@ class TopicStore:
                 (user, topic_id),
             ).fetchone()
             assigned = (old["assigned_user"] if old else "") or (assigned_user or "").strip()[:60]
-            completed_at = (old["completed_at"] if old else "") or ""
-            if not completed_at and keys:
-                completed_at = now  # 首次有完成项即记；全清空则保留历史
+            prev = (old["completed_at"] if old else "") or ""
+            if self._fully_done(conn, topic_id, keys):
+                completed_at = prev or now
+            else:
+                completed_at = ""
             conn.execute(
                 "INSERT OR REPLACE INTO topic_progress"
                 " (user, topic_id, assigned_user, done_keys, completed_at, updated_at)"
@@ -134,6 +159,55 @@ class TopicStore:
                 (user, topic_id),
             ).fetchone()
         return _out(row)
+
+    def _fully_done(self, conn: sqlite3.Connection, topic_id: str, keys: list[str]) -> bool:
+        """done_keys 是否盖住该专题的全部节点。内容缺失或坏 JSON = 未完成。"""
+        row = conn.execute(
+            "SELECT content FROM topic_content WHERE topic_id = ?",
+            (topic_id,)).fetchone()
+        if row is None:
+            return False
+        try:
+            need = node_keys_from_content(row["content"])
+        except (ValueError, TypeError, AttributeError):
+            return False
+        return bool(need) and set(keys) >= need
+
+    def _migrate_completed_meaning(self, conn: sqlite3.Connection) -> bool:
+        """把「做了第一项就盖章」的旧行清成未完成。
+
+        已盖住全部节点的行保留原来的 completed_at，历史周学分留在原周，
+        不因为这次改口径而搬家。没有专题内容、判断不了节点全集的行也不动。
+        返回是否写过库。
+        """
+        try:
+            rows = conn.execute(
+                "SELECT user, topic_id, done_keys FROM topic_progress"
+                " WHERE COALESCE(completed_at, '') != ''"
+            ).fetchall()
+        except sqlite3.Error:
+            return False
+        changed = False
+        for r in rows:
+            content = conn.execute(
+                "SELECT content FROM topic_content WHERE topic_id = ?",
+                (r["topic_id"],)).fetchone()
+            if content is None:
+                continue
+            try:
+                need = node_keys_from_content(content["content"])
+                done = set(json.loads(r["done_keys"] or "[]"))
+            except (ValueError, TypeError, AttributeError):
+                continue
+            if not need or done >= need:
+                continue
+            conn.execute(
+                "UPDATE topic_progress SET completed_at = ''"
+                " WHERE user = ? AND topic_id = ?",
+                (r["user"], r["topic_id"]),
+            )
+            changed = True
+        return changed
 
     # ================= v2 结构化专题内容 =================
 
