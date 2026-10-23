@@ -492,12 +492,32 @@ async function mountExamGrading(host, students) {
   const list = host.querySelector('.gcard-list')
   const countEl = host.querySelector('#geg-count')
   let papers = []
+  // 混合卷登记级别默认 = 所选学生当前解锁级别（vocab_exam.record 拒绝 level=-1）
+  const unlockByUser = new Map()
   try {
-    papers = (await api.vocabPaperGrading()).papers || []
+    const [grading, pairs] = await Promise.all([
+      api.vocabPaperGrading(),
+      Promise.all((students || []).map(async (s) => {
+        try {
+          const d = await api.vocabExams({ user: s })
+          const n = Number(d.unlocked_level)
+          return [s, Number.isFinite(n) ? n : 0]
+        } catch {
+          return [s, 0]
+        }
+      })),
+    ])
+    papers = grading.papers || []
+    for (const [s, n] of pairs) unlockByUser.set(s, n)
   } catch {
     list.innerHTML = '<p class="reading-hint">试卷列表加载失败（可刷新重试）。</p>'
     countEl.textContent = '—'
     return
+  }
+  const registerLevel = (user) => {
+    const n = Number(unlockByUser.get(user))
+    if (!Number.isFinite(n)) return 0
+    return Math.max(0, Math.min(7, Math.round(n)))
   }
   const pending = papers.filter((p) => !(p.exams || []).length)
   countEl.textContent = `${pending.length} 卷待打分`
@@ -508,12 +528,16 @@ async function mountExamGrading(host, students) {
   }
 
   const today = todayIso()
+  const levelOpts = (selected) => [0, 1, 2, 3, 4, 5, 6, 7].map((n) =>
+    `<option value="${n}" ${n === selected ? 'selected' : ''}>L${n}</option>`).join('')
   const rowHtml = (p) => {
     const graded = (p.exams || [])
+    const isMix = Number(p.level) < 0 || String(p.paper_id || '').startsWith('MIX-')
+    const defaultLv = registerLevel(students[0])
     return `
     <div class="geg-row ${graded.length ? 'graded' : ''}" data-pid="${escapeHtml(p.paper_id)}">
       <div class="geg-info">
-        <b>L${p.level} 卷 ${escapeHtml(p.paper_id)}</b>
+        <b>${isMix ? '🧩 已学混合卷' : `L${p.level} 卷`} ${escapeHtml(p.paper_id)}</b>
         <span>${p.count} 词 · ${escapeHtml((p.created_at || '').slice(0, 10))}</span>
       </div>
       <div class="geg-grades">
@@ -525,6 +549,12 @@ async function mountExamGrading(host, students) {
         <select class="geg-user" data-pid="${escapeHtml(p.paper_id)}">
           ${students.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
         </select>
+        ${isMix ? `
+        <label class="geg-lv-wrap">登记到
+          <select class="geg-lv" data-pid="${escapeHtml(p.paper_id)}" title="混合卷跨级别。默认该生当前解锁级别；成绩按所选级别登记，≥80 解锁下一级">
+            ${levelOpts(defaultLv)}
+          </select>
+        </label>` : ''}
         <input class="geg-score" type="number" min="0" max="100" placeholder="分数" data-pid="${escapeHtml(p.paper_id)}">
         <input class="geg-date" type="date" value="${today}" data-pid="${escapeHtml(p.paper_id)}">
         <button class="reading-btn small primary" data-geg="${escapeHtml(p.paper_id)}" data-lv="${p.level}">登记</button>
@@ -533,12 +563,21 @@ async function mountExamGrading(host, students) {
   }
   list.innerHTML = papers.map(rowHtml).join('')
 
+  // 换学生时，混合卷登记级别跟着该生当前解锁级别走
+  list.addEventListener('change', (e) => {
+    const userSel = e.target.closest('.geg-user')
+    if (!userSel) return
+    const lvSel = userSel.closest('.geg-row')?.querySelector('.geg-lv')
+    if (!lvSel) return
+    lvSel.value = String(registerLevel(userSel.value))
+  })
+
   // 登记按钮：list 级事件委托（行替换后监听不丢）
   list.addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-geg]')
     if (!btn) return
     const pid = btn.dataset.geg
-    const lv = Number(btn.dataset.lv)
+    let lv = Number(btn.dataset.lv)
     const row = list.querySelector(`.geg-row[data-pid="${CSS.escape(pid)}"]`)
     const user = row.querySelector('.geg-user').value
     const score = Number(row.querySelector('.geg-score').value)
@@ -546,6 +585,13 @@ async function mountExamGrading(host, students) {
     if (!user) return alert('请选择学生')
     if (!(score >= 0 && score <= 100)) return alert('分数须为 0-100')
     if (!date) return alert('请选择考试日期')
+    // 混合卷（lv<0 或 MIX）：用行内所选级别登记，否则 record 会 422
+    const lvSel = row.querySelector('.geg-lv')
+    if (lvSel || lv < 0) {
+      if (!lvSel) return alert('混合卷须选择登记级别（L0–L7）')
+      lv = Number(lvSel.value)
+      if (!(lv >= 0 && lv <= 7)) return alert('混合卷须选择登记级别（L0–L7）')
+    }
     btn.disabled = true
     btn.textContent = '登记中…'
     try {

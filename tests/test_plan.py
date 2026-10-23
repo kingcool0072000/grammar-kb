@@ -869,3 +869,39 @@ def test_day_completion_is_the_done_exit(plan_env, weekday_clock):
     td = ps.today_tasks("malin", day)
     lec = next(t for t in td["tasks"] if t.get("key") == "lecture:29")
     assert lec["done"] is True and lec["why"] == "signal"
+
+
+def test_mix_paper_sunday_copy(plan_env):
+    """MIX 卷周日任务写成「已学混合卷」，不出现「L-1 级试卷」。卷号完成判定不动。"""
+    from grammar_kb.plan import PlanStore
+    from grammar_kb.plan.schedule import paper_task_detail
+    assert paper_task_detail(-1).startswith("已学混合卷")
+    assert "L-1" not in paper_task_detail(-1)
+    assert paper_task_detail(3).startswith("L3 级试卷")
+    assert paper_task_detail(None).startswith("试卷资产")
+
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    mix_id = "MIX-20261023010101-1111"
+    lvl_id = "L3-20261023010101-2222"
+    c.put(f"/plan/weeks/{MON}", headers=ht, json={
+        "tasks": {"vocab_papers": [mix_id, lvl_id, "MIX-missing"]}, "notes": ""})
+    con = sqlite3.connect(plan_env / "fce.db")
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS vocab_paper_history ("
+        " id INTEGER PRIMARY KEY AUTOINCREMENT, level INTEGER NOT NULL,"
+        " paper_id TEXT NOT NULL UNIQUE, words TEXT NOT NULL, created_at TEXT)")
+    con.executemany(
+        "INSERT INTO vocab_paper_history (level, paper_id, words, created_at)"
+        " VALUES (?,?,?,?)",
+        [(-1, mix_id, "[]", "2026-10-23"), (3, lvl_id, "[]", "2026-10-23")])
+    con.commit()
+    con.close()
+    ps = PlanStore(str(plan_env / "fce.db"))
+    sun = (date.fromisoformat(MON) + timedelta(days=6)).isoformat()
+    tasks = {t["key"]: t for t in ps.week_daily_tasks(MON, for_date=sun, user="malin")}
+    assert tasks[f"paper:{mix_id}"]["detail"].startswith("已学混合卷")
+    assert "L-1" not in tasks[f"paper:{mix_id}"]["detail"]
+    assert tasks[f"paper:{mix_id}"]["text"] == f"单词试卷练习（{mix_id}）"
+    assert tasks[f"paper:{lvl_id}"]["detail"].startswith("L3 级试卷")
+    assert tasks["paper:MIX-missing"]["detail"].startswith("试卷资产")

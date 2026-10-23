@@ -11,6 +11,9 @@ from .http import _ok, _html_response, _require_teacher
 
 def register_vocab(app, ctx):
     vocab_exam = ctx.vocab_exam
+    # 试卷历史与背词进度同库（fce.db）。路径从 store 取，不闭包
+    # create_app 的局部变量。
+    paper_db = vocab_exam.db_path
 
     # ---- 词汇级别考试（线下考卷 + 成绩登记；考试驱动解锁） ----
 
@@ -18,15 +21,27 @@ def register_vocab(app, ctx):
 
     @app.post("/vocab-papers/generate")
     def vocab_paper_generate(rec: dict, request: "fastapi.Request"):
-        """生成一份级别考试卷（三题型+历史去重）。save=0 仅预览。教师专属。"""
+        """生成一份考试卷（三题型+历史去重）。save=0 仅预览。教师专属。
+
+        scope="level"（默认）本级出题；scope="learned" 按某学生已学词
+        （进度里出现过的词，含未掌握）跨级别混合出题，须带 user。
+        learned 仍要求 body.level 为 0-7（占位，不决定词池）。
+        """
         _require_teacher(request)
         from ..vocab_paper import generate_paper, render_new_paper_html
         level = rec.get("level") if isinstance(rec, dict) else None
         if not isinstance(level, int) or not (0 <= level <= 7):
             raise HTTPException(status_code=422, detail="level 须为 0-7 整数")
         save = bool(rec.get("save", True)) if isinstance(rec, dict) else True
+        scope = str(rec.get("scope") or "level") if isinstance(rec, dict) else "level"
+        user = str(rec.get("user") or "").strip() if isinstance(rec, dict) else ""
+        if scope not in ("level", "learned"):
+            raise HTTPException(status_code=422, detail="scope 须为 level 或 learned")
+        if scope == "learned" and not user:
+            raise HTTPException(status_code=422, detail="learned 范围须指定 user（学生账号）")
         try:
-            paper = generate_paper(level, save=save)
+            paper = generate_paper(level, save=save, scope=scope,
+                                   user=user or None, fce_db_path=paper_db)
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
         return _ok({"paper": paper,
@@ -38,7 +53,8 @@ def register_vocab(app, ctx):
         _require_teacher(request)
         from ..vocab_paper import save_paper
         try:
-            return _ok(save_paper(rec if isinstance(rec, dict) else {}))
+            return _ok(save_paper(rec if isinstance(rec, dict) else {},
+                                  fce_db_path=paper_db))
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
 
@@ -47,7 +63,7 @@ def register_vocab(app, ctx):
         """删除一份试卷资产。教师专属。"""
         _require_teacher(request)
         from ..vocab_paper import delete_paper
-        if not delete_paper(paper_id):
+        if not delete_paper(paper_id, fce_db_path=paper_db):
             raise HTTPException(status_code=404, detail="试卷不存在")
         return _ok({"deleted": paper_id})
 
@@ -56,7 +72,7 @@ def register_vocab(app, ctx):
         """预览一份历史卷（完整 HTML）。教师专属。"""
         _require_teacher(request)
         from ..vocab_paper import get_paper, render_new_paper_html
-        paper = get_paper(paper_id)
+        paper = get_paper(paper_id, fce_db_path=paper_db)
         if not paper:
             raise HTTPException(status_code=404, detail="试卷不存在")
         return _ok({"paper": {
@@ -68,11 +84,18 @@ def register_vocab(app, ctx):
 
     @app.get("/vocab-papers/history")
     def vocab_paper_history(request: "fastapi.Request", level: int = -1,
-                            limit: int = 30):
-        """已生成试卷历史（去重追溯/复用）。教师专属。"""
+                            limit: int = 80, include_mix: bool = False):
+        """已生成试卷历史（去重追溯/复用）。教师专属。
+
+        level>=0 且 include_mix=1：返回该级 + 混合卷（level<0），
+        两桶各自按 limit 取，避免本级卷被其它级别挤出窗口。
+        """
         _require_teacher(request)
         from ..vocab_paper import list_paper_history
-        items = list_paper_history(None if level < 0 else level, limit=limit)
+        items = list_paper_history(
+            None if level < 0 else level, limit=limit,
+            fce_db_path=paper_db,
+            include_mix=bool(include_mix) and level >= 0)
         return _ok({"papers": items})
 
     @app.get("/vocab-exams/unlock")
@@ -138,7 +161,8 @@ def register_vocab(app, ctx):
         """批改中心·考试打分：已存档试卷 + 每卷已登记成绩（教师专属）。"""
         _require_teacher(request)
         from ..vocab_paper import list_paper_history
-        papers = list_paper_history(None if level < 0 else level, limit=50)
+        papers = list_paper_history(
+            None if level < 0 else level, limit=50, fce_db_path=paper_db)
         by_paper = vocab_exam.exams_for_papers([p["paper_id"] for p in papers])
         out = []
         for p in papers:

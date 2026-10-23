@@ -8,6 +8,19 @@ from typing import Optional
 
 from ..clock import monday_of, today_cn, week_bounds
 from .util import _short, _task_key, add_days
+
+
+def paper_task_detail(level: Optional[int]) -> str:
+    """周日试卷任务说明。混合卷 level<0 写成「已学混合卷」，避免「L-1 级试卷」。"""
+    if level is None:
+        head = "试卷资产"
+    elif int(level) < 0:
+        head = "已学混合卷"
+    else:
+        head = f"L{int(level)} 级试卷"
+    return head + " · 线下完成后到词汇考试登记"
+
+
 class ScheduleMixin:
 
     def week_daily_tasks(self, week_start: str, for_date: Optional[str] = None,
@@ -156,8 +169,7 @@ class ScheduleMixin:
                 tasks.append({
                     "type": "paper", "key": f"paper:{pid}",
                     "text": f"单词试卷练习（{pid}）",
-                    "detail": (f"L{plv} 级试卷" if plv is not None else "试卷资产")
-                              + " · 线下完成后到词汇考试登记",
+                    "detail": paper_task_detail(plv),
                 })
             # 周日泛读兜底：周六前（含周六）仍未读完的剩余量周日一天清
             for book_key, pct in (t.get("reading") or {}).items():

@@ -1,6 +1,7 @@
 """词汇级别考试测试：解锁规则 / 成绩登记 / 考卷生成 / 权限。"""
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 
@@ -162,3 +163,170 @@ def test_paper_generation(vex_env, monkeypatch):
     assert [w["word"] for w in p1["words"]] == [w["word"] for w in p2["words"]]
     assert len(p1["words"]) == 50
     assert render_paper_html(p1).startswith("<!DOCTYPE html>")
+
+
+def _fake_rich(names):
+    """测试用富词条：不读 grammar.db。"""
+    return {
+        w: {"word": w, "pos": '["n"]', "pos_list": ["n"],
+            "pos_cn": "n. 名词", "gloss": "义", "gloss_clean": "义"}
+        for w in names
+    }
+
+
+def _insert_hist(db, level, paper_id, words):
+    from grammar_kb.vocab_exam import VocabExamStore
+    from grammar_kb.vocab_paper import _HISTORY_TABLE_SQL
+    store = VocabExamStore(db)
+    with store._connect() as conn:
+        conn.execute(_HISTORY_TABLE_SQL)
+        conn.execute(
+            "INSERT OR REPLACE INTO vocab_paper_history"
+            " (level, paper_id, words, created_at) VALUES (?,?,?,?)",
+            (level, paper_id, json.dumps(words), "2026-01-01T00:00:00"),
+        )
+
+
+def test_mix_history_buckets_and_save(tmp_path):
+    """本级 + 混合卷分桶取回；大量其它级别不能把本级或 MIX 挤出窗口。"""
+    from grammar_kb.vocab_paper import list_paper_history, save_paper
+    db = str(tmp_path / "fce.db")
+    words = [f"w{i:02d}" for i in range(50)]
+    save_paper({"paper_id": "L0-20260101010101-1000", "words": words,
+                "created_at": "2026-01-01T00:00:00"}, fce_db_path=db)
+    save_paper({"paper_id": "MIX-20260101010101-1001", "words": words,
+                "created_at": "2026-01-01T00:00:01"}, fce_db_path=db)
+    for i in range(30):
+        save_paper({
+            "paper_id": f"L2-20260101010101-{2000 + i}",
+            "words": words, "created_at": "2026-01-02T00:00:00",
+        }, fce_db_path=db)
+    only = list_paper_history(0, limit=5, fce_db_path=db)
+    assert [p["paper_id"] for p in only] == ["L0-20260101010101-1000"]
+    both = list_paper_history(0, limit=5, fce_db_path=db, include_mix=True)
+    ids = {p["paper_id"] for p in both}
+    assert "L0-20260101010101-1000" in ids
+    assert "MIX-20260101010101-1001" in ids
+    assert all(p["level"] in (0, -1) for p in both)
+    with pytest.raises(ValueError):
+        save_paper({"paper_id": "MIX-short", "words": ["a"]}, fce_db_path=db)
+    with pytest.raises(ValueError):
+        save_paper({"paper_id": "NOPE-1", "words": words}, fce_db_path=db)
+
+
+def test_learned_dedup_ignores_level_papers(tmp_path, monkeypatch):
+    """learned 只跟先前 MIX（level<0）去重；本级卷用过的词不抽干混合卷。
+
+    反过来，level 范围仍只跟本级历史去重，不看 MIX。
+    """
+    import grammar_kb.vocab_paper as vp
+    words = [f"w{i:03d}" for i in range(80)]
+    rich = list(_fake_rich(words).values())
+    monkeypatch.setattr(vp, "_load_learned_words", lambda user, fce_db_path=None: rich)
+    monkeypatch.setattr(vp, "_load_words_rich", lambda level: rich)
+    db = str(tmp_path / "fce.db")
+    _insert_hist(db, 0, "L0-20260101010101-3000", words)
+    paper = vp.generate_paper(1, save=False, scope="learned", user="malin",
+                              fce_db_path=db)
+    assert paper["paper_id"].startswith("MIX-")
+    assert paper["level"] == -1 and paper["scope"] == "learned"
+    assert paper["user"] == "malin"
+    assert paper["overlap_with_history"] == 0
+    assert len(paper["words"]) == 50
+    assert set(paper["words"]) <= set(words)
+    # 先前 MIX 已覆盖全部词池 → 再出一卷应因重复超限失败
+    _insert_hist(db, -1, "MIX-20260101010101-3001", words)
+    with pytest.raises(ValueError, match="重复"):
+        vp.generate_paper(1, save=False, scope="learned", user="malin",
+                          fce_db_path=db)
+    # level 范围不看 MIX：清掉本级历史后，只剩 MIX 覆盖也不挡本级
+    from grammar_kb.vocab_exam import VocabExamStore
+    with VocabExamStore(db)._connect() as conn:
+        conn.execute("DELETE FROM vocab_paper_history WHERE level = 0")
+    level_paper = vp.generate_paper(0, save=False, fce_db_path=db)
+    assert level_paper["paper_id"].startswith("L0-")
+    assert level_paper["overlap_with_history"] == 0
+    # 本级历史仍按原口径去重
+    _insert_hist(db, 0, "L0-20260101010101-3002", words)
+    with pytest.raises(ValueError, match="重复"):
+        vp.generate_paper(0, save=False, fce_db_path=db)
+
+
+def test_paper_generate_learned_scope(vex_env, monkeypatch):
+    """learned：进度里出现过的词（含未掌握）跨级出卷；登记须选 0-7 级。"""
+    import grammar_kb.vocab_paper as vp
+    monkeypatch.setattr(
+        vp, "_load_words_by_names",
+        lambda names: _fake_rich([n for n in names if n]))
+    c = _client(vex_env)
+    ht = _login(c, "teacher", "123456")
+    db = str(vex_env / "fce.db")
+    learned = [f"got{i:03d}" for i in range(80)]
+    other = [f"other{i:03d}" for i in range(10)]
+    with sqlite3.connect(db) as con:
+        con.execute(
+            "CREATE TABLE IF NOT EXISTS recite_word_progress ("
+            " user TEXT NOT NULL, word TEXT NOT NULL, level INTEGER,"
+            " right INTEGER NOT NULL DEFAULT 0, wrong INTEGER NOT NULL DEFAULT 0,"
+            " mastered_at TEXT, last_seen TEXT, PRIMARY KEY (user, word))")
+        # 已学 = 进度里出现过即可，这里全部未掌握（mastered_at 空）
+        con.executemany(
+            "INSERT OR REPLACE INTO recite_word_progress"
+            " (user, word, level, right, wrong, mastered_at, last_seen)"
+            " VALUES (?,?,?,?,?,?,datetime('now'))",
+            [("malin", w, 0, 0, 1, None) for w in learned]
+            + [("other", w, 1, 3, 0, "2026-01-01") for w in other])
+    # 本级卷用过全部已学词，也不应挡住 MIX
+    _insert_hist(db, 0, "L0-20260101010101-4000", learned)
+    r = c.post("/vocab-papers/generate", headers=ht, json={
+        "level": 1, "save": False, "scope": "learned", "user": "malin"})
+    assert r.status_code == 200, r.text
+    p = r.json()["data"]["paper"]
+    assert p["paper_id"].startswith("MIX-") and p["level"] == -1
+    assert p["scope"] == "learned" and p["user"] == "malin"
+    assert len(p["words"]) == 50 and p["overlap_with_history"] == 0
+    assert set(p["words"]) <= set(learned)
+    assert set(p["words"]).isdisjoint(other)
+    assert "已学全部混合卷" in r.json()["data"]["html"]
+    r2 = c.post("/vocab-papers/save", headers=ht, json=p)
+    assert r2.status_code == 200, r2.text
+    assert r2.json()["data"]["level"] == -1
+    r3 = c.get(f"/vocab-papers/{p['paper_id']}/preview", headers=ht)
+    assert r3.status_code == 200
+    assert "已学全部混合卷" in r3.json()["data"]["html"]
+    # 指定级别时默认不含 MIX；include_mix 把混合卷带上
+    plain = c.get("/vocab-papers/history", headers=ht,
+                  params={"level": 1, "limit": 20})
+    assert plain.status_code == 200
+    assert all(x["paper_id"] != p["paper_id"]
+               for x in plain.json()["data"]["papers"])
+    mixed = c.get("/vocab-papers/history", headers=ht,
+                  params={"level": 0, "include_mix": True, "limit": 5})
+    assert mixed.status_code == 200
+    got = {x["paper_id"]: x["level"] for x in mixed.json()["data"]["papers"]}
+    assert got.get(p["paper_id"]) == -1
+    assert got.get("L0-20260101010101-4000") == 0
+    # 混合卷不能按 level=-1 登记；选一个 0-7 级可以，并出现在批改列表
+    assert c.post("/vocab-exams", headers=ht, json={
+        "user": "malin", "level": -1, "score": 88,
+        "exam_date": "2026-10-11", "paper_id": p["paper_id"],
+    }).status_code == 422
+    ok = c.post("/vocab-exams", headers=ht, json={
+        "user": "malin", "level": 2, "score": 88,
+        "exam_date": "2026-10-11", "paper_id": p["paper_id"],
+    })
+    assert ok.status_code == 200, ok.text
+    grading = c.get("/vocab-papers/grading", headers=ht).json()["data"]["papers"]
+    row = next(x for x in grading if x["paper_id"] == p["paper_id"])
+    assert row["level"] == -1
+    assert any(e["user"] == "malin" and e["level"] == 2 and e["score"] == 88
+               for e in row["exams"])
+    assert c.post("/vocab-papers/generate", headers=ht, json={
+        "level": 1, "scope": "learned"}).status_code == 422
+    assert c.post("/vocab-papers/generate", headers=ht, json={
+        "level": 1, "scope": "mixed"}).status_code == 422
+    assert c.post("/vocab-papers/generate", headers=ht, json={
+        "level": 1, "scope": "learned", "user": "ghost"}).status_code == 422
+    hs = _login(c, "malin", "123456")
+    assert c.post("/vocab-papers/generate", headers=hs, json={
+        "level": 1, "scope": "learned", "user": "malin"}).status_code == 403

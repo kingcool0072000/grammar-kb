@@ -1,6 +1,10 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
 
+function vocabPaperHead(level) {
+  return Number(level) < 0 ? '已学混合卷' : `L${level}`
+}
+
 // 教师版 · 学生管理：增删学生账号 + 给每个学生配置学习总目标。
 // 目标结构复用 /plan/goals（词汇/讲次/FCE/截止日），讲次下拉来自备课内容。
 export async function mountStudents(el, { bare = false } = {}) {
@@ -187,7 +191,7 @@ export async function mountStudents(el, { bare = false } = {}) {
 
         <div class="pe-sec"><h4>📝 单词考试试卷 <i>关联已生成的试卷资产</i><button type="button" class="chip sg-all" data-all="paper">全选</button></h4>
           <div class="pe-fce-parts">${papers.map((x) => `
-            <button type="button" class="pe-part" data-sg-paper="${escapeHtml(x.paper_id)}">L${x.level} · ${x.paper_id.slice(-8)}<i>${(x.created_at || '').slice(5, 10)}</i></button>`).join('') || '<p class="muted">尚未生成试卷（备课中心-背单词）</p>'}</div>
+            <button type="button" class="pe-part" data-sg-paper="${escapeHtml(x.paper_id)}">${vocabPaperHead(x.level)} · ${x.paper_id.slice(-8)}<i>${(x.created_at || '').slice(5, 10)}</i></button>`).join('') || '<p class="muted">尚未生成试卷（备课中心-背单词）</p>'}</div>
         </div>
 
         <label class="plan-field">冲刺截止日期
