@@ -20,8 +20,34 @@ def _paper_short(paper: str) -> str:
 def add_days(iso_str: str, n: int) -> str:
     return (date.fromisoformat(iso_str) + timedelta(days=n)).isoformat()
 
+
+def completion_percent(done: int, total: int) -> Optional[int]:
+    """已到任务的完成率。没有任务时返回 None，避免空清单被显示成 0%。
+
+    分子分母必须来自 ``day_completion`` / ``today_tasks``。
+    ``plan_day_checks`` 不参与这个数。
+    """
+    total_n = int(total or 0)
+    if total_n <= 0:
+        return None
+    return round(int(done or 0) / total_n * 100)
+
+
+def task_public(t: dict, *, future: bool = False) -> dict:
+    """周历 / 周清单对外的一条任务（带完成原因，方便界面说明为什么亮或不亮）。"""
+    return {
+        "key": t.get("key") or _task_key(t),
+        "text": t.get("text") or "",
+        "detail": t.get("detail"),
+        "type": t.get("type") or "plan",
+        "article_id": t.get("article_id"),
+        "done": False if future else bool(t.get("done")),
+        "why": "scheduled" if future else t.get("why"),
+    }
+
+
 def _task_key(t: dict) -> str:
-    """派生任务 → 稳定键（打卡表 task_key 口径）。"""
+    """派生任务 → 稳定键（与 plan_day_checks.task_key 同形，但打卡不进 done）。"""
     if t.get("key"):
         return str(t["key"])
     ty = t.get("type")

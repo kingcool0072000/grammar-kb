@@ -252,7 +252,7 @@ def register_plan(app, ctx):
     @app.get("/plan/today")
     def plan_today(request: "fastapi.Request", user: str = "malin",
                    day: Optional[str] = None):
-        """学生今日任务清单（内循环核心：派生 + 自动检测 + 手动打卡）。"""
+        """学生今日任务清单。完成只看学习信号，不看手动打卡。"""
         u = user if request.state.role == "teacher" else request.state.user
         try:
             return _ok(plan.today_tasks(user=u, day=day))
@@ -261,13 +261,16 @@ def register_plan(app, ctx):
 
     @app.get("/plan/week-todo")
     def plan_week_todo(request: "fastapi.Request", user: str = "malin"):
-        """学生周清单：本周目标 + 逐日完成矩阵。"""
+        """学生周清单：本周目标 + 逐日完成率（信号）+ 每条任务的 why。"""
         u = user if request.state.role == "teacher" else request.state.user
         return _ok(plan.week_todo(user=u))
 
     @app.post("/plan/day-check")
     def plan_day_check(request: "fastapi.Request", payload: dict):
-        """手动打卡/取消（学生本人；教师可代打卡）。"""
+        """写入 plan_day_checks。该表不参与 done / 完成率。
+
+        完成只看学习信号。这里只留教师或学生的干预记录，打卡不是完成的前提。
+        """
         auth_user = request.state.user
         is_teacher = request.state.role == "teacher"
         user = (payload.get("user") or "").strip() if isinstance(payload, dict) else ""
@@ -280,9 +283,32 @@ def register_plan(app, ctx):
             raise HTTPException(status_code=422, detail="user/day/task_key 必填")
         try:
             plan.put_day_check(user, day, task_key, on)
-            return _ok({"user": user, "day": day, "task_key": task_key, "on": on})
+            return _ok({
+                "user": user, "day": day, "task_key": task_key, "on": on,
+                "affects_done": False,
+                "note": "打卡不计入完成率；完成只看学习信号",
+            })
         except ValueError:
             raise HTTPException(status_code=422, detail="day 须为 YYYY-MM-DD")
+
+    @app.post("/plan/history-day")
+    def plan_history_freeze(request: "fastapi.Request", payload: dict):
+        """教师冻结某日快照。历史表是可选回填，不是每日完成流水。
+
+        不传 tasks：按当前完成判定原样冻住，不把未完成项改成完成。
+        传 tasks：只保存给出的行，服务端不补造任务或完成记录。
+        """
+        _require_teacher(request)
+        body = payload if isinstance(payload, dict) else {}
+        user = str(body.get("user") or "").strip()
+        day = str(body.get("day") or "").strip()
+        if not user or not day:
+            raise HTTPException(status_code=422, detail="user/day 必填")
+        tasks = body.get("tasks") if "tasks" in body else None
+        try:
+            return _ok(plan.freeze_history_day(user[:32], day, tasks))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
 
     # ---- 学情分析 · AI 周报（手动触发，分析上一自然周；教师专属） ----
 

@@ -7,7 +7,8 @@
 实现按主题拆在本包内（store / rules / actuals / schedule / completion /
 books / goals + goals_editor / focus + focus_track + focus_meta / …）。
 「今天」与周一起点走 :mod:`grammar_kb.clock`（固定北京时间），不看进程时区。
-某日哪些计划键算完成，只问 ``PlanStore.day_completion``。
+某日哪些计划键算完成，只问 ``PlanStore.day_completion``（学习信号）。
+``plan_day_checks`` 不参与。``plan_history_days`` 只是可选回填，不是每日流水。
 """
 from __future__ import annotations
 

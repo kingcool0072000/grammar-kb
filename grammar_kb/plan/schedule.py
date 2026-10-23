@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from typing import Optional
 
 from ..clock import monday_of, today_cn, week_bounds
-from .util import _short, _task_key, add_days
+from .util import _short, _task_key, add_days, completion_percent, task_public
 
 
 def paper_task_detail(level: Optional[int]) -> str:
@@ -257,14 +257,16 @@ class ScheduleMixin:
             return None
 
 
-    # ---- 内循环：学生今日任务 / 周清单（自动检测 + 手动打卡） ----
+    # ---- 内循环：学生今日任务 / 周清单（完成只看学习信号） ----
 
     def today_tasks(self, user: str = "malin", day: Optional[str] = None) -> dict:
         """学生某日的任务清单（内循环核心）。
 
         任务由本周 plan_weeks.tasks 派生（与教师驾驶舱「每日任务展开」
-        同一规则）。完成态只认 ``day_completion``——学生做了即亮，
-        不提供手动打卡（plan_day_checks 保留给教师端干预，不进 done）。
+        同一规则）。完成态只认 ``day_completion``——学生做了即亮。
+        ``plan_day_checks`` 不进 done，也不进 percent。
+        某日若已有 ``plan_history_days`` 快照，用快照代替派生清单
+        （可选回填，不是每日流水）。
         """
         d = day or today_cn().isoformat()
         ws = monday_of(date.fromisoformat(d)).isoformat()
@@ -296,8 +298,13 @@ class ScheduleMixin:
                     t2["detail"] = "读了：" + "、".join(dict.fromkeys(names))
             out.append(t2)
         done_n = sum(1 for x in out if x["done"])
+        frozen = historical is not None
         return {"date": d, "week_start": ws, "tasks": out,
-                "done": done_n, "total": len(out), "acts": acts_out}
+                "done": done_n, "total": len(out),
+                "percent": completion_percent(done_n, len(out)),
+                "basis": "history" if frozen else "signals",
+                "historical": frozen,
+                "acts": acts_out}
 
 
     def _signals_and_acts(self, user: str, day: str,
@@ -342,14 +349,25 @@ class ScheduleMixin:
             d = (date.fromisoformat(ws) + timedelta(days=i)).isoformat()
             if d > today_iso:
                 fut = self.week_daily_tasks(ws, for_date=d, user=user)
-                days.append({"date": d, "future": True,
-                             "done": 0, "total": len(fut)})
+                days.append({
+                    "date": d, "future": True,
+                    "done": 0, "total": len(fut),
+                    "percent": None,
+                    "basis": "signals",
+                    "tasks": [task_public(x, future=True) for x in fut],
+                })
                 continue
             td = self.today_tasks(user=user, day=d)
             days.append({
                 "date": d, "future": False,
                 "done": td["done"], "total": td["total"],
+                "percent": td["percent"],
+                "basis": td["basis"],
+                "tasks": [task_public(x) for x in td["tasks"]],
             })
+        past = [x for x in days if not x["future"]]
+        done_n = sum(x["done"] for x in past)
+        total_n = sum(x["total"] for x in past)
         return {
             "week_start": ws,
             "goals": {
@@ -361,4 +379,11 @@ class ScheduleMixin:
                 "focus_kps": t.get("focus_kps") or [],
             },
             "days": days,
+            "done": done_n,
+            "total": total_n,
+            "percent": completion_percent(done_n, total_n),
+            "completion_note": (
+                "完成率按学习信号自动计算，不看手动打卡。"
+                "plan_history_days 只在教师冻结过的日期替代信号，不是每日流水。"
+            ),
         }

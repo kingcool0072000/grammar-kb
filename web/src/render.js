@@ -33,6 +33,41 @@ export function todayIso() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/** 计划任务完成原因（day_completion.why）。界面用它说明为什么亮，不靠打卡。 */
+const TASK_WHY = {
+  history: '历史快照（回填，不是当天流水）',
+  goal_reached: '目标已达成',
+  session_match: '阅读会话对上这本书',
+  not_read: '当天没有读到这本书',
+  quota_met: '背词达到当日配额',
+  below_quota: '背词未达当日配额',
+  signal: '学习信号已记上',
+  no_signal: '还没有对应的学习信号',
+  scheduled: '还没到这一天',
+}
+
+const TASK_WHY_SHORT = {
+  history: '快照',
+  goal_reached: '达标',
+  session_match: '读过',
+  not_read: '未读',
+  quota_met: '配额够',
+  below_quota: '未达配额',
+  signal: '有记录',
+  no_signal: '无记录',
+  scheduled: '未到',
+}
+
+export function taskWhy(code) {
+  if (!code) return ''
+  return TASK_WHY[code] || String(code)
+}
+
+export function taskWhyShort(code) {
+  if (!code) return ''
+  return TASK_WHY_SHORT[code] || ''
+}
+
 /** 每日有效学习时长目标（分钟）：周中（周一~周五）45，周末（周六/日）90 */
 export function studyGoalMin(dateIso) {
   if (!dateIso) return 45
