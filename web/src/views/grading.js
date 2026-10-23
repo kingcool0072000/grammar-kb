@@ -409,7 +409,8 @@ export async function mountGrading(el) {
     </section>
     <section class="gcard gd-exam-grading" id="gd-exam-grading">
       <header class="gcard-head">
-        <h2>📝 考试打分 <i>单词试卷 · 线下考完手动登记</i></h2>
+        <h2>📝 考试打分 <i>单词试卷 · 登记、修改、删除</i></h2>
+        <button class="chip" id="geg-all" type="button">全部记录</button>
         <b class="gcard-n" id="geg-count">…</b>
       </header>
       <div class="gcard-list"><p class="reading-hint">加载试卷…</p></div>
@@ -542,7 +543,10 @@ async function mountExamGrading(host, students) {
       </div>
       <div class="geg-grades">
         ${graded.length
-          ? graded.map((e) => `<span class="geg-chip ${e.score >= 80 ? 'ok' : ''}">${escapeHtml(e.user)} ${e.score} 分${e.score >= 80 ? ' ✓解锁' : ''}</span>`).join('')
+          ? graded.map((e) => `<span class="geg-chip ${e.score >= 80 ? 'ok' : ''}">${escapeHtml(e.user)} L${e.level} ${e.score} 分
+              <button type="button" class="geg-op" data-gedit="${e.id}" data-user="${escapeHtml(e.user)}" data-level="${e.level}" data-score="${e.score}" data-date="${escapeHtml(e.exam_date || '')}">修改</button>
+              <button type="button" class="geg-op" data-gdel="${e.id}">删除</button>
+            </span>`).join('')
           : '<span class="geg-chip none">未登记</span>'}
       </div>
       <div class="geg-form">
@@ -551,7 +555,7 @@ async function mountExamGrading(host, students) {
         </select>
         ${isMix ? `
         <label class="geg-lv-wrap">登记到
-          <select class="geg-lv" data-pid="${escapeHtml(p.paper_id)}" title="混合卷跨级别。默认该生当前解锁级别；成绩按所选级别登记，≥80 解锁下一级">
+          <select class="geg-lv" data-pid="${escapeHtml(p.paper_id)}" title="混合卷跨级别。成绩记在所选级别上；单词级别是否变化取决于该生有没有被单独设定">
             ${levelOpts(defaultLv)}
           </select>
         </label>` : ''}
@@ -562,6 +566,8 @@ async function mountExamGrading(host, students) {
     </div>`
   }
   list.innerHTML = papers.map(rowHtml).join('')
+  const allBtn = host.querySelector('#geg-all')
+  if (allBtn) allBtn.addEventListener('click', () => { location.hash = '/vocabExam' })
 
   // 换学生时，混合卷登记级别跟着该生当前解锁级别走
   list.addEventListener('change', (e) => {
@@ -572,8 +578,55 @@ async function mountExamGrading(host, students) {
     lvSel.value = String(registerLevel(userSel.value))
   })
 
-  // 登记按钮：list 级事件委托（行替换后监听不丢）
+  async function refreshRow(pid, row) {
+    const fresh = (await api.vocabPaperGrading()).papers || []
+    const np = fresh.find((x) => x.paper_id === pid)
+    if (np && row.isConnected) row.outerHTML = rowHtml(np)
+    countEl.textContent = `${fresh.filter((x) => !(x.exams || []).length).length} 卷待打分`
+  }
+
+  function rememberUnlock(user, level) {
+    const n = Number(level)
+    if (user && Number.isFinite(n)) unlockByUser.set(user, n)
+  }
+
+  // 登记 / 修改 / 删除：list 级事件委托（行替换后监听不丢）
   list.addEventListener('click', async (e) => {
+    const editBtn = e.target.closest('[data-gedit]')
+    if (editBtn) {
+      const row = editBtn.closest('.geg-row')
+      if (!row) return
+      const userSel = row.querySelector('.geg-user')
+      if (userSel && [...userSel.options].some((o) => o.value === editBtn.dataset.user)) {
+        userSel.value = editBtn.dataset.user
+      }
+      row.querySelector('.geg-score').value = editBtn.dataset.score
+      row.querySelector('.geg-date').value = editBtn.dataset.date
+      const lvSel = row.querySelector('.geg-lv')
+      if (lvSel) lvSel.value = editBtn.dataset.level
+      row.dataset.editId = editBtn.dataset.gedit
+      row.dataset.editLevel = editBtn.dataset.level
+      const reg = row.querySelector('[data-geg]')
+      if (reg) reg.textContent = '保存修改'
+      row.querySelector('.geg-score').focus()
+      return
+    }
+    const delBtn = e.target.closest('[data-gdel]')
+    if (delBtn) {
+      if (!confirm('删除这条考试记录？')) return
+      const row = delBtn.closest('.geg-row')
+      const pid = row?.dataset.pid
+      delBtn.disabled = true
+      try {
+        await api.vocabExamDel(delBtn.dataset.gdel)
+        toast('已删除')
+        if (row && pid) await refreshRow(pid, row)
+      } catch (err) {
+        alert(err.message)
+        delBtn.disabled = false
+      }
+      return
+    }
     const btn = e.target.closest('[data-geg]')
     if (!btn) return
     const pid = btn.dataset.geg
@@ -585,29 +638,37 @@ async function mountExamGrading(host, students) {
     if (!user) return alert('请选择学生')
     if (!(score >= 0 && score <= 100)) return alert('分数须为 0-100')
     if (!date) return alert('请选择考试日期')
+    const editId = row.dataset.editId
     // 混合卷（lv<0 或 MIX）：用行内所选级别登记，否则 record 会 422
     const lvSel = row.querySelector('.geg-lv')
-    if (lvSel || lv < 0) {
+    if (editId && !lvSel) {
+      lv = Number(row.dataset.editLevel)
+    } else if (lvSel || lv < 0) {
       if (!lvSel) return alert('混合卷须选择登记级别（L0–L7）')
       lv = Number(lvSel.value)
       if (!(lv >= 0 && lv <= 7)) return alert('混合卷须选择登记级别（L0–L7）')
     }
+    const before = Number(unlockByUser.get(user))
     btn.disabled = true
-    btn.textContent = '登记中…'
+    btn.textContent = editId ? '保存中…' : '登记中…'
     try {
-      const r = await api.vocabExamAdd({ user, level: lv, score, exam_date: date, paper_id: pid })
-      toast(score >= 80
-        ? `🎉 ${user} ${score} 分通过！已解锁 L${r.unlocked_level}`
-        : `已登记 ${user} ${score} 分（差 ${80 - score} 分解锁）`)
-      // 刷新该卷行 + 待打分数
-      const fresh = (await api.vocabPaperGrading()).papers || []
-      const np = fresh.find((x) => x.paper_id === pid)
-      if (np && row.isConnected) row.outerHTML = rowHtml(np)
-      countEl.textContent = `${fresh.filter((x) => !(x.exams || []).length).length} 卷待打分`
+      const payload = { user, level: lv, score, exam_date: date }
+      const r = editId
+        ? await api.vocabExamUpdate(editId, payload)
+        : await api.vocabExamAdd({ ...payload, paper_id: pid })
+      rememberUnlock(user, r.unlocked_level)
+      if (r.previous_user) rememberUnlock(r.previous_user, r.previous_unlocked_level)
+      const after = Number(r.unlocked_level)
+      let msg = `${editId ? '已修改' : '已登记'} ${user} ${score} 分`
+      if (Number.isFinite(before) && Number.isFinite(after) && after !== before) {
+        msg += `，单词级别现为 L${after}`
+      }
+      toast(msg)
+      await refreshRow(pid, row)
     } catch (err) {
-      alert('登记失败：' + err.message)
+      alert((editId ? '修改失败：' : '登记失败：') + err.message)
       btn.disabled = false
-      btn.textContent = '登记'
+      btn.textContent = editId ? '保存修改' : '登记'
     }
   })
 }

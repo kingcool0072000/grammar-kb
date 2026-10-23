@@ -277,7 +277,6 @@ export const api = {
   planRules: ({ user } = {}) => req('/plan/rules', { searchParams: { user } }),
   planRuleSet: (ruleId, { value, user } = {}) =>
     reqJson(`/plan/rules/${encodeURIComponent(ruleId)}`, 'PUT', { value, user }),
-  // 词汇级别考试（成绩登记驱动解锁；≥80 解锁下一级）
   // scope: 'level' 本级 | 'learned' 已学词混合卷（进度里出现过即可，含未掌握；须带 user）
   vocabPaperGenerate: (level, save = true, { scope = 'level', user = '' } = {}) =>
     reqJson('/vocab-papers/generate', 'POST', { level, save, scope, user }),
@@ -296,12 +295,20 @@ export const api = {
         ...(limit != null ? { limit } : {}),
       },
     }),
+  // 词汇考试记录（登记 / 修改 / 删除；教师专属写）
+  // 单词级别由 vocabUnlockPut 单独设定，不要求考试 80 分
   vocabUnlockGet: () => req('/vocab-exams/unlock'),
   vocabUnlockPut: (user, level) =>
     reqJson('/vocab-exams/unlock', 'PUT', { user, level }),
-  vocabExams: ({ user } = {}) =>
-    req('/vocab-exams', { searchParams: { user } }),
+  vocabExams: ({ user, includeAll } = {}) =>
+    req('/vocab-exams', {
+      searchParams: {
+        ...(user ? { user } : {}),
+        ...(includeAll ? { include_all: 1 } : {}),
+      },
+    }),
   vocabExamAdd: (rec) => reqJson('/vocab-exams', 'POST', rec),
+  vocabExamUpdate: (id, rec) => reqJson(`/vocab-exams/${id}`, 'PUT', rec),
   vocabExamDel: (id) => reqJson(`/vocab-exams/${id}`, 'DELETE'),
   // FCE 听力音频（文件到位即生效；available=key 列表）
   fceAudioStatus: (testId) => req(`/fce-papers/${testId}/audio`),

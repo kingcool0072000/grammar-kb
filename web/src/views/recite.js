@@ -237,7 +237,7 @@ export async function mountRecite(el, { vocab, role }) {
         const locked = lv > unlocked
         const label = lv === 0 ? 'L0 课本' : `L${lv}`
         return `<button class="chip ${lv === cur ? 'active' : ''} ${locked ? 'locked' : ''}"
-          data-scope="${lv === 0 ? 'all' : lv}" ${locked ? 'disabled title="通过上一级的词汇考试（80 分）后解锁"' : ''}>${locked ? '🔒 ' : ''}${label} · ${n} 词</button>`
+          data-scope="${lv === 0 ? 'all' : lv}" ${locked ? 'disabled title="这一级还没开放，请老师在单词级别里设置"' : ''}>${locked ? '🔒 ' : ''}${label} · ${n} 词</button>`
       })
       .join('')
   }

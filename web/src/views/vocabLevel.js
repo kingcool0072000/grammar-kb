@@ -4,7 +4,7 @@ import { escapeHtml } from '../render.js'
 // 教师版 · 背单词级别详情（备课中心子页）：
 //   2.1 本级单词内容（词表+搜索，L0=哈一课本高频词=原词汇表）
 //   2.2 单词考试设计（试卷生成/打印）
-//   2.3 级别解锁配置（每学生手动解锁级别，与考试解锁取 max）
+//   2.3 单词级别（教师直接设定，不要求考试 80 分）
 export async function mountVocabLevel(el, { level = 0 } = {}) {
   const lv = Math.max(0, Math.min(5, Number(level) || 0))
   el.innerHTML = `
@@ -16,12 +16,11 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
   `
   const body = el.querySelector('#vl-body')
 
-  // ---- 数据：本级词 + 解锁配置 + 学生列表 ----
-  let data, unlock, students
+  // ---- 数据：本级词 + 每个学生的单词级别 + 学生列表 ----
+  let data, students
   try {
-    ;[data, unlock, students] = await Promise.all([
+    ;[data, students] = await Promise.all([
       api.vocabLevels({ maxLevel: 5, level: lv }),
-      api.vocabUnlockGet().catch(() => ({})),
       api.users().catch(() => ({ users: [] })),
     ])
   } catch (e) {
@@ -29,9 +28,15 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
     return
   }
   const words = (data.items || []).filter((w) => w.level === lv)
-  const counts = data.counts || {}
-  const unlocked = data.unlocked ?? 0
   const studs = (students.users || []).filter((u) => u.role === 'student')
+  const levelState = {}
+  await Promise.all(studs.map(async (u) => {
+    try {
+      levelState[u.user] = await api.vocabExams({ user: u.user })
+    } catch {
+      levelState[u.user] = { unlocked_level: 0, passed_levels: [], level_configured: false }
+    }
+  }))
 
   render()
 
@@ -68,6 +73,7 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
               ${studs.map((u) => `<option value="${escapeHtml(u.user)}">${escapeHtml(u.user)}</option>`).join('') || '<option value="">（无学生账号）</option>'}
             </select>
             <button class="btn-primary" id="vl-gen">🎲 生成试卷</button>
+            <button class="chip" id="vl-records" type="button">📋 考试成绩</button>
           </div>
         </header>
         <p class="muted">随机选词（不同首字母/词性，自动规避人名/地名）· 中译英 20 + 英译中 20 + 拼写挖空 10 · 每题带词性提示 · 与历史试卷重复 ≤10 词。<b>本级</b>=L${lv} 词库；<b>全部已学词</b>=所选学生背过的词（出现在进度里即可，含尚未掌握）跨级别混合，卷号 MIX-。流程：生成 → 预览 → 满意后保存存档。</p>
@@ -75,19 +81,28 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
         <div id="vl-paper-history"></div>
       </section>
 
-      <!-- 2.3 级别解锁配置 -->
+      <!-- 2.3 单词级别：教师直接设定，不看考试是否到 80 分 -->
       <section class="vl-sec card">
-        <header class="vl-head"><h3>🔓 级别解锁配置 <i>手动配置优先与考试解锁取最大值</i></h3></header>
+        <header class="vl-head"><h3>🔤 单词级别 <i>直接设定该生能背到哪一级，不要求考试 80 分</i></h3></header>
         <div class="vl-unlock-rows">
-          ${studs.map((u) => `
+          ${studs.map((u) => {
+            const st = levelState[u.user] || {}
+            const effective = Number(st.unlocked_level ?? 0)
+            const configured = !!st.level_configured
+            const passed = st.passed_levels || []
+            const how = configured
+              ? '已单独设定，与考试分数无关'
+              : (passed.length ? '尚未单独设定，暂按考试及格推算' : '尚未单独设定，点选即可指定')
+            return `
             <div class="vl-unlock-row" data-stu="${escapeHtml(u.user)}">
               <b>🎒 ${escapeHtml(u.user)}</b>
               <div class="vl-lv-btns">
                 ${[0, 1, 2, 3, 4, 5].map((n) => `
-                  <button class="chip ${(unlock[u.user] ?? 0) >= n ? 'primary' : ''}" data-stu-lv="${n}" title="解锁到 L${n}">L${n}</button>`).join('')}
+                  <button class="chip ${effective >= n ? 'primary' : ''}" data-stu-lv="${n}" title="设为 L${n}">L${n}</button>`).join('')}
               </div>
-              <span class="vl-unlock-state">当前生效解锁到 <b>L${data.unlocked ?? 0}</b></span>
-            </div>`).join('') || '<p class="muted">暂无学生账号（先在学生管理添加）。</p>'}
+              <span class="vl-unlock-state">单词级别 <b>L${effective}</b> · ${how}</span>
+            </div>`
+          }).join('') || '<p class="muted">暂无学生账号（先在学生管理添加）。</p>'}
         </div>
       </section>`
 
@@ -226,6 +241,9 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
       }
     }
     body.querySelector('#vl-gen').addEventListener('click', () => genPaper())
+    body.querySelector('#vl-records').addEventListener('click', () => {
+      location.hash = '/vocabExam'
+    })
 
     async function loadHistory() {
       const host = body.querySelector('#vl-paper-history')
@@ -267,7 +285,7 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
       } catch { host.innerHTML = '' }
     }
     loadHistory()
-    // 解锁配置
+    // 单词级别：点哪一级就设成哪一级，不看考试分数
     body.querySelectorAll('.vl-unlock-row').forEach((row) => {
       const stu = row.dataset.stu
       row.querySelectorAll('[data-stu-lv]').forEach((b) =>
@@ -275,12 +293,13 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
           const n = Number(b.dataset.stuLv)
           try {
             const r = await api.vocabUnlockPut(stu, n)
-            unlock[stu] = n
+            const effective = Number(r.unlocked ?? n)
+            levelState[stu] = { ...(levelState[stu] || {}), unlocked_level: effective, level_configured: true }
             row.querySelectorAll('[data-stu-lv]').forEach((x) =>
-              x.classList.toggle('primary', Number(x.dataset.stuLv) <= n))
+              x.classList.toggle('primary', Number(x.dataset.stuLv) <= effective))
             row.querySelector('.vl-unlock-state').innerHTML =
-              `当前生效解锁到 <b>L${r.unlocked}</b>`
-            toast(`✅ ${stu} 手动解锁到 L${n}（生效 L${r.unlocked}）`)
+              `单词级别 <b>L${effective}</b> · 已单独设定，与考试分数无关`
+            toast(`已将 ${stu} 的单词级别设为 L${effective}`)
           } catch (e) { alert('设置失败：' + e.message) }
         }))
     })

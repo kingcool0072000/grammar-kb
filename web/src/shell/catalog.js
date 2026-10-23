@@ -20,7 +20,7 @@ export const STUDENT_TABS = [
 const TEACHER_ALLOWED = new Set([
   ...TEACHER_TABS.map((t) => t.key),
   // 备课 / 批改 / 计划跳进来的工具页
-  'courses', 'vocab', 'taxonomy', 'fce', 'fceListen', 'exams', 'vocabLevel',
+  'courses', 'vocab', 'taxonomy', 'fce', 'fceListen', 'exams', 'vocabLevel', 'vocabExam',
   'students', 'paperAdmin', 'readingAdmin', 'readingList', 'topicsAdmin',
   'libraryManage', 'librarySettings',
   // 师生都能开的隐藏页（教师从卡片进专题、泛读馆）
@@ -40,10 +40,6 @@ export function normalizeKey() {
   if (key === 'today') {
     location.replace('#/recite')
     key = 'recite'
-  }
-  if (key === 'vocabExam') {
-    location.replace('#/vocabLevel/0')
-    key = 'vocabLevel'
   }
   if (key === 'analytics') {
     location.replace('#/grading?tab=analytics')

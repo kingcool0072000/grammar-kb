@@ -330,3 +330,128 @@ def test_paper_generate_learned_scope(vex_env, monkeypatch):
     hs = _login(c, "malin", "123456")
     assert c.post("/vocab-papers/generate", headers=hs, json={
         "level": 1, "scope": "learned", "user": "malin"}).status_code == 403
+
+
+def test_exam_record_crud(vex_env):
+    """教师可登记、修改、删除考试记录；学生只能看自己的，不能改。"""
+    c = _client(vex_env)
+    hs = _login(c, "malin", "123456")
+    hm = _login(c, "mxy", "mxy123")
+    ht = _login(c, "teacher", "123456")
+    created = c.post("/vocab-exams", headers=ht, json={
+        "user": "malin", "level": 0, "score": 90, "exam_date": "2026-10-11",
+        "note": "第一次", "paper_id": "L0-paper",
+    })
+    assert created.status_code == 200, created.text
+    exam = created.json()["data"]["exam"]
+    eid = exam["id"]
+    assert exam["note"] == "第一次" and exam["paper_id"] == "L0-paper"
+    # 学生不能改、不能删
+    assert c.put(f"/vocab-exams/{eid}", headers=hs, json={
+        "score": 10}).status_code == 403
+    assert c.delete(f"/vocab-exams/{eid}", headers=hs).status_code == 403
+    # 只改分数：其余字段保留；未单独设定级别时，不及格会把推算级别降回去
+    edited = c.put(f"/vocab-exams/{eid}", headers=ht, json={"score": 40})
+    assert edited.status_code == 200, edited.text
+    body = edited.json()["data"]
+    assert body["exam"]["score"] == 40
+    assert body["exam"]["note"] == "第一次"
+    assert body["exam"]["paper_id"] == "L0-paper"
+    assert body["exam"]["level"] == 0
+    assert body["passed"] is False
+    assert body["unlocked_level"] == 0
+    # 改级别、日期、备注、归属学生
+    moved = c.put(f"/vocab-exams/{eid}", headers=ht, json={
+        "user": "mxy", "level": 2, "score": 88, "exam_date": "2026-10-20",
+        "note": "改记到 mxy",
+    })
+    assert moved.status_code == 200, moved.text
+    rec = moved.json()["data"]["exam"]
+    assert rec["user"] == "mxy" and rec["level"] == 2 and rec["score"] == 88
+    assert rec["exam_date"] == "2026-10-20" and rec["note"] == "改记到 mxy"
+    assert rec["paper_id"] == "L0-paper"
+    assert moved.json()["data"]["previous_user"] == "malin"
+    # 教师看全部；学生即使带 include_all 也只能看自己的
+    all_rows = c.get("/vocab-exams", headers=ht, params={"include_all": 1}).json()["data"]["exams"]
+    assert any(r["id"] == eid and r["user"] == "mxy" for r in all_rows)
+    malin_rows = c.get("/vocab-exams", headers=hs, params={"include_all": 1}).json()["data"]["exams"]
+    assert malin_rows == []
+    mxy_rows = c.get("/vocab-exams", headers=hm).json()["data"]["exams"]
+    assert [r["id"] for r in mxy_rows] == [eid]
+    # 校验与缺记录
+    assert c.put(f"/vocab-exams/{eid}", headers=ht, json={"score": 120}).status_code == 422
+    assert c.put(f"/vocab-exams/{eid}", headers=ht, json={"exam_date": "2026/10/20"}).status_code == 422
+    assert c.put(f"/vocab-exams/{eid}", headers=ht, json={}).status_code == 422
+    assert c.put("/vocab-exams/999", headers=ht, json={"score": 10}).status_code == 404
+    assert c.delete(f"/vocab-exams/{eid}", headers=ht).status_code == 200
+    assert c.delete(f"/vocab-exams/{eid}", headers=ht).status_code == 404
+    assert c.get("/vocab-exams", headers=hm).json()["data"]["exams"] == []
+
+
+def test_word_level_config_independent_of_score(vex_env):
+    """单词级别是教师设定，不要求、也不被 80 分改写；没设定过才按考试推算。"""
+    db = vex_env / "grammar.db"
+    con = sqlite3.connect(db)
+    con.execute(
+        "CREATE TABLE vocab_word (word TEXT, level INTEGER, pos TEXT, gloss TEXT,"
+        " meanings TEXT, example TEXT, extra TEXT)"
+    )
+    con.executemany(
+        "INSERT INTO vocab_word VALUES (?,?,?,?,?,?,?)",
+        [
+            ("apple", 0, "[]", "苹果", "[]", "{}", "{}"),
+            ("orbit", 3, "[]", "轨道", "[]", "{}", "{}"),
+        ],
+    )
+    con.commit()
+    con.close()
+    c = TestClient(create_app(str(db), str(vex_env / "exam.db"),
+                              fce_db_path=str(vex_env / "fce.db")))
+    hs = _login(c, "malin", "123456")
+    hm = _login(c, "mxy", "mxy123")
+    ht = _login(c, "teacher", "123456")
+    # 没有任何考试，教师直接设到 L3
+    r = c.put("/vocab-exams/unlock", headers=ht, json={"user": "malin", "level": 3})
+    assert r.status_code == 200, r.text
+    assert r.json()["data"]["unlocked"] == 3
+    assert r.json()["data"]["configured"] is True
+    own = c.get("/vocab-exams", headers=hs).json()["data"]
+    assert own["unlocked_level"] == 3 and own["level_configured"] is True
+    assert own["passed_levels"] == []
+    lv = c.get("/vocab-levels?max_level=5", headers=hs).json()["data"]
+    assert lv["unlocked"] == 3
+    assert {w["word"] for w in lv["items"]} == {"apple", "orbit"}
+    # 学生不能改自己的级别
+    assert c.put("/vocab-exams/unlock", headers=hs, json={
+        "user": "malin", "level": 5}).status_code == 403
+    assert c.put("/vocab-exams/unlock", headers=ht, json={
+        "user": "malin", "level": True}).status_code == 422
+    # 不及格、以及之后的高分，都不改写已经设定的级别
+    assert c.post("/vocab-exams", headers=ht, json={
+        "user": "malin", "level": 0, "score": 50,
+        "exam_date": "2026-10-11"}).status_code == 200
+    assert c.post("/vocab-exams", headers=ht, json={
+        "user": "malin", "level": 0, "score": 96,
+        "exam_date": "2026-10-12"}).json()["data"]["unlocked_level"] == 3
+    # 教师可以把级别改到比考试推算更低（96 分本来会解锁 L1）
+    low = c.put("/vocab-exams/unlock", headers=ht, json={"user": "malin", "level": 0})
+    assert low.json()["data"]["unlocked"] == 0
+    after = c.get("/vocab-levels?max_level=5", headers=hs).json()["data"]
+    assert after["unlocked"] == 0
+    assert [w["word"] for w in after["items"]] == ["apple"]
+    passed = c.get("/vocab-exams", headers=hs).json()["data"]
+    assert passed["unlocked_level"] == 0 and 0 in passed["passed_levels"]
+    # 设定时间留在 vocab_unlock.updated_at（已有审计列，不另开历史表）
+    with sqlite3.connect(vex_env / "fce.db") as stamp:
+        row = stamp.execute(
+            "SELECT level, updated_at FROM vocab_unlock WHERE user = ?",
+            ("malin",),
+        ).fetchone()
+    assert row[0] == 0 and row[1]
+    # 从未设定过的学生：考试 ≥80 仍解锁下一级
+    assert c.post("/vocab-exams", headers=ht, json={
+        "user": "mxy", "level": 0, "score": 82,
+        "exam_date": "2026-10-13"}).json()["data"]["unlocked_level"] == 1
+    mxy = c.get("/vocab-exams", headers=hm).json()["data"]
+    assert mxy["unlocked_level"] == 1 and mxy["level_configured"] is False
+    assert c.get("/vocab-exams/unlock", headers=hs).status_code == 403

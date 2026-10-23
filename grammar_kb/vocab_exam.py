@@ -1,8 +1,12 @@
 """词汇级别考试：线下考卷生成 + 成绩登记（fce.db 同库）。
 
-解锁规则（2026-09-26 起，取代教师手动 vocabUnlock）：
-- L0 默认开放；通过 L{n} 级考卷（≥80 分，教师登记成绩）自动解锁 L{n+1}。
-- 考卷线下进行：家长持「答案页」读题（听写部分读音），孩子在纸质卷作答。
+单词级别（学生能背到哪一级）以教师设定为准：
+- 在备课中心「背单词 · 级别」里为该生点过级别后，这个值直接生效，
+  不要求词汇考试达到 80 分，也不会被之后的考试分数改写
+  （可设得比考试推算更高或更低）。vocab_unlock.updated_at 记下最近一次设定。
+- 从未单独设定过的学生仍走旧规则：L0 默认开放；L{n} 考试 ≥80 解锁 L{n+1}。
+
+考卷线下进行：家长持「答案页」读题（听写部分读音），孩子在纸质卷作答。
 
 考卷结构（50 词 × 2 分 = 100 分，及格 80）：
 - A 听写 15 题：家长读英文单词，孩子拼写
@@ -123,27 +127,68 @@ class VocabExamStore:
         with self._connect() as conn:
             return [dict(r) for r in conn.execute(sql, args).fetchall()]
 
-    def unlocked_level(self, user: str) -> int:
-        """学生当前最高可用级别：L0 恒开。
+    def get(self, exam_id: int) -> Optional[dict]:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM vocab_exams WHERE id = ?", (int(exam_id),)
+            ).fetchone()
+        return dict(row) if row else None
 
-        双路来源取最大：L{n} 考试 ≥80 自动解锁 L{n+1}；教师手动解锁配置
-        （vocab_unlock 表，备课中心-背单词-级别解锁配置）直接生效。
-        两者取 max——手动配置不会把已考出来的级别锁回去。
+    def update(self, exam_id: int, user: str, level: int, score: int,
+               exam_date: str, note: str = "", paper_id: str = "") -> Optional[dict]:
+        """改一条考试记录。不存在返回 None。字段校验与 record 相同。"""
+        if not (0 <= int(level) <= 7):
+            raise ValueError("level 须为 0-7")
+        if not (0 <= int(score) <= 100):
+            raise ValueError("score 须为 0-100")
+        datetime.strptime(exam_date, "%Y-%m-%d")
+        who = (user or "").strip()[:60]
+        if not who:
+            raise ValueError("user 须指定学生账号")
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE vocab_exams SET user=?, level=?, score=?, exam_date=?,"
+                " note=?, paper_id=? WHERE id=?",
+                (who, int(level), int(score), exam_date, (note or "")[:500],
+                 (paper_id or "")[:64], int(exam_id)),
+            )
+            row = conn.execute(
+                "SELECT * FROM vocab_exams WHERE id = ?", (int(exam_id),)
+            ).fetchone()
+        return dict(row) if row else None
+
+    def unlocked_level(self, user: str) -> int:
+        """学生当前单词级别（背单词能看到的最高级）。
+
+        教师在 vocab_unlock 里显式设定过 → 以该值为准，与考试是否 ≥80 无关。
+        从未设定过 → L0 恒开；L{n} 考试 ≥80 解锁 L{n+1}（上限 L5）。
         """
+        configured = self._configured_level(user)
+        if configured is not None:
+            return configured
         passed = self.passed_levels(user)
-        by_exam = min(5, max(passed) + 1) if passed else 0
-        return max(by_exam, self.get_unlock_override(user))
+        return min(5, max(passed) + 1) if passed else 0
 
     # ---- 手动解锁配置（教师，备课中心-背单词） ----
 
-    def get_unlock_override(self, user: str) -> int:
-        """教师手动配置的解锁级别（未配置返回 0）。"""
+    def _configured_level(self, user: str) -> Optional[int]:
+        """教师显式设定的单词级别；没有设定行时返回 None（与「设成 0」区分）。"""
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT level FROM vocab_unlock WHERE user = ?",
                 ((user or "").strip()[:60],),
             ).fetchone()
-        return min(5, max(0, row["level"])) if row else 0
+        if row is None:
+            return None
+        return min(5, max(0, int(row["level"])))
+
+    def level_configured(self, user: str) -> bool:
+        return self._configured_level(user) is not None
+
+    def get_unlock_override(self, user: str) -> int:
+        """教师手动配置的单词级别（未配置返回 0）。"""
+        lv = self._configured_level(user)
+        return 0 if lv is None else lv
 
     def list_unlock_all(self) -> dict[str, int]:
         with self._connect() as conn:
