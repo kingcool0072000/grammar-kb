@@ -1,4 +1,9 @@
-"""PlanStore：周计划读写。行为方法按主题拆在各 Mixin 中。"""
+"""PlanStore：周计划读写。行为方法按主题拆在各 Mixin 中。
+
+泛读词数：FocusMixin（逐日/逐会话）+ FocusTrackMixin（轨迹几何）
++ FocusMetaMixin（有效性与书目）。总目标：GoalsMixin（进度与完成态）
++ GoalsEditorMixin（编辑器选项源）。
+"""
 from __future__ import annotations
 
 import json
@@ -14,7 +19,10 @@ from .util import _week_out
 from .actuals import ActualsMixin
 from .books import BooksMixin
 from .focus import FocusMixin
+from .focus_meta import FocusMetaMixin
+from .focus_track import FocusTrackMixin
 from .goals import GoalsMixin
+from .goals_editor import GoalsEditorMixin
 from .review import ReviewMixin
 from .rules import RulesMixin
 from .schedule import ScheduleMixin
@@ -30,7 +38,10 @@ class PlanStore(
     BooksMixin,
     ViewsMixin,
     GoalsMixin,
+    GoalsEditorMixin,
     FocusMixin,
+    FocusTrackMixin,
+    FocusMetaMixin,
     SignalsMixin,
 ):
     """plan_weeks 读写 + 周完成度实时聚合。"""

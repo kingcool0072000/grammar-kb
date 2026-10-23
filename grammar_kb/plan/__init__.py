@@ -4,7 +4,8 @@
 
     from grammar_kb.plan import PlanStore, week_bounds, cn_dt, monday_of
 
-实现按主题拆在本包内（store / rules / actuals / schedule / books / …）。
+实现按主题拆在本包内（store / rules / actuals / schedule / books /
+goals + goals_editor / focus + focus_track + focus_meta / …）。
 「今天」与周一起点走 :mod:`grammar_kb.clock`（固定北京时间），不看进程时区。
 """
 from __future__ import annotations
