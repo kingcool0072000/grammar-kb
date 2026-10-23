@@ -60,6 +60,7 @@ export async function mountStudents(el, { bare = false } = {}) {
             <div class="st-info">
               <b>🎒 ${escapeHtml(u.user)}</b>
               <span class="st-goal" data-goal="${escapeHtml(u.user)}">目标加载中…</span>
+              <span class="st-alert" data-alert="${escapeHtml(u.user)}"></span>
             </div>
             <div class="st-ops">
               <button class="chip" data-cfg="${escapeHtml(u.user)}">🎯 配置目标</button>
@@ -79,6 +80,13 @@ export async function mountStudents(el, { bare = false } = {}) {
         const el2 = body.querySelector(`[data-goal="${CSS.escape(u.user)}"]`)
         if (el2) el2.textContent = '🎯 ' + goalsText(r.goals)
       } catch { /* 单个失败不影响整体 */ }
+      try {
+        const s = await api.reviewSummary({ user: u.user })
+        const alertEl = body.querySelector(`[data-alert="${CSS.escape(u.user)}"]`)
+        if (alertEl && s && s.alert) {
+          alertEl.textContent = `错词本卡住：在周期 ${s.in_cycle} 词，近 14 日没有攻克`
+        }
+      } catch { /* 摘要失败不挡学生卡 */ }
     }
   }
 

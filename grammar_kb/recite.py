@@ -6,12 +6,17 @@
 「批改中心」查看。数据量极小，不设删除（历史即成长记录）。
 
 错词走艾宾浩斯记忆周期（recite_review 表）：答错日 D 起，在 D+1/2/4/7/
-15/30 六个节点各复习一次；复习（scope=wrongbook 会话）答对过一节点，
-六节点全过即「攻克」入已攻克词本；任何会话再答错则回炉重计周期。
+15/30 六个节点各复习一次；复习会话（scope=wrongbook，或 mode=conquer）
+答对过一节点，六节点全过即「攻克」入已攻克词本；任何会话再答错则回炉重计。
+
+复习闭环摘要（/recite/review-summary）与错词本同一口径：在周期 =
+conquered_at 为空；到期 = next_review 等于今天；逾期 = next_review 早于
+今天（北京日历）。逾期未清时限制当天首次见到的新词。
 """
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from datetime import date, datetime, timedelta, timezone as _tz
 from pathlib import Path
@@ -24,6 +29,15 @@ from .fce_query import _default_db_path
 EB_STAGES = (1, 2, 4, 7, 15, 30)
 # 复习会话标识（scope 值）：该类会话里的答对才推进节点
 REVIEW_SCOPE = "wrongbook"
+# mode=conquer 同样是复习会话（池子只有错词本，答对推进同一套节点）
+CONQUER_MODE = "conquer"
+# 逾期 > 0 时，当天「首次见到」的新词上限。环境变量 RECITE_NEW_WORD_CAP 可覆盖。
+NEW_WORD_CAP = 20
+# 教师告警：在周期达到此数、且近 N 日没有错词周期攻克、但有背词会话
+ALERT_IN_CYCLE = 50
+ALERT_QUIET_DAYS = 14
+# 学生卡「近 7 日攻克」窗口（含今天，北京日历）
+CONQUERED_RECENT_DAYS = 7
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS recite_sessions (
@@ -47,6 +61,7 @@ CREATE TABLE IF NOT EXISTS recite_word_progress (
     wrong     INTEGER NOT NULL DEFAULT 0,
     mastered_at TEXT,
     last_seen TEXT,
+    first_seen TEXT,
     PRIMARY KEY (user, word)
 );
 CREATE INDEX IF NOT EXISTS idx_rwp_user_seen ON recite_word_progress(user, last_seen);
@@ -94,6 +109,43 @@ def _add_days(day_iso: str, n: int) -> str:
         return _calendar_today()
 
 
+def _within_days(day_iso: str, today: str, days: int) -> bool:
+    """北京日历日 day 是否落在含 today 的最近 days 天内（今天算第 1 天）。"""
+    if not day_iso or not today or days <= 0:
+        return False
+    try:
+        delta = (date.fromisoformat(today[:10]) - date.fromisoformat(day_iso[:10])).days
+    except ValueError:
+        return False
+    return 0 <= delta < days
+
+
+def _is_review_session(scope: str, mode: str) -> bool:
+    """错词本复习或攻克模式：答对才推进艾宾浩斯节点。"""
+    return (scope or "") == REVIEW_SCOPE or (mode or "") == CONQUER_MODE
+
+
+def new_word_base() -> int:
+    """当天新词额度的配置值（默认 20）。RECITE_NEW_WORD_CAP 为非负整数时覆盖。"""
+    raw = os.environ.get("RECITE_NEW_WORD_CAP", "").strip()
+    if raw.isdigit():
+        return max(0, min(int(raw), 500))
+    return NEW_WORD_CAP
+
+
+def effective_new_cap(overdue: int, base: int) -> Optional[int]:
+    """逾期为 0 不限额（None）。
+
+    逾期 > 0 时限额为 base。逾期堆已经不少于 base（没清掉）时收到 0：
+    先复习再背新词，比「照样给满 base」更严，计算也只是一次比较。
+    """
+    if overdue <= 0:
+        return None
+    if overdue >= base:
+        return 0
+    return base
+
+
 class ReciteStore:
     """recite_sessions 读写。"""
 
@@ -107,7 +159,17 @@ class ReciteStore:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         conn.executescript(SCHEMA)
+        self._migrate(conn)
         return conn
+
+    @staticmethod
+    def _migrate(conn: sqlite3.Connection) -> None:
+        """旧库补 first_seen。已有行保持 NULL：不把历史词算成「今天首见」。"""
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(recite_word_progress)")}
+        if cols and "first_seen" not in cols:
+            conn.execute(
+                "ALTER TABLE recite_word_progress ADD COLUMN first_seen TEXT"
+            )
 
     def submit(
         self, user: str, total: int, wrong: int, acc: int, duration_sec: int,
@@ -118,8 +180,18 @@ class ReciteStore:
             raise ValueError("题数须为正")
         wrong_words = [str(w)[:60] for w in (wrong_words or [])][:50]
         now = datetime.now(_tz.utc).isoformat(timespec="seconds")
+        today = _calendar_today()
+        # 先按错词本口径回填并取逾期，再决定今天还能不能见新词。
+        pre = self.review_summary(user)
+        cap = pre["new_cap"]
         review_stats: dict = {}
         with self._connect() as conn:
+            fresh = self._unseen_words(conn, user, details)
+            # 本组没有首见新词（复习/攻克/已见过）时不拦，即使今天已经用满额度。
+            if cap is not None and fresh and pre["new_used"] + len(fresh) > cap:
+                raise ValueError(
+                    f"今日新词已达上限（{pre['new_used']}/{cap}），先清逾期再背新词"
+                )
             cur = conn.execute(
                 "INSERT INTO recite_sessions (user, total, wrong, acc, duration_sec,"
                 " wrong_words, mode, scope, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
@@ -130,12 +202,16 @@ class ReciteStore:
             if details:
                 self._upsert_details(conn, user, details)
                 review_stats = self._update_reviews(
-                    conn, user, details, is_review=(scope == REVIEW_SCOPE))
+                    conn, user, details,
+                    is_review=_is_review_session(scope, mode),
+                )
             row = conn.execute(
                 "SELECT * FROM recite_sessions WHERE id = ?", (cur.lastrowid,)
             ).fetchone()
         out = _out(row)
         out["review"] = review_stats
+        out["new_used"] = self._count_new_used(user, today)
+        out["new_cap"] = cap
         return out
 
     def _upsert_details(self, conn: sqlite3.Connection, user: str, details: list) -> None:
@@ -172,11 +248,17 @@ class ReciteStore:
                 )
             else:
                 r, wr = (1, 0) if correct else (0, 1)
+                # 已在错词周期里的词不是「今天首见的新词」（含历史回填）。
+                in_cycle = conn.execute(
+                    "SELECT 1 FROM recite_review WHERE user=? AND word=?",
+                    (user, w),
+                ).fetchone()
                 conn.execute(
                     "INSERT INTO recite_word_progress (user, word, level, right, wrong,"
-                    " mastered_at, last_seen) VALUES (?,?,?,?,?,?,?)",
+                    " mastered_at, last_seen, first_seen) VALUES (?,?,?,?,?,?,?,?)",
                     (user, w, levels.get(w), r, wr,
-                     now if correct else None, now),
+                     now if correct else None, now,
+                     None if in_cycle else now),
                 )
 
     def _update_reviews(self, conn: sqlite3.Connection, user: str,
@@ -184,9 +266,9 @@ class ReciteStore:
         """艾宾浩斯周期状态机：答错 → 进/回炉周期；复习会话答对 → 推进
         一个节点；过满六节点（D+1/2/4/7/15/30）→ 攻克入已攻克词本。
 
-        普通会话的答对不推进节点（避免常规练习顺手清空错题周期）；
-        任何会话的答错都会把该词拉回 stage=0 重计。返回本组统计
-        {entered, advanced, conquered, due_now}。
+        复习会话 = scope=wrongbook 或 mode=conquer。普通会话的答对不推进
+        节点（避免常规练习顺手清空错题周期）；任何会话的答错都会把该词
+        拉回 stage=0 重计。返回本组统计 {entered, advanced, conquered, due_now}。
         """
         clean: dict[str, int] = {}
         for d in details or []:
@@ -388,11 +470,14 @@ class ReciteStore:
                             (nr, nw, lvl, mastered, now, user, w),
                         )
                     else:
+                        # 本地历史合并不是「今天新学的词」，first_seen 留空，
+                        # 不占用逾期时的新词额度。
                         conn.execute(
                             "INSERT INTO recite_word_progress (user, word, level, right,"
-                            " wrong, mastered_at, last_seen) VALUES (?,?,?,?,?,?,?)",
+                            " wrong, mastered_at, last_seen, first_seen)"
+                            " VALUES (?,?,?,?,?,?,?,?)",
                             (user, w, levels.get(w), r, wr,
-                             now if r >= max(wr, 1) else None, now),
+                             now if r >= max(wr, 1) else None, now, None),
                         )
         return self.progress(user, include_words=True)
 
@@ -504,6 +589,167 @@ class ReciteStore:
                 "stages": list(EB_STAGES), "stage_dist": stage_dist,
             },
         }
+
+    def review_summary(self, user: str) -> dict:
+        """复习闭环摘要。计数与 /recite/wrongbook、recite_review 同一口径。
+
+        due_today：next_review 等于今天（不含逾期）。
+        overdue：next_review 早于今天。
+        in_cycle：conquered_at 为空的错词（含未到期）。
+        conquered_n.total：已攻克词本全集（与 wrongbook stats.conquered_n 相同）。
+        conquered_n.d7：其中 conquered_at（没有则 mastered_at）落在近 7 个北京日。
+        conquer_pool：到期 ∪ 逾期 ∪ 在周期，不含新鲜词、不含已攻克。
+        顺序：今天到期（错次多的在前）→ 逾期（更早的在前）→ 未到期。
+        activity：最近的错词本/攻克会话，以及最近触碰的周期词。
+        alert：在周期 ≥ 50、近 14 日没有错词周期攻克（只看 conquered_at）、
+        且至少有一条背词会话。一遍背会不算把周期清掉。
+        """
+        user = (user or "").strip()[:60]
+        today = _calendar_today()
+        wb = self.wrongbook(user)
+        in_cycle = wb["in_cycle"]
+        conquered = wb["conquered"]
+        due = [x for x in in_cycle if (x.get("next_review") or "") == today]
+        overdue = [
+            x for x in in_cycle
+            if x.get("next_review") and x["next_review"] < today
+        ]
+        due_set = {x["word"] for x in due}
+        over_set = {x["word"] for x in overdue}
+        rest = [
+            x for x in in_cycle
+            if x["word"] not in due_set and x["word"] not in over_set
+        ]
+        due.sort(key=lambda x: (-int(x.get("wrong_count") or 0), x["word"]))
+        overdue.sort(key=lambda x: (
+            x["next_review"], -int(x.get("wrong_count") or 0), x["word"],
+        ))
+        rest.sort(key=lambda x: (x.get("next_review") or "9999-12-31", x["word"]))
+        pool = [x["word"] for x in due + overdue + rest]
+
+        def _book_day(item: dict) -> str:
+            stamp = item.get("conquered_at") or item.get("mastered_at") or ""
+            return _cn_day_of(stamp) if stamp else ""
+
+        d7 = sum(
+            1 for x in conquered
+            if _within_days(_book_day(x), today, CONQUERED_RECENT_DAYS)
+        )
+        conquered_14 = sum(
+            1 for x in conquered
+            if x.get("conquered_at")
+            and _within_days(_cn_day_of(x["conquered_at"]), today, ALERT_QUIET_DAYS)
+        )
+        cap = effective_new_cap(len(overdue), new_word_base())
+        with self._connect() as conn:
+            new_used = self._count_new_used_conn(conn, user, today)
+            sessions_n = conn.execute(
+                "SELECT COUNT(*) FROM recite_sessions WHERE user = ?", (user,),
+            ).fetchone()[0]
+            activity = self._recent_activity(conn, user)
+        return {
+            "user": user,
+            "today": today,
+            "due_today": len(due),
+            "overdue": len(overdue),
+            "in_cycle": len(in_cycle),
+            "conquered_n": {"d7": d7, "total": len(conquered)},
+            "activity": activity,
+            "due_words": [x["word"] for x in due],
+            "overdue_words": [x["word"] for x in overdue],
+            "conquer_pool": pool,
+            "new_used": new_used,
+            "new_cap": cap,
+            "alert": (
+                len(in_cycle) >= ALERT_IN_CYCLE
+                and conquered_14 == 0
+                and sessions_n > 0
+            ),
+        }
+
+    def _count_new_used(self, user: str, today: str) -> int:
+        with self._connect() as conn:
+            return self._count_new_used_conn(conn, user, today)
+
+    @staticmethod
+    def _count_new_used_conn(conn: sqlite3.Connection, user: str, today: str) -> int:
+        rows = conn.execute(
+            "SELECT first_seen FROM recite_word_progress"
+            " WHERE user = ? AND first_seen IS NOT NULL",
+            (user,),
+        ).fetchall()
+        return sum(1 for r in rows if _cn_day_of(r["first_seen"]) == today)
+
+    @staticmethod
+    def _unseen_words(conn: sqlite3.Connection, user: str, details: Optional[list]) -> list[str]:
+        """本组里真正的首见新词：进度表没有、错词周期里也没有。"""
+        fresh: list[str] = []
+        seen: set[str] = set()
+        for d in details or []:
+            if not isinstance(d, dict):
+                continue
+            w = str(d.get("word", "")).strip().lower()[:60]
+            if not w or w in seen:
+                continue
+            seen.add(w)
+            row = conn.execute(
+                "SELECT 1 FROM recite_word_progress WHERE user = ? AND word = ?",
+                (user, w),
+            ).fetchone()
+            if row is not None:
+                continue
+            cyc = conn.execute(
+                "SELECT 1 FROM recite_review WHERE user = ? AND word = ?",
+                (user, w),
+            ).fetchone()
+            if cyc is None:
+                fresh.append(w)
+        return fresh
+
+    @staticmethod
+    def _recent_activity(conn: sqlite3.Connection, user: str) -> list[dict]:
+        """最近错词本/攻克会话 + 最近触碰的周期词（各最多 8 条）。"""
+        out: list[dict] = []
+        sessions = conn.execute(
+            "SELECT id, total, wrong, acc, mode, scope, created_at"
+            " FROM recite_sessions WHERE user = ? AND (scope = ? OR mode = ?)"
+            " ORDER BY id DESC LIMIT 8",
+            (user, REVIEW_SCOPE, CONQUER_MODE),
+        ).fetchall()
+        for r in sessions:
+            out.append({
+                "kind": "session",
+                "id": r["id"],
+                "total": r["total"],
+                "wrong": r["wrong"],
+                "acc": r["acc"],
+                "mode": r["mode"],
+                "scope": r["scope"],
+                "at": r["created_at"],
+                "day": _cn_day_of(r["created_at"] or ""),
+            })
+        words = conn.execute(
+            "SELECT word, stage, first_wrong_at, last_review_at, conquered_at"
+            " FROM recite_review WHERE user = ?"
+            " ORDER BY COALESCE(conquered_at, last_review_at, first_wrong_at) DESC,"
+            " word LIMIT 8",
+            (user,),
+        ).fetchall()
+        for r in words:
+            if r["conquered_at"]:
+                event, at = "conquered", r["conquered_at"]
+            elif (r["stage"] or 0) > 0:
+                event, at = "reviewed", r["last_review_at"] or r["first_wrong_at"]
+            else:
+                event, at = "entered", r["first_wrong_at"] or r["last_review_at"]
+            out.append({
+                "kind": "word",
+                "word": r["word"],
+                "event": event,
+                "stage": r["stage"],
+                "at": _cn_day_of(at or ""),
+            })
+        return out
 
     def list(self, user: Optional[str] = None, limit: int = 100) -> list[dict]:
         sql = "SELECT * FROM recite_sessions"

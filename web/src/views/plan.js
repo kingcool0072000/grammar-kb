@@ -95,11 +95,13 @@ export async function mountPlan(el) {
         </div>
       </div>
       ${'' /* 目标卡容器：周/总切换内容由 renderGoalCard 填充 */}
+      <div id="review-alert"></div>
       <div id="goal-card"></div>
       <div id="rules-card"></div>
       <div id="plan-view"></div>
     `
     renderGoalCard()
+    renderReviewAlert()
     renderRulesCard()
     body.querySelector('#pw-cfg-goal').addEventListener('click', () => {
       sessionStorage.setItem('gkb-open-goal', state.student)
@@ -181,6 +183,20 @@ export async function mountPlan(el) {
         </div>
         <div class="gp-dims">${bars}</div>
       </div>`
+    }
+
+    async function renderReviewAlert() {
+      const host = body.querySelector('#review-alert')
+      if (!host) return
+      const who = state.student
+      let s = null
+      try { s = await api.reviewSummary({ user: who }) } catch { s = null }
+      if (state.student !== who || !body.querySelector('#review-alert')) return
+      if (!s || !s.alert) { host.innerHTML = ''; return }
+      host.innerHTML = `
+        <div class="pw-alert">
+          错词本卡住：<b>${escapeHtml(who)}</b> 在周期 ${s.in_cycle} 词，近 14 日没有从错词周期攻克，背词还在继续。先安排攻克复习。
+        </div>`
     }
 
     function renderGoalCard() {

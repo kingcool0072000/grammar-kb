@@ -1250,6 +1250,67 @@ main {
   transition: width 0.3s;
 }
 .recite-dash .muted { margin: 0; font-size: 13.5px; }
+/* 词库张数（已背/掌握/共 N 词）退到复习三张卡下面，字号收一档 */
+.recite-dash-secondary { padding: 12px 16px; }
+.recite-dash-secondary .recite-dash-pct { font-size: 16px; font-weight: 700; }
+.recite-dash-secondary .muted { font-size: 12.5px; }
+
+/* 复习闭环：到期 / 逾期 / 近 7 日攻克。数字是主信息。 */
+.rc-loop {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 6px;
+}
+.rc-loop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.rc-loop-card:hover:not(:disabled) { border-color: var(--ink); }
+.rc-loop-card:disabled { cursor: default; opacity: 0.55; }
+.rc-loop-card b {
+  font-size: 28px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.rc-loop-card span { font-size: 14px; font-weight: 700; }
+.rc-loop-card small { font-size: 11.5px; color: var(--ink-faint); }
+.rc-loop-card.due b { color: #b3541e; }
+.rc-loop-card.over b { color: #b42318; }
+.rc-loop-card.cq b { color: #2e7d4f; }
+.rc-loop-sub {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.tt-loop { margin-bottom: 14px; }
+.st-alert { font-size: 12px; color: #b42318; min-height: 0; }
+.st-alert:empty { display: none; }
+.pw-alert {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #b4231844;
+  background: #fdecec;
+  color: #7a1b14;
+  font-size: 13px;
+}
+@media (max-width: 640px) {
+  .rc-loop { gap: 6px; }
+  .rc-loop-card { padding: 10px 8px; }
+  .rc-loop-card b { font-size: 22px; }
+  .rc-loop-card span { font-size: 12.5px; }
+}
 
 /* ======================= FCE 真题（fce.db 试卷浏览） ======================= */
 
