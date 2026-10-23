@@ -2,6 +2,10 @@ import { api } from '../api.js'
 import { escapeHtml, escAttr, todayIso, studyGoalMin } from '../render.js'
 import { PLAN_ADD_TYPES, appendPlanItem } from './planAdd.js'
 
+function vocabPaperHead(level) {
+  return Number(level) < 0 ? '已学混合卷' : `L${level}`
+}
+
 // 教师版 · 计划表：周历视图。本周大卡（今日任务）+ 月历式周网格往下排，
 // 学情分析并入为子 Tab（#/plan?tab=analytics / #/plan 切换）。
 // 计划数据由 scripts/seed_plan_weeks.py 自动排程预填，教师可编辑微调。
@@ -480,7 +484,8 @@ export async function mountPlan(el) {
           return fceParts.map((p) => pickBtn(p.label, p.label, have.fce.has(p.label)))
         }
         if (draft.type === 'paper') {
-          return papers.map((p) => pickBtn(p.paper_id, `${p.paper_id} · L${p.level}`, have.paper.has(p.paper_id)))
+          return papers.map((p) => pickBtn(
+            p.paper_id, `${p.paper_id} · ${vocabPaperHead(p.level)}`, have.paper.has(p.paper_id)))
         }
         return []
       }
@@ -527,7 +532,12 @@ export async function mountPlan(el) {
           return `精读《${a?.title || draft.article_id}》`
         }
         if (draft.type === 'fce') return draft.label
-        if (draft.type === 'paper') return `试卷 ${draft.paper_id}`
+        if (draft.type === 'paper') {
+          const p = papers.find((x) => x.paper_id === draft.paper_id)
+          return p && Number(p.level) < 0
+            ? `已学混合卷 ${draft.paper_id}`
+            : `试卷 ${draft.paper_id}`
+        }
         if (draft.type === 'vocab') return `L${draft.level} 掌握 ${draft.goal} 词（${draft.pct}%）`
         if (draft.type === 'speak') return `每周朗读 ${draft.n} 篇`
         if (draft.type === 'reading') {
@@ -913,7 +923,7 @@ export async function mountPlan(el) {
           ✍️ ${escapeHtml(a.title.slice(0, 18))}<i>${a.words}</i>
         </button>`).join('')
       const paperChipsPool = (pool) => pool.map((x) => `
-        <button type="button" class="pe-part ${paperSel.has(x.paper_id) ? 'on' : ''}" data-paper="${escapeHtml(x.paper_id)}">L${x.level} · ${x.paper_id.slice(-8)}<i>${(x.created_at || '').slice(5, 10)}</i></button>`).join('')
+        <button type="button" class="pe-part ${paperSel.has(x.paper_id) ? 'on' : ''}" data-paper="${escapeHtml(x.paper_id)}">${vocabPaperHead(x.level)} · ${x.paper_id.slice(-8)}<i>${(x.created_at || '').slice(5, 10)}</i></button>`).join('')
 
       const fceGroups = [1, 2, 3, 4].map((tid) => {
         const parts = (ed.fce_parts || []).filter((x) => x.test_id === tid)

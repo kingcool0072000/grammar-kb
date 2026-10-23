@@ -275,8 +275,9 @@ export const api = {
   planRuleSet: (ruleId, { value, user } = {}) =>
     reqJson(`/plan/rules/${encodeURIComponent(ruleId)}`, 'PUT', { value, user }),
   // 词汇级别考试（成绩登记驱动解锁；≥80 解锁下一级）
-  vocabPaperGenerate: (level, save = true) =>
-    reqJson('/vocab-papers/generate', 'POST', { level, save }),
+  // scope: 'level' 本级 | 'learned' 已学词混合卷（进度里出现过即可，含未掌握；须带 user）
+  vocabPaperGenerate: (level, save = true, { scope = 'level', user = '' } = {}) =>
+    reqJson('/vocab-papers/generate', 'POST', { level, save, scope, user }),
   vocabPaperSave: (paper) =>
     reqJson('/vocab-papers/save', 'POST', paper),
   vocabPaperGrading: () => req('/vocab-papers/grading'),
@@ -284,8 +285,14 @@ export const api = {
     reqJson(`/vocab-papers/${encodeURIComponent(paperId)}`, 'DELETE'),
   vocabPaperPreview: (paperId) =>
     req(`/vocab-papers/${encodeURIComponent(paperId)}/preview`),
-  vocabPaperHistory: (level) =>
-    req('/vocab-papers/history', { searchParams: level != null ? { level } : {} }),
+  vocabPaperHistory: (level, { includeMix = false, limit } = {}) =>
+    req('/vocab-papers/history', {
+      searchParams: {
+        ...(level != null ? { level } : {}),
+        ...(includeMix ? { include_mix: 1 } : {}),
+        ...(limit != null ? { limit } : {}),
+      },
+    }),
   vocabUnlockGet: () => req('/vocab-exams/unlock'),
   vocabUnlockPut: (user, level) =>
     reqJson('/vocab-exams/unlock', 'PUT', { user, level }),

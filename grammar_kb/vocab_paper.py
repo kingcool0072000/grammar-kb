@@ -85,6 +85,21 @@ def _skip_for_en2zh(pos: str) -> bool:
     return bool(tags & {"prep", "proper"})
 
 
+def _rich_rows(rows) -> list[dict]:
+    """vocab_word 原始行 → 富词条（pos 解析、人名/地名规避）。"""
+    out = []
+    for r in rows:
+        pos = (r["pos"] or "").strip()
+        gloss = (r["gloss"] or "").strip()
+        if _is_name_word(pos, gloss):
+            continue
+        out.append({"word": r["word"], "pos": pos,
+                    "pos_list": _pos_list(pos),
+                    "pos_cn": _pos_cn(pos),
+                    "gloss": gloss, "gloss_clean": _strip_gloss_pos(gloss)})
+    return out
+
+
 def _load_words_rich(level: int) -> list[dict]:
     """本级词条：word/pos/gloss（pos 解析为列表）。
 
@@ -100,17 +115,55 @@ def _load_words_rich(level: int) -> list[dict]:
         rows = conn.execute(
             "SELECT word, pos, gloss FROM vocab_word WHERE level = ?",
             (int(level),)).fetchall()
-    out = []
-    for r in rows:
-        pos = (r["pos"] or "").strip()
-        gloss = (r["gloss"] or "").strip()
-        if _is_name_word(pos, gloss):
-            continue
-        out.append({"word": r["word"], "pos": pos,
-                    "pos_list": _pos_list(pos),
-                    "pos_cn": _pos_cn(pos),
-                    "gloss": gloss, "gloss_clean": _strip_gloss_pos(gloss)})
+    return _rich_rows(rows)
+
+
+def _load_words_by_names(names: list[str]) -> dict[str, dict]:
+    """按词面批量取富词条（跨级别；MIX 卷重建用），返回 {word: rich}。"""
+    path = _grammar_db_path()
+    if not path or not Path(path).exists() or not names:
+        return {}
+    out: dict[str, dict] = {}
+    chunk = 400
+    with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
+        conn.row_factory = sqlite3.Row
+        for i in range(0, len(names), chunk):
+            part = names[i:i + chunk]
+            rows = conn.execute(
+                "SELECT word, pos, gloss FROM vocab_word"
+                f" WHERE word IN ({','.join('?' * len(part))})",
+                part).fetchall()
+            for w in _rich_rows(rows):
+                out[w["word"]] = w
     return out
+
+
+def _load_learned_words(user: str, fce_db_path: Optional[str] = None) -> list[dict]:
+    """某学生「已学」词（跨级别混合）。
+
+    「已学」= recite_word_progress 里出现过的词，含尚未掌握
+    （mastered_at 为空、只错过）的词。不是「已掌握」子集。回
+    vocab_word 取释义/词性；词库里没有的词面跳过。
+
+    fce_db_path 由调用方透传（与 VocabExamStore 同库）。None 时
+    走 VocabExamStore 的默认路径。
+    """
+    user = (user or "").strip()[:60]
+    if not user:
+        return []
+    store = VocabExamStore(fce_db_path)
+    with store._connect() as conn:
+        try:
+            rows = conn.execute(
+                "SELECT DISTINCT word FROM recite_word_progress"
+                " WHERE user = ?", (user,)).fetchall()
+        except sqlite3.OperationalError:
+            return []
+    learned = [r["word"] for r in rows if r["word"]]
+    if not learned:
+        return []
+    rich = _load_words_by_names(learned)
+    return [rich[w] for w in learned if w in rich]
 
 
 def _pick_diverse(words: list[dict], n: int, rng: random.Random) -> list[dict]:
@@ -177,20 +230,40 @@ _HISTORY_TABLE_SQL = (
     " created_at TEXT)")
 
 
-def list_paper_history(level: Optional[int] = None, limit: int = 50
-                       ) -> list[dict]:
-    store = VocabExamStore()
+def list_paper_history(level: Optional[int] = None, limit: int = 50,
+                       fce_db_path: Optional[str] = None,
+                       include_mix: bool = False) -> list[dict]:
+    """已生成试卷。level=None 为全部（含混合卷）。
+
+    include_mix：指定级别时再带上混合卷（level<0）。两桶各自取
+    limit 条再按 id 合并，避免「先取全局最近 N 条再在客户端筛本级」
+    时本级卷被别的级别挤出窗口。
+    """
+    store = VocabExamStore(fce_db_path)
+    limit = max(1, min(int(limit), 200))
+    cols = "id, paper_id, level, words, created_at"
     with store._connect() as conn:
         conn.execute(_HISTORY_TABLE_SQL)
         if level is None:
             rows = conn.execute(
-                "SELECT paper_id, level, words, created_at FROM vocab_paper_history"
-                " ORDER BY id DESC LIMIT ?", (int(limit),)).fetchall()
+                f"SELECT {cols} FROM vocab_paper_history"
+                " ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+        elif include_mix:
+            rows_lv = conn.execute(
+                f"SELECT {cols} FROM vocab_paper_history"
+                " WHERE level = ? ORDER BY id DESC LIMIT ?",
+                (int(level), limit)).fetchall()
+            rows_mix = conn.execute(
+                f"SELECT {cols} FROM vocab_paper_history"
+                " WHERE level < 0 ORDER BY id DESC LIMIT ?",
+                (limit,)).fetchall()
+            rows = sorted([*rows_lv, *rows_mix],
+                          key=lambda r: r["id"], reverse=True)
         else:
             rows = conn.execute(
-                "SELECT paper_id, level, words, created_at FROM vocab_paper_history"
+                f"SELECT {cols} FROM vocab_paper_history"
                 " WHERE level = ? ORDER BY id DESC LIMIT ?",
-                (int(level), int(limit))).fetchall()
+                (int(level), limit)).fetchall()
     out = []
     for r in rows:
         try:
@@ -203,20 +276,44 @@ def list_paper_history(level: Optional[int] = None, limit: int = 50
     return out
 
 
-def generate_paper(level: int, save: bool = True) -> dict:
-    """生成一份本级考试卷。save=False 仅预览不落历史。"""
-    rng = random.Random()
-    words = _load_words_rich(level)
-    if len(words) < 50:
-        raise ValueError(f"L{level} 词量不足 50（现有 {len(words)}）")
+def generate_paper(level: int, save: bool = True, scope: str = "level",
+                   user: Optional[str] = None,
+                   fce_db_path: Optional[str] = None) -> dict:
+    """生成一份考试卷。save=False 仅预览不落历史。
 
-    store = VocabExamStore()
+    scope="level"：本级词池（原口径）。
+    scope="learned"：user 的全部已学词（进度里出现过即可，含未掌握），
+    跨级别混合。卷号 MIX- 前缀，level 存 -1。去重只对先前的混合卷
+    （level<0），不用各级试卷把混合卷词池抽干。
+    """
+    rng = random.Random()
+    scope = scope or "level"
+    if scope not in ("level", "learned"):
+        raise ValueError("scope 须为 level 或 learned")
+    if scope == "learned":
+        lvl_out, prefix = -1, "MIX"
+        words = _load_learned_words(user or "", fce_db_path)
+        if len(words) < 50:
+            who = (user or "").strip() or "该学生"
+            raise ValueError(f"{who} 已学词不足 50（现有 {len(words)}）")
+    else:
+        lvl_out, prefix = int(level), f"L{int(level)}"
+        words = _load_words_rich(level)
+        if len(words) < 50:
+            raise ValueError(f"L{level} 词量不足 50（现有 {len(words)}）")
+
+    store = VocabExamStore(fce_db_path)
     hist_words: set[str] = set()
     with store._connect() as conn:
         conn.execute(_HISTORY_TABLE_SQL)
-        rows = conn.execute(
-            "SELECT words FROM vocab_paper_history WHERE level = ?",
-            (int(level),)).fetchall()
+        if scope == "learned":
+            rows = conn.execute(
+                "SELECT words FROM vocab_paper_history WHERE level < 0"
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT words FROM vocab_paper_history WHERE level = ?",
+                (int(level),)).fetchall()
     for r in rows:
         try:
             hist_words.update(json.loads(r["words"] or "[]"))
@@ -229,7 +326,7 @@ def generate_paper(level: int, save: bool = True) -> dict:
         w for w in words if w["word"] in hist_words]
     picked = _pick_diverse(pool, 50, rng)
     if len(picked) < 50:
-        raise ValueError(f"L{level} 可选词不足 50（现有 {len(picked)}）")
+        raise ValueError(f"可选词不足 50（现有 {len(picked)}）")
 
     # 拼写段优先拿长词（≥4 字母才好挖空）：从全部选中词里挑最长的 10 个
     long_sorted = sorted(picked, key=lambda w: -len(w["word"]))
@@ -253,12 +350,14 @@ def generate_paper(level: int, save: bool = True) -> dict:
         raise ValueError(f"与历史重复 {overlap} 词超限（≤10）")
     all_words = [w["word"] for w in picked]
 
-    paper_id = (f"L{level}-"
+    paper_id = (f"{prefix}-"
                 + datetime.now(_tz.utc).strftime("%Y%m%d%H%M%S")
                 + f"-{rng.randrange(1000, 9999)}")
     paper = {
         "paper_id": paper_id,
-        "level": int(level),
+        "level": lvl_out,
+        "scope": scope,
+        "user": (user or "").strip()[:60] if scope == "learned" else "",
         "created_at": datetime.now(_tz.utc).isoformat(timespec="seconds"),
         "overlap_with_history": overlap,
         "zh2en": [{"word": w["word"], "gloss": w["gloss_clean"],
@@ -276,29 +375,30 @@ def generate_paper(level: int, save: bool = True) -> dict:
             conn.execute(
                 "INSERT OR REPLACE INTO vocab_paper_history"
                 " (level, paper_id, words, created_at) VALUES (?,?,?,?)",
-                (int(level), paper_id,
+                (lvl_out, paper_id,
                  json.dumps(all_words, ensure_ascii=False),
                  paper["created_at"]),
             )
     return paper
 
 
-def save_paper(paper: dict) -> dict:
+def save_paper(paper: dict, fce_db_path: Optional[str] = None) -> dict:
     """存档一份「预览态」生成的卷（生成→预览→保存 流程的第三步）。
 
-    校验 paper_id 形如 L{n}-...，词表取 paper['words']（50 词）；
-    幂等（INSERT OR REPLACE）。
+    paper_id 形如 L{n}-... 或 MIX-...（混合卷 level 记 -1）。
+    词表取 paper['words']，须为 50 词。幂等（INSERT OR REPLACE）。
     """
     pid = str((paper or {}).get("paper_id") or "")[:64]
-    level = (paper or {}).get("level")
     ws = (paper or {}).get("words") or []
-    m = re.match(r"^L(\d)-", pid)
-    if not m or not isinstance(level, int) or not ws:
+    m = re.match(r"^(?:L(\d)|MIX)-", pid)
+    if not m or not ws:
         raise ValueError("试卷数据不完整（paper_id/level/words）")
-    level = int(m.group(1))
+    if len(ws) != 50:
+        raise ValueError("试卷须为 50 词")
+    level = int(m.group(1)) if m.group(1) else -1
     created = str(paper.get("created_at") or "")[:40] or datetime.now(
         _tz.utc).isoformat(timespec="seconds")
-    store = VocabExamStore()
+    store = VocabExamStore(fce_db_path)
     with store._connect() as conn:
         conn.execute(_HISTORY_TABLE_SQL)
         conn.execute(
@@ -308,9 +408,9 @@ def save_paper(paper: dict) -> dict:
     return {"paper_id": pid, "level": level, "count": len(ws)}
 
 
-def delete_paper(paper_id: str) -> bool:
+def delete_paper(paper_id: str, fce_db_path: Optional[str] = None) -> bool:
     """删除一份已生成的试卷资产。"""
-    store = VocabExamStore()
+    store = VocabExamStore(fce_db_path)
     with store._connect() as conn:
         conn.execute(_HISTORY_TABLE_SQL)
         cur = conn.execute(
@@ -319,9 +419,9 @@ def delete_paper(paper_id: str) -> bool:
         return cur.rowcount > 0
 
 
-def get_paper(paper_id: str) -> Optional[dict]:
+def get_paper(paper_id: str, fce_db_path: Optional[str] = None) -> Optional[dict]:
     """取一份历史卷（含渲染 HTML，供预览）。"""
-    store = VocabExamStore()
+    store = VocabExamStore(fce_db_path)
     with store._connect() as conn:
         conn.execute(_HISTORY_TABLE_SQL)
         row = conn.execute(
@@ -335,7 +435,11 @@ def get_paper(paper_id: str) -> Optional[dict]:
     except (ValueError, TypeError):
         ws = []
     # 从词库回填词条渲染试卷（历史卷可完整重建；词性一并带上）
-    words_rich = {w["word"]: w for w in _load_words_rich(row["level"])}
+    if row["level"] is not None and int(row["level"]) >= 0:
+        words_rich = {w["word"]: w for w in _load_words_rich(row["level"])}
+    else:
+        # 混合卷（MIX- / level<0）：词跨级别，按词面回填
+        words_rich = _load_words_by_names(list(ws))
     spell = []
 
     def _entry(w):
@@ -363,7 +467,13 @@ def render_new_paper_html(paper: dict, title: str = "") -> str:
     e = html.escape
     lvl = paper["level"]
     pid = paper["paper_id"]
-    t = title or f"哈一词汇考试 · L{lvl} 级"
+    if title:
+        t = title
+    elif lvl is not None and int(lvl) < 0:
+        who = (paper.get("user") or "").strip()
+        t = f"哈一词汇考试 · 已学全部混合卷（{who}）" if who else "哈一词汇考试 · 已学全部混合卷"
+    else:
+        t = f"哈一词汇考试 · L{lvl} 级"
 
     zh2en = "".join(
         f'<div class="q"><span class="n">{i}</span>'
