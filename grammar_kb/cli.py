@@ -345,7 +345,8 @@ def build_parser() -> argparse.ArgumentParser:
     pse.set_defaults(func=cmd_serve)
 
     psy = sub.add_parser("sync-aicloud", help="从爱问云拉取测验成绩同步进成绩库")
-    psy.add_argument("--phone", default=None, help="爱问云账号（默认 $AICLOUD_PHONE）")
+    psy.add_argument("--phone", default=None,
+                     help="爱问云账号（默认 $GRAMMAR_KB_AICLOUD_PHONE）")
     psy.add_argument("--password", default=None, help="密码（默认 $AICLOUD_PASSWORD）")
     psy.add_argument("--group", type=int, default=None, help="班级 ID（默认 $AICLOUD_GROUP 或 3350581）")
     psy.add_argument("--dry-run", action="store_true", help="只打印计划不写库")

@@ -78,6 +78,24 @@ def test_teacher_lists_and_filters(rm_env):
     assert len(only) == 1 and only[0]["user"] == "malin"
 
 
+def test_other_user_cannot_overwrite_session(rm_env):
+    """会话 id 可猜测；别人用同一个 id 心跳不得改写原主的统计。"""
+    c = _client(rm_env)
+    malin = _login(c, "malin")
+    mxy = _login(c, "mxy", "mxy123")
+    assert c.post("/readingmore/api/session", headers=malin,
+                  json=_hb("rm-shared", 1_800_000_000_000)).status_code == 200
+    hijack = c.post("/readingmore/api/session", headers=mxy,
+                    json=_hb("rm-shared", 1_800_000_000_000, turn_count=99, book="hijack"))
+    assert hijack.status_code == 409
+    teacher = _login(c, "teacher")
+    items = c.get("/readingmore/api/sessions", headers=teacher).json()["data"]
+    row = next(x for x in items if x["id"] == "rm-shared")
+    assert row["user"] == "malin"
+    assert row["turns"] == 8
+    assert row["book"] == "The Week Junior 2026-09"
+
+
 def test_student_forbidden_and_401(rm_env):
     c = _client(rm_env)
     s = _login(c, "malin")

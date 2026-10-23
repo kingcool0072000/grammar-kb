@@ -117,6 +117,13 @@ def post_session(rec: SessionHeartbeat, request: Request) -> dict:
     now = int(datetime.now(timezone.utc).timestamp() * 1000)
     lookups = rec.new_lookups[:200]
     with _conn() as c:
+        owner = c.execute(
+            "SELECT user FROM rm_sessions WHERE id = ?", (rec.id,)
+        ).fetchone()
+        # 会话 id 由浏览器生成（时间戳 + 4 位 base36），可被猜到。
+        # 冲突更新不能改写别人的行，否则学习日志会记到对方名下。
+        if owner is not None and owner["user"] != user:
+            raise HTTPException(status_code=409, detail="会话不属于当前用户")
         c.execute(
             """INSERT INTO rm_sessions
                (id,user,device,book,start,end,total_ms,focus_ms,engaged_ms,
