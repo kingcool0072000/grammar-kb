@@ -905,3 +905,179 @@ def test_mix_paper_sunday_copy(plan_env):
     assert tasks[f"paper:{mix_id}"]["text"] == f"单词试卷练习（{mix_id}）"
     assert tasks[f"paper:{lvl_id}"]["detail"].startswith("L3 级试卷")
     assert tasks["paper:MIX-missing"]["detail"].startswith("试卷资产")
+
+
+def _task_sig(tasks):
+    return [(t.get("key"), t.get("done"), t.get("why")) for t in tasks]
+
+
+def test_checks_do_not_change_done_or_percent(plan_env, weekday_clock):
+    """完成率来自 day_completion。plan_day_checks 写满也不改 done / percent / why。"""
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    ht = _login(c, "teacher", "123456")
+    _put_week(c, ht, {"lectures": [29]})
+    day = today_cn().isoformat()
+    before = c.get("/plan/today", headers=hs).json()["data"]
+    assert before["basis"] == "signals"
+    assert before["tasks"], "当天应有派生任务，否则测不到「空打卡 ≠ 0%」"
+    assert all("why" in t for t in before["tasks"])
+    sig = _task_sig(before["tasks"])
+    # 有任务但还没做：percent 可以是 0，但这是信号结果，不是因为打卡表是空的。
+    if before["total"]:
+        assert before["percent"] == round(before["done"] / before["total"] * 100)
+    key = before["tasks"][0]["key"]
+    chk = c.post("/plan/day-check", headers=hs, json={
+        "user": "malin", "day": day, "task_key": key, "on": True})
+    assert chk.status_code == 200, chk.text
+    body = chk.json()["data"]
+    assert body["affects_done"] is False
+    assert "不计入" in body["note"]
+    after = c.get("/plan/today", headers=hs).json()["data"]
+    assert _task_sig(after["tasks"]) == sig
+    assert after["percent"] == before["percent"]
+    assert after["done"] == before["done"]
+
+    wv = c.get(f"/plan/week-view?week_start={MON}&user=malin",
+               headers=ht).json()["data"]
+    cell = next(x for x in wv["days"] if x["date"] == day)
+    assert cell["basis"] == "signals"
+    assert cell["percent"] == before["percent"]
+    assert all(t.get("why") for t in cell["tasks"])
+    # 未来日不因为「还没打卡」显示 0%
+    for fut in wv["days"]:
+        if fut["future"]:
+            assert fut["percent"] is None
+            assert all(t["why"] == "scheduled" for t in fut["tasks"])
+    assert "不看手动打卡" in wv["completion"]["note"]
+    assert wv["completion"]["percent"] == c.get(
+        "/plan/week-todo", headers=hs).json()["data"]["percent"]
+    todo = c.get("/plan/week-todo", headers=hs).json()["data"]
+    todo_day = next(x for x in todo["days"] if x["date"] == day)
+    assert todo_day["percent"] == before["percent"]
+    assert _task_sig(todo_day["tasks"]) == sig
+    assert "不看手动打卡" in todo["completion_note"]
+
+    con = sqlite3.connect(plan_env / "fce.db")
+    n = con.execute("SELECT COUNT(*) FROM plan_day_checks").fetchone()[0]
+    con.close()
+    assert n == 1  # 打卡行在，但上面的完成率没跟着变
+
+
+def test_past_week_rate_uses_signals_without_history_or_checks(plan_env):
+    """上周没有回填快照、打卡表也是空的，完成率仍按当天成绩信号，而不是 0%。"""
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    ht = _login(c, "teacher", "123456")
+    c.put(f"/plan/weeks/{PREV}", headers=ht,
+          json={"tasks": {"lectures": [29]}, "notes": ""})
+    assert c.post("/exams", headers=hs, json={
+        "lecture": 29, "date": PREV, "score": 90, "wrong": [], "kind": "lecture",
+    }).status_code == 200
+    wv = c.get(f"/plan/week-view?week_start={PREV}&user=malin",
+               headers=ht).json()["data"]
+    mon = next(x for x in wv["days"] if x["date"] == PREV)
+    lec = next(t for t in mon["tasks"] if t["key"] == "lecture:29")
+    assert lec["done"] is True and lec["why"] == "signal"
+    assert mon["basis"] == "signals"
+    assert mon["percent"] is not None and mon["percent"] > 0
+    assert wv["completion"]["basis"] == "signals"
+    assert wv["completion"]["percent"] is not None and wv["completion"]["percent"] > 0
+    ov = c.get("/plan/overview?user=malin", headers=ht).json()["data"]
+    row = next(x for x in ov["weeks"] if x["week_start"] == PREV)
+    assert row["percent"] == wv["completion"]["percent"]
+    assert row["percent"] > 0
+    con = sqlite3.connect(plan_env / "fce.db")
+    assert con.execute("SELECT COUNT(*) FROM plan_day_checks").fetchone()[0] == 0
+    assert con.execute(
+        "SELECT COUNT(*) FROM plan_history_days").fetchone()[0] == 0
+    con.close()
+
+
+def test_history_freeze_does_not_invent_done(plan_env, weekday_clock):
+    """冻结快照只锁当前判定。不传 tasks 时未完成项保持未完成；服务端不补造完成。"""
+    from grammar_kb.plan import PlanStore
+
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    ht = _login(c, "teacher", "123456")
+    _put_week(c, ht, {"lectures": [29]})
+    day = today_cn().isoformat()
+    before = c.get("/plan/today", headers=hs).json()["data"]
+    sig = _task_sig(before["tasks"])
+    assert any(done is False for _, done, _ in sig)
+
+    denied = c.post("/plan/history-day", headers=hs,
+                    json={"user": "malin", "day": day})
+    assert denied.status_code == 403
+
+    frozen = c.post("/plan/history-day", headers=ht,
+                    json={"user": "malin", "day": day})
+    assert frozen.status_code == 200, frozen.text
+    note = frozen.json()["data"]["note"]
+    assert "未完成" in note and "不是每日流水" in note
+    after = c.get("/plan/today", headers=hs).json()["data"]
+    assert after["basis"] == "history"
+    assert _task_sig(after["tasks"]) == sig
+    assert after["percent"] == before["percent"]
+
+    # 旧回填行没有 done：仍按「快照里的任务即完成」，这是显式写入不是自动补造。
+    ps = PlanStore(str(plan_env / "fce.db"), exam_db_path=str(plan_env / "exam.db"))
+    ps.put_history_day("malin", day, [{
+        "type": "lecture", "key": "lecture:7", "text": "第7讲 学+测",
+    }])
+    legacy = c.get("/plan/today", headers=hs).json()["data"]
+    assert legacy["tasks"][0]["key"] == "lecture:7"
+    assert legacy["tasks"][0]["done"] is True
+    assert legacy["tasks"][0]["why"] == "history"
+    assert legacy["percent"] == 100
+
+    explicit = c.post("/plan/history-day", headers=ht, json={
+        "user": "malin", "day": day,
+        "tasks": [{"type": "lecture", "key": "lecture:29", "text": "第29讲",
+                   "done": False, "why": "no_signal"}],
+    })
+    assert explicit.status_code == 200, explicit.text
+    assert explicit.json()["data"]["count"] == 1
+    kept = c.get("/plan/today", headers=hs).json()["data"]
+    assert _task_sig(kept["tasks"]) == [("lecture:29", False, "no_signal")]
+    assert kept["percent"] == 0
+
+    empty = c.post("/plan/history-day", headers=ht,
+                   json={"user": "malin", "day": day, "tasks": []})
+    assert empty.status_code == 200
+    assert "空快照" in empty.json()["data"]["note"]
+    wiped = c.get("/plan/today", headers=hs).json()["data"]
+    assert wiped["total"] == 0 and wiped["percent"] is None
+
+    bad = c.post("/plan/history-day", headers=ht,
+                 json={"user": "malin", "day": "nope"})
+    assert bad.status_code == 422
+
+
+def test_goal_progress_dims_are_per_module(plan_env):
+    """总目标进度按模块给条，综合百分比只是汇总，不能代替各维度。"""
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    goals = {
+        "lectures": [29, 30],
+        "vocab_target": 100,
+        "fce_parts": ["Test 1 · RUE P1"],
+        "articles": [52],
+        "vocab_papers": ["L1-demo"],
+    }
+    assert c.put("/plan/goals", headers=ht,
+                 json={"user": "malin", "goals": goals}).status_code == 200
+    d = c.get("/plan/goal-progress?user=malin", headers=ht).json()["data"]
+    names = [x["name"] for x in d["dims"]]
+    assert "语法课程" in names
+    assert any(n.startswith("词汇") for n in names)
+    assert "FCE Part" in names
+    assert "精读朗读" in names
+    assert "单词试卷" in names
+    assert all(x["total"] > 0 and "done" in x for x in d["dims"])
+    assert d["percent"] is not None
+    # 各模块独立：一门课没考过时，综合百分比不能被当成唯一进度。
+    lec = next(x for x in d["dims"] if x["name"] == "语法课程")
+    assert lec["done"] == 0 and lec["total"] == 2
+    assert len(d["dims"]) >= 5

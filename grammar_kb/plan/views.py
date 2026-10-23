@@ -1,4 +1,4 @@
-"""周历、月历、总览与手动打卡。"""
+"""周历、月历、总览。完成率走学习信号；打卡表不进 done。"""
 from __future__ import annotations
 
 import contextlib
@@ -6,7 +6,14 @@ import sqlite3
 from datetime import date, datetime, timedelta, timezone as _tz
 
 from ..clock import cn_dt, monday_of, today_cn
-from .util import _paper_short, _short, _task_key, add_days
+from .util import (
+    _paper_short, _short, add_days, completion_percent, task_public,
+)
+
+_COMPLETION_NOTE = (
+    "完成率按学习信号自动计算，不看手动打卡。"
+    "仅教师冻结过的日期改用 plan_history_days 快照，那不是每日流水。"
+)
 class ViewsMixin:
 
     def week_view(self, week_start: str, user: str = "malin") -> dict:
@@ -16,7 +23,8 @@ class ViewsMixin:
         - 阅读篇数（reading 目标书数）
         - 泛读总词数（各书目标% 对应词数 − 已读词数，按剩余摊到天）
         - 题型类数（微练习讲数 + FCE 项数 + 讲次测验，去重类目）
-        历史周逐日按当天口径回看（today_tasks(day=…)）。
+        已到的日子一律 ``today_tasks``（信号；有快照才改走回填）。
+        没有计划项时 percent 为 null，不显示成 0%。
         """
         w = self._get_week(week_start, user=user)
         t = w.get("tasks") or {}
@@ -78,54 +86,40 @@ class ViewsMixin:
         }
 
         # ---- 逐日矩阵 ----
+        # 过去的周不再因为没有 plan_history_days 就变成 0/0。
+        # 快照只在教师冻过的那一天替代信号（today_tasks 内部处理）。
         days = []
-        current_monday = monday_of(today_cn()).isoformat()
-        is_historical = week_start < current_monday
         for i in range(7):
             d = (date.fromisoformat(week_start) + timedelta(days=i)).isoformat()
             if d > today_iso:
                 # 未来日带出均摊后的当日计划（done=False 灰显），教师/学生
-                # 都能提前看到「那天该做什么」；total 即当日任务数
+                # 都能提前看到「那天该做什么」；total 即当日任务数。
+                # 未来日不进完成率，percent 保持 null，避免空打卡被看成 0%。
                 fut = self.week_daily_tasks(week_start, for_date=d, user=user)
                 days.append({
                     "date": d, "future": True, "done": 0, "total": len(fut),
-                    "tasks": [{"key": x.get("key") or _task_key(x),
-                               "text": x.get("text", ""),
-                               "detail": x.get("detail"),
-                               "type": x.get("type", "plan"),
-                               "article_id": x.get("article_id"),
-                               "done": False} for x in fut],
-                })
-                continue
-            if is_historical:
-                # 历史日优先显示逐日快照（真实活动=计划完成100%）；
-                # 量化实录（泛读/背单词/计划外朗读）从活动表按日补上，
-                # 无快照日也会带出实录（有活动就有量）。
-                hist = self.history_day(user, d) or []
-                planned_arts = {x.get("article_id") for x in hist
-                                if x.get("article_id") is not None}
-                _, _, acts = self._signals_and_acts(user, d, planned_arts)
-                days.append({
-                    "date": d, "future": False,
-                    "done": len(hist), "total": len(hist),
-                    "tasks": [{"key": x.get("key") or _task_key(x),
-                               "text": x.get("text", ""),
-                               "detail": x.get("detail"),
-                               "type": x.get("type", "history"),
-                               "done": True} for x in hist],
-                    "acts": acts,
+                    "percent": None, "basis": "signals",
+                    "tasks": [task_public(x, future=True) for x in fut],
                 })
                 continue
             td = self.today_tasks(user=user, day=d)
             days.append({
                 "date": d, "future": False,
                 "done": td["done"], "total": td["total"],
-                "tasks": [{"key": x["key"], "text": x["text"],
-                           "detail": x.get("detail"), "type": x["type"],
-                           "article_id": x.get("article_id"),
-                           "done": x["done"]} for x in td["tasks"]],
+                "percent": td["percent"], "basis": td["basis"],
+                "tasks": [task_public(x) for x in td["tasks"]],
                 "acts": td.get("acts") or {},
             })
+        past = [d for d in days if not d["future"]]
+        done_n = sum(d["done"] for d in past)
+        total_n = sum(d["total"] for d in past)
+        bases = {d.get("basis") for d in past if d.get("total")}
+        if bases == {"history"}:
+            basis = "history"
+        elif "history" in bases:
+            basis = "mixed"
+        else:
+            basis = "signals"
         return {
             "week_start": week_start, "tasks": t, "notes": w.get("notes") or "",
             "breakdown": breakdown, "days": days, "current_week": in_week,
@@ -135,6 +129,12 @@ class ViewsMixin:
                 for aid in (t.get("articles") or [])
             ],
             "goal_progress": self._week_goal_progress(t, days, user, week_start),
+            "completion": {
+                "done": done_n, "total": total_n,
+                "percent": completion_percent(done_n, total_n),
+                "basis": basis,
+                "note": _COMPLETION_NOTE,
+            },
         }
 
 
@@ -331,10 +331,13 @@ class ViewsMixin:
             if iso_ > today_iso:
                 td = self.week_daily_tasks(
                     monday_of(d).isoformat(), for_date=iso_, user=user)
-                cell.update({"done": 0, "total": len(td)})
+                cell.update({"done": 0, "total": len(td), "percent": None})
             else:
                 td = self.today_tasks(user=user, day=iso_)
-                cell.update({"done": td["done"], "total": td["total"]})
+                cell.update({
+                    "done": td["done"], "total": td["total"],
+                    "percent": td["percent"],
+                })
             days.append(cell)
             d += timedelta(days=1)
         return {"month": first.isoformat()[:7], "days": days}
@@ -361,20 +364,24 @@ class ViewsMixin:
                             or t.get("hw_papers") or t.get("vocab_goal")
                             or t.get("fce") or t.get("reading"))
             done = total = 0
-            if ws <= cur:  # 已开始的周才聚合完成度（未来周无 actuals）
-                historical_week = ws < cur
+            bases: set[str] = set()
+            if ws <= cur:  # 已开始的周才聚合完成度（未来周无信号）
                 for i in range(7):
                     d = (date.fromisoformat(ws) + timedelta(days=i)).isoformat()
                     if d > today_iso:
                         continue
-                    if historical_week:
-                        hist = self.history_day(user, d) or []
-                        done += len(hist)
-                        total += len(hist)
-                    else:
-                        td = self.today_tasks(user=user, day=d)
-                        done += td["done"]
-                        total += td["total"]
+                    # 过去的周也走信号。没有回填快照时不再把整周算成 0/0。
+                    td = self.today_tasks(user=user, day=d)
+                    done += td["done"]
+                    total += td["total"]
+                    if td["total"]:
+                        bases.add(td["basis"])
+            if bases == {"history"}:
+                basis = "history"
+            elif "history" in bases:
+                basis = "mixed"
+            else:
+                basis = "signals"
             weeks.append({
                 "week_start": ws, "has_plan": has_plan,
                 "is_current": ws == cur, "past": ws < cur,
@@ -387,6 +394,8 @@ class ViewsMixin:
                 "reading": t.get("reading") or {},
                 "notes": w.get("notes") or "",
                 "done": done, "total": total,
+                "percent": completion_percent(done, total) if ws <= cur else None,
+                "basis": basis,
             })
             ws = (date.fromisoformat(ws) + timedelta(days=7)).isoformat()
         return {"weeks": weeks, "current_week": cur}

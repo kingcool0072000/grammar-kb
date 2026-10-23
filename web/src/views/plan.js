@@ -1,5 +1,5 @@
 import { api } from '../api.js'
-import { escapeHtml, escAttr, todayIso, studyGoalMin } from '../render.js'
+import { escapeHtml, escAttr, todayIso, studyGoalMin, taskWhy, taskWhyShort } from '../render.js'
 import { PLAN_ADD_TYPES, appendPlanItem } from './planAdd.js'
 
 function vocabPaperHead(level) {
@@ -160,21 +160,23 @@ export async function mountPlan(el) {
         </div>`
       }
       const bars = gp.dims.map((d) => {
-        const pct = d.total ? Math.min(100, Math.round(d.done / d.total * 100)) : 0
+        const raw = d.total ? Math.round(d.done / d.total * 100) : null
+        const width = raw == null ? 0 : Math.max(0, Math.min(100, raw))
+        const pctLabel = raw == null ? '—' : `${raw}%`
         return `<div class="gp-dim">
           <span class="gp-dim-name">${d.icon} ${escapeHtml(d.name)}${d.extra ? `<i>${escapeHtml(d.extra)}</i>` : ''}</span>
-          <div class="gp-dim-bar"><i style="width:${pct}%"></i></div>
+          <div class="gp-dim-bar" title="${pctLabel}"><i style="width:${width}%"></i></div>
+          <b class="gp-dim-pct">${pctLabel}</b>
           <b class="gp-dim-n">${d.done}/${d.total}</b>
         </div>`
       }).join('')
+      const sum = gp.percent == null ? '' : `<span class="gp-total">综合 ${gp.percent}%（${gp.done_items}/${gp.total_items}）· 看各模块</span>`
       return `<div class="gp-card">
         <div class="gp-head">
-          <div class="gp-ring" style="--p:${gp.percent}">
-            <b>${gp.percent}%</b><span>${isWeek ? '周进度' : '总进度'}</span>
-          </div>
           <div class="gp-meta">
             <b>${title}</b>
-            <span class="muted">${gp.done_items}/${gp.total_items} 项完成${!isWeek && gp.deadline ? ` · 截止 ${gp.deadline}` : ''}</span>
+            ${sum}
+            ${!isWeek && gp.deadline ? `<span class="muted">截止 ${escapeHtml(String(gp.deadline))}</span>` : ''}
           </div>
           <div class="gp-mode-tabs">
             <button class="chip ${isWeek ? 'primary' : ''}" data-gmode="week">周目标</button>
@@ -303,6 +305,7 @@ export async function mountPlan(el) {
             <button class="chip" data-wk="prev" ${viewWeek <= earliest ? 'disabled' : ''}>← 上一周</button>
             <div class="pw-title">
               <h3>${isCur ? '本周' : '周'} · ${weekLabel(wv.week_start)}${wv.current_week ? '' : wv.week_start > curWeek ? '（未开始）' : '（已结束）'}</h3>
+              <p class="muted">${weekRateText(wv.completion)}</p>
             </div>
             <button class="chip" data-wk="next" ${wv.week_start >= '2027-01-25' ? 'disabled' : ''}>下一周 →</button>
             <button class="chip" data-add="${wv.week_start}">＋ 加一项</button>
@@ -633,22 +636,26 @@ export async function mountPlan(el) {
       const dd = Number(d.date.slice(8))
       const isToday = d.date === today
       const icon = { micro_drill: '✏️', wrong_words: '🔤', lecture: '📚', fce: '🎧', reading: '📖', speak: '🎤', article: '📄', paper: '📝', vocab: '🔤', hw_paper: '🗒' }
-      // 单日卡片显示当天完成的工作；未来日/今天显示均摊后的当日计划
-      // （今天有完成时只显示已完成——完成度视角优先，空了才亮当日计划）。
-      // 计划外的工作（朗读/泛读/背单词量化实录）由 acts 补充显示。
+      // 已到的日子列出全部计划项，并带上完成原因。完成率来自学习信号，
+      // 没有计划项时不显示 0%（避免被理解成「还没打卡」）。
       const taskRow = (x, ok) => {
+        const why = taskWhy(x.why)
+        const whyShort = d.future ? '' : taskWhyShort(x.why)
+        const tip = [x.detail, why].filter(Boolean).join(' · ')
+          || x.text || ''
         const inner = `
           <i>${icon[x.type] || '•'}</i>
           <span title="${escapeHtml(x.text)}">${escapeHtml(x.text)}</span>
+          ${whyShort ? `<small class="pw-why">${escapeHtml(whyShort)}</small>` : ''}
           ${ok ? '<em>✓</em>' : ''}`
         // 精读篇目可点：直达阅读训练详情（教师备课可顺手看正文；
         // #/reading 学生专属，教师走阅读内容管理页）
         if (x.type === 'article' && x.article_id)
           return `<a class="pw-task link ${ok ? 'done' : `plan ${isToday ? 'today' : ''}`}"
             href="#/readingAdmin"
-            title="${escapeHtml(x.detail || '阅读内容里查看/管理这篇文章')}">${inner}</a>`
+            title="${escapeHtml(tip || '阅读内容里查看/管理这篇文章')}">${inner}</a>`
         return `<div class="pw-task ${ok ? 'done' : `plan ${isToday ? 'today' : ''}`}"
-          title="${escapeHtml(x.detail || '')}">${inner}</div>`
+          title="${escapeHtml(tip)}">${inner}</div>`
       }
       const rows = (d.tasks || []).filter((x) => x.done).map((x) => taskRow(x, true)).join('')
       const planRows = (d.tasks || []).filter((x) => !x.done).map((x) => taskRow(x, false)).join('')
@@ -674,17 +681,35 @@ export async function mountPlan(el) {
       const minBadge = d.future ? '' :
         `<i class="pw-min ${studyMin >= goalMin ? 'ok' : ''}" title="每日目标 ${goalMin} 分钟（周中45/周末90）">${studyMin ? `${studyMin}′` : '0′'}/${goalMin}′${studyMin >= goalMin ? ' ✓' : ''}</i>`
       const full = !d.future && d.total > 0 && d.done >= d.total
-      const hasLive = Boolean(rows || extraRows || statRows.length)
+      const rateTitle = d.future
+        ? '还没到这一天'
+        : (d.total
+          ? `${d.done}/${d.total} · 按学习信号计算，不看打卡`
+          : '当天没有计划项，不显示 0%')
+      const bodyRows = d.future ? planRows : (rows + planRows)
+      const hasBody = Boolean(bodyRows || extraRows || statRows.length)
       return `<div class="pw-day ${isToday ? 'today' : ''} ${d.future ? 'future' : ''} ${full ? 'fulled' : ''}">
         <div class="pw-day-head">
           <b>周${dayNames[i]}</b><span>${dd} 日</span>
           ${minBadge}
-          <em>${d.future ? (d.total ? `${d.total} 项` : '待来') : (d.done ? `${d.done} ✓` : '—')}</em>
+          <em title="${escapeHtml(rateTitle)}">${dayRateLabel(d)}</em>
         </div>
-        <div class="pw-tasks">${hasLive
-          ? rows + extraRows + statHtml
-          : ((d.future || isToday) ? planRows : '<i class="pw-none">无完成</i>')}</div>
+        <div class="pw-tasks">${hasBody
+          ? bodyRows + extraRows + statHtml
+          : `<i class="pw-none">${d.future ? '无安排' : '当天没有计划项'}</i>`}</div>
       </div>`
+    }
+
+    function dayRateLabel(d) {
+      if (d.future) return d.total ? `${d.total} 项` : '待来'
+      if (!d.total) return '—'
+      const pct = d.percent != null ? d.percent : Math.round(d.done / d.total * 100)
+      return `${pct}%`
+    }
+
+    function weekRateText(comp) {
+      if (!comp || !comp.total) return '已到的日子还没有计划项 · 完成率按学习信号计算，不需要打卡'
+      return `完成率 ${comp.percent}%（${comp.done}/${comp.total}）· 按学习信号自动计算，不需要打卡`
     }
 
     // 周目标 chips（周历「本周目标」区与全览行共用，口径一致）
@@ -799,11 +824,11 @@ export async function mountPlan(el) {
           <div class="po-list">
             ${(ov.weeks || []).map((w) => {
               const chips = weekGoalChips(w, ed)
-              const pct = w.total ? Math.round((w.done / w.total) * 100) : null
+              const pct = w.percent != null ? w.percent : (w.total ? Math.round((w.done / w.total) * 100) : null)
               return `<div class="po-row ${w.past ? 'past' : ''} ${w.is_current ? 'cur' : ''} ${w.has_plan ? '' : 'noplan'}" data-ws="${w.week_start}">
                 <span class="po-date">${weekLabel(w.week_start)}</span>
                 <span class="po-chips">${chips.length ? chips.map((c) => `<i>${escapeHtml(c)}</i>`).join('') : '<em class="muted">未排计划</em>'}</span>
-                <span class="po-done">${w.total ? `<b>${pct}%</b>（${w.done}/${w.total}）` : ''}</span>
+                <span class="po-done" title="按学习信号计算，不看打卡">${pct == null ? '' : `<b>${pct}%</b>（${w.done}/${w.total}）`}</span>
               </div>`
             }).join('')}
           </div>

@@ -27,7 +27,9 @@ class CompletionMixin:
 
         ``keys`` 是 ``{task_key: {"done": bool, "why": str}}``。
         ``tasks`` 为当日派生清单（含配额、书名）；缺省时只回活动信号键。
-        ``historical`` 时清单行一律完成（历史回填快照），实录仍按日算。
+        ``historical`` 时：行上带 ``done`` 的按冻结值回放（不把未完成改成完成）；
+        旧回填行没有 ``done`` 时仍视为该条已完成。实录仍按日算。
+        ``plan_day_checks`` 不读、不写。
         """
         rows = list(tasks or [])
         planned = {
@@ -37,7 +39,13 @@ class CompletionMixin:
         keys: dict[str, dict] = {}
         if historical:
             for t in rows:
-                keys[_task_key(t)] = {"done": True, "why": "history"}
+                key = _task_key(t)
+                if "done" in t:
+                    why = t.get("why") or ("history" if t.get("done") else "no_signal")
+                    keys[key] = {"done": bool(t.get("done")), "why": str(why)[:40]}
+                else:
+                    # 旧回填：快照里出现的任务即当时完成，没有逐条判定。
+                    keys[key] = {"done": True, "why": "history"}
         else:
             for t in rows:
                 key = _task_key(t)

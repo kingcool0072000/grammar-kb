@@ -1,5 +1,5 @@
 import { api } from '../api.js'
-import { escapeHtml, todayIso, studyGoalMin } from '../render.js'
+import { escapeHtml, todayIso, studyGoalMin, taskWhy, taskWhyShort } from '../render.js'
 
 // 学生版 · 课程表：教师计划看板-周计划的只读镜像（/plan/my-week，
 // week_view 同源数据）。只看自己 + 本周；展示周拆解汇总 + 周一至周日
@@ -56,35 +56,42 @@ export async function mountTimetable(el) {
   }
   if (tasks.vocab_papers?.length) summary.push(`📝 试卷 ${tasks.vocab_papers.length} 份`)
 
-  const dimRow = (x) => `
-    <div class="tt-dim ${x.done >= x.total ? 'done' : ''}">
+  const dimRow = (x) => {
+    const raw = x.total ? Math.round(x.done / x.total * 100) : null
+    const width = raw == null ? 0 : Math.max(0, Math.min(100, raw))
+    return `
+    <div class="tt-dim ${x.done >= x.total && x.total ? 'done' : ''}">
       <span class="tt-dim-icon">${x.icon}</span>
       <span class="tt-dim-name">${escapeHtml(x.name)}</span>
-      <div class="tt-dim-bar"><i style="width:${Math.min(100, (x.done / (x.total || 1)) * 100)}%"></i></div>
-      <b class="tt-dim-num">${round1(x.done)}/${x.total}</b>
+      <div class="tt-dim-bar"><i style="width:${width}%"></i></div>
+      <b class="tt-dim-num">${raw == null ? '—' : `${raw}%`}<small>${round1(x.done)}/${x.total}</small></b>
     </div>`
+  }
 
   const dayCell = (day, i) => {
     const isToday = day.date === today
     // 任务行：精读篇目可点——直达阅读练习（列表里本周任务置顶标 📌）
     const ttTask = (t, ok) => {
+      const why = taskWhy(t.why)
+      const whyShort = day.future ? '' : taskWhyShort(t.why)
+      const tip = [t.detail, why].filter(Boolean).join(' · ')
+        || (t.type === 'article' ? '去阅读练习读全文 + 提交朗读' : '')
       const inner = `
         <span class="tt-task-ic">${TYPE_ICON[t.type] || '•'}</span>
         <span class="tt-task-text">${escapeHtml(t.text || t.key)}</span>
+        ${whyShort ? `<small class="tt-why">${escapeHtml(whyShort)}</small>` : ''}
         ${ok ? '<span class="tt-task-check">✓</span>' : ''}`
       if (t.type === 'article')
         return `<a class="tt-task link ${ok ? 'ok' : 'plan'}" href="#/reading"
-          title="${escapeHtml(t.detail || '去阅读练习读全文 + 提交朗读')}">${inner}</a>`
-      return `<div class="tt-task ${ok ? 'ok' : 'plan'}" title="${escapeHtml(t.detail || '')}">${inner}</div>`
+          title="${escapeHtml(tip)}">${inner}</a>`
+      return `<div class="tt-task ${ok ? 'ok' : 'plan'}" title="${escapeHtml(tip)}">${inner}</div>`
     }
     // 已完成的学习（课程表=学习记录视角）：完成计划任务 +
     // 计划外朗读 + 泛读/背单词实录统计（与教师计划看板日卡同口径）
     const doneTasks = (day.tasks || []).filter((t) => t.done)
     const items = doneTasks.map((t) => ttTask(t, true)).join('')
-    // 未来日/今天（尚无完成时）：展示均摊后的当日计划（灰显「今天/那天该做什么」）
-    const planTasks = (day.future || isToday) && !doneTasks.length
-      ? (day.tasks || []).filter((t) => !t.done) : []
-    const planItems = planTasks.map((t) => ttTask(t, false)).join('')
+    // 未完成项也列出，并带上原因（无记录 / 未达配额），避免 0% 被看成没打卡。
+    const planItems = (day.tasks || []).filter((t) => !t.done).map((t) => ttTask(t, false)).join('')
     const acts = day.acts || {}
     const extraRows = (acts.extra_speaks || []).map((x) => `
       <div class="tt-task ok">
@@ -105,7 +112,7 @@ export async function mountTimetable(el) {
     const studyMin = acts.study_min || 0
     const minBadge = day.future ? '' :
       `<i class="tt-min ${studyMin >= goalMin ? 'ok' : ''}" title="每日目标 ${goalMin} 分钟（周中45/周末90）">${studyMin ? `${studyMin}′` : '0′'}/${goalMin}′${studyMin >= goalMin ? ' ✓' : ''}</i>`
-    const live = items || extraRows || statRows.length
+    const live = items || planItems || extraRows || statRows.length
     return `
       <section class="tt-day ${isToday ? 'today' : ''} ${day.future ? 'future' : ''}">
         <header>
@@ -113,25 +120,26 @@ export async function mountTimetable(el) {
           <span class="tt-day-date">${day.date.slice(5)}</span>
           ${isToday ? '<i class="tt-today-tag">今天</i>' : ''}
           ${minBadge}
-          <span class="tt-day-count">${day.future ? `${day.total} 项` : `${day.done}/${day.total}`}</span>
+          <span class="tt-day-count" title="${day.future ? '还没到这一天' : '按学习信号计算，不看打卡'}">${dayRateLabel(day)}</span>
         </header>
         ${day.future
           ? (planItems || `<p class="tt-day-empty">无安排</p>`)
-          : (live ? items + extraRows + statHtml
-            : (planItems || `<p class="tt-day-empty">还没有完成的学习</p>`))}
+          : (live ? items + planItems + extraRows + statHtml
+            : `<p class="tt-day-empty">当天没有计划项</p>`)}
       </section>`
   }
 
   el.innerHTML = `
     <div class="view-head">
       <h1>课程表</h1>
-      <p>本周（${d.week_start || ''} 起）已完成的学习记录 · 每天做了什么一目了然</p>
+      <p>本周（${d.week_start || ''} 起）${studentWeekRate(d.completion)} · 按学习信号自动计算，不用打卡</p>
     </div>
     <div id="tt-loop"></div>
     ${summary.length ? `<div class="tt-summary">${summary.map((s) => `<span>${s}</span>`).join('')}</div>` : ''}
     ${dims.length ? `
       <section class="tt-goalcard card">
         <h3>🎯 本周目标进度</h3>
+        ${gp.percent == null ? '' : `<p class="tt-goal-sum">综合 ${gp.percent}% · 以各模块为准</p>`}
         ${dims.map(dimRow).join('')}
       </section>` : ''}
     <div class="tt-grid">
@@ -182,4 +190,16 @@ async function renderReviewStrip(host) {
 
 function round1(n) {
   return Math.round(Number(n || 0) * 10) / 10
+}
+
+function dayRateLabel(day) {
+  if (day.future) return day.total ? `${day.total} 项` : '待来'
+  if (!day.total) return '—'
+  const pct = day.percent != null ? day.percent : Math.round(day.done / day.total * 100)
+  return `${pct}%`
+}
+
+function studentWeekRate(comp) {
+  if (!comp || !comp.total) return '本周已到的日子还没有计划项'
+  return `完成率 ${comp.percent}%`
 }

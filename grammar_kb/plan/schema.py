@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS plan_weeks (
     updated_at TEXT,
     PRIMARY KEY (user, week_start)
 );
+-- 教师干预留痕。不参与 today_tasks.done，也不参与完成率。
 CREATE TABLE IF NOT EXISTS plan_day_checks (
     user       TEXT NOT NULL,
     date       TEXT NOT NULL,        -- YYYY-MM-DD
@@ -26,6 +27,7 @@ CREATE TABLE IF NOT EXISTS plan_goals (
     goals      TEXT NOT NULL DEFAULT '{}',  -- 总目标 JSON（见 _goals_default）
     updated_at TEXT
 );
+-- 可选回填快照，不是每日完成流水。无记录的日期按 day_completion 信号计完成。
 CREATE TABLE IF NOT EXISTS plan_history_days (
     user       TEXT NOT NULL,
     date       TEXT NOT NULL,
