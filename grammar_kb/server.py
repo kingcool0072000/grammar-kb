@@ -544,11 +544,14 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         # 学生端解锁规则（2026-09-26 起，取代教师手动 vocabUnlock）：
         # L0 恒开；L{n} 级考卷 ≥80 分（教师登记）自动解锁 L{n+1}。
         # counts 始终按 req_level 给全量（锁定层也要显示词数），items 才截断。
-        max_level = req_level
+        # level=n 只取该级，且不能用这个参数越过解锁上限（此前第二段赋值
+        # 用 req_level 覆盖了学生上限，?level=7 能把未解锁词库整页拉走）。
+        unlocked = req_level
         if request.state.role != "teacher":
-            max_level = min(req_level, vocab_exam.unlocked_level(_request_user(request)))
+            unlocked = min(req_level, vocab_exam.unlocked_level(_request_user(request)))
+        level_filter: Optional[int] = None
         if level >= 0:
-            max_level = max(0, min(req_level, int(level)))
+            level_filter = max(0, int(level))
         import json as _json
 
         def _j(s, dft):
@@ -567,13 +570,22 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
                 ).fetchall()
             )
             if counts_only:
-                return _ok({"counts": counts_all, "unlocked": max_level,
+                return _ok({"counts": counts_all, "unlocked": unlocked,
                             "items": []})
-            rows = conn.execute(
-                "SELECT word, level, pos, gloss, meanings, example, extra"
-                " FROM vocab_word WHERE level <= ?",
-                (max_level,),
-            ).fetchall()
+            if level_filter is not None and level_filter > unlocked:
+                rows = []
+            elif level_filter is not None:
+                rows = conn.execute(
+                    "SELECT word, level, pos, gloss, meanings, example, extra"
+                    " FROM vocab_word WHERE level = ?",
+                    (level_filter,),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT word, level, pos, gloss, meanings, example, extra"
+                    " FROM vocab_word WHERE level <= ?",
+                    (unlocked,),
+                ).fetchall()
         items = [{
             "word": r["word"],
             "level": r["level"],
@@ -589,7 +601,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             -(int(x["extra"].get("freq") or 0)) if x["level"] == 0 else x["word"],
             x["word"],
         ))
-        return _ok({"counts": counts_all, "unlocked": max_level, "items": items})
+        return _ok({"counts": counts_all, "unlocked": unlocked, "items": items})
 
     # ---- 词汇级别考试（线下考卷 + 成绩登记；考试驱动解锁） ----
 
@@ -758,7 +770,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         data = fce_papers.get_paper(test_id)
         if data is None:
             raise HTTPException(status_code=404, detail=f"FCE Test {test_id} 不存在")
-        if getattr(request.state, "role", "teacher") != "teacher":
+        if getattr(request.state, "role", "") != "teacher":
             for sec in data["sections"]:
                 for q in sec["questions"]:
                     q["answer"] = ""
@@ -804,8 +816,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         return _ok(data)
 
     @app.put("/fce-submissions/{sub_id}")
-    def fce_grade(sub_id: int, rec: FceGradeIn):
-        """教师批改作文（打分 + 评语）。"""
+    def fce_grade(sub_id: int, rec: FceGradeIn, request: "fastapi.Request"):
+        """教师批改作文（打分 + 评语）。端点再拦一次，不单靠中间件前缀白名单。"""
+        _require_teacher(request)
         data = fce_submissions.grade(sub_id, rec.teacher_score, rec.teacher_comment)
         if data is None:
             raise HTTPException(status_code=404, detail=f"提交记录 id={sub_id} 不存在")
@@ -814,7 +827,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     @app.delete("/fce-submissions/{sub_id}")
     def fce_delete(sub_id: int, request: "fastapi.Request"):
         """教师删除一条 FCE 练习提交。"""
-        if getattr(request.state, "role", "teacher") != "teacher":
+        if getattr(request.state, "role", "") != "teacher":
             raise HTTPException(status_code=403, detail="该功能仅教师账号可用")
         if not fce_submissions.delete(sub_id):
             raise HTTPException(status_code=404, detail=f"提交记录 id={sub_id} 不存在")
@@ -825,7 +838,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     @app.get("/reading/articles")
     def reading_articles(request: "fastapi.Request", kind: Optional[str] = None):
         """文章列表。默认只返回派生文（阅读练习用）；教师传 kind=base 看原文段。"""
-        is_teacher = getattr(request.state, "role", "teacher") == "teacher"
+        is_teacher = getattr(request.state, "role", "") == "teacher"
         if kind == "base":
             if not is_teacher:
                 raise HTTPException(status_code=403, detail="原文段落列表仅教师可查")
@@ -840,7 +853,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         data = reading.get_article(article_id)
         if data is None:
             raise HTTPException(status_code=404, detail=f"文章 id={article_id} 不存在")
-        if data["kind"] == "base" and getattr(request.state, "role", "teacher") != "teacher":
+        if data["kind"] == "base" and getattr(request.state, "role", "") != "teacher":
             raise HTTPException(status_code=403, detail="原文段落仅教师可读，学生请练习派生文章")
         data["has_audio"] = (audio_dir / f"{article_id}.wav").is_file()
         return _ok(data)
@@ -851,7 +864,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         data = reading.get_article(article_id)
         if data is None:
             raise HTTPException(status_code=404, detail=f"文章 id={article_id} 不存在")
-        if data["kind"] == "base" and getattr(request.state, "role", "teacher") != "teacher":
+        if data["kind"] == "base" and getattr(request.state, "role", "") != "teacher":
             raise HTTPException(status_code=403, detail="原文段落仅教师可读")
         return _ok(reading.annotate(article_id))
 
@@ -861,7 +874,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
         ids=1,2,3 限定文章；缺省全部派生文。
         """
-        if getattr(request.state, "role", "teacher") != "teacher":
+        if getattr(request.state, "role", "") != "teacher":
             raise HTTPException(status_code=403, detail="难度评价仅教师账号可用")
         id_list: Optional[list[int]] = None
         if ids:
@@ -1425,8 +1438,13 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         """从爱问云拉取已出分测验的逐题对错（未批改跳过）。教师专属。"""
         _require_teacher(request)
         import os as _os
-        phone = _os.environ.get("GRAMMAR_KB_AICLOUD_PHONE") or "18610087156"
-        password = _os.environ.get("AICLOUD_PASSWORD") or "rbxw123456"
+        phone = (_os.environ.get("GRAMMAR_KB_AICLOUD_PHONE") or "").strip()
+        password = (_os.environ.get("AICLOUD_PASSWORD") or "").strip()
+        if not phone or not password:
+            raise HTTPException(
+                status_code=503,
+                detail="未配置爱问云账号（GRAMMAR_KB_AICLOUD_PHONE / AICLOUD_PASSWORD）",
+            )
         try:
             import anyio
             rep = await anyio.to_thread.run_sync(
@@ -1583,7 +1601,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         return _ok(report)
 
     def _require_teacher(request) -> None:
-        if getattr(request.state, "role", "teacher") != "teacher":
+        if getattr(request.state, "role", "") != "teacher":
             raise HTTPException(status_code=403, detail="该功能仅教师账号可用")
 
     def _to_int(v, default=None):
@@ -1617,7 +1635,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         return _ok(exams.add(user=owner, **payload))
 
     @app.put("/exams/{exam_id}")
-    def exams_update(exam_id: int, rec: ExamRecordIn):
+    def exams_update(exam_id: int, rec: ExamRecordIn, request: "fastapi.Request"):
+        _require_teacher(request)
         payload = rec.model_dump()
         # 归属学生随编辑可改（教师修正记错名下的记录）；置空则不动
         owner = payload.pop("student", None) or None
@@ -1627,7 +1646,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         return _ok(updated)
 
     @app.delete("/exams/{exam_id}")
-    def exams_delete(exam_id: int):
+    def exams_delete(exam_id: int, request: "fastapi.Request"):
+        _require_teacher(request)
         if not exams.delete(exam_id):
             raise HTTPException(status_code=404, detail=f"成绩记录 id={exam_id} 不存在")
         return _ok({"id": exam_id})
@@ -1640,6 +1660,16 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     def _require_teacher_lib(request) -> None:
         """泛读馆教师端点兜底（中间件是粗闸门，端点是细闸门，两层都要有）。"""
         _require_teacher(request)
+
+    def _require_book_access(request, book_id: int) -> None:
+        """书架解锁门同样挡直链：/file、章节、预习、进度。
+
+        未配置 bookUnlock 时全部放行（与 list_books 一致）。
+        """
+        role = getattr(request.state, "role", "")
+        if library.student_can_access_book(_request_user(request), role, book_id):
+            return
+        raise HTTPException(status_code=403, detail="这本书还没解锁")
 
     @app.post("/library/prep/batch")
     def lib_prep_batch(rec: dict, request: "fastapi.Request"):
@@ -1681,8 +1711,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         return _ok({"ok": True})
 
     @app.get("/library/prep/{book_id}/{chapter_index}")
-    def lib_prep_get(book_id: int, chapter_index: int):
+    def lib_prep_get(book_id: int, chapter_index: int, request: "fastapi.Request"):
         """读某章预习（师生可读）。未生成返回 data=null（区别于参考实现直接 404）。"""
+        _require_book_access(request, book_id)
         payload = library.get_prep(book_id, chapter_index)
         return _ok(payload)
 
@@ -1707,21 +1738,24 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         return _ok(book)
 
     @app.get("/library/books/{book_id}/file")
-    def lib_book_file(book_id: int):
+    def lib_book_file(book_id: int, request: "fastapi.Request"):
+        _require_book_access(request, book_id)
         got = library.get_file(book_id)
         if got is None:
             raise HTTPException(status_code=404, detail="书籍不存在或文件丢失")
         return FileResponse(got[0], media_type=got[1])
 
     @app.get("/library/books/{book_id}/cover")
-    def lib_book_cover(book_id: int):
+    def lib_book_cover(book_id: int, request: "fastapi.Request"):
+        _require_book_access(request, book_id)
         got = library.get_cover(book_id)
         if got is None:
             raise HTTPException(status_code=404, detail="无封面")
         return FileResponse(got[0], media_type=got[1])
 
     @app.get("/library/books/{book_id}/chapters")
-    def lib_book_chapters(book_id: int):
+    def lib_book_chapters(book_id: int, request: "fastapi.Request"):
+        _require_book_access(request, book_id)
         chapters = library.list_chapters(book_id)
         if chapters is None:
             raise HTTPException(status_code=404, detail="书籍不存在")
@@ -1748,19 +1782,23 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         return _ok(out)
 
     @app.post("/library/books/{book_id}/open")
-    def lib_book_open(book_id: int):
+    def lib_book_open(book_id: int, request: "fastapi.Request"):
         """记录"打开书"行为（更新 last_opened_at）。"""
+        _require_book_access(request, book_id)
         library.touch_open(book_id)
         return _ok({"ok": True})
 
     @app.get("/library/books/{book_id}/progress")
     def lib_progress_get(book_id: int, request: "fastapi.Request"):
         """当前用户在某书的阅读进度（未开始返回 data=null）。"""
+        _require_book_access(request, book_id)
         return _ok(library.get_progress(book_id, _request_user(request)))
 
     @app.put("/library/books/{book_id}/progress")
     def lib_progress_put(book_id: int, rec: dict, request: "fastapi.Request"):
         """上报阅读进度：percent 夹 0-100、delta 夹 0-3600，UPSERT。"""
+        # 先看门再写：否则学生可以对锁定书写一条 percent>0，书架例外会把它放出来。
+        _require_book_access(request, book_id)
         body = rec if isinstance(rec, dict) else {}
         cfi = body.get("cfi") or ""
         chapter_index = _to_int(body.get("chapterIndex"), 0)
@@ -1778,7 +1816,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     @app.get("/library/settings")
     def lib_settings(request: "fastapi.Request"):
         """设置视图：教师完整版；学生只有 student + hasKey（绝不泄漏 apiKey/model/prompt）。"""
-        is_teacher = getattr(request.state, "role", "teacher") == "teacher"
+        is_teacher = getattr(request.state, "role", "") == "teacher"
         return _ok(library.settings_view(is_teacher))
 
     # ---- 书籍解锁（教师手动配置；学生书架可见性门控） ----
@@ -1803,6 +1841,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     @app.get("/library/books/{book_id}/reading-config")
     def lib_reading_config(book_id: int, request: "fastapi.Request"):
         """必读章 idx 列表（未配置返回 null = 全书口径）。师生可读。"""
+        _require_book_access(request, book_id)
         if library.get_title(book_id) is None:
             raise HTTPException(status_code=404, detail="书籍不存在")
         return _ok({"book_id": book_id, "chapters": library.get_reading_config(book_id)})

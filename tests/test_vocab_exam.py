@@ -112,6 +112,40 @@ def test_exam_validation_and_perm(vex_env):
     assert c.delete("/vocab-exams/999", headers=ht).status_code == 404
 
 
+def test_level_query_cannot_bypass_unlock(vex_env):
+    """?level= 不能越过学生解锁上限，也不能把 unlocked 改写成所请求的级别。"""
+    db = vex_env / "grammar.db"
+    con = sqlite3.connect(db)
+    con.execute(
+        "CREATE TABLE vocab_word (word TEXT, level INTEGER, pos TEXT, gloss TEXT,"
+        " meanings TEXT, example TEXT, extra TEXT)"
+    )
+    con.executemany(
+        "INSERT INTO vocab_word VALUES (?,?,?,?,?,?,?)",
+        [
+            ("apple", 0, "[]", "苹果", "[]", "{}", "{}"),
+            ("orbit", 3, "[]", "轨道", "[]", "{}", "{}"),
+        ],
+    )
+    con.commit()
+    con.close()
+    c = TestClient(create_app(str(db), str(vex_env / "exam.db"),
+                              fce_db_path=str(vex_env / "fce.db")))
+    hs = _login(c, "malin", "123456")
+    locked = c.get("/vocab-levels?max_level=7&level=3", headers=hs)
+    assert locked.status_code == 200, locked.text
+    body = locked.json()["data"]
+    assert body["unlocked"] == 0
+    assert body["items"] == []
+    assert body["counts"].get("3") == 1 or body["counts"].get(3) == 1
+    own = c.get("/vocab-levels?max_level=7", headers=hs).json()["data"]
+    assert [w["word"] for w in own["items"]] == ["apple"]
+    ht = _login(c, "teacher", "123456")
+    teacher = c.get("/vocab-levels?max_level=7&level=3", headers=ht).json()["data"]
+    assert [w["word"] for w in teacher["items"]] == ["orbit"]
+    assert teacher["unlocked"] == 7
+
+
 def test_paper_generation(vex_env, monkeypatch):
     """考卷：50 词四部分 + HTML 结构 + seed 复现。"""
     _require_level_words(monkeypatch)

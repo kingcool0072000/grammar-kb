@@ -650,6 +650,30 @@ class TestDict:
 
 
 class TestStudentPermissions:
+    def test_unlock_blocks_direct_links(self, student, teacher, book_id):
+        """bookUnlock 不在列表里的书，直链文件/章节/进度都不能绕过书架。"""
+        r = teacher.put("/library/book-unlock", json={"unlock": {"malin": [999]}})
+        assert r.status_code == 200, r.text
+        assert student.get(f"/library/books/{book_id}/file").status_code == 403
+        assert student.get(f"/library/books/{book_id}/chapters").status_code == 403
+        assert student.get(f"/library/prep/{book_id}/1").status_code == 403
+        assert student.put(
+            f"/library/books/{book_id}/progress",
+            json={"cfi": "x", "chapterIndex": 1, "percent": 10, "readingSecondsDelta": 30},
+        ).status_code == 403
+        shelf = student.get("/library/books").json()["data"]["books"]
+        assert all(b["id"] != book_id for b in shelf)
+        # 教师不受这道门影响
+        assert teacher.get(f"/library/books/{book_id}/file").status_code == 200
+        # 清掉限制后学生可以开始读；再收紧时，已有进度的书仍然可读
+        assert teacher.put("/library/book-unlock", json={"unlock": {}}).status_code == 200
+        assert student.put(
+            f"/library/books/{book_id}/progress",
+            json={"cfi": "x", "chapterIndex": 1, "percent": 10, "readingSecondsDelta": 30},
+        ).status_code == 200
+        assert teacher.put("/library/book-unlock", json={"unlock": {"malin": [999]}}).status_code == 200
+        assert student.get(f"/library/books/{book_id}/file").status_code == 200
+
     def test_books_readonly(self, student, teacher, book_id):
         # 读：书架 / 章节 / 文件 / 封面 / 预习 / 进度均可
         assert student.get("/library/books").status_code == 200

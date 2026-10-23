@@ -334,8 +334,11 @@ class FocusStore:
                 metrics_json = ""
         with self._connect() as conn:
             old = conn.execute(
-                "SELECT created_at FROM focus_sessions WHERE session_id = ?", (sid,)
+                "SELECT user, created_at FROM focus_sessions WHERE session_id = ?",
+                (sid,),
             ).fetchone()
+            if old and old["user"] != user:
+                raise ValueError("session_id 已被其他用户占用")
             created_at = ((old["created_at"] if old else None)
                           or datetime.now(_tz.utc).isoformat(timespec="seconds"))
             def _wj(items) -> str:

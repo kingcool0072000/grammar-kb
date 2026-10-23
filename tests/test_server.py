@@ -66,6 +66,14 @@ def client():
             yield c
 
 
+def test_aicloud_sync_requires_credentials(client, monkeypatch):
+    monkeypatch.delenv("AICLOUD_PASSWORD", raising=False)
+    monkeypatch.delenv("GRAMMAR_KB_AICLOUD_PHONE", raising=False)
+    r = client.post("/homework-admin/sync-aicloud")
+    assert r.status_code == 503
+    assert "AICLOUD_PASSWORD" in r.json()["message"]
+
+
 def test_envelope_success(client):
     r = client.get("/stats")
     assert r.status_code == 200

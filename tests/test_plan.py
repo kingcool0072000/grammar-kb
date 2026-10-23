@@ -472,12 +472,16 @@ def test_daily_spread_weekday_template(plan_env):
     ht = _login(c, "teacher", "123456")
     _put_week(c, ht, {"lectures": [25, 26], "vocab_goal": 100})
     d = c.get("/plan/today", headers=hs).json()["data"]
-    # 背词配额行存在且 quota 量化（周一跑：5 工作日 → 100/5=20）
+    # 背词配额行存在且 quota 量化（周一 100/5=20；周五分母只剩 1 天）
     vocab = next((t for t in d["tasks"] if t["type"] == "vocab"), None)
     assert vocab is not None and vocab.get("quota")
-    # 讲次行按当天摊（2 讲/5 工作日 → 每天 1 讲）
+    # 讲次按「剩余讲次 / 剩余工作日」向上取整摊到今天。
+    # 周一 2/5 → 1 讲；周五 2/1 → 两讲都在今天。不能写死「恰好 1 讲」，
+    # 也不能写成 `len==1 and … or "26" in text`（or 优先级会让多讲也误过）。
+    wd_left = 5 - date.today().weekday()
+    per = max(1, -(-2 // wd_left))  # 与 plan.week_daily_tasks 同一向上取整
     lecs = [t for t in d["tasks"] if t["type"] == "lecture"]
-    assert len(lecs) == 1 and "25" in lecs[0]["text"] or "26" in lecs[0]["text"]
+    assert [t["text"] for t in lecs] == [f"第{n}讲 学+测" for n in (25, 26)[:per]]
 
 
 @pytest.mark.skipif(date.today().weekday() >= 5,
@@ -619,7 +623,7 @@ def test_topic_completion_lights_lecture(plan_env):
 
 
 def test_weekday_speak_completion_visible(plan_env):
-    """周中提前提交朗读：工作日当天清单出「今天已提交朗读 ✓」行，
+    """周中提前提交朗读：提交日清单出「今天已提交朗读 ✓」行，
     且周六排程把它从剩余里剔除（不再重复排未完成）。"""
     c = _client(plan_env)
     ht = _login(c, "teacher", "123456")
@@ -636,20 +640,23 @@ def test_weekday_speak_completion_visible(plan_env):
         file TEXT DEFAULT '', note TEXT DEFAULT '',
         created_at TEXT NOT NULL DEFAULT '')""")
     today = date.today()
-    # 录音落在本周周六之前（如周三）——验证周六排程的剩余剔除
+    # 录音落在本周周六之前（如周三）——验证周六排程的剩余剔除。
+    # 周三还没到（周一、周二）则退到周一。✓ 行只挂在提交日
+    # （「今天已提交朗读」），不能拿日历今天去对：周二查 /plan/today
+    # 会看到 0 篇精读，因为录音在周一。
     wed = date.fromisoformat(MON) + timedelta(days=2)
-    rec_day = wed if wed <= today else date.fromisoformat(MON)  # 越界退周一
+    rec_day = wed if wed <= today else date.fromisoformat(MON)
     con.execute("INSERT INTO reading_recordings (user, article_id, created_at)"
                 " VALUES ('malin', 61, ?)",
                 (f"{rec_day.isoformat()}T12:00:00+00:00",))
     con.commit()
     con.close()
-    today = date.today()
-    if today.weekday() < 5:  # 工作日：当天清单应见 ✓ 行
-        d = c.get("/plan/today", headers=hs).json()["data"]
-        arts = [t for t in d["tasks"] if t.get("type") == "article"]
-        assert any(t.get("done") for t in arts), \
-            f"周中提交朗读的计划内文章应显示完成: {d['tasks']}"
+    # 提交日是周一或周三，都是工作日模板
+    d = c.get("/plan/today", headers=hs,
+              params={"day": rec_day.isoformat()}).json()["data"]
+    arts = [t for t in d["tasks"] if t.get("type") == "article"]
+    assert any(t.get("done") for t in arts), \
+        f"周中提交朗读的计划内文章应在提交日显示完成: {d['tasks']}"
     # 周六排程：已提交的 61 不再出现在周六清单（剩余剔除）
     sat = date.fromisoformat(MON) + timedelta(days=5)
     from grammar_kb.plan import PlanStore

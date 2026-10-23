@@ -76,6 +76,21 @@ def test_focus_submit_and_heartbeat(focus_env):
     assert mine[0]["polyline"] is None and mine[0]["mouse_metrics"] is None  # 列表不带明细
 
 
+def test_other_user_cannot_claim_session(focus_env):
+    """同 session_id 的心跳只能由原主覆盖，不能把记录改记到别人名下。"""
+    c = _client(focus_env)
+    malin = _login(c, "malin")
+    mxy = _login(c, "mxy", password="mxy123")
+    assert c.post("/focus/sessions", headers=malin, json=_payload()).status_code == 200
+    r = c.post("/focus/sessions", headers=mxy, json=_payload(
+        book_title="stolen", total_sec=10))
+    assert r.status_code == 422
+    mine = c.get("/focus/sessions", headers=malin).json()["data"]
+    assert len(mine) == 1 and mine[0]["user"] == "malin"
+    assert mine[0]["book_title"] == "Charlotte's Web"
+    assert mine[0]["total_sec"] == 600
+
+
 def test_focus_visibility(focus_env):
     """列表权限：学生只见自己、教师见全部；详情教师 200 / 学生 403 / 404。"""
     c = _client(focus_env)

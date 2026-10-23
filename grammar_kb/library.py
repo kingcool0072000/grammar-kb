@@ -318,6 +318,25 @@ class LibraryStore:
         return {"books": books, "stats": {"reading": reading, "finished": finished,
                                           "totalSeconds": total_seconds}}
 
+    def student_can_access_book(self, user: str, role: str, book_id: int) -> bool:
+        """学生能否打开这本书。与 list_books 同一道门。
+
+        教师恒可。未给该生配置 bookUnlock（键不存在）=全部可见。
+        配置了 id 列表则只放行列表内的书，以及该生自己 percent>0 的书
+        （教师后来收紧列表时，不把正在读的书藏掉）。没有进度的锁定书
+        不能靠先上报进度把自己放出来——调用方须在写进度前先问这里。
+        """
+        if role == "teacher":
+            return True
+        gate = (self.get_settings()["student"].get("bookUnlock") or {}).get(user)
+        if gate is None:
+            return True
+        allowed = {int(x) for x in gate if str(x).isdigit()}
+        if int(book_id) in allowed:
+            return True
+        prog = self.get_progress(int(book_id), user)
+        return bool(prog and (prog.get("percent") or 0) > 0)
+
     def get_book_unlock(self) -> dict:
         """书籍解锁配置全量（教师视图）：{学生: [book_id...]}。"""
         return dict(self.get_settings()["student"].get("bookUnlock") or {})
