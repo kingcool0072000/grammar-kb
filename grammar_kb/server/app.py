@@ -15,6 +15,7 @@ from ..paths import ROOT, data_path
 from ..query import Query
 from .ctx import AppCtx
 from .http import _ok
+from .routes_atlas import register_atlas
 from .routes_library import register_library
 from .routes_plan import register_plan
 from .routes_practice import register_practice
@@ -123,12 +124,17 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     # 静态前端资源（web/dist 挂载时）：HTML/JS/CSS/字体免登录
     _STATIC_PREFIXES = ("/assets/", "/favicon", "/vite.svg",
                         "/analytics-report.html",  # 学情静态报告（public 资源）
-                        "/readingmore",)  # 杂志阅读器静态页（API 另走 Bearer 鉴权）
+                        "/readingmore",  # 杂志阅读器静态页（API 另走 Bearer 鉴权）
+                        # 词光插画/录音：<img>/<audio> 带不上 Authorization。
+                        # 内容是 CC BY 公开素材，不是学生进度。
+                        "/atlas-media",)
     # 学生角色可访问的 (method, path 前缀)：背单词所需数据 + 提交成绩 + FCE 真题练习
     _STUDENT_ALLOW = (
         ("GET", "/stats"),
         ("GET", "/vocabulary"),
         ("GET", "/vocab-levels"),  # 分层词库（背单词；学生可见范围=教师设定的单词级别）
+        ("GET", "/atlas/"),  # 词光词条（插画/录音/例句）；媒体文件走 /atlas-media 免登录
+        ("GET", "/atlas-info"),
         ("GET", "/vocab-exams"),  # 学生看自己的考试状态（已过级别/解锁到哪级）
         ("GET", "/dict/"),
         ("GET", "/exams"),
@@ -265,6 +271,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     )
     # 注册顺序与拆分前 create_app 内的定义顺序一致（路径重叠时先注册者优先）
     register_query(app, ctx)
+    register_atlas(app, ctx)
     register_vocab(app, ctx)
     register_practice(app, ctx)
     register_study(app, ctx)

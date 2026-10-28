@@ -4,7 +4,7 @@
 
 import { api } from '../../api.js'
 import { escapeHtml, escAttr } from '../../render.js'
-import { speak } from './lookup.js'
+import { speakWord } from '../../atlas.js'
 import { ICONS } from './icons.js'
 
 // 主题预设与字体栈由 reader.js 使用；抽屉面板自己也需展示，这里同源照抄 types/index.ts
@@ -341,7 +341,7 @@ export function createPrepDrawer({ onClose, onStart }) {
     d.body.innerHTML = inner
 
     d.body.querySelectorAll('[data-tts]').forEach((btn) => {
-      btn.addEventListener('click', () => speak(btn.dataset.tts))
+      btn.addEventListener('click', () => speakWord(btn.dataset.tts))
     })
     d.body.querySelector('.lib-prep-start').addEventListener('click', () => {
       d.close()

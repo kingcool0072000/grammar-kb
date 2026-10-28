@@ -12,6 +12,7 @@ import { ICONS } from './icons.js'
 // 作用域，本文件内部（划词条/查词浮层的 🔊）也要调 speak，曾因此
 // ReferenceError: speak is not defined。
 import { speak } from '../../tts.js'
+import { fillAtlasHost, loadAtlas, speakWord } from '../../atlas.js'
 export { speak }
 
 /**
@@ -85,7 +86,7 @@ export function createLookupLayer(bodyEl, opts = {}) {
         x: rect.left - host.left + rect.width / 2,
         y: rect.top - host.top,
       })
-      speak(word)
+      speakWord(word)
       if (onSpeakCb) onSpeakCb(word)
     } catch { /* ignore */ }
   }
@@ -111,7 +112,7 @@ export function createLookupLayer(bodyEl, opts = {}) {
     if (!btn || !currentSel) return
     const act = btn.dataset.act
     if (act === 'sound') {
-      speak(currentSel.word)
+      speakWord(currentSel.word)
       if (onSpeakCb) onSpeakCb(currentSel.word)
     } else if (act === 'dict') {
       showDict(currentSel)
@@ -139,8 +140,8 @@ export function createLookupLayer(bodyEl, opts = {}) {
   const dictWordEl = dictEl.querySelector('.lib-dict-head .word')
   const dictPhEl = dictEl.querySelector('.lib-dict-head .ph')
   const dictSourceEl = dictEl.querySelector('.lib-dict-source')
-  dictEl.querySelector('.lib-dict-head .sound').addEventListener('click', () => {
-    speak(dictWord)
+    dictEl.querySelector('.lib-dict-head .sound').addEventListener('click', () => {
+    speakWord(dictWord)
     if (onSpeakCb) onSpeakCb(dictWord)
   })
   dictEl.querySelector('.lib-dict-head .close').addEventListener('click', hideDict)
@@ -206,6 +207,7 @@ export function createLookupLayer(bodyEl, opts = {}) {
     const seq = dictSeq
     if (dictTimer) clearTimeout(dictTimer)
     dictWord = lookup.word
+    loadAtlas(lookup.word)
     dictWordEl.textContent = lookup.word
     dictPhEl.textContent = ''
     dictSourceEl.textContent = ''
@@ -255,11 +257,16 @@ export function createLookupLayer(bodyEl, opts = {}) {
 
     const senses = Array.isArray(e.senses) ? e.senses : []
     if (e.source === 'not_found' || (!senses.length && !e.meaning)) {
-      dictBody.innerHTML = '<div class="lib-dict-empty">词典未收录该词</div>'
+      dictBody.innerHTML = '<div class="atlas-host"></div><div class="lib-dict-empty">词典未收录该词</div>'
+      fillAtlasHost(dictBody.querySelector('.atlas-host'), dictWord, e.atlas || null)
+      loadAtlas(dictWord).then((full) => {
+        const empty = dictBody.querySelector('.lib-dict-empty')
+        if (full && empty) empty.remove()
+      })
       return
     }
 
-    let html = ''
+    let html = '<div class="atlas-host"></div>'
     if (senses.length) {
       // ECDICT / AI 结构化释义：pos 胶囊 + gloss + 斜体例句
       for (const s of senses) {
@@ -278,6 +285,7 @@ export function createLookupLayer(bodyEl, opts = {}) {
       html += `<div class="lib-dict-sense">${pos}<div class="def">${escapeHtml(e.meaning || '')}</div>${ex}</div>`
     }
     dictBody.innerHTML = html
+    fillAtlasHost(dictBody.querySelector('.atlas-host'), dictWord, e.atlas || null)
   }
 
   function hideAll() {

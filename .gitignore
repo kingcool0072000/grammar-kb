@@ -37,3 +37,7 @@ data/audio/
 
 # 泛读馆用户内容（epub/封面，不入库；library.db 沿 data/*.db 规则）
 data/library/
+
+# 词光媒体与克隆缓存（插画 + 约 2.3 万条 mp3，由 scripts/import_word_atlas.py 拉取）
+data/atlas/
+data/atlas-cache/

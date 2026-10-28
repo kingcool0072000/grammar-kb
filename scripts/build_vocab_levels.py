@@ -15,6 +15,10 @@
 
 输入文件（data/wordlists/{初中,高中,四级,六级,考研,雅思,专四}.jsonl，行格式
 {"word","us","uk","translations":[...],"phrases":[...],"sentences":[...]}）
+
+词光 Word Atlas 的 7298 条不并进这些级别：插画和录音写在 vocab_atlas
+（见 scripts/import_word_atlas.py）。并进「雅思」会改变 L6 考卷和词数，
+而学生背单词界面只开放到 L5。
 """
 from __future__ import annotations
 

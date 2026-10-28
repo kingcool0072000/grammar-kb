@@ -76,6 +76,7 @@ PDF ──► pdf_parser   去水印（字体+方向过滤）+ 重排行 + 还�
 | `structure.py`  | 行分类（节/小节/子项/例句/练习）→ 知识点切分 |
 | `classify.py`   | 分类规则、关键词词典、关系检测、**考点信号**（**纯函数**） |
 | `vocabulary.py` | 基于语料的单词表（释义/词性/词形变化） |
+| `atlas.py`      | 词光 Word Atlas 叠加层（插画/录音/例句，CC BY 4.0；不改词级、不碰背词进度） |
 | `markdown.py`   | 表格 → GFM、知识点与整讲渲染 |
 | `db.py`         | schema + CRUD + FTS5(trigram, external-content)，无截断 |
 | `query.py`      | 面向调用的查询 API |
@@ -104,6 +105,13 @@ PDF ──► pdf_parser   去水印（字体+方向过滤）+ 重排行 + 还�
 | `web/`          | 学习前端（Vite，详见下文「Web 学习前端」与 `web/README.md`） |
 
 ---
+
+## 词光（Word Atlas）
+
+背单词时，和 [词光](https://github.com/designfuchen/word-atlas) 对得上的词会显示插画，
+并播放英音、美音和例句录音；没有文件就继续用浏览器语音。词光的 7298 条雅思词
+**没有**并进现有「雅思」级别。导入命令和服务器步骤见 [docs/word-atlas.md](docs/word-atlas.md)，
+署名见 [NOTICE](NOTICE)。
 
 ## 数据库 Schema（摘要）
 

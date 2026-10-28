@@ -1,6 +1,9 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
-import { speak } from '../tts.js'
+import {
+  atlasFigure, bindAtlas, fillAtlasHost, getAccent, phoneticHtml,
+  playPronunciation, rememberAtlas, speakWord, stopAtlasAudio, wordAudioUrl,
+} from '../atlas.js'
 
 // 背单词：全屏沉浸卡片。三种题型——中译英（看释义拼单词）、英译中（认词）、
 // 拼写挖空（缺字母补全），统一「翻面自评」作答；错词间隔重现直到答对。
@@ -162,6 +165,7 @@ export async function mountRecite(el, { vocab, role }) {
     <div class="view-head">
       <h1>背单词</h1>
       <p>基于词汇表（${vocab.length} 词）的全屏卡片：中译英、英译中、拼写挖空。翻面自动发音，答错的词按艾宾浩斯记忆法复习（1、2、4、7、15、30 天），直到攻克。</p>
+      <p class="atlas-footnote">部分单词的插画和录音来自 <a href="https://github.com/designfuchen/word-atlas" target="_blank" rel="noopener">词光 Word Atlas</a>，<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>，署名 Word Atlas contributors（词光）。没有录音时仍用浏览器语音。<a href="#/config">发音设置</a></p>
     </div>
     <div id="rc-loop"></div>
     <div class="card recite-dash recite-dash-secondary" id="rc-dash"></div>
@@ -307,6 +311,7 @@ export async function mountRecite(el, { vocab, role }) {
     // 拿不到 forms，词形变化题从未出过、音标不显示）
     levelVocab = items.map((it) => {
       const ex = it.extra || {}
+      if (it.atlas) rememberAtlas(it.word, it.atlas)
       return {
         ...it,
         forms: it.forms || ex.forms || {},
@@ -627,7 +632,7 @@ export async function mountRecite(el, { vocab, role }) {
     host.querySelectorAll('.rc-wb-word').forEach((chip) => {
       chip.addEventListener('click', async () => {
         const w = chip.dataset.word
-        if (ttsOn()) speak(w)
+        if (ttsOn()) speakWord(w)
         const show = (lines, note) => {
           host.querySelectorAll('.rc-wb-detail').forEach((b) => b.remove())
           const box = document.createElement('div')
@@ -635,8 +640,10 @@ export async function mountRecite(el, { vocab, role }) {
           box.innerHTML = `
             <b>${escapeHtml(w)}</b>
             ${lines.length ? `<p>${lines.map((l) => escapeHtml(String(l))).join('<br/>')}</p>` : ''}
-            ${note ? `<span class="muted">${escapeHtml(note)}</span>` : ''}`
+            ${note ? `<span class="muted">${escapeHtml(note)}</span>` : ''}
+            <div class="atlas-host"></div>`
           chip.after(box)
+          fillAtlasHost(box.querySelector('.atlas-host'), w, null, { size: 'thumb' })
         }
         let lines = glossOf(w)
         if (lines.length) return show(lines)
@@ -803,6 +810,7 @@ function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
   }
 
   function renderQ() {
+    stopAtlasAudio()
     const q = currentQ()
     cleanupKeys()
     if (!q) return finish()
@@ -844,17 +852,20 @@ function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
 // ---- 单张卡片 -------------------------------------------------------------- //
 
 function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
+  stopAtlasAudio()
   const e = q.entry
   const posTags = entryPos(e).map((p) => `<span class="vocab-pos">${POS_CN[p]}</span>`).join('')
   const specials = (e.special_spellings || [])
     .map((s) => `<span class="rc-special">${escapeHtml(s)}</span>`)
     .join('')
   const example = (e.examples || [])[0] || (e.example && e.example.en ? e.example : null)
-
+  // 英译中正面已经露出单词，插画和录音按钮可以一起放。
+  // 中译英 / 挖空正面不放插画和音标，避免把答案画出来。
   const promptHtml =
     q.type === 'en2zh'
-      ? `<div class="rc-word">${escapeHtml(e.display || e.word)}</div>
-         <div class="rc-phonetic">${escapeHtml(e.phonetic || '')} ${posTags}</div>`
+      ? `${atlasFigure(e.atlas)}
+         <div class="rc-word">${escapeHtml(e.display || e.word)}</div>
+         <div class="rc-phonetic">${phoneticHtml(e)} ${posTags}</div>`
       : q.type === 'cloze'
         ? `<div class="rc-word rc-cloze">${escapeHtml(q.masked)}</div>
            <div class="rc-phonetic">${posTags} ${escapeHtml(q.meaning)}</div>`
@@ -878,6 +889,7 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
   const $area = overlay.querySelector('.rc-answer-area')
   const $extra = overlay.querySelector('.rc-extra')
 
+  bindAtlas($card)
   overlay.querySelector('.rc-quit').addEventListener('click', onQuit)
   const $tts = overlay.querySelector('.rc-tts')
   $tts.addEventListener('click', () => {
@@ -885,7 +897,9 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
     setTtsOn(on)
     $tts.textContent = on ? '🔊' : '🔇'
     $tts.title = on ? '翻面自动发音中，点击静音' : '已静音，点击开启自动发音'
-    if (on && $card.dataset.state === 'back') speak(e.display || e.word) // 开启后立即补一次
+    if (on && $card.dataset.state === 'back') {
+      playPronunciation(wordAudioUrl(e.atlas, getAccent()), e.display || e.word)
+    }
   })
 
   // 释义区：gloss 逗号长串拆成前 6 条分行（每行一条义项，可读）；
@@ -900,16 +914,23 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
     const gl = glossLines()
     const forms = Object.entries(e.forms || {}).filter(([k]) => FORM_CN[k])
     const ex = example
+    const backMedia = q.type === 'en2zh'
+      ? ''
+      : `${atlasFigure(e.atlas)}${e.atlas ? `<div class="rc-phonetic">${phoneticHtml(e)}</div>` : ''}`
     $extra.innerHTML = `
       <div class="rc-detail">
+        ${backMedia}
         ${q.type !== 'en2zh' ? '' : gl.length ? `<div class="rc-gloss">${gl.map((l) => `<p>${escapeHtml(l)}</p>`).join('')}</div>` : ''}
         ${specials ? `<div class="rc-special-row">${specials}</div>` : ''}
         ${forms.length ? `<div class="rc-forms">${forms.map(
           ([k, v]) => `<span class="rc-form"><i>${FORM_CN[k]}</i>${escapeHtml(v)}</span>`,
         ).join('')}</div>` : ''}
         ${ex ? `<div class="rc-example">${escapeHtml(ex.en)}<br/><span class="muted">${escapeHtml(ex.zh || '')}</span></div>` : ''}
+        <div class="atlas-host"></div>
       </div>
     `
+    bindAtlas($extra)
+    fillAtlasHost($extra.querySelector('.atlas-host'), e.word, e.atlas, { image: false })
   }
 
   {
@@ -921,7 +942,7 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
       $card.dataset.state = 'back'
       revealDetail()
       // 翻面揭晓答案：自动 TTS 发音一次（🔇 可关）
-      if (ttsOn()) speak(e.display || e.word)
+      if (ttsOn()) playPronunciation(wordAudioUrl(e.atlas, getAccent()), e.display || e.word)
       $area.innerHTML = `
         ${q.type === 'en2zh'
           ? `<div class="rc-answer-gloss">${glossLines().slice(0, 3).map((l) => escapeHtml(l)).join('；') || '—'}</div>`
@@ -969,7 +990,7 @@ function mountResult(el, { total, uniqWrong, acc, duration, pool, size, mode, sc
   `
   el.appendChild(wrap)
   wrap.querySelectorAll('.rc-say').forEach((s) =>
-    s.addEventListener('click', () => { if (ttsOn()) speak(s.dataset.say) }),
+    s.addEventListener('click', () => { if (ttsOn()) speakWord(s.dataset.say) }),
   )
   wrap.querySelector('#rr-again').addEventListener('click', () => {
     wrap.remove()

@@ -1,6 +1,7 @@
 import { api } from '../api.js'
 import { renderMd, escapeHtml, escAttr } from '../render.js'
 import { catColor } from '../theme.js'
+import { fillAtlasHost } from '../atlas.js'
 
 // 右侧详情抽屉：
 //  - openKp(point)：知识点详情，含「🎯 考点信号」双向区块
@@ -284,7 +285,8 @@ export function createDrawer(ctx = {}) {
           .join('')}</div>`
     }
     if (!html) html = '<div class="empty">暂无详细信息。</div>'
-    $body.innerHTML = html
+    $body.innerHTML = `<div class="atlas-host"></div>${html}`
+    fillAtlasHost($body.querySelector('.atlas-host'), e.word, e.atlas || null, { size: 'full' })
     $body.scrollTop = 0
     open()
   }

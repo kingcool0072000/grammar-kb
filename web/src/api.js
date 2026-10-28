@@ -216,6 +216,9 @@ export const api = {
         ...(level != null ? { level } : {}),
       },
     }),
+  // 词光词条（插画/录音/例句）。404 由调用方吞掉并退回浏览器 TTS。
+  atlasEntry: (word) => req(`/atlas/${encodeURIComponent(word)}`),
+  atlasInfo: () => req('/atlas-info'),
   wrongbook: ({ user, limit = 500 } = {}) =>
     req('/recite/wrongbook', { searchParams: { user, limit } }),
   // 复习闭环摘要：到期 / 逾期 / 近 7 日攻克 / 新词额度 / 教师告警

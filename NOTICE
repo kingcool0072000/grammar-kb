@@ -1,0 +1,25 @@
+词光 Word Atlas 内容署名
+========================
+
+和爸学使用开源项目词光 Word Atlas 的词条文本、插画和单词录音：
+
+    https://github.com/designfuchen/word-atlas
+
+这些内容以 Creative Commons Attribution 4.0 International（CC BY 4.0）提供：
+
+    https://creativecommons.org/licenses/by/4.0/
+
+署名：Word Atlas contributors（词光）
+
+和爸学没有修改插画和录音，只是在已有单词上显示它们。录音是合成语音
+（英音 ElevenLabs “Alice”，美音 “Sarah”），授权只覆盖成品音频，
+不包括声音模型或声音身份。
+
+词光词库不是官方雅思（IELTS）词表，与考试主办方无关。
+
+以下内容没有引入本仓库：
+
+- `public/sfx/` 里的界面音效和音乐（许可不够明确）
+- 词光应用的界面代码（MIT，本项目没有复制它的 React 代码）
+
+词条和媒体不放进 git。服务器上用 `scripts/import_word_atlas.py` 拉取。
