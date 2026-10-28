@@ -57,6 +57,14 @@ export function mountView(route, container, { role, state, ctx, pointsById }) {
   if (route === 'readingList') return mountReadingList(container)
   if (route === 'readingAdmin') return mountReadingAdmin(container)
   if (route === 'reading') return mountReading(container, { role })
+  if (route === 'videoAdmin') {
+    return import('../views/videoAdmin.js').then(({ mountVideoAdmin }) =>
+      mountVideoAdmin(container))
+  }
+  if (route === 'videoStudy') {
+    return import('../views/videoStudy.js').then(({ mountVideoStudy }) =>
+      mountVideoStudy(container, { role }))
+  }
   if (route === 'library') return mountLibraryShelf(container, { role })
   if (route === 'libraryReader') {
     return mountLibraryReader(container, { role, bookId: Number(routeSegs()[1]) })

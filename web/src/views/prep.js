@@ -98,6 +98,22 @@ async function mountContent(el) {
         </div>
       </section>
 
+      <!-- ================= 视频学习（看视频+复述录音） ================= -->
+      <section class="gd-section">
+        <header class="gd-section-head">
+          <h2>🎬 视频学习</h2>
+        </header>
+        <div class="gd-subgroup">
+          <h3>🎞 看视频 + 复述</h3>
+          <div class="prep-cards">
+            <button class="prep-card" data-go="videoAdmin">
+              <b>视频管理</b><span>清单 · 生僻词 · 提示 · 上下架</span>
+            </button>
+          </div>
+          <p class="reading-hint">维护学生「视频学习」Tab 的视频清单（新增/编辑/上下架）；学生看完视频提交复述录音，批改在批改中心的「待批复述」。</p>
+        </div>
+      </section>
+
       <!-- ================= FCE 听说读写 ================= -->
       <section class="gd-section">
         <header class="gd-section-head">

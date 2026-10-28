@@ -77,6 +77,7 @@ PDF ──► pdf_parser   去水印（字体+方向过滤）+ 重排行 + 还�
 | `classify.py`   | 分类规则、关键词词典、关系检测、**考点信号**（**纯函数**） |
 | `vocabulary.py` | 基于语料的单词表（释义/词性/词形变化） |
 | `atlas.py`      | 词光 Word Atlas 叠加层（插画/录音/例句，CC BY 4.0；不改词级、不碰背词进度） |
+| `video_study.py`| 视频学习：YouTube 清单 + 学生复述录音 + 教师 10 分制批改（`data/fce.db`） |
 | `markdown.py`   | 表格 → GFM、知识点与整讲渲染 |
 | `db.py`         | schema + CRUD + FTS5(trigram, external-content)，无截断 |
 | `query.py`      | 面向调用的查询 API |
@@ -112,6 +113,17 @@ PDF ──► pdf_parser   去水印（字体+方向过滤）+ 重排行 + 还�
 并播放英音、美音和例句录音；没有文件就继续用浏览器语音。词表以词光词头为准
 （派生词并进去，只在词光里的词按 CEFR 补进初中 / 高中 / 雅思，且不进入试卷抽词池）。
 步骤见 [docs/word-atlas.md](docs/word-atlas.md)，署名见 [NOTICE](NOTICE)。
+登录框不放署名；教师「设置中心」（`#/config`）里的词光一节展示：
+插画与单词录音来自词光 Word Atlas，CC BY 4.0，署名 Word Atlas contributors（词光）。
+
+## 版本号
+
+应用版本只写在 `grammar_kb/VERSION` 这一行。`pyproject.toml` 用 setuptools dynamic version 读它，
+Python 的 `grammar_kb.__version__` 也读它，前端构建（`web/vite.config.js`）把它注入 `web/src/version.js`。
+
+改版本：编辑 `grammar_kb/VERSION`，然后重新构建前端（`cd web && npm run build`）并重启服务。
+`GET /version` 返回服务端版本和 git 短 SHA（没有 git 时 SHA 为空）。
+教师「设置中心」同时显示前端构建版本和服务端版本，用来发现 `web/dist` 和 Python 不是同一次发布。
 
 ## 数据库 Schema（摘要）
 

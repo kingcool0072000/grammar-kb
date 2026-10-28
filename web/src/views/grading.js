@@ -1,9 +1,10 @@
 import { api, getAuth } from '../api.js'
 import { escapeHtml, todayIso } from '../render.js'
 import { renderReadingReview } from './readingReview.js'
+import { renderVideoReview, videoRetellRow } from './videoReview.js'
 
 // 教师版 · 批改中心。打开默认是待办队列：
-//   待批录音 → 待批作文 → 异常专注
+//   待批录音 → 待批复述 → 待批作文 → 异常专注
 // 已批改 / 已自动阅卷 / 正常专注收进折叠区，不和队列抢位置。
 export async function mountGrading(el) {
   // 三子 Tab：批改看板（默认）/ 学习日志 / 学情分析（原计划表子 Tab 迁入）
@@ -324,26 +325,44 @@ export async function mountGrading(el) {
         host.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
       }
     }
+    const openVideoReview = async () => {
+      const host = document.createElement('div')
+      el.replaceChildren(host)
+      host.innerHTML = '<p class="muted">加载视频复述批改…</p>'
+      try {
+        const retells = await api.videoRetells({ limit: 200, user: student })
+        await renderVideoReview(host, retells, {
+          onBack: () => {
+            state.tab = 'board'
+            render()
+            return true
+          },
+        })
+      } catch (e) {
+        host.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
+      }
+    }
     el.innerHTML = '<p class="muted">加载中…</p>'
-    let recs, fceSubs, recite, exams, focus
+    let recs, fceSubs, recite, exams, focus, vretells
     const boardSnapshot = boardSnapshots.get(student)
     if (boardSnapshot) {
-      ({ recs, fceSubs, recite, exams, focus } = boardSnapshot)
+      ({ recs, fceSubs, recite, exams, focus, vretells } = boardSnapshot)
     } else {
       try {
         const timed = (p, ms = 8000) => Promise.race([
           p, new Promise((resolve) => setTimeout(() => resolve([]), ms)),
         ]).catch(() => [])
-        ;[recs, fceSubs, recite, exams, focus] = await Promise.all([
+        ;[recs, fceSubs, recite, exams, focus, vretells] = await Promise.all([
           timed(api.readingRecordings({ limit: 200, user: student })),
           timed(api.fceSubmissions({ limit: 200, user: student })),
           timed(api.reciteSessions({ limit: 100, user: student })),
           timed(api.examsList(student)),
           timed(api.focusSessions({ limit: 50, user: student })),
+          timed(api.videoRetells({ limit: 200, user: student })),
         ])
         focus = Array.isArray(focus) ? focus : []
         await attachFocusRw(focus)
-        boardSnapshots.set(student, { recs, fceSubs, recite, exams, focus })
+        boardSnapshots.set(student, { recs, fceSubs, recite, exams, focus, vretells })
       } catch (e) {
         el.querySelector('p').innerHTML = `<span style="color:#b42318">加载失败：${escapeHtml(e.message)}</span>`
         return
@@ -355,14 +374,17 @@ export async function mountGrading(el) {
   exams = Array.isArray(exams) ? exams : []
   focus = Array.isArray(focus) ? focus : []
   recite = Array.isArray(recite) ? recite : []
+  vretells = Array.isArray(vretells) ? vretells : []
 
   const pendRec = recs.filter((r) => r.status === 'pending')
+  const pendVR = vretells.filter((r) => r.status === 'pending')
   const pendEssay = fceSubs.filter((s) => s.status === 'pending')
   const abnormal = focus.filter(isAbnormalFocus)
   const doneRec = recs.filter((r) => r.status !== 'pending')
+  const doneVR = vretells.filter((r) => r.status !== 'pending')
   const doneEssay = fceSubs.filter((s) => s.status !== 'pending')
   const calmFocus = focus.filter((s) => !isAbnormalFocus(s) && !isZombieFocus(s))
-  const handledN = doneRec.length + doneEssay.length + calmFocus.length + exams.length
+  const handledN = doneRec.length + doneVR.length + doneEssay.length + calmFocus.length + exams.length
 
   const queueBlock = (key, title, n, rows, empty, more) => `
     <section class="g-queue-block ${n ? 'has-pend' : ''}" data-card="${key}">
@@ -380,7 +402,7 @@ export async function mountGrading(el) {
     <section class="g-queue">
       <header class="g-queue-head">
         <h2>待处理</h2>
-        <p class="g-queue-note">待批录音 → 待批作文 → 异常专注。已处理的收在下面。</p>
+        <p class="g-queue-note">待批录音 → 待批复述 → 待批作文 → 异常专注。已处理的收在下面。</p>
       </header>
       ${queueBlock(
         'recording',
@@ -391,8 +413,16 @@ export async function mountGrading(el) {
         pendRec.length ? `<button class="gcard-more" data-all="recording">去批改录音（${pendRec.length}）→</button>` : '',
       )}
       ${queueBlock(
+        'vretell',
+        '2 · 待批复述',
+        pendVR.length,
+        pendVR.map((r) => videoRetellRow(r)).join(''),
+        '没有待批的视频复述',
+        pendVR.length ? `<button class="gcard-more" data-all="vretell">去批批复述（${pendVR.length}）→</button>` : '',
+      )}
+      ${queueBlock(
         'essay',
-        '2 · 待批作文',
+        '3 · 待批作文',
         pendEssay.length,
         pendEssay.map((s) => fceRow(s)).join(''),
         '没有待批作文',
@@ -400,7 +430,7 @@ export async function mountGrading(el) {
       )}
       ${queueBlock(
         'focus',
-        '3 · 异常专注',
+        '4 · 异常专注',
         abnormal.length,
         abnormal.map((s) => abnormalFocusRow(s)).join(''),
         '最近没有需要看的异常专注',
@@ -416,12 +446,17 @@ export async function mountGrading(el) {
       <div class="gcard-list"><p class="reading-hint">加载试卷…</p></div>
     </section>
     <details class="g-handled">
-      <summary>已处理（${handledN}）<i>已批录音、已阅练习、正常专注、哈一成绩</i></summary>
+      <summary>已处理（${handledN}）<i>已批录音、已批复述、已阅练习、正常专注、哈一成绩</i></summary>
       <div class="g-handled-grid">
         <section class="gcard" data-card="recording-done">
           <header class="gcard-head"><h2>已批录音</h2><b class="gcard-n">${doneRec.length}</b></header>
           <div class="gcard-list">${doneRec.slice(0, 6).map((r) => recRow(r)).join('') || '<p class="reading-hint">暂无</p>'}</div>
           ${doneRec.length ? `<button class="gcard-more" data-all="recording">查看全部录音 →</button>` : ''}
+        </section>
+        <section class="gcard">
+          <header class="gcard-head"><h2>已批复述</h2><b class="gcard-n">${doneVR.length}</b></header>
+          <div class="gcard-list">${doneVR.slice(0, 6).map((r) => videoRetellRow(r)).join('') || '<p class="reading-hint">暂无</p>'}</div>
+          ${doneVR.length ? `<button class="gcard-more" data-all="vretell">查看全部复述 →</button>` : ''}
         </section>
         <section class="gcard">
           <header class="gcard-head"><h2>已阅作文与练习</h2><b class="gcard-n">${doneEssay.length}</b></header>
@@ -451,6 +486,7 @@ export async function mountGrading(el) {
 
   const showAll = {
     recording: async () => openRecordingReview(),
+    vretell: async () => openVideoReview(),
     essay: () => go('essay'),
     'haya-exam': () => go('haya-exam'),
     focus: () => { state.tab = 'log'; render() },
@@ -465,6 +501,12 @@ export async function mountGrading(el) {
     if (e.target.closest('[data-rec-del],[data-rec-edit],audio,a')) return
     if (!e.target.closest('.fce-his-row')) return
     openRecordingReview()
+  })
+  const vrList = el.querySelector('[data-card="vretell"] .gcard-list')
+  if (vrList) vrList.addEventListener('click', (e) => {
+    if (e.target.closest('audio')) return
+    if (!e.target.closest('.fce-his-row')) return
+    openVideoReview()
   })
   const essayList = el.querySelector('[data-card="essay"] .gcard-list')
   if (essayList) essayList.addEventListener('click', (e) => {

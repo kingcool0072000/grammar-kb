@@ -1147,14 +1147,13 @@ main {
   border-radius: 16px;
   background: rgba(14, 116, 144, 0.05);
 }
-.atlas-credit, .atlas-footnote, .atlas-about, .login-atlas {
+.atlas-credit, .atlas-footnote, .atlas-about {
   font-size: 12px;
   color: var(--ink-faint);
   line-height: 1.55;
 }
 .atlas-credit { display: block; margin-top: 4px; font-size: 11px; }
-.login-atlas { text-align: center; max-width: 440px; margin: 14px auto 0; }
-.atlas-footnote a, .atlas-about a, .login-atlas a { color: inherit; }
+.atlas-footnote a, .atlas-about a { color: inherit; }
 .atlas-accents { display: inline-flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .atlas-accent, .atlas-play {
   border: 1px solid var(--line);
@@ -3607,3 +3606,37 @@ li.open .topic-reveal-btn.reopen { display: inline-block; }
 @media (max-width: 860px) {
   .gp-dim-name { width: 120px; }
 }
+/* ---- 视频学习（学生 Tab：iframe 看视频 + 复述录音） ---- */
+.vs-video-wrap { position: relative; width: 100%; max-width: 860px; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: #000; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12); }
+.vs-video-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.vs-side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: 16px; align-items: start; }
+@media (max-width: 900px) { .vs-side { grid-template-columns: 1fr; } }
+.vs-vocab, .vs-hints { border: 1px solid var(--line, #e2e8f0); border-radius: 12px; background: var(--card, #fff); padding: 12px 14px; }
+.vs-vocab-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--line, #edf1f6); }
+.vs-vocab-row:last-child { border-bottom: 0; }
+.vs-vocab-word { font-size: 15px; color: #1f2933; cursor: pointer; }
+.vs-vocab-word:hover { color: #4a6fa5; }
+.vs-tts { font-size: 12px; opacity: 0.55; margin-left: 2px; }
+.vs-vocab-gloss { color: var(--ink-soft, #52606d); font-size: 13px; }
+.vs-hint-line { margin: 6px 0; padding-left: 10px; border-left: 3px solid #e3c567; color: var(--ink-soft, #52606d); font-size: 14px; }
+
+/* ---- 视频学习内容管理（教师）：新增/编辑表单 ---- */
+.va-editor { margin-top: 14px; padding: 16px; border: 1px solid var(--line, #e2e8f0); border-radius: 12px; background: var(--card, #fff); display: flex; flex-direction: column; gap: 12px; }
+.va-editor-head { display: flex; flex-wrap: wrap; gap: 12px; }
+.va-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-soft, #52606d); }
+.va-field input { border: 1px solid var(--line, #e2e8f0); border-radius: 8px; padding: 6px 10px; font-size: 14px; min-width: 180px; }
+.va-field input:disabled { background: #f1f4f8; color: #9aa5b1; }
+.va-editor-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+@media (max-width: 900px) { .va-editor-cols { grid-template-columns: 1fr; } }
+.va-col { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-soft, #52606d); }
+.va-col textarea { border: 1px solid var(--line, #e2e8f0); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical; }
+
+/* ---- 视频学习受限播放器：盾板/结束遮罩/自绘控制条 ---- */
+.vs-shield { position: absolute; inset: 0; z-index: 2; background: transparent; }
+.vs-ended-mask[hidden] { display: none; }
+.vs-ended-mask { position: absolute; inset: 0; z-index: 3; background: #0f172a; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; }
+.vs-ended-mask b { font-size: 22px; }
+.vs-ended-mask p { color: #c9cdd3; margin: 0; }
+.vs-bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 12px; border: 1px solid var(--line, #e2e8f0); border-radius: 10px; background: var(--card, #fff); flex-wrap: wrap; }
+.vs-bar input[type="range"] { flex: 1; min-width: 160px; accent-color: #8a6d3b; }
+.vs-time { font-size: 12px; color: var(--ink-soft, #52606d); font-variant-numeric: tabular-nums; white-space: nowrap; }

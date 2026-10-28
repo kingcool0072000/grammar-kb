@@ -14,6 +14,7 @@ export const STUDENT_TABS = [
   { key: 'reading', label: '阅读练习' },
   { key: 'topics', label: '专题学习' },
   { key: 'library', label: '泛读馆' },
+  { key: 'videoStudy', label: '视频学习' },
   { key: 'fcePapers', label: 'FCE真题' },
 ]
 
@@ -22,9 +23,11 @@ const TEACHER_ALLOWED = new Set([
   // 备课 / 批改 / 计划跳进来的工具页
   'courses', 'vocab', 'taxonomy', 'fce', 'fceListen', 'exams', 'vocabLevel', 'vocabExam',
   'students', 'paperAdmin', 'readingAdmin', 'readingList', 'topicsAdmin',
+  'videoAdmin',
   'libraryManage', 'librarySettings',
   // 师生都能开的隐藏页（教师从卡片进专题、泛读馆）
   'topics', 'library', 'libraryReader', 'fcePapers', 'config', 'conquered',
+  'videoStudy',
 ])
 
 const STUDENT_ALLOWED = new Set([

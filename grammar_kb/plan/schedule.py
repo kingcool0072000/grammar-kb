@@ -6,8 +6,16 @@ import sqlite3
 from datetime import date, timedelta
 from typing import Optional
 
-from ..clock import monday_of, today_cn, week_bounds
+from ..clock import cn_dt, monday_of, today_cn, week_bounds
 from .util import _short, _task_key, add_days, completion_percent, task_public
+
+
+def _cn_bound(value: str) -> str:
+    """日期或带时间的边界 → ``YYYY-MM-DD HH:MM:SS``（配合 cn_dt 比较）。"""
+    text = str(value).strip().replace("T", " ")
+    if len(text) <= 10:
+        return f"{text} 00:00:00"
+    return text[:19]
 
 
 def paper_task_detail(level: Optional[int]) -> str:
@@ -196,7 +204,66 @@ class ScheduleMixin:
                     })
                 if lec in today_hw:
                     tasks.append(hw_row(lec))
+        self._append_video_tasks(tasks, t, user, lo, ref, upto, dow, wd_left)
         return tasks
+
+    def _append_video_tasks(self, tasks: list[dict], t: dict, user: str,
+                            lo: str, ref: str, upto: str, dow: int,
+                            wd_left: int) -> None:
+        """本周 videos 摊进当日清单。提交复述即完成，当天提交的行保留 ✓。"""
+        vids = [str(v).strip() for v in (t.get("videos") or []) if str(v).strip()]
+        if not vids:
+            return
+        done_vids = self._retold_video_ids(lo, upto, user)
+        today_vids = self._retold_video_ids(ref, upto, user)
+        rest = [v for v in vids if v not in done_vids]
+        # 工作日按剩余工作日均摊；周末每天兜底 1 条，避免周六日清单空白。
+        if rest:
+            per = max(1, -(-len(rest) // wd_left)) if dow < 5 and wd_left else 1
+            for vid in rest[:per]:
+                tasks.append(self._video_task(vid))
+        have = {x.get("key") for x in tasks}
+        for vid in vids:
+            if vid in today_vids and f"video:{vid}" not in have:
+                tasks.append(self._video_task(vid, done_today=True))
+
+    def _video_task(self, vid: str, *, done_today: bool = False) -> dict:
+        title = self._video_title(vid)
+        text = f"视频复述《{_short(title, 16)}》" if title else "视频复述"
+        detail = ("今天已提交复述 ✓" if done_today
+                  else "看完视频，用自己的话复述并提交录音")
+        return {
+            "type": "video", "key": f"video:{vid}", "vid": vid,
+            "text": text, "detail": detail,
+        }
+
+    def _video_title(self, vid: str) -> str:
+        try:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT title FROM video_item WHERE vid = ?", (vid,),
+                ).fetchone()
+                return (row["title"] or "") if row else ""
+        except sqlite3.Error:
+            return ""
+
+    def _retold_video_ids(self, lo: str, hi: str, user: str) -> set[str]:
+        """[lo, hi) 内该生提交过复述的视频 vid。缺表时返回空集。"""
+        try:
+            with self._connect() as conn:
+                names = {r[0] for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'")}
+                if "video_retell" not in names:
+                    return set()
+                rows = conn.execute(
+                    "SELECT DISTINCT vid FROM video_retell"
+                    f" WHERE user = ? AND {cn_dt('created_at')} >= ?"
+                    f" AND {cn_dt('created_at')} < ?",
+                    (user, _cn_bound(lo), _cn_bound(hi)),
+                ).fetchall()
+                return {r["vid"] for r in rows if r["vid"]}
+        except sqlite3.Error:
+            return set()
 
 
     def _wrong_words_count(self, user: str) -> int:

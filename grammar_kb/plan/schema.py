@@ -68,4 +68,5 @@ RULES: list[dict] = [
 #   "vocab_goal": 320,           # 本周目标掌握词数（绝对值，非增量）
 #   "fce": [["Test1","P1"], ...] # 简化为 ["Test1 P1", "Test2 RUE"] 文本即可
 #   "reading": {"波西杰克逊1": 100} # 书名 → 周末目标进度 %
+#   "videos": ["xxxxxxxxxxx", ...]  # 本周安排的视频 vid；提交复述即完成
 # }

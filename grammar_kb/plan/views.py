@@ -303,6 +303,12 @@ class ViewsMixin:
                 if x.get("type") == "paper" and x.get("done"))
             dim("📝", "试卷", done_p, len(papers))
 
+        videos = [str(v).strip() for v in (t.get("videos") or []) if str(v).strip()]
+        if videos:
+            done_ids = self._retold_video_ids(
+                week_start, add_days(week_start, 7), user)
+            dim("🎬", "视频复述", len(set(videos) & done_ids), len(videos))
+
         total_items = sum(d["total"] for d in dims)
         # 泛读维度按实际计数（可超 100%）；其余维度封顶（完成即满）
         done_items = sum(

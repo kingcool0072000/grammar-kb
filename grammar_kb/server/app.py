@@ -21,8 +21,32 @@ from .routes_plan import register_plan
 from .routes_practice import register_practice
 from .routes_query import register_query
 from .routes_study import register_study
+from .routes_video import register_video
 from .routes_vocab import register_vocab
 from .schemas import LoginIn
+
+_GIT_SHA: Optional[str] = None
+
+
+def _git_short() -> str:
+    """当前检出的短 SHA。无 git（打包镜像、浅拷贝）时返回空串，结果进程内缓存。"""
+    global _GIT_SHA
+    if _GIT_SHA is not None:
+        return _GIT_SHA
+    import subprocess
+
+    sha = ""
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            timeout=2,
+        )
+        sha = out.decode().strip()
+    except (OSError, subprocess.SubprocessError):
+        sha = ""
+    _GIT_SHA = sha
+    return sha
 
 
 def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None,
@@ -42,6 +66,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from ..recite import ReciteStore
     from ..focus import FocusStore
     from ..topics import TopicStore
+    from ..video_study import VideoStore
     from ..plan import PlanStore
     from ..vocab_exam import VocabExamStore
     from ..analytics_ai import AnalyticsAI
@@ -61,6 +86,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     recite = ReciteStore(fce_db_path)
     focus = FocusStore(fce_db_path)
     topics = TopicStore(fce_db_path)
+    # 视频学习（看视频 + 复述录音批改）：fce.db 同库
+    video_study = VideoStore(fce_db_path)
     # 计划表（教师周计划）：fce.db 同库存 tasks/notes，完成度实时聚合多库
     plan = PlanStore(fce_db_path, exam_db_path=exam_db_path,
                    grammar_db_path=db_path)
@@ -120,7 +147,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     # ---- 认证 ----
     # 白名单路径免登录：根信息、API 文档、登录本身
-    _AUTH_OPEN = frozenset({"/", "/api-info", "/docs", "/redoc", "/openapi.json", "/auth/login"})
+    _AUTH_OPEN = frozenset({
+        "/", "/api-info", "/version", "/docs", "/redoc", "/openapi.json", "/auth/login",
+    })
     # 静态前端资源（web/dist 挂载时）：HTML/JS/CSS/字体免登录
     _STATIC_PREFIXES = ("/assets/", "/favicon", "/vite.svg",
                         "/analytics-report.html",  # 学情静态报告（public 资源）
@@ -179,6 +208,12 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         # 阅读更多（杂志阅读器统计）：心跳上报 + 自己的聚合数据
         ("POST", "/readingmore/api/session"),
         ("GET", "/readingmore/api/stats"),
+        # 视频学习
+        ("GET", "/video-study"),
+        ("GET", "/video-study/items/"),
+        ("POST", "/video-study/retells"),
+        ("GET", "/video-study/retells"),
+        ("GET", "/video-study/retells/"),
     )
 
     @app.middleware("http")
@@ -235,6 +270,15 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     app.include_router(_readingmore._router)
 
     # ---- 端点 ----
+    @app.get("/version", include_in_schema=False)
+    def app_version():
+        """服务端版本与 git 短 SHA。免登录，供设置中心对照前端构建版本。"""
+        return _ok({
+            "service": "grammar-kb",
+            "version": __version__,
+            "git": _git_short(),
+        })
+
     @app.get("/api-info", include_in_schema=False)
     def root():
         """服务信息（原 / 路径，静态前端部署时 / 让给 web/dist）。"""
@@ -242,6 +286,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             {
                 "service": "grammar-kb",
                 "version": __version__,
+                "git": _git_short(),
                 "endpoints": [
                     "POST /auth/login",
                     "GET /stats",
@@ -266,6 +311,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         kbq=kbq, exams=exams, users=users, fce_papers=fce_papers,
         fce_submissions=fce_submissions, reading=reading,
         analytics_ai=analytics_ai, recite=recite, focus=focus, topics=topics,
+        videos=video_study,
         plan=plan, homework_admin=homework_admin, vocab_exam=vocab_exam,
         library=library, prep_queue=prep_queue, audio_dir=audio_dir,
     )
@@ -276,6 +322,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     register_practice(app, ctx)
     register_study(app, ctx)
     register_plan(app, ctx)
+    register_video(app, ctx)
     register_library(app, ctx)
 
     # ---- 静态前端（可选）：web/dist 构建产物由本进程直接服务 ----

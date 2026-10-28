@@ -1,6 +1,6 @@
 // 词光 Word Atlas：插画、英/美录音、例句朗读。
 // 媒体 URL 走 /api/atlas-media（部署期由后端剥掉 /api）。文件 404 或播放失败时
-// 退回 tts.js 的浏览器语音。署名见 aboutHtml()，登录页和设置中心也会展示。
+// 退回 tts.js 的浏览器语音。署名见 aboutHtml()，展示在教师设置中心。
 import { api } from './api.js'
 import { escapeHtml, escAttr } from './render.js'
 import { speak } from './tts.js'
@@ -302,14 +302,12 @@ export function bindAtlas(root) {
 }
 
 export function aboutHtml() {
+  // 署名只放设置中心，不放登录框。链接保持可点。
   return `
     <p class="atlas-about">
-      插画、例句和单词录音来自开源项目
+      插画与单词录音来自
       <a href="https://github.com/designfuchen/word-atlas" target="_blank" rel="noopener">词光 Word Atlas</a>，
-      以 <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>
-      授权。署名：Word Atlas contributors（词光）。和爸学未修改这些素材。
-      录音是合成语音（英音 ElevenLabs Alice，美音 Sarah），只授权成品音频。
-      界面音效没有引入。这不是官方雅思词表。
-      没有对应录音时，发音仍使用本机浏览器语音。
+      <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>，
+      署名 Word Atlas contributors（词光）。
     </p>`
 }
