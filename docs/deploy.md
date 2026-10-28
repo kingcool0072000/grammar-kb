@@ -178,6 +178,13 @@ Environment=TZ=Asia/Shanghai
 - 库为单文件 journal 模式，可直接整文件备份/搬迁（rsync/scp 即可）
 - 录音经 ffmpeg 转 m4a 入库，部署机需装 ffmpeg（未装则原样存 webm，教师端 Chrome 可播）
 
+## 词光插画和录音
+
+词条、插画和 mp3 不在 git 里。部署新代码后在服务器执行
+`scripts/import_word_atlas.py`（先词条，再 `--media`）。
+步骤、磁盘和 Caddy 注意点见 [word-atlas.md](word-atlas.md)。
+背词进度在 `fce.db`，这条导入不会打开它。
+
 ## 健康检查
 
 ```bash

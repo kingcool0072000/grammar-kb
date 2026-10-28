@@ -1,5 +1,6 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
+import { fillAtlasHost } from '../atlas.js'
 
 // 教师版 · 背单词级别详情（备课中心子页）：
 //   2.1 本级单词内容（词表+搜索，L0=哈一课本高频词=原词汇表）
@@ -11,6 +12,7 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
     <div class="view-head">
       <h1>背单词 · L${lv}${lv === 0 ? '（课本高频词）' : ''}</h1>
       <p>本级词库 · 考试设计 · 解锁配置。</p>
+      <p class="atlas-footnote">和词光对得上的词可以看插画、听录音。素材来自 <a href="https://github.com/designfuchen/word-atlas" target="_blank" rel="noopener">词光 Word Atlas</a>，<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>，署名 Word Atlas contributors（词光）。词光的雅思词没有并进本级词表。</p>
     </div>
     <div id="vl-body"><p class="muted">加载中…</p></div>
   `
@@ -163,9 +165,11 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
           <div class="vl-dlg-sec"><b>释义</b><p>${escapeHtml(glossOf(w) || '（暂无）')}</p></div>
           ${forms ? `<div class="vl-dlg-sec"><b>词形变化</b><p>${escapeHtml(forms)}</p></div>` : ''}
           ${exEn ? `<div class="vl-dlg-sec"><b>例句</b><p class="vl-dlg-en">${escapeHtml(exEn)}</p>${exZh ? `<p class="vl-dlg-zh">${escapeHtml(exZh)}</p>` : ''}</div>` : ''}
+          <div class="atlas-host"></div>
           <div class="chip-row"><button class="chip" id="vl-dlg-close">关闭</button></div>
         </div>`
       document.body.appendChild(dlg)
+      fillAtlasHost(dlg.querySelector('.atlas-host'), w.word, w.atlas, { size: 'full' })
       const close = () => dlg.remove()
       dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
       dlg.querySelector('#vl-dlg-close').addEventListener('click', close)

@@ -15,6 +15,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Iterator, Optional
 
+from .atlas import ensure_schema as _ensure_atlas_schema
 from .models import Block, KnowledgePoint, Lecture, Marker, Relation, TableData
 
 SCHEMA = """
@@ -133,6 +134,8 @@ class GrammarDB:
 
     def init_schema(self) -> None:
         self.conn.executescript(SCHEMA)
+        # 词光词条表：只加表/加列。讲义重建和背词进度都不走这里删除。
+        _ensure_atlas_schema(self.conn)
         self.conn.commit()
 
     def reset_all(self) -> None:
@@ -142,6 +145,7 @@ class GrammarDB:
         """
         with self.transaction() as c:
             # 先删 FTS 与子表，再删主表（注意外键顺序）
+            # vocab_atlas 故意不删：它不是讲义内容，清讲次不应丢掉已导入的词光词条。
             for t in ("kp_fts", "lecture_block", "relation", "marker",
                       "knowledge_point", "homework_question", "lecture", "meta"):
                 c.execute(f"DROP TABLE IF EXISTS {t}")

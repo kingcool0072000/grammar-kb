@@ -15,6 +15,10 @@
 
 输入文件（data/wordlists/{初中,高中,四级,六级,考研,雅思,专四}.jsonl，行格式
 {"word","us","uk","translations":[...],"phrases":[...],"sentences":[...]}）
+
+词光词头由 scripts/sync_word_atlas_vocab.py 写进这些 jsonl。
+新补的词 extra.exam 为 false，不进试卷抽词池；拼写替换（labour→labor）
+仍可入卷。背词进度在 fce.db，本脚本只重建 vocab_word。
 """
 from __future__ import annotations
 
@@ -26,6 +30,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+
+from grammar_kb.atlas_vocab import canon_key, headword_allowed, load_alias_file  # noqa: E402
 
 ORDER = ["初中", "高中", "四级", "六级", "考研", "雅思", "专四"]  # L1..L7
 
@@ -57,7 +63,7 @@ def load_level_sets() -> list[tuple[str, set[str]]]:
             except json.JSONDecodeError:
                 continue
             w = (d.get("word") or "").strip().lower()
-            if w and w.isascii() and " " not in w and len(w) >= 2:
+            if headword_allowed(w, str(d.get("origin") or "")):
                 ws.add(w)
         out.append((lv, ws))
     return out
@@ -77,8 +83,9 @@ def load_level_entries() -> dict[str, dict]:
             except json.JSONDecodeError:
                 continue
             w = (d.get("word") or "").strip().lower()
-            # 单字母词（a/i）与语料功能词无背诵价值且释义质量差，跳过
-            if not w or not w.isascii() or " " in w or len(w) < 2:
+            # 单字母词（a/i）与语料功能词无背诵价值且释义质量差，跳过。
+            # 词光补入的短语（post office）允许空格；旧词表里的空格短语仍跳过。
+            if not headword_allowed(w, str(d.get("origin") or "")):
                 continue
             if w in out:
                 continue
@@ -94,6 +101,17 @@ def load_level_entries() -> dict[str, dict]:
                 if tr:
                     meanings.append((f"{ty}. " if ty and "." not in tr[:6] else "") + tr)
             ex = (d.get("sentences") or [{}])[0]
+            extra = {}
+            if d.get("origin"):
+                extra["origin"] = d["origin"]
+            if d.get("exam") is False:
+                extra["exam"] = False
+            if d.get("cefr"):
+                extra["cefr"] = d["cefr"]
+            if d.get("topic"):
+                extra["topic"] = d["topic"]
+            if d.get("atlas_id"):
+                extra["atlas_id"] = d["atlas_id"]
             out[w] = {
                 "pos": pos,
                 "gloss": "；".join(m[:40] for m in meanings[:3])[:120],
@@ -102,6 +120,7 @@ def load_level_entries() -> dict[str, dict]:
                     "en": (ex.get("sentence") or "").strip()[:200],
                     "zh": (ex.get("translation") or "").strip()[:160],
                 },
+                "extra": extra,
             }
     return out
 
@@ -115,6 +134,9 @@ def build() -> None:
     q = Query(GrammarDB(str(db_path)))
     hayi = q.vocabulary(limit=2000, min_freq=2)
     print(f"L0 哈一语料高频词: {len(hayi)}")
+    alias_keys = {canon_key(word) for word in load_alias_file()}
+    # 词光词族/拼写别名不再单独占 L0 词头，避免和词光词头各算一张卡。
+    hayi = [e for e in hayi if canon_key(e["word"]) not in alias_keys]
     l0_words = {e["word"].lower() for e in hayi}
 
     # ---- L1-L7：最低出现级别归层，剔除 L0 ----
@@ -123,7 +145,7 @@ def build() -> None:
     assign: dict[str, int] = {}
     for lv_idx, (_, ws) in enumerate(level_sets):
         for w in ws:
-            if w in l0_words or w in assign:
+            if w in l0_words or w in assign or canon_key(w) in alias_keys:
                 continue
             assign[w] = lv_idx + 1
     from collections import Counter
@@ -165,7 +187,7 @@ def build() -> None:
             e.get("gloss") or "",
             json.dumps(e.get("meanings") or [], ensure_ascii=False),
             json.dumps(e.get("example") or {}, ensure_ascii=False),
-            "{}",
+            json.dumps(e.get("extra") or {}, ensure_ascii=False),
         ))
     con.executemany(
         "INSERT OR REPLACE INTO vocab_word (word, level, pos, gloss, meanings, example, extra)"

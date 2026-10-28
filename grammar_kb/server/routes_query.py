@@ -7,6 +7,7 @@ from typing import Optional
 import fastapi  # noqa: F401  FastAPI 解析注解里的 fastapi.Request
 from fastapi import HTTPException, Query as FQuery
 
+from ..atlas import compact_for_words, lookup_public
 from .http import _ok, _request_user
 
 def register_query(app, ctx):
@@ -115,6 +116,10 @@ def register_query(app, ctx):
         entry = kbq.dict_lookup(w)
         if entry is None:
             raise HTTPException(status_code=404, detail=f"词典未收录：{word}")
+        atlas = lookup_public(kbq.db.conn, w, full=True)
+        if atlas:
+            entry = dict(entry)
+            entry["atlas"] = atlas
         return _ok(entry)
 
     @app.get("/vocabulary")
@@ -179,15 +184,31 @@ def register_query(app, ctx):
                     " FROM vocab_word WHERE level <= ?",
                     (unlocked,),
                 ).fetchall()
-        items = [{
-            "word": r["word"],
-            "level": r["level"],
-            "pos": _j(r["pos"], "[]"),
-            "gloss": r["gloss"] or "",
-            "meanings": _j(r["meanings"], "[]"),
-            "example": _j(r["example"], "{}"),
-            "extra": _j(r["extra"], "{}"),
-        } for r in rows]
+        atlas_by_word = compact_for_words(conn, [r["word"] for r in rows])
+        items = []
+        for r in rows:
+            item = {
+                "word": r["word"],
+                "level": r["level"],
+                "pos": _j(r["pos"], "[]"),
+                "gloss": r["gloss"] or "",
+                "meanings": _j(r["meanings"], "[]"),
+                "example": _j(r["example"], "{}"),
+                "extra": _j(r["extra"], "{}"),
+            }
+            atlas = atlas_by_word.get((r["word"] or "").strip().lower())
+            if atlas:
+                item["atlas"] = {
+                    key: value for key, value in atlas.items()
+                    if key not in ("gloss", "example")
+                }
+                # 词光是释义和例句的优先来源；没有词光条目时仍用词表原文。
+                if atlas.get("gloss"):
+                    item["gloss"] = atlas["gloss"]
+                    item["from_atlas"] = True
+                if atlas.get("example"):
+                    item["example"] = atlas["example"]
+            items.append(item)
         # L0 按语料词频降序（跟「背单词」原有顺序一致），L1+ 按字母序
         items.sort(key=lambda x: (
             x["level"],

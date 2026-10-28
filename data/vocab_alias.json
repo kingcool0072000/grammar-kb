@@ -1,0 +1,3998 @@
+{
+ "version": 1,
+ "note": "别名折到词光词头。kind=family|inflection|spelling|typo。进度合并用，不要手改后不重跑脚本。",
+ "aliases": {
+  "abandonment": {
+   "to": "abandon",
+   "kind": "family"
+  },
+  "abnormally": {
+   "to": "normally",
+   "kind": "family"
+  },
+  "abolition": {
+   "to": "abolish",
+   "kind": "family"
+  },
+  "abruptly": {
+   "to": "abrupt",
+   "kind": "family"
+  },
+  "accidental": {
+   "to": "accident",
+   "kind": "family"
+  },
+  "accidentally": {
+   "to": "accident",
+   "kind": "family"
+  },
+  "accommodate": {
+   "to": "accommodation",
+   "kind": "family"
+  },
+  "accordance": {
+   "to": "accord",
+   "kind": "family"
+  },
+  "accountable": {
+   "to": "account",
+   "kind": "family"
+  },
+  "accumulate": {
+   "to": "accumulation",
+   "kind": "family"
+  },
+  "accustomed": {
+   "to": "accustom",
+   "kind": "family"
+  },
+  "acknowledge": {
+   "to": "acknowledgment",
+   "kind": "family"
+  },
+  "acutely": {
+   "to": "acute",
+   "kind": "family"
+  },
+  "adjust": {
+   "to": "adjustment",
+   "kind": "family"
+  },
+  "admirable": {
+   "to": "admire",
+   "kind": "family"
+  },
+  "admiration": {
+   "to": "admire",
+   "kind": "family"
+  },
+  "admittedly": {
+   "to": "admit",
+   "kind": "family"
+  },
+  "adolescence": {
+   "to": "adolescent",
+   "kind": "family"
+  },
+  "adulthood": {
+   "to": "adult",
+   "kind": "family"
+  },
+  "advancement": {
+   "to": "advanced",
+   "kind": "family"
+  },
+  "adventurer": {
+   "to": "adventure",
+   "kind": "family"
+  },
+  "adventurous": {
+   "to": "adventure",
+   "kind": "family"
+  },
+  "adversely": {
+   "to": "adverse",
+   "kind": "family"
+  },
+  "advisory": {
+   "to": "advice",
+   "kind": "family"
+  },
+  "aeronautics": {
+   "to": "aero",
+   "kind": "family"
+  },
+  "aesthetics": {
+   "to": "aesthetic",
+   "kind": "family"
+  },
+  "affectionate": {
+   "to": "affection",
+   "kind": "family"
+  },
+  "affiliation": {
+   "to": "affiliate",
+   "kind": "family"
+  },
+  "affirmation": {
+   "to": "affirm",
+   "kind": "family"
+  },
+  "aggregate": {
+   "to": "aggregation",
+   "kind": "family"
+  },
+  "aggression": {
+   "to": "aggressive",
+   "kind": "family"
+  },
+  "aggressor": {
+   "to": "aggressive",
+   "kind": "family"
+  },
+  "agitate": {
+   "to": "agitation",
+   "kind": "family"
+  },
+  "agony": {
+   "to": "agonize",
+   "kind": "family"
+  },
+  "alternatively": {
+   "to": "alternative",
+   "kind": "family"
+  },
+  "ambiguity": {
+   "to": "ambiguous",
+   "kind": "family"
+  },
+  "amusement": {
+   "to": "amusing",
+   "kind": "family"
+  },
+  "analytical": {
+   "to": "analysis",
+   "kind": "family"
+  },
+  "ancestral": {
+   "to": "ancestor",
+   "kind": "family"
+  },
+  "animated": {
+   "to": "animate",
+   "kind": "family"
+  },
+  "annoying": {
+   "to": "annoy",
+   "kind": "family"
+  },
+  "annually": {
+   "to": "annual",
+   "kind": "family"
+  },
+  "antagonism": {
+   "to": "antagonist",
+   "kind": "family"
+  },
+  "antibiotic": {
+   "to": "antibiotics",
+   "kind": "family"
+  },
+  "appeal": {
+   "to": "appealing",
+   "kind": "family"
+  },
+  "applicable": {
+   "to": "apply",
+   "kind": "family"
+  },
+  "appointee": {
+   "to": "appointment",
+   "kind": "family"
+  },
+  "appreciable": {
+   "to": "appreciably",
+   "kind": "family"
+  },
+  "appreciative": {
+   "to": "appreciate",
+   "kind": "family"
+  },
+  "appropriation": {
+   "to": "appropriate",
+   "kind": "family"
+  },
+  "apt": {
+   "to": "aptitude",
+   "kind": "family"
+  },
+  "arabic": {
+   "to": "arabian",
+   "kind": "family"
+  },
+  "argumentative": {
+   "to": "argue",
+   "kind": "family"
+  },
+  "aristocrat": {
+   "to": "aristocracy",
+   "kind": "family"
+  },
+  "arrogance": {
+   "to": "arrogantly",
+   "kind": "family"
+  },
+  "arrogant": {
+   "to": "arrogantly",
+   "kind": "family"
+  },
+  "ash": {
+   "to": "ashtray",
+   "kind": "family"
+  },
+  "aspirational": {
+   "to": "aspiration",
+   "kind": "family"
+  },
+  "assassin": {
+   "to": "assassination",
+   "kind": "family"
+  },
+  "assassinate": {
+   "to": "assassination",
+   "kind": "family"
+  },
+  "association": {
+   "to": "associate",
+   "kind": "family"
+  },
+  "assure": {
+   "to": "assurance",
+   "kind": "family"
+  },
+  "athletic": {
+   "to": "athlete",
+   "kind": "family"
+  },
+  "athletics": {
+   "to": "athlete",
+   "kind": "family"
+  },
+  "atom": {
+   "to": "atomic",
+   "kind": "family"
+  },
+  "attachment": {
+   "to": "attach",
+   "kind": "family"
+  },
+  "audio": {
+   "to": "audio-visual",
+   "kind": "family"
+  },
+  "authorization": {
+   "to": "authorize",
+   "kind": "family"
+  },
+  "automate": {
+   "to": "automatic",
+   "kind": "family"
+  },
+  "automatically": {
+   "to": "automatic",
+   "kind": "family"
+  },
+  "automation": {
+   "to": "automatic",
+   "kind": "family"
+  },
+  "autonomous": {
+   "to": "autonomy",
+   "kind": "family"
+  },
+  "availability": {
+   "to": "available",
+   "kind": "family"
+  },
+  "aware": {
+   "to": "unaware",
+   "kind": "family"
+  },
+  "awareness": {
+   "to": "unaware",
+   "kind": "family"
+  },
+  "awe": {
+   "to": "awesome",
+   "kind": "family"
+  },
+  "awfully": {
+   "to": "awful",
+   "kind": "family"
+  },
+  "bacteria": {
+   "to": "bacterium",
+   "kind": "family"
+  },
+  "baker": {
+   "to": "bake",
+   "kind": "family"
+  },
+  "bare": {
+   "to": "barely",
+   "kind": "family"
+  },
+  "barometre": {
+   "to": "barometer",
+   "kind": "spelling"
+  },
+  "batter": {
+   "to": "bat",
+   "kind": "family"
+  },
+  "battlefield": {
+   "to": "battle",
+   "kind": "family"
+  },
+  "battleground": {
+   "to": "battle",
+   "kind": "family"
+  },
+  "be": {
+   "to": "being",
+   "kind": "family"
+  },
+  "behavious": {
+   "to": "behaviour",
+   "kind": "typo"
+  },
+  "belongings": {
+   "to": "belong",
+   "kind": "family"
+  },
+  "bent": {
+   "to": "bend",
+   "kind": "family"
+  },
+  "betray": {
+   "to": "betrayal",
+   "kind": "family"
+  },
+  "bind": {
+   "to": "bound",
+   "kind": "family"
+  },
+  "biological": {
+   "to": "biology",
+   "kind": "family"
+  },
+  "blacken": {
+   "to": "black",
+   "kind": "family"
+  },
+  "blessing": {
+   "to": "bless",
+   "kind": "family"
+  },
+  "boarder": {
+   "to": "boarding",
+   "kind": "family"
+  },
+  "boating": {
+   "to": "boat",
+   "kind": "family"
+  },
+  "bodily": {
+   "to": "body",
+   "kind": "family"
+  },
+  "boiler": {
+   "to": "boil",
+   "kind": "family"
+  },
+  "bony": {
+   "to": "bone",
+   "kind": "family"
+  },
+  "bored": {
+   "to": "boring",
+   "kind": "family"
+  },
+  "bossy": {
+   "to": "boss",
+   "kind": "family"
+  },
+  "boxing": {
+   "to": "box",
+   "kind": "family"
+  },
+  "breathless": {
+   "to": "breathe",
+   "kind": "family"
+  },
+  "breezy": {
+   "to": "breeze",
+   "kind": "family"
+  },
+  "brew": {
+   "to": "brewery",
+   "kind": "family"
+  },
+  "broad": {
+   "to": "breadth",
+   "kind": "family"
+  },
+  "brotherhood": {
+   "to": "brother",
+   "kind": "family"
+  },
+  "brotherly": {
+   "to": "brother",
+   "kind": "family"
+  },
+  "brow": {
+   "to": "eyebrow",
+   "kind": "family"
+  },
+  "bully": {
+   "to": "bullying",
+   "kind": "family"
+  },
+  "bureaucratic": {
+   "to": "bureaucracy",
+   "kind": "family"
+  },
+  "businesswoman": {
+   "to": "businessman",
+   "kind": "family"
+  },
+  "calculate": {
+   "to": "calculator",
+   "kind": "family"
+  },
+  "capability": {
+   "to": "capable",
+   "kind": "family"
+  },
+  "carpenter": {
+   "to": "carpentry",
+   "kind": "family"
+  },
+  "ceaseless": {
+   "to": "cease",
+   "kind": "family"
+  },
+  "celebrated": {
+   "to": "celebrate",
+   "kind": "family"
+  },
+  "cessation": {
+   "to": "cease",
+   "kind": "family"
+  },
+  "charitable": {
+   "to": "charity",
+   "kind": "family"
+  },
+  "charm": {
+   "to": "charming",
+   "kind": "family"
+  },
+  "christianity": {
+   "to": "christian",
+   "kind": "family"
+  },
+  "chronically": {
+   "to": "chronic",
+   "kind": "family"
+  },
+  "citation": {
+   "to": "cite",
+   "kind": "family"
+  },
+  "civilized": {
+   "to": "civilization",
+   "kind": "family"
+  },
+  "clamour": {
+   "to": "clamor",
+   "kind": "spelling"
+  },
+  "clinical": {
+   "to": "clinic",
+   "kind": "family"
+  },
+  "coastal": {
+   "to": "coast",
+   "kind": "family"
+  },
+  "collaborative": {
+   "to": "collaboration",
+   "kind": "family"
+  },
+  "collector": {
+   "to": "collect",
+   "kind": "family"
+  },
+  "collegiate": {
+   "to": "college",
+   "kind": "family"
+  },
+  "collision": {
+   "to": "collide",
+   "kind": "family"
+  },
+  "color": {
+   "to": "colorless",
+   "kind": "family"
+  },
+  "combustible": {
+   "to": "combustion",
+   "kind": "family"
+  },
+  "comically": {
+   "to": "comic",
+   "kind": "family"
+  },
+  "command": {
+   "to": "commander",
+   "kind": "family"
+  },
+  "commentator": {
+   "to": "comment",
+   "kind": "family"
+  },
+  "commuter": {
+   "to": "commute",
+   "kind": "family"
+  },
+  "companionship": {
+   "to": "companion",
+   "kind": "family"
+  },
+  "comparable": {
+   "to": "compare",
+   "kind": "family"
+  },
+  "compelling": {
+   "to": "compel",
+   "kind": "family"
+  },
+  "compensation": {
+   "to": "compensate",
+   "kind": "family"
+  },
+  "competence": {
+   "to": "competent",
+   "kind": "family"
+  },
+  "comply": {
+   "to": "compliance",
+   "kind": "family"
+  },
+  "comprehend": {
+   "to": "comprehension",
+   "kind": "family"
+  },
+  "concerning": {
+   "to": "concerned",
+   "kind": "family"
+  },
+  "conclude": {
+   "to": "conclusion",
+   "kind": "family"
+  },
+  "conditional": {
+   "to": "condition",
+   "kind": "family"
+  },
+  "confidentially": {
+   "to": "confidential",
+   "kind": "family"
+  },
+  "confidently": {
+   "to": "confidence",
+   "kind": "family"
+  },
+  "confrontation": {
+   "to": "confront",
+   "kind": "family"
+  },
+  "confrontational": {
+   "to": "confront",
+   "kind": "family"
+  },
+  "connectivity": {
+   "to": "connect",
+   "kind": "family"
+  },
+  "consequent": {
+   "to": "consequently",
+   "kind": "family"
+  },
+  "considered": {
+   "to": "consider",
+   "kind": "family"
+  },
+  "consign": {
+   "to": "consignment",
+   "kind": "family"
+  },
+  "consistent": {
+   "to": "consistency",
+   "kind": "family"
+  },
+  "consistently": {
+   "to": "consistency",
+   "kind": "family"
+  },
+  "constitution": {
+   "to": "constitute",
+   "kind": "family"
+  },
+  "constrain": {
+   "to": "constraint",
+   "kind": "family"
+  },
+  "consult": {
+   "to": "consultant",
+   "kind": "family"
+  },
+  "consultancy": {
+   "to": "consultant",
+   "kind": "family"
+  },
+  "consultation": {
+   "to": "consultant",
+   "kind": "family"
+  },
+  "contamination": {
+   "to": "contaminate",
+   "kind": "family"
+  },
+  "contented": {
+   "to": "content",
+   "kind": "family"
+  },
+  "contention": {
+   "to": "contend",
+   "kind": "family"
+  },
+  "continental": {
+   "to": "continent",
+   "kind": "family"
+  },
+  "continuity": {
+   "to": "continuous",
+   "kind": "family"
+  },
+  "contraction": {
+   "to": "contract",
+   "kind": "family"
+  },
+  "contradictory": {
+   "to": "contradict",
+   "kind": "family"
+  },
+  "conversion": {
+   "to": "convert",
+   "kind": "family"
+  },
+  "convey": {
+   "to": "conveyance",
+   "kind": "family"
+  },
+  "conviction": {
+   "to": "convict",
+   "kind": "family"
+  },
+  "convincing": {
+   "to": "convince",
+   "kind": "family"
+  },
+  "coordinate": {
+   "to": "coordination",
+   "kind": "family"
+  },
+  "correlate": {
+   "to": "correlation",
+   "kind": "family"
+  },
+  "cosmic": {
+   "to": "cosmos",
+   "kind": "family"
+  },
+  "counseling": {
+   "to": "counselor",
+   "kind": "family"
+  },
+  "countable": {
+   "to": "count",
+   "kind": "family"
+  },
+  "courageous": {
+   "to": "courage",
+   "kind": "family"
+  },
+  "coverage": {
+   "to": "cover",
+   "kind": "family"
+  },
+  "creamy": {
+   "to": "cream",
+   "kind": "family"
+  },
+  "creativity": {
+   "to": "create",
+   "kind": "family"
+  },
+  "credible": {
+   "to": "incredible",
+   "kind": "family"
+  },
+  "creditor": {
+   "to": "credit",
+   "kind": "family"
+  },
+  "criticism": {
+   "to": "critical",
+   "kind": "family"
+  },
+  "cruelty": {
+   "to": "cruel",
+   "kind": "family"
+  },
+  "cube": {
+   "to": "cubic",
+   "kind": "family"
+  },
+  "cumulative": {
+   "to": "accumulation",
+   "kind": "family"
+  },
+  "curable": {
+   "to": "cure",
+   "kind": "family"
+  },
+  "custody": {
+   "to": "custodian",
+   "kind": "family"
+  },
+  "customary": {
+   "to": "customs",
+   "kind": "family"
+  },
+  "daily": {
+   "to": "day",
+   "kind": "family"
+  },
+  "dampen": {
+   "to": "damp",
+   "kind": "family"
+  },
+  "danish": {
+   "to": "denmark",
+   "kind": "family"
+  },
+  "dazzle": {
+   "to": "dazzling",
+   "kind": "family"
+  },
+  "decisive": {
+   "to": "decision",
+   "kind": "family"
+  },
+  "decode": {
+   "to": "code",
+   "kind": "family"
+  },
+  "decorative": {
+   "to": "decorate",
+   "kind": "family"
+  },
+  "deduce": {
+   "to": "deduction",
+   "kind": "family"
+  },
+  "deduct": {
+   "to": "deduction",
+   "kind": "family"
+  },
+  "deep": {
+   "to": "deepen",
+   "kind": "family"
+  },
+  "defensive": {
+   "to": "defend",
+   "kind": "family"
+  },
+  "defiance": {
+   "to": "defiant",
+   "kind": "family"
+  },
+  "deflect": {
+   "to": "deflection",
+   "kind": "family"
+  },
+  "defy": {
+   "to": "defiant",
+   "kind": "family"
+  },
+  "degeneration": {
+   "to": "degenerate",
+   "kind": "family"
+  },
+  "deliberately": {
+   "to": "deliberate",
+   "kind": "family"
+  },
+  "delicacy": {
+   "to": "delicate",
+   "kind": "family"
+  },
+  "delusion": {
+   "to": "delude",
+   "kind": "family"
+  },
+  "denial": {
+   "to": "deny",
+   "kind": "family"
+  },
+  "denomination": {
+   "to": "denominate",
+   "kind": "family"
+  },
+  "density": {
+   "to": "dense",
+   "kind": "family"
+  },
+  "depressing": {
+   "to": "depressed",
+   "kind": "family"
+  },
+  "deprivation": {
+   "to": "deprive",
+   "kind": "family"
+  },
+  "descriptive": {
+   "to": "describe",
+   "kind": "family"
+  },
+  "deserted": {
+   "to": "desert",
+   "kind": "family"
+  },
+  "desire": {
+   "to": "desirable",
+   "kind": "family"
+  },
+  "desperately": {
+   "to": "desperate",
+   "kind": "family"
+  },
+  "desperation": {
+   "to": "desperate",
+   "kind": "family"
+  },
+  "destined": {
+   "to": "destiny",
+   "kind": "family"
+  },
+  "destructive": {
+   "to": "destroy",
+   "kind": "family"
+  },
+  "detached": {
+   "to": "detach",
+   "kind": "family"
+  },
+  "detect": {
+   "to": "detective",
+   "kind": "family"
+  },
+  "detector": {
+   "to": "detection",
+   "kind": "family"
+  },
+  "deteriorate": {
+   "to": "deterioration",
+   "kind": "family"
+  },
+  "detrimental": {
+   "to": "detriment",
+   "kind": "family"
+  },
+  "devise": {
+   "to": "device",
+   "kind": "family"
+  },
+  "devotion": {
+   "to": "devote",
+   "kind": "family"
+  },
+  "dictation": {
+   "to": "dictate",
+   "kind": "family"
+  },
+  "dictator": {
+   "to": "dictate",
+   "kind": "family"
+  },
+  "dietary": {
+   "to": "diet",
+   "kind": "family"
+  },
+  "digit": {
+   "to": "digital",
+   "kind": "family"
+  },
+  "dignified": {
+   "to": "dignity",
+   "kind": "family"
+  },
+  "diligence": {
+   "to": "diligent",
+   "kind": "family"
+  },
+  "diner": {
+   "to": "dine",
+   "kind": "family"
+  },
+  "disability": {
+   "to": "disabled",
+   "kind": "family"
+  },
+  "disappointing": {
+   "to": "disappoint",
+   "kind": "family"
+  },
+  "disarm": {
+   "to": "arms",
+   "kind": "family"
+  },
+  "disastrous": {
+   "to": "disaster",
+   "kind": "family"
+  },
+  "disbelief": {
+   "to": "belief",
+   "kind": "family"
+  },
+  "disconnect": {
+   "to": "connect",
+   "kind": "family"
+  },
+  "disgusted": {
+   "to": "disgusting",
+   "kind": "family"
+  },
+  "dishonest": {
+   "to": "honest",
+   "kind": "family"
+  },
+  "dismissal": {
+   "to": "dismiss",
+   "kind": "family"
+  },
+  "disobey": {
+   "to": "obey",
+   "kind": "family"
+  },
+  "disorderly": {
+   "to": "disorder",
+   "kind": "family"
+  },
+  "dispensable": {
+   "to": "indispensable",
+   "kind": "family"
+  },
+  "displease": {
+   "to": "displeasure",
+   "kind": "family"
+  },
+  "disqualify": {
+   "to": "qualify",
+   "kind": "family"
+  },
+  "distant": {
+   "to": "distance",
+   "kind": "family"
+  },
+  "distinctive": {
+   "to": "distinct",
+   "kind": "family"
+  },
+  "distinguished": {
+   "to": "distinguish",
+   "kind": "family"
+  },
+  "distracted": {
+   "to": "distraction",
+   "kind": "family"
+  },
+  "distrust": {
+   "to": "trust",
+   "kind": "family"
+  },
+  "diver": {
+   "to": "dive",
+   "kind": "family"
+  },
+  "diversify": {
+   "to": "diversity",
+   "kind": "family"
+  },
+  "divert": {
+   "to": "diversion",
+   "kind": "family"
+  },
+  "doctorate": {
+   "to": "doctor",
+   "kind": "family"
+  },
+  "dominate": {
+   "to": "dominant",
+   "kind": "family"
+  },
+  "donor": {
+   "to": "donate",
+   "kind": "family"
+  },
+  "dose": {
+   "to": "overdose",
+   "kind": "family"
+  },
+  "dramatic": {
+   "to": "drama",
+   "kind": "family"
+  },
+  "dramatically": {
+   "to": "drama",
+   "kind": "family"
+  },
+  "drastically": {
+   "to": "drastic",
+   "kind": "family"
+  },
+  "dreadful": {
+   "to": "dread",
+   "kind": "family"
+  },
+  "duly": {
+   "to": "due",
+   "kind": "family"
+  },
+  "dump": {
+   "to": "dumping",
+   "kind": "family"
+  },
+  "duplication": {
+   "to": "duplicate",
+   "kind": "family"
+  },
+  "durability": {
+   "to": "durable",
+   "kind": "family"
+  },
+  "duster": {
+   "to": "dust",
+   "kind": "family"
+  },
+  "dweller": {
+   "to": "dwelling",
+   "kind": "family"
+  },
+  "dying": {
+   "to": "die",
+   "kind": "family"
+  },
+  "eagerness": {
+   "to": "eager",
+   "kind": "family"
+  },
+  "earthly": {
+   "to": "earth",
+   "kind": "family"
+  },
+  "eastwards": {
+   "to": "eastward",
+   "kind": "family"
+  },
+  "ecological": {
+   "to": "ecology",
+   "kind": "family"
+  },
+  "economical": {
+   "to": "economy",
+   "kind": "family"
+  },
+  "editorial": {
+   "to": "edit",
+   "kind": "family"
+  },
+  "educational": {
+   "to": "education",
+   "kind": "family"
+  },
+  "educator": {
+   "to": "education",
+   "kind": "family"
+  },
+  "efficiently": {
+   "to": "efficient",
+   "kind": "family"
+  },
+  "egypt": {
+   "to": "egyptian",
+   "kind": "family"
+  },
+  "eight": {
+   "to": "eighth",
+   "kind": "family"
+  },
+  "elaborately": {
+   "to": "elaborate",
+   "kind": "family"
+  },
+  "elate": {
+   "to": "elated",
+   "kind": "family"
+  },
+  "eloquence": {
+   "to": "eloquent",
+   "kind": "family"
+  },
+  "emergence": {
+   "to": "emerge",
+   "kind": "family"
+  },
+  "empire": {
+   "to": "emperor",
+   "kind": "family"
+  },
+  "empress": {
+   "to": "emperor",
+   "kind": "family"
+  },
+  "encouragement": {
+   "to": "encourage",
+   "kind": "family"
+  },
+  "endanger": {
+   "to": "dangerous",
+   "kind": "family"
+  },
+  "engagement": {
+   "to": "engage",
+   "kind": "family"
+  },
+  "enlargement": {
+   "to": "large",
+   "kind": "family"
+  },
+  "enrolment": {
+   "to": "enrol",
+   "kind": "family"
+  },
+  "entangle": {
+   "to": "tangle",
+   "kind": "family"
+  },
+  "entertaining": {
+   "to": "entertain",
+   "kind": "family"
+  },
+  "enthusiastic": {
+   "to": "enthusiasm",
+   "kind": "family"
+  },
+  "entire": {
+   "to": "entirety",
+   "kind": "family"
+  },
+  "entrepreneurship": {
+   "to": "entrepreneur",
+   "kind": "family"
+  },
+  "enviable": {
+   "to": "envy",
+   "kind": "family"
+  },
+  "envious": {
+   "to": "envy",
+   "kind": "family"
+  },
+  "equality": {
+   "to": "equal",
+   "kind": "family"
+  },
+  "equally": {
+   "to": "equal",
+   "kind": "family"
+  },
+  "equipped": {
+   "to": "equipment",
+   "kind": "family"
+  },
+  "equity": {
+   "to": "equitable",
+   "kind": "family"
+  },
+  "erase": {
+   "to": "eraser",
+   "kind": "family"
+  },
+  "erroneous": {
+   "to": "error",
+   "kind": "family"
+  },
+  "escapee": {
+   "to": "escape",
+   "kind": "family"
+  },
+  "especial": {
+   "to": "especially",
+   "kind": "family"
+  },
+  "eventual": {
+   "to": "eventually",
+   "kind": "family"
+  },
+  "evolutionary": {
+   "to": "evolution",
+   "kind": "family"
+  },
+  "evolve": {
+   "to": "evolution",
+   "kind": "family"
+  },
+  "exaggerate": {
+   "to": "exaggerated",
+   "kind": "family"
+  },
+  "examine": {
+   "to": "exam",
+   "kind": "family"
+  },
+  "excel": {
+   "to": "excellent",
+   "kind": "family"
+  },
+  "excessively": {
+   "to": "excess",
+   "kind": "family"
+  },
+  "exclude": {
+   "to": "exclusive",
+   "kind": "family"
+  },
+  "exclusion": {
+   "to": "exclusive",
+   "kind": "family"
+  },
+  "exclusively": {
+   "to": "exclusive",
+   "kind": "family"
+  },
+  "execute": {
+   "to": "executive",
+   "kind": "family"
+  },
+  "exhaustive": {
+   "to": "exhaust",
+   "kind": "family"
+  },
+  "existent": {
+   "to": "exist",
+   "kind": "family"
+  },
+  "expel": {
+   "to": "expulsion",
+   "kind": "family"
+  },
+  "expend": {
+   "to": "expenditure",
+   "kind": "family"
+  },
+  "experienced": {
+   "to": "experience",
+   "kind": "family"
+  },
+  "explicitly": {
+   "to": "explicit",
+   "kind": "family"
+  },
+  "exploit": {
+   "to": "exploitation",
+   "kind": "family"
+  },
+  "exposure": {
+   "to": "expose",
+   "kind": "family"
+  },
+  "extension": {
+   "to": "extent",
+   "kind": "family"
+  },
+  "extensively": {
+   "to": "extent",
+   "kind": "family"
+  },
+  "extracurricular": {
+   "to": "curriculum",
+   "kind": "family"
+  },
+  "extraterrestrial": {
+   "to": "terrestrial",
+   "kind": "family"
+  },
+  "facial": {
+   "to": "face",
+   "kind": "family"
+  },
+  "fairness": {
+   "to": "fair",
+   "kind": "family"
+  },
+  "faithful": {
+   "to": "faith",
+   "kind": "family"
+  },
+  "fantasize": {
+   "to": "fantasy",
+   "kind": "family"
+  },
+  "fatten": {
+   "to": "fat",
+   "kind": "family"
+  },
+  "favorable": {
+   "to": "favor",
+   "kind": "family"
+  },
+  "favourable": {
+   "to": "favour",
+   "kind": "family"
+  },
+  "fax": {
+   "to": "telefax",
+   "kind": "family"
+  },
+  "fearful": {
+   "to": "fear",
+   "kind": "family"
+  },
+  "fearless": {
+   "to": "fear",
+   "kind": "family"
+  },
+  "fearlessly": {
+   "to": "fear",
+   "kind": "family"
+  },
+  "feasibility": {
+   "to": "feasible",
+   "kind": "family"
+  },
+  "feeder": {
+   "to": "feed",
+   "kind": "family"
+  },
+  "ferment": {
+   "to": "fermentation",
+   "kind": "family"
+  },
+  "fertile": {
+   "to": "fertilizer",
+   "kind": "family"
+  },
+  "fertility": {
+   "to": "fertilizer",
+   "kind": "family"
+  },
+  "fiery": {
+   "to": "fire",
+   "kind": "family"
+  },
+  "fingernail": {
+   "to": "nail",
+   "kind": "family"
+  },
+  "finished": {
+   "to": "finish",
+   "kind": "family"
+  },
+  "firmly": {
+   "to": "firm",
+   "kind": "family"
+  },
+  "fitted": {
+   "to": "fit",
+   "kind": "family"
+  },
+  "flautist": {
+   "to": "flute",
+   "kind": "family"
+  },
+  "fluently": {
+   "to": "fluent",
+   "kind": "family"
+  },
+  "following": {
+   "to": "follow",
+   "kind": "family"
+  },
+  "forceful": {
+   "to": "force",
+   "kind": "family"
+  },
+  "foreseeable": {
+   "to": "foresee",
+   "kind": "family"
+  },
+  "forestry": {
+   "to": "forest",
+   "kind": "family"
+  },
+  "forge": {
+   "to": "forgery",
+   "kind": "family"
+  },
+  "forgetful": {
+   "to": "forget",
+   "kind": "family"
+  },
+  "forwards": {
+   "to": "forward",
+   "kind": "family"
+  },
+  "foundation": {
+   "to": "found",
+   "kind": "family"
+  },
+  "founder": {
+   "to": "found",
+   "kind": "family"
+  },
+  "founding": {
+   "to": "found",
+   "kind": "family"
+  },
+  "fourteen": {
+   "to": "four",
+   "kind": "family"
+  },
+  "fragrant": {
+   "to": "fragrance",
+   "kind": "family"
+  },
+  "fright": {
+   "to": "frightened",
+   "kind": "family"
+  },
+  "frosting": {
+   "to": "frost",
+   "kind": "family"
+  },
+  "fruitless": {
+   "to": "fruit",
+   "kind": "family"
+  },
+  "frustrating": {
+   "to": "frustrate",
+   "kind": "family"
+  },
+  "fry": {
+   "to": "fried",
+   "kind": "family"
+  },
+  "fulfill": {
+   "to": "fulfillment",
+   "kind": "family"
+  },
+  "fundamentally": {
+   "to": "fundamental",
+   "kind": "family"
+  },
+  "furnished": {
+   "to": "furniture",
+   "kind": "family"
+  },
+  "fussy": {
+   "to": "fuss",
+   "kind": "family"
+  },
+  "gambling": {
+   "to": "gamble",
+   "kind": "family"
+  },
+  "gaoler": {
+   "to": "gaol",
+   "kind": "family"
+  },
+  "gaseous": {
+   "to": "gas",
+   "kind": "family"
+  },
+  "gathering": {
+   "to": "gather",
+   "kind": "family"
+  },
+  "generalize": {
+   "to": "generalization",
+   "kind": "family"
+  },
+  "generative": {
+   "to": "generate",
+   "kind": "family"
+  },
+  "genetically": {
+   "to": "genetic",
+   "kind": "family"
+  },
+  "geometric": {
+   "to": "geometry",
+   "kind": "family"
+  },
+  "gifted": {
+   "to": "gift",
+   "kind": "family"
+  },
+  "glamorous": {
+   "to": "glamour",
+   "kind": "family"
+  },
+  "gloomy": {
+   "to": "gloom",
+   "kind": "family"
+  },
+  "glorify": {
+   "to": "glorious",
+   "kind": "family"
+  },
+  "glory": {
+   "to": "glorious",
+   "kind": "family"
+  },
+  "golfer": {
+   "to": "golf",
+   "kind": "family"
+  },
+  "govern": {
+   "to": "government",
+   "kind": "family"
+  },
+  "grandchild": {
+   "to": "grandparent",
+   "kind": "family"
+  },
+  "gritty": {
+   "to": "grit",
+   "kind": "family"
+  },
+  "grocer": {
+   "to": "grocery",
+   "kind": "family"
+  },
+  "groundless": {
+   "to": "ground",
+   "kind": "family"
+  },
+  "guilt": {
+   "to": "guilty",
+   "kind": "family"
+  },
+  "gymnasium": {
+   "to": "gym",
+   "kind": "family"
+  },
+  "hairy": {
+   "to": "hair",
+   "kind": "family"
+  },
+  "handy": {
+   "to": "hand",
+   "kind": "family"
+  },
+  "happy": {
+   "to": "happiness",
+   "kind": "family"
+  },
+  "harden": {
+   "to": "hard",
+   "kind": "family"
+  },
+  "harmless": {
+   "to": "harmful",
+   "kind": "family"
+  },
+  "hasty": {
+   "to": "haste",
+   "kind": "family"
+  },
+  "hatred": {
+   "to": "hate",
+   "kind": "family"
+  },
+  "hazardous": {
+   "to": "hazard",
+   "kind": "family"
+  },
+  "he": {
+   "to": "him",
+   "kind": "family"
+  },
+  "headmistress": {
+   "to": "headmaster",
+   "kind": "family"
+  },
+  "heir": {
+   "to": "heiress",
+   "kind": "family"
+  },
+  "hers": {
+   "to": "her",
+   "kind": "family"
+  },
+  "herself": {
+   "to": "her",
+   "kind": "family"
+  },
+  "hesitate": {
+   "to": "hesitation",
+   "kind": "family"
+  },
+  "highly": {
+   "to": "high",
+   "kind": "family"
+  },
+  "hilly": {
+   "to": "hill",
+   "kind": "family"
+  },
+  "himself": {
+   "to": "him",
+   "kind": "family"
+  },
+  "his": {
+   "to": "him",
+   "kind": "family"
+  },
+  "hitchhiker": {
+   "to": "hitchhike",
+   "kind": "family"
+  },
+  "hobbyist": {
+   "to": "hobby",
+   "kind": "family"
+  },
+  "holder": {
+   "to": "hold",
+   "kind": "family"
+  },
+  "honesty": {
+   "to": "honest",
+   "kind": "family"
+  },
+  "honorary": {
+   "to": "honor",
+   "kind": "family"
+  },
+  "honourable": {
+   "to": "honour",
+   "kind": "family"
+  },
+  "hostility": {
+   "to": "hostile",
+   "kind": "family"
+  },
+  "humanity": {
+   "to": "human",
+   "kind": "family"
+  },
+  "humiliation": {
+   "to": "humiliate",
+   "kind": "family"
+  },
+  "humorous": {
+   "to": "humour",
+   "kind": "family"
+  },
+  "hunter": {
+   "to": "hunt",
+   "kind": "family"
+  },
+  "i": {
+   "to": "my",
+   "kind": "family"
+  },
+  "ideological": {
+   "to": "ideology",
+   "kind": "family"
+  },
+  "ideologically": {
+   "to": "ideology",
+   "kind": "family"
+  },
+  "idiom": {
+   "to": "idiomatic",
+   "kind": "family"
+  },
+  "illegitimate": {
+   "to": "legitimate",
+   "kind": "family"
+  },
+  "illogical": {
+   "to": "logic",
+   "kind": "family"
+  },
+  "illuminating": {
+   "to": "illuminate",
+   "kind": "family"
+  },
+  "illumination": {
+   "to": "illuminate",
+   "kind": "family"
+  },
+  "illusion": {
+   "to": "illusive",
+   "kind": "family"
+  },
+  "imbalance": {
+   "to": "balance",
+   "kind": "family"
+  },
+  "immensely": {
+   "to": "immense",
+   "kind": "family"
+  },
+  "immersive": {
+   "to": "immerse",
+   "kind": "family"
+  },
+  "immigrant": {
+   "to": "immigration",
+   "kind": "family"
+  },
+  "immobile": {
+   "to": "mobile",
+   "kind": "family"
+  },
+  "immortality": {
+   "to": "mortal",
+   "kind": "family"
+  },
+  "impatient": {
+   "to": "patient",
+   "kind": "family"
+  },
+  "impermanent": {
+   "to": "permanent",
+   "kind": "family"
+  },
+  "implementation": {
+   "to": "implement",
+   "kind": "family"
+  },
+  "implicate": {
+   "to": "implication",
+   "kind": "family"
+  },
+  "import": {
+   "to": "importer",
+   "kind": "family"
+  },
+  "improper": {
+   "to": "properly",
+   "kind": "family"
+  },
+  "inaction": {
+   "to": "action",
+   "kind": "family"
+  },
+  "inactive": {
+   "to": "activity",
+   "kind": "family"
+  },
+  "inadequacy": {
+   "to": "adequate",
+   "kind": "family"
+  },
+  "inappropriate": {
+   "to": "appropriate",
+   "kind": "family"
+  },
+  "inaugural": {
+   "to": "inauguration",
+   "kind": "family"
+  },
+  "inaugurate": {
+   "to": "inauguration",
+   "kind": "family"
+  },
+  "incalculable": {
+   "to": "calculation",
+   "kind": "family"
+  },
+  "inclination": {
+   "to": "inclined",
+   "kind": "family"
+  },
+  "inclusion": {
+   "to": "include",
+   "kind": "family"
+  },
+  "incompatibility": {
+   "to": "compatible",
+   "kind": "family"
+  },
+  "incompetent": {
+   "to": "competent",
+   "kind": "family"
+  },
+  "inconsiderate": {
+   "to": "considerate",
+   "kind": "family"
+  },
+  "inconvenience": {
+   "to": "convenient",
+   "kind": "family"
+  },
+  "incorporate": {
+   "to": "corporation",
+   "kind": "family"
+  },
+  "incurable": {
+   "to": "cure",
+   "kind": "family"
+  },
+  "indefinite": {
+   "to": "definite",
+   "kind": "family"
+  },
+  "indemnity": {
+   "to": "indemnify",
+   "kind": "family"
+  },
+  "indicator": {
+   "to": "indication",
+   "kind": "family"
+  },
+  "indignation": {
+   "to": "indignant",
+   "kind": "family"
+  },
+  "induce": {
+   "to": "inducement",
+   "kind": "family"
+  },
+  "inefficient": {
+   "to": "efficient",
+   "kind": "family"
+  },
+  "inert": {
+   "to": "inertia",
+   "kind": "family"
+  },
+  "inescapable": {
+   "to": "escape",
+   "kind": "family"
+  },
+  "inexact": {
+   "to": "exact",
+   "kind": "family"
+  },
+  "infected": {
+   "to": "infect",
+   "kind": "family"
+  },
+  "inflate": {
+   "to": "inflation",
+   "kind": "family"
+  },
+  "informed": {
+   "to": "information",
+   "kind": "family"
+  },
+  "infringe": {
+   "to": "infringement",
+   "kind": "family"
+  },
+  "inheritance": {
+   "to": "inherit",
+   "kind": "family"
+  },
+  "inhibition": {
+   "to": "inhibit",
+   "kind": "family"
+  },
+  "initially": {
+   "to": "initial",
+   "kind": "family"
+  },
+  "initiative": {
+   "to": "initiate",
+   "kind": "family"
+  },
+  "inquire": {
+   "to": "inquiry",
+   "kind": "family"
+  },
+  "insecticide": {
+   "to": "insect",
+   "kind": "family"
+  },
+  "insecure": {
+   "to": "secure",
+   "kind": "family"
+  },
+  "insecurity": {
+   "to": "security",
+   "kind": "family"
+  },
+  "insensitive": {
+   "to": "sensitive",
+   "kind": "family"
+  },
+  "insincere": {
+   "to": "sincere",
+   "kind": "family"
+  },
+  "insistent": {
+   "to": "insist",
+   "kind": "family"
+  },
+  "insolvent": {
+   "to": "solvent",
+   "kind": "family"
+  },
+  "inspiration": {
+   "to": "inspire",
+   "kind": "family"
+  },
+  "inspiring": {
+   "to": "inspire",
+   "kind": "family"
+  },
+  "instantaneously": {
+   "to": "instantaneous",
+   "kind": "family"
+  },
+  "instantly": {
+   "to": "instant",
+   "kind": "family"
+  },
+  "instinctively": {
+   "to": "instinct",
+   "kind": "family"
+  },
+  "institutional": {
+   "to": "institution",
+   "kind": "family"
+  },
+  "insulate": {
+   "to": "insulation",
+   "kind": "family"
+  },
+  "insurer": {
+   "to": "insurance",
+   "kind": "family"
+  },
+  "intensely": {
+   "to": "intense",
+   "kind": "family"
+  },
+  "intentional": {
+   "to": "intention",
+   "kind": "family"
+  },
+  "interaction": {
+   "to": "interact",
+   "kind": "family"
+  },
+  "interactive": {
+   "to": "interact",
+   "kind": "family"
+  },
+  "interpretation": {
+   "to": "interpreter",
+   "kind": "family"
+  },
+  "intervention": {
+   "to": "intervene",
+   "kind": "family"
+  },
+  "interviewer": {
+   "to": "interview",
+   "kind": "family"
+  },
+  "intimate": {
+   "to": "intimation",
+   "kind": "family"
+  },
+  "intolerant": {
+   "to": "tolerate",
+   "kind": "family"
+  },
+  "intriguing": {
+   "to": "intrigue",
+   "kind": "family"
+  },
+  "invariable": {
+   "to": "variable",
+   "kind": "family"
+  },
+  "invasion": {
+   "to": "invade",
+   "kind": "family"
+  },
+  "invasive": {
+   "to": "invade",
+   "kind": "family"
+  },
+  "inventive": {
+   "to": "invent",
+   "kind": "family"
+  },
+  "inviting": {
+   "to": "invite",
+   "kind": "family"
+  },
+  "ironic": {
+   "to": "irony",
+   "kind": "family"
+  },
+  "irrelevant": {
+   "to": "relevant",
+   "kind": "family"
+  },
+  "irreversible": {
+   "to": "reverse",
+   "kind": "family"
+  },
+  "jeweler": {
+   "to": "jewelry",
+   "kind": "family"
+  },
+  "juicy": {
+   "to": "juice",
+   "kind": "family"
+  },
+  "justice": {
+   "to": "just",
+   "kind": "family"
+  },
+  "justifiable": {
+   "to": "justify",
+   "kind": "family"
+  },
+  "justified": {
+   "to": "justification",
+   "kind": "family"
+  },
+  "keenly": {
+   "to": "keen",
+   "kind": "family"
+  },
+  "keeper": {
+   "to": "keep",
+   "kind": "family"
+  },
+  "kilogram": {
+   "to": "kilo",
+   "kind": "family"
+  },
+  "kneel": {
+   "to": "knee",
+   "kind": "family"
+  },
+  "knighthood": {
+   "to": "knight",
+   "kind": "family"
+  },
+  "labour": {
+   "to": "labor",
+   "kind": "spelling"
+  },
+  "labourer": {
+   "to": "laborer",
+   "kind": "spelling"
+  },
+  "landowner": {
+   "to": "land",
+   "kind": "family"
+  },
+  "lastly": {
+   "to": "last",
+   "kind": "family"
+  },
+  "leading": {
+   "to": "leader",
+   "kind": "family"
+  },
+  "leaf": {
+   "to": "leaves",
+   "kind": "family"
+  },
+  "lengthen": {
+   "to": "long",
+   "kind": "family"
+  },
+  "lengthy": {
+   "to": "long",
+   "kind": "family"
+  },
+  "liar": {
+   "to": "lie",
+   "kind": "family"
+  },
+  "liberation": {
+   "to": "liberate",
+   "kind": "family"
+  },
+  "liberty": {
+   "to": "libertarian",
+   "kind": "family"
+  },
+  "likely": {
+   "to": "unlikely",
+   "kind": "family"
+  },
+  "lioness": {
+   "to": "lion",
+   "kind": "family"
+  },
+  "loaded": {
+   "to": "load",
+   "kind": "family"
+  },
+  "lobbyist": {
+   "to": "lobby",
+   "kind": "family"
+  },
+  "locality": {
+   "to": "local",
+   "kind": "family"
+  },
+  "logically": {
+   "to": "logic",
+   "kind": "family"
+  },
+  "loyalty": {
+   "to": "loyal",
+   "kind": "family"
+  },
+  "luck": {
+   "to": "lucky",
+   "kind": "family"
+  },
+  "machinery": {
+   "to": "machine",
+   "kind": "family"
+  },
+  "magical": {
+   "to": "magic",
+   "kind": "family"
+  },
+  "magnetic": {
+   "to": "magnet",
+   "kind": "family"
+  },
+  "majestic": {
+   "to": "majesty",
+   "kind": "family"
+  },
+  "malicious": {
+   "to": "malice",
+   "kind": "family"
+  },
+  "malnourished": {
+   "to": "malnutrition",
+   "kind": "family"
+  },
+  "mandate": {
+   "to": "mandatory",
+   "kind": "family"
+  },
+  "manufacturer": {
+   "to": "manufacture",
+   "kind": "family"
+  },
+  "markedly": {
+   "to": "marked",
+   "kind": "family"
+  },
+  "mastery": {
+   "to": "master",
+   "kind": "family"
+  },
+  "mathematician": {
+   "to": "maths",
+   "kind": "family"
+  },
+  "me": {
+   "to": "my",
+   "kind": "family"
+  },
+  "measurable": {
+   "to": "measure",
+   "kind": "family"
+  },
+  "memorise": {
+   "to": "memory",
+   "kind": "family"
+  },
+  "mentally": {
+   "to": "mental",
+   "kind": "family"
+  },
+  "mercifully": {
+   "to": "mercy",
+   "kind": "family"
+  },
+  "merciless": {
+   "to": "mercy",
+   "kind": "family"
+  },
+  "mere": {
+   "to": "merely",
+   "kind": "family"
+  },
+  "metropolis": {
+   "to": "metropolitan",
+   "kind": "family"
+  },
+  "mexican": {
+   "to": "mexico",
+   "kind": "family"
+  },
+  "might": {
+   "to": "mighty",
+   "kind": "family"
+  },
+  "milligramme": {
+   "to": "gramme",
+   "kind": "family"
+  },
+  "mine": {
+   "to": "my",
+   "kind": "family"
+  },
+  "minority": {
+   "to": "minor",
+   "kind": "family"
+  },
+  "miscarriage": {
+   "to": "miscarry",
+   "kind": "family"
+  },
+  "miserly": {
+   "to": "miser",
+   "kind": "family"
+  },
+  "misinterpret": {
+   "to": "interpret",
+   "kind": "family"
+  },
+  "mission": {
+   "to": "missionary",
+   "kind": "family"
+  },
+  "misty": {
+   "to": "mist",
+   "kind": "family"
+  },
+  "misunderstanding": {
+   "to": "understanding",
+   "kind": "family"
+  },
+  "mixer": {
+   "to": "mix",
+   "kind": "family"
+  },
+  "mobility": {
+   "to": "mobile",
+   "kind": "family"
+  },
+  "modernise": {
+   "to": "modern",
+   "kind": "family"
+  },
+  "modernization": {
+   "to": "modernize",
+   "kind": "family"
+  },
+  "modesty": {
+   "to": "modest",
+   "kind": "family"
+  },
+  "monarchy": {
+   "to": "monarch",
+   "kind": "family"
+  },
+  "monotonous": {
+   "to": "monotony",
+   "kind": "family"
+  },
+  "monstrous": {
+   "to": "monster",
+   "kind": "family"
+  },
+  "mortality": {
+   "to": "mortal",
+   "kind": "family"
+  },
+  "motorist": {
+   "to": "motor",
+   "kind": "family"
+  },
+  "mould": {
+   "to": "mold",
+   "kind": "spelling"
+  },
+  "mountainous": {
+   "to": "mountain",
+   "kind": "family"
+  },
+  "mournful": {
+   "to": "mourn",
+   "kind": "family"
+  },
+  "mouthful": {
+   "to": "mouth",
+   "kind": "family"
+  },
+  "moving": {
+   "to": "move",
+   "kind": "family"
+  },
+  "muddy": {
+   "to": "mud",
+   "kind": "family"
+  },
+  "mutually": {
+   "to": "mutual",
+   "kind": "family"
+  },
+  "mysterious": {
+   "to": "mystery",
+   "kind": "family"
+  },
+  "mysteriously": {
+   "to": "mystery",
+   "kind": "family"
+  },
+  "myth": {
+   "to": "mythical",
+   "kind": "family"
+  },
+  "mythology": {
+   "to": "mythical",
+   "kind": "family"
+  },
+  "narrowly": {
+   "to": "narrow",
+   "kind": "family"
+  },
+  "naval": {
+   "to": "navy",
+   "kind": "family"
+  },
+  "necessitate": {
+   "to": "necessary",
+   "kind": "family"
+  },
+  "needy": {
+   "to": "need",
+   "kind": "family"
+  },
+  "negligent": {
+   "to": "negligence",
+   "kind": "family"
+  },
+  "neighborhood": {
+   "to": "neighboring",
+   "kind": "family"
+  },
+  "nervousness": {
+   "to": "nervous",
+   "kind": "family"
+  },
+  "neurotic": {
+   "to": "neurosis",
+   "kind": "family"
+  },
+  "neutrality": {
+   "to": "neutral",
+   "kind": "family"
+  },
+  "nineteen": {
+   "to": "nine",
+   "kind": "family"
+  },
+  "ninety": {
+   "to": "nine",
+   "kind": "family"
+  },
+  "nobility": {
+   "to": "noble",
+   "kind": "family"
+  },
+  "noisily": {
+   "to": "noise",
+   "kind": "family"
+  },
+  "nominate": {
+   "to": "nomination",
+   "kind": "family"
+  },
+  "nominee": {
+   "to": "nomination",
+   "kind": "family"
+  },
+  "notably": {
+   "to": "notable",
+   "kind": "family"
+  },
+  "notoriously": {
+   "to": "notorious",
+   "kind": "family"
+  },
+  "nourishment": {
+   "to": "nourish",
+   "kind": "family"
+  },
+  "nutritious": {
+   "to": "nutrition",
+   "kind": "family"
+  },
+  "obedient": {
+   "to": "obey",
+   "kind": "family"
+  },
+  "obligatory": {
+   "to": "obligation",
+   "kind": "family"
+  },
+  "obscurity": {
+   "to": "obscure",
+   "kind": "family"
+  },
+  "observer": {
+   "to": "observe",
+   "kind": "family"
+  },
+  "obsession": {
+   "to": "obsess",
+   "kind": "family"
+  },
+  "obstruct": {
+   "to": "obstruction",
+   "kind": "family"
+  },
+  "offend": {
+   "to": "offence",
+   "kind": "family"
+  },
+  "offshore": {
+   "to": "shore",
+   "kind": "family"
+  },
+  "oily": {
+   "to": "oil",
+   "kind": "family"
+  },
+  "omen": {
+   "to": "ominous",
+   "kind": "family"
+  },
+  "opening": {
+   "to": "open",
+   "kind": "family"
+  },
+  "opponent": {
+   "to": "oppose",
+   "kind": "family"
+  },
+  "opposition": {
+   "to": "opposite",
+   "kind": "family"
+  },
+  "oppress": {
+   "to": "oppression",
+   "kind": "family"
+  },
+  "organiser": {
+   "to": "organise",
+   "kind": "family"
+  },
+  "orient": {
+   "to": "orientate",
+   "kind": "family"
+  },
+  "origin": {
+   "to": "original",
+   "kind": "family"
+  },
+  "ours": {
+   "to": "our",
+   "kind": "family"
+  },
+  "outrageous": {
+   "to": "outrage",
+   "kind": "family"
+  },
+  "overestimate": {
+   "to": "estimate",
+   "kind": "family"
+  },
+  "oversee": {
+   "to": "oversight",
+   "kind": "family"
+  },
+  "pacify": {
+   "to": "pacific",
+   "kind": "family"
+  },
+  "pack": {
+   "to": "packet",
+   "kind": "family"
+  },
+  "pajamas": {
+   "to": "pyjamas",
+   "kind": "spelling"
+  },
+  "panorama": {
+   "to": "panoramic",
+   "kind": "family"
+  },
+  "part": {
+   "to": "partly",
+   "kind": "family"
+  },
+  "partial": {
+   "to": "partially",
+   "kind": "family"
+  },
+  "participate": {
+   "to": "participant",
+   "kind": "family"
+  },
+  "particularly": {
+   "to": "particular",
+   "kind": "family"
+  },
+  "passionate": {
+   "to": "passion",
+   "kind": "family"
+  },
+  "patience": {
+   "to": "patient",
+   "kind": "family"
+  },
+  "patiently": {
+   "to": "patient",
+   "kind": "family"
+  },
+  "patriot": {
+   "to": "patriotism",
+   "kind": "family"
+  },
+  "penetrate": {
+   "to": "penetration",
+   "kind": "family"
+  },
+  "perceive": {
+   "to": "perceptible",
+   "kind": "family"
+  },
+  "perception": {
+   "to": "perceptible",
+   "kind": "family"
+  },
+  "periodically": {
+   "to": "period",
+   "kind": "family"
+  },
+  "periphery": {
+   "to": "peripheral",
+   "kind": "family"
+  },
+  "perishable": {
+   "to": "perish",
+   "kind": "family"
+  },
+  "perplexity": {
+   "to": "perplex",
+   "kind": "family"
+  },
+  "persist": {
+   "to": "persistence",
+   "kind": "family"
+  },
+  "perspiration": {
+   "to": "perspire",
+   "kind": "family"
+  },
+  "pessimism": {
+   "to": "pessimistic",
+   "kind": "family"
+  },
+  "pessimist": {
+   "to": "pessimistic",
+   "kind": "family"
+  },
+  "phonetic": {
+   "to": "phonetics",
+   "kind": "family"
+  },
+  "photographer": {
+   "to": "photograph",
+   "kind": "family"
+  },
+  "picky": {
+   "to": "pick",
+   "kind": "family"
+  },
+  "pictorial": {
+   "to": "picture",
+   "kind": "family"
+  },
+  "pilgrim": {
+   "to": "pilgrimage",
+   "kind": "family"
+  },
+  "pillowcase": {
+   "to": "pillow",
+   "kind": "family"
+  },
+  "pioneer": {
+   "to": "pioneering",
+   "kind": "family"
+  },
+  "piracy": {
+   "to": "pirate",
+   "kind": "family"
+  },
+  "playful": {
+   "to": "play",
+   "kind": "family"
+  },
+  "plead": {
+   "to": "plea",
+   "kind": "family"
+  },
+  "pleasing": {
+   "to": "please",
+   "kind": "family"
+  },
+  "plumber": {
+   "to": "plumb",
+   "kind": "family"
+  },
+  "pointed": {
+   "to": "point",
+   "kind": "family"
+  },
+  "pollster": {
+   "to": "poll",
+   "kind": "family"
+  },
+  "popularity": {
+   "to": "popular",
+   "kind": "family"
+  },
+  "porous": {
+   "to": "pore",
+   "kind": "family"
+  },
+  "possession": {
+   "to": "possess",
+   "kind": "family"
+  },
+  "postage": {
+   "to": "post",
+   "kind": "family"
+  },
+  "postgraduate": {
+   "to": "graduate",
+   "kind": "family"
+  },
+  "precedent": {
+   "to": "unprecedented",
+   "kind": "family"
+  },
+  "precise": {
+   "to": "precisely",
+   "kind": "family"
+  },
+  "precision": {
+   "to": "precisely",
+   "kind": "family"
+  },
+  "predominant": {
+   "to": "predominance",
+   "kind": "family"
+  },
+  "predominantly": {
+   "to": "predominance",
+   "kind": "family"
+  },
+  "prematurely": {
+   "to": "premature",
+   "kind": "family"
+  },
+  "preparatory": {
+   "to": "prepare",
+   "kind": "family"
+  },
+  "presidency": {
+   "to": "president",
+   "kind": "family"
+  },
+  "presidential": {
+   "to": "president",
+   "kind": "family"
+  },
+  "prestigious": {
+   "to": "prestige",
+   "kind": "family"
+  },
+  "presume": {
+   "to": "presumably",
+   "kind": "family"
+  },
+  "presumption": {
+   "to": "presumably",
+   "kind": "family"
+  },
+  "pretence": {
+   "to": "pretend",
+   "kind": "family"
+  },
+  "preventable": {
+   "to": "prevent",
+   "kind": "family"
+  },
+  "priceless": {
+   "to": "price",
+   "kind": "family"
+  },
+  "printing": {
+   "to": "printer",
+   "kind": "family"
+  },
+  "privileged": {
+   "to": "privilege",
+   "kind": "family"
+  },
+  "productivity": {
+   "to": "produce",
+   "kind": "family"
+  },
+  "profitable": {
+   "to": "profit",
+   "kind": "family"
+  },
+  "programmer": {
+   "to": "program",
+   "kind": "family"
+  },
+  "programming": {
+   "to": "program",
+   "kind": "family"
+  },
+  "prohibition": {
+   "to": "prohibit",
+   "kind": "family"
+  },
+  "prohibitively": {
+   "to": "prohibit",
+   "kind": "family"
+  },
+  "projector": {
+   "to": "project",
+   "kind": "family"
+  },
+  "promotion": {
+   "to": "promote",
+   "kind": "family"
+  },
+  "promotional": {
+   "to": "promote",
+   "kind": "family"
+  },
+  "propel": {
+   "to": "propulsion",
+   "kind": "family"
+  },
+  "prosecute": {
+   "to": "prosecution",
+   "kind": "family"
+  },
+  "prosper": {
+   "to": "prosperous",
+   "kind": "family"
+  },
+  "protract": {
+   "to": "protracted",
+   "kind": "family"
+  },
+  "proudly": {
+   "to": "proud",
+   "kind": "family"
+  },
+  "psychiatrist": {
+   "to": "psychiatry",
+   "kind": "family"
+  },
+  "psychological": {
+   "to": "psychology",
+   "kind": "family"
+  },
+  "punishment": {
+   "to": "punish",
+   "kind": "family"
+  },
+  "purify": {
+   "to": "pure",
+   "kind": "family"
+  },
+  "pursue": {
+   "to": "pursuit",
+   "kind": "family"
+  },
+  "puzzled": {
+   "to": "puzzle",
+   "kind": "family"
+  },
+  "puzzling": {
+   "to": "puzzle",
+   "kind": "family"
+  },
+  "qualitative": {
+   "to": "quality",
+   "kind": "family"
+  },
+  "quantifiable": {
+   "to": "quantify",
+   "kind": "family"
+  },
+  "racial": {
+   "to": "race",
+   "kind": "family"
+  },
+  "racially": {
+   "to": "race",
+   "kind": "family"
+  },
+  "radiate": {
+   "to": "radiation",
+   "kind": "family"
+  },
+  "radically": {
+   "to": "radical",
+   "kind": "family"
+  },
+  "radioactive": {
+   "to": "radiation",
+   "kind": "family"
+  },
+  "radioactivity": {
+   "to": "radiation",
+   "kind": "family"
+  },
+  "radius": {
+   "to": "radial",
+   "kind": "family"
+  },
+  "raft": {
+   "to": "rafting",
+   "kind": "family"
+  },
+  "rainfall": {
+   "to": "rainy",
+   "kind": "family"
+  },
+  "randomly": {
+   "to": "random",
+   "kind": "family"
+  },
+  "rarity": {
+   "to": "rarely",
+   "kind": "family"
+  },
+  "reaction": {
+   "to": "react",
+   "kind": "family"
+  },
+  "readjust": {
+   "to": "adjustment",
+   "kind": "family"
+  },
+  "reappear": {
+   "to": "appear",
+   "kind": "family"
+  },
+  "rearrange": {
+   "to": "arrange",
+   "kind": "family"
+  },
+  "reasoning": {
+   "to": "reason",
+   "kind": "family"
+  },
+  "rebel": {
+   "to": "rebellion",
+   "kind": "family"
+  },
+  "recede": {
+   "to": "recession",
+   "kind": "family"
+  },
+  "receptive": {
+   "to": "reception",
+   "kind": "family"
+  },
+  "recharge": {
+   "to": "charge",
+   "kind": "family"
+  },
+  "recruiter": {
+   "to": "recruit",
+   "kind": "family"
+  },
+  "rectangle": {
+   "to": "rectangular",
+   "kind": "family"
+  },
+  "recyclable": {
+   "to": "recycle",
+   "kind": "family"
+  },
+  "reddish": {
+   "to": "red",
+   "kind": "family"
+  },
+  "reflect": {
+   "to": "reflection",
+   "kind": "family"
+  },
+  "reflective": {
+   "to": "reflection",
+   "kind": "family"
+  },
+  "reframe": {
+   "to": "frame",
+   "kind": "family"
+  },
+  "refugee": {
+   "to": "refuge",
+   "kind": "family"
+  },
+  "regrettable": {
+   "to": "regret",
+   "kind": "family"
+  },
+  "reimburse": {
+   "to": "reimbursement",
+   "kind": "family"
+  },
+  "reinforce": {
+   "to": "reinforcement",
+   "kind": "family"
+  },
+  "relieve": {
+   "to": "relieved",
+   "kind": "family"
+  },
+  "religious": {
+   "to": "religion",
+   "kind": "family"
+  },
+  "relinguish": {
+   "to": "relinquish",
+   "kind": "typo"
+  },
+  "reminder": {
+   "to": "remind",
+   "kind": "family"
+  },
+  "reminiscence": {
+   "to": "reminiscent",
+   "kind": "family"
+  },
+  "renovate": {
+   "to": "renovation",
+   "kind": "family"
+  },
+  "repairable": {
+   "to": "repair",
+   "kind": "family"
+  },
+  "reprint": {
+   "to": "print",
+   "kind": "family"
+  },
+  "reproductive": {
+   "to": "reproduce",
+   "kind": "family"
+  },
+  "resent": {
+   "to": "resentful",
+   "kind": "family"
+  },
+  "resentment": {
+   "to": "resentful",
+   "kind": "family"
+  },
+  "reserved": {
+   "to": "reserve",
+   "kind": "family"
+  },
+  "resistance": {
+   "to": "resist",
+   "kind": "family"
+  },
+  "resolute": {
+   "to": "resolutely",
+   "kind": "family"
+  },
+  "resolution": {
+   "to": "resolve",
+   "kind": "family"
+  },
+  "resonant": {
+   "to": "resonance",
+   "kind": "family"
+  },
+  "resourceful": {
+   "to": "resource",
+   "kind": "family"
+  },
+  "respectable": {
+   "to": "respect",
+   "kind": "family"
+  },
+  "respectively": {
+   "to": "respective",
+   "kind": "family"
+  },
+  "responsive": {
+   "to": "response",
+   "kind": "family"
+  },
+  "restructure": {
+   "to": "structure",
+   "kind": "family"
+  },
+  "retailer": {
+   "to": "retail",
+   "kind": "family"
+  },
+  "retirement": {
+   "to": "retire",
+   "kind": "family"
+  },
+  "reunite": {
+   "to": "unite",
+   "kind": "family"
+  },
+  "reveal": {
+   "to": "revelation",
+   "kind": "family"
+  },
+  "revealing": {
+   "to": "revelation",
+   "kind": "family"
+  },
+  "reverent": {
+   "to": "reverence",
+   "kind": "family"
+  },
+  "reviewer": {
+   "to": "review",
+   "kind": "family"
+  },
+  "revolutionary": {
+   "to": "revolution",
+   "kind": "family"
+  },
+  "revolve": {
+   "to": "revolution",
+   "kind": "family"
+  },
+  "rewrite": {
+   "to": "writing",
+   "kind": "family"
+  },
+  "rhetorical": {
+   "to": "rhetoric",
+   "kind": "family"
+  },
+  "righteousness": {
+   "to": "righteous",
+   "kind": "family"
+  },
+  "riotous": {
+   "to": "riot",
+   "kind": "family"
+  },
+  "roadside": {
+   "to": "road",
+   "kind": "family"
+  },
+  "roadway": {
+   "to": "road",
+   "kind": "family"
+  },
+  "rocky": {
+   "to": "rock",
+   "kind": "family"
+  },
+  "roller": {
+   "to": "roll",
+   "kind": "family"
+  },
+  "roman": {
+   "to": "rome",
+   "kind": "family"
+  },
+  "rotten": {
+   "to": "rot",
+   "kind": "family"
+  },
+  "routinely": {
+   "to": "routine",
+   "kind": "family"
+  },
+  "rower": {
+   "to": "row",
+   "kind": "family"
+  },
+  "rusia": {
+   "to": "russia",
+   "kind": "typo"
+  },
+  "russia": {
+   "to": "russian",
+   "kind": "family"
+  },
+  "sad": {
+   "to": "sadness",
+   "kind": "family"
+  },
+  "sadden": {
+   "to": "sadness",
+   "kind": "family"
+  },
+  "saleswoman": {
+   "to": "salesman",
+   "kind": "family"
+  },
+  "sanity": {
+   "to": "insane",
+   "kind": "family"
+  },
+  "sarcasm": {
+   "to": "sarcastic",
+   "kind": "family"
+  },
+  "savings": {
+   "to": "save",
+   "kind": "family"
+  },
+  "saying": {
+   "to": "say",
+   "kind": "family"
+  },
+  "scarcity": {
+   "to": "scarcely",
+   "kind": "family"
+  },
+  "schoolchild": {
+   "to": "school",
+   "kind": "family"
+  },
+  "scorn": {
+   "to": "scornful",
+   "kind": "family"
+  },
+  "scots": {
+   "to": "scotland",
+   "kind": "family"
+  },
+  "scottish": {
+   "to": "scotland",
+   "kind": "family"
+  },
+  "screw": {
+   "to": "screwdriver",
+   "kind": "family"
+  },
+  "sculptor": {
+   "to": "sculpture",
+   "kind": "family"
+  },
+  "seasoning": {
+   "to": "season",
+   "kind": "family"
+  },
+  "secretarial": {
+   "to": "secretary",
+   "kind": "family"
+  },
+  "segregation": {
+   "to": "segregate",
+   "kind": "family"
+  },
+  "seize": {
+   "to": "seizure",
+   "kind": "family"
+  },
+  "selective": {
+   "to": "select",
+   "kind": "family"
+  },
+  "sensation": {
+   "to": "sensational",
+   "kind": "family"
+  },
+  "sensitively": {
+   "to": "sensitive",
+   "kind": "family"
+  },
+  "separation": {
+   "to": "separate",
+   "kind": "family"
+  },
+  "server": {
+   "to": "service",
+   "kind": "family"
+  },
+  "settle": {
+   "to": "settlement",
+   "kind": "family"
+  },
+  "settler": {
+   "to": "settlement",
+   "kind": "family"
+  },
+  "seven": {
+   "to": "seventh",
+   "kind": "family"
+  },
+  "severity": {
+   "to": "severely",
+   "kind": "family"
+  },
+  "sewerage": {
+   "to": "sewer",
+   "kind": "family"
+  },
+  "shameless": {
+   "to": "ashamed",
+   "kind": "family"
+  },
+  "shareholder": {
+   "to": "share",
+   "kind": "family"
+  },
+  "sharpener": {
+   "to": "sharp",
+   "kind": "family"
+  },
+  "shaver": {
+   "to": "shave",
+   "kind": "family"
+  },
+  "she": {
+   "to": "her",
+   "kind": "family"
+  },
+  "shellfish": {
+   "to": "shell",
+   "kind": "family"
+  },
+  "shoemaker": {
+   "to": "shoe",
+   "kind": "family"
+  },
+  "shooting": {
+   "to": "shoot",
+   "kind": "family"
+  },
+  "shopkeeper": {
+   "to": "shop",
+   "kind": "family"
+  },
+  "sicken": {
+   "to": "sick",
+   "kind": "family"
+  },
+  "silvery": {
+   "to": "silver",
+   "kind": "family"
+  },
+  "simultaneously": {
+   "to": "simultaneous",
+   "kind": "family"
+  },
+  "sincerity": {
+   "to": "sincere",
+   "kind": "family"
+  },
+  "situate": {
+   "to": "situated",
+   "kind": "family"
+  },
+  "sixteenth": {
+   "to": "sixteen",
+   "kind": "family"
+  },
+  "sleepless": {
+   "to": "sleep",
+   "kind": "family"
+  },
+  "slippery": {
+   "to": "slip",
+   "kind": "family"
+  },
+  "smelly": {
+   "to": "smell",
+   "kind": "family"
+  },
+  "smoker": {
+   "to": "smoke",
+   "kind": "family"
+  },
+  "smoky": {
+   "to": "smoke",
+   "kind": "family"
+  },
+  "snobbery": {
+   "to": "snobbish",
+   "kind": "family"
+  },
+  "soapy": {
+   "to": "soap",
+   "kind": "family"
+  },
+  "solitude": {
+   "to": "solitary",
+   "kind": "family"
+  },
+  "southerly": {
+   "to": "southern",
+   "kind": "family"
+  },
+  "sovereign": {
+   "to": "sovereignty",
+   "kind": "family"
+  },
+  "spacious": {
+   "to": "space",
+   "kind": "family"
+  },
+  "spaniard": {
+   "to": "spain",
+   "kind": "family"
+  },
+  "speciality": {
+   "to": "specialty",
+   "kind": "spelling"
+  },
+  "spectacle": {
+   "to": "spectacular",
+   "kind": "family"
+  },
+  "speechless": {
+   "to": "speech",
+   "kind": "family"
+  },
+  "splendour": {
+   "to": "splendid",
+   "kind": "family"
+  },
+  "spoken": {
+   "to": "speak",
+   "kind": "family"
+  },
+  "spokesperson": {
+   "to": "spokesman",
+   "kind": "family"
+  },
+  "sportswoman": {
+   "to": "sportsman",
+   "kind": "family"
+  },
+  "spotless": {
+   "to": "spot",
+   "kind": "family"
+  },
+  "squarely": {
+   "to": "square",
+   "kind": "family"
+  },
+  "staggering": {
+   "to": "stagger",
+   "kind": "family"
+  },
+  "stagnant": {
+   "to": "stagnation",
+   "kind": "family"
+  },
+  "stainless": {
+   "to": "stain",
+   "kind": "family"
+  },
+  "stair": {
+   "to": "stairs",
+   "kind": "family"
+  },
+  "staircase": {
+   "to": "stairs",
+   "kind": "family"
+  },
+  "standing": {
+   "to": "stand",
+   "kind": "family"
+  },
+  "staple": {
+   "to": "stapler",
+   "kind": "family"
+  },
+  "starry": {
+   "to": "star",
+   "kind": "family"
+  },
+  "startling": {
+   "to": "startle",
+   "kind": "family"
+  },
+  "stiff": {
+   "to": "stiffen",
+   "kind": "family"
+  },
+  "stink": {
+   "to": "stinky",
+   "kind": "family"
+  },
+  "strengthen": {
+   "to": "strong",
+   "kind": "family"
+  },
+  "stripe": {
+   "to": "striped",
+   "kind": "family"
+  },
+  "stuffing": {
+   "to": "stuff",
+   "kind": "family"
+  },
+  "stun": {
+   "to": "stunning",
+   "kind": "family"
+  },
+  "stylistic": {
+   "to": "style",
+   "kind": "family"
+  },
+  "subdivision": {
+   "to": "subdivide",
+   "kind": "family"
+  },
+  "substitution": {
+   "to": "substitute",
+   "kind": "family"
+  },
+  "suburban": {
+   "to": "suburb",
+   "kind": "family"
+  },
+  "succession": {
+   "to": "successor",
+   "kind": "family"
+  },
+  "successively": {
+   "to": "successive",
+   "kind": "family"
+  },
+  "suffice": {
+   "to": "sufficient",
+   "kind": "family"
+  },
+  "suggestive": {
+   "to": "suggestion",
+   "kind": "family"
+  },
+  "suitability": {
+   "to": "suit",
+   "kind": "family"
+  },
+  "sunburnt": {
+   "to": "sunburn",
+   "kind": "family"
+  },
+  "supervision": {
+   "to": "supervisor",
+   "kind": "family"
+  },
+  "surgical": {
+   "to": "surgeon",
+   "kind": "family"
+  },
+  "surrounding": {
+   "to": "surround",
+   "kind": "family"
+  },
+  "suspend": {
+   "to": "suspension",
+   "kind": "family"
+  },
+  "sustain": {
+   "to": "sustainable",
+   "kind": "family"
+  },
+  "sustainability": {
+   "to": "sustainable",
+   "kind": "family"
+  },
+  "swede": {
+   "to": "sweden",
+   "kind": "family"
+  },
+  "sympathy": {
+   "to": "sympathetic",
+   "kind": "family"
+  },
+  "synthetic": {
+   "to": "synthesis",
+   "kind": "family"
+  },
+  "tactical": {
+   "to": "tactic",
+   "kind": "family"
+  },
+  "talkative": {
+   "to": "talk",
+   "kind": "family"
+  },
+  "tangible": {
+   "to": "intangible",
+   "kind": "family"
+  },
+  "tangled": {
+   "to": "tangle",
+   "kind": "family"
+  },
+  "tasteless": {
+   "to": "taste",
+   "kind": "family"
+  },
+  "telecommunications": {
+   "to": "telecommunication",
+   "kind": "family"
+  },
+  "tempting": {
+   "to": "temptation",
+   "kind": "family"
+  },
+  "ten": {
+   "to": "tenth",
+   "kind": "family"
+  },
+  "tendency": {
+   "to": "tend",
+   "kind": "family"
+  },
+  "territorial": {
+   "to": "territory",
+   "kind": "family"
+  },
+  "testimony": {
+   "to": "testify",
+   "kind": "family"
+  },
+  "thank": {
+   "to": "thanksgiving",
+   "kind": "family"
+  },
+  "thankful": {
+   "to": "thanksgiving",
+   "kind": "family"
+  },
+  "theft": {
+   "to": "thief",
+   "kind": "family"
+  },
+  "their": {
+   "to": "they",
+   "kind": "family"
+  },
+  "them": {
+   "to": "they",
+   "kind": "family"
+  },
+  "themselves": {
+   "to": "they",
+   "kind": "family"
+  },
+  "theoretical": {
+   "to": "theory",
+   "kind": "family"
+  },
+  "thinking": {
+   "to": "think",
+   "kind": "family"
+  },
+  "this": {
+   "to": "these",
+   "kind": "family"
+  },
+  "three": {
+   "to": "third",
+   "kind": "family"
+  },
+  "thrifty": {
+   "to": "thrift",
+   "kind": "family"
+  },
+  "thrilling": {
+   "to": "thriller",
+   "kind": "family"
+  },
+  "tidal": {
+   "to": "tide",
+   "kind": "family"
+  },
+  "timely": {
+   "to": "time",
+   "kind": "family"
+  },
+  "timid": {
+   "to": "timidity",
+   "kind": "family"
+  },
+  "tireless": {
+   "to": "tired",
+   "kind": "family"
+  },
+  "tobacconist": {
+   "to": "tobacco",
+   "kind": "family"
+  },
+  "toenail": {
+   "to": "nail",
+   "kind": "family"
+  },
+  "tolerance": {
+   "to": "tolerate",
+   "kind": "family"
+  },
+  "ton": {
+   "to": "tonnage",
+   "kind": "family"
+  },
+  "transform": {
+   "to": "transformation",
+   "kind": "family"
+  },
+  "translator": {
+   "to": "translate",
+   "kind": "family"
+  },
+  "transparency": {
+   "to": "transparent",
+   "kind": "family"
+  },
+  "tricky": {
+   "to": "trick",
+   "kind": "family"
+  },
+  "tropical": {
+   "to": "tropic",
+   "kind": "family"
+  },
+  "trustworthy": {
+   "to": "trust",
+   "kind": "family"
+  },
+  "turbulence": {
+   "to": "turbulent",
+   "kind": "family"
+  },
+  "tyrant": {
+   "to": "tyrannical",
+   "kind": "family"
+  },
+  "unbiased": {
+   "to": "bias",
+   "kind": "family"
+  },
+  "uncompromising": {
+   "to": "compromise",
+   "kind": "family"
+  },
+  "unconditional": {
+   "to": "condition",
+   "kind": "family"
+  },
+  "understandable": {
+   "to": "understand",
+   "kind": "family"
+  },
+  "underwrite": {
+   "to": "underwriter",
+   "kind": "family"
+  },
+  "unemployment": {
+   "to": "employment",
+   "kind": "family"
+  },
+  "unfold": {
+   "to": "fold",
+   "kind": "family"
+  },
+  "unified": {
+   "to": "unify",
+   "kind": "family"
+  },
+  "unimportant": {
+   "to": "important",
+   "kind": "family"
+  },
+  "unity": {
+   "to": "unite",
+   "kind": "family"
+  },
+  "unload": {
+   "to": "load",
+   "kind": "family"
+  },
+  "unlock": {
+   "to": "lock",
+   "kind": "family"
+  },
+  "unmarried": {
+   "to": "married",
+   "kind": "family"
+  },
+  "unnatural": {
+   "to": "natural",
+   "kind": "family"
+  },
+  "unofficial": {
+   "to": "official",
+   "kind": "family"
+  },
+  "unplug": {
+   "to": "plug",
+   "kind": "family"
+  },
+  "unqualified": {
+   "to": "qualification",
+   "kind": "family"
+  },
+  "unreal": {
+   "to": "real",
+   "kind": "family"
+  },
+  "unrealistic": {
+   "to": "realistic",
+   "kind": "family"
+  },
+  "unsafe": {
+   "to": "safe",
+   "kind": "family"
+  },
+  "unskilled": {
+   "to": "skill",
+   "kind": "family"
+  },
+  "unsuccessful": {
+   "to": "successful",
+   "kind": "family"
+  },
+  "untie": {
+   "to": "tie",
+   "kind": "family"
+  },
+  "untreated": {
+   "to": "treat",
+   "kind": "family"
+  },
+  "untrue": {
+   "to": "true",
+   "kind": "family"
+  },
+  "unwise": {
+   "to": "wise",
+   "kind": "family"
+  },
+  "unworthy": {
+   "to": "worthy",
+   "kind": "family"
+  },
+  "us": {
+   "to": "our",
+   "kind": "family"
+  },
+  "utilization": {
+   "to": "utilize",
+   "kind": "family"
+  },
+  "vacant": {
+   "to": "vacancy",
+   "kind": "family"
+  },
+  "vacate": {
+   "to": "vacancy",
+   "kind": "family"
+  },
+  "validation": {
+   "to": "invalid",
+   "kind": "family"
+  },
+  "validity": {
+   "to": "valid",
+   "kind": "family"
+  },
+  "valuation": {
+   "to": "value",
+   "kind": "family"
+  },
+  "vanity": {
+   "to": "vain",
+   "kind": "family"
+  },
+  "varied": {
+   "to": "variety",
+   "kind": "family"
+  },
+  "victor": {
+   "to": "victorious",
+   "kind": "family"
+  },
+  "victory": {
+   "to": "victorious",
+   "kind": "family"
+  },
+  "viewer": {
+   "to": "view",
+   "kind": "family"
+  },
+  "villager": {
+   "to": "village",
+   "kind": "family"
+  },
+  "violence": {
+   "to": "violent",
+   "kind": "family"
+  },
+  "violently": {
+   "to": "violent",
+   "kind": "family"
+  },
+  "violinist": {
+   "to": "violin",
+   "kind": "family"
+  },
+  "virtuous": {
+   "to": "virtue",
+   "kind": "family"
+  },
+  "visibility": {
+   "to": "visible",
+   "kind": "family"
+  },
+  "vitality": {
+   "to": "vital",
+   "kind": "family"
+  },
+  "vitally": {
+   "to": "vital",
+   "kind": "family"
+  },
+  "voltage": {
+   "to": "volt",
+   "kind": "family"
+  },
+  "we": {
+   "to": "our",
+   "kind": "family"
+  },
+  "well": {
+   "to": "better",
+   "kind": "family"
+  },
+  "westerner": {
+   "to": "western",
+   "kind": "family"
+  },
+  "westwards": {
+   "to": "westward",
+   "kind": "family"
+  },
+  "where": {
+   "to": "wherever",
+   "kind": "family"
+  },
+  "whiskey": {
+   "to": "whisky",
+   "kind": "spelling"
+  },
+  "who": {
+   "to": "whose",
+   "kind": "family"
+  },
+  "wholesale": {
+   "to": "wholesaler",
+   "kind": "family"
+  },
+  "wholly": {
+   "to": "whole",
+   "kind": "family"
+  },
+  "whom": {
+   "to": "whose",
+   "kind": "family"
+  },
+  "widen": {
+   "to": "wide",
+   "kind": "family"
+  },
+  "wishful": {
+   "to": "wish",
+   "kind": "family"
+  },
+  "wit": {
+   "to": "witty",
+   "kind": "family"
+  },
+  "work": {
+   "to": "worker",
+   "kind": "family"
+  },
+  "workforce": {
+   "to": "worker",
+   "kind": "family"
+  },
+  "worldly": {
+   "to": "world",
+   "kind": "family"
+  },
+  "worn": {
+   "to": "wear",
+   "kind": "family"
+  },
+  "worsen": {
+   "to": "worse",
+   "kind": "family"
+  },
+  "wounded": {
+   "to": "wound",
+   "kind": "family"
+  },
+  "yearly": {
+   "to": "year",
+   "kind": "family"
+  },
+  "you": {
+   "to": "yourself",
+   "kind": "family"
+  },
+  "yours": {
+   "to": "yourself",
+   "kind": "family"
+  },
+  "yourselves": {
+   "to": "yourself",
+   "kind": "family"
+  },
+  "zip": {
+   "to": "zipper",
+   "kind": "family"
+  }
+ }
+}

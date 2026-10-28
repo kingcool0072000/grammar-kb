@@ -1,6 +1,6 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
-import { speak } from '../tts.js'
+import { fillAtlasHost, speakWord } from '../atlas.js'
 
 // ✅ 已攻克题本（学生页 #/conquered）：全部背完掌握的单词——
 // 一遍背会（从未进错题本）+ 从错题周期六轮复习全对走出来的。
@@ -98,14 +98,16 @@ export async function mountConquered(el) {
           <button class="chip" id="cq-dlg-say" title="发音">🔊</button></h3>
         <div class="vl-dlg-sec"><b>释义</b><p>${escapeHtml(glossOf(w) || '（暂无）')}</p></div>
         ${ex.en ? `<div class="vl-dlg-sec"><b>例句</b><p class="vl-dlg-en">${escapeHtml(ex.en)}</p>${ex.zh ? `<p class="vl-dlg-zh">${escapeHtml(ex.zh)}</p>` : ''}</div>` : ''}
+        <div class="atlas-host"></div>
         <div class="vl-dlg-sec"><b>掌握</b><p>${escapeHtml(src)} · 累计答对 ${w.right ?? '—'} 次 / 答错 ${w.wrong ?? '—'} 次</p></div>
         <div class="chip-row"><button class="chip" id="cq-dlg-close">关闭</button></div>
       </div>`
     document.body.appendChild(dlg)
+    fillAtlasHost(dlg.querySelector('.atlas-host'), w.word, w.atlas || null)
     const close = () => dlg.remove()
     dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
     dlg.querySelector('#cq-dlg-close').addEventListener('click', close)
-    dlg.querySelector('#cq-dlg-say').addEventListener('click', () => speak(w.word))
+    dlg.querySelector('#cq-dlg-say').addEventListener('click', () => speakWord(w.word))
   }
 
   search.addEventListener('input', () => { page = 0; renderPage() })

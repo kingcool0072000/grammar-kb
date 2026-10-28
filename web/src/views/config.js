@@ -2,6 +2,8 @@
 // #/readconf（阅读练习排版），并新增泛读馆宽度偏好（标准/宽）。
 // 旧 hash 由 main.js 路由重定向到本页，不留独立页面。
 import { speak, speakWithVoice, getTtsPref, setTtsPref, waitForVoices, ttsDiagnostics } from '../tts.js'
+import { aboutHtml, getAccent, setAccent } from '../atlas.js'
+import { api } from '../api.js'
 import { getReadPref, setReadPref, resetReadPref } from '../readpref.js'
 import { getFceAudioPref, setFceAudioPref } from './fceAudio.js'
 import { escapeHtml, escAttr } from '../render.js'
@@ -114,6 +116,18 @@ export async function mountConfig(el) {
 
     <!-- ====== 发音 ====== -->
     <h2 class="cfg-section">🗣️ 发音</h2>
+    <div class="tts-box">
+      <div class="rdc-row">
+        <label>词光录音</label>
+        <div class="lib-seg" id="cfg-atlas-accent">
+          <button type="button" data-v="uk" class="${getAccent() === 'uk' ? 'active' : ''}">英式</button>
+          <button type="button" data-v="us" class="${getAccent() === 'us' ? 'active' : ''}">美式</button>
+        </div>
+        <span class="tts-vtag">有词光录音时优先播放这一套；没有文件或播放失败时，仍用下面的浏览器语音。</span>
+      </div>
+      <p class="atlas-footnote" id="cfg-atlas-count"></p>
+      ${aboutHtml()}
+    </div>
     <div class="tts-box" id="cfg-tts-status">正在读取本设备的音色列表…</div>
     <div class="tts-box">
       <div class="tts-rate-row">
@@ -185,6 +199,26 @@ export async function mountConfig(el) {
     refreshRd()
   })
   refreshRd()
+
+  el.querySelector('#cfg-atlas-accent').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]')
+    if (!b) return
+    setAccent(b.dataset.v)
+    el.querySelectorAll('#cfg-atlas-accent button').forEach((x) =>
+      x.classList.toggle('active', x === b),
+    )
+  })
+  api.atlasInfo().then((info) => {
+    const node = el.querySelector('#cfg-atlas-count')
+    if (!node || !info) return
+    if (!info.count) {
+      node.textContent = '词光词条还没导入。导入后，对得上的单词会显示插画；现在先用浏览器语音。'
+    } else if (info.media_ready) {
+      node.textContent = `已导入 ${info.count} 条词光词条，插画和录音可播放。`
+    } else {
+      node.textContent = `已导入 ${info.count} 条词光词条。媒体文件还没放到服务器，发音会退回浏览器语音。`
+    }
+  }).catch(() => {})
 
   // ---- TTS ----
   const rateInput = el.querySelector('#cfg-rate')

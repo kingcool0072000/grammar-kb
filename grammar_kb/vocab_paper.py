@@ -18,6 +18,7 @@ from datetime import datetime, timezone as _tz
 from pathlib import Path
 from typing import Optional
 
+from .atlas_vocab import exam_allowed
 from .vocab_exam import _grammar_db_path, VocabExamStore
 
 
@@ -112,9 +113,15 @@ def _load_words_rich(level: int) -> list[dict]:
         return []
     with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
         conn.row_factory = sqlite3.Row
-        rows = conn.execute(
-            "SELECT word, pos, gloss FROM vocab_word WHERE level = ?",
-            (int(level),)).fetchall()
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(vocab_word)")}
+        sql = "SELECT word, pos, gloss"
+        if "extra" in cols:
+            sql += ", extra"
+        sql += " FROM vocab_word WHERE level = ?"
+        rows = [
+            row for row in conn.execute(sql, (int(level),)).fetchall()
+            if "extra" not in cols or exam_allowed(row["extra"])
+        ]
     return _rich_rows(rows)
 
 
