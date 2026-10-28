@@ -72,6 +72,8 @@ class ViewsMixin:
             drill_types.add("作业卷")
         if t.get("fce"):
             drill_types.add("FCE 真题")
+        if t.get("videos"):
+            drill_types.add("视频复述")
         breakdown = {
             "reading_books": len(reading_items),
             "reading_items": reading_items,
@@ -83,6 +85,7 @@ class ViewsMixin:
             "lecture_count": len(t.get("lectures") or []),
             "hw_paper_count": len(t.get("hw_papers") or []),
             "fce_count": len(t.get("fce") or []),
+            "video_count": len(t.get("videos") or []),
         }
 
         # ---- 逐日矩阵 ----
@@ -127,6 +130,11 @@ class ViewsMixin:
             "article_titles": [
                 {"id": aid, "title": self._article_title(aid)}
                 for aid in (t.get("articles") or [])
+            ],
+            # 视频任务补标题（学生课程表/计划卡显示片名；已删除的为 null）
+            "video_titles": [
+                {"vid": v, "title": self._video_title_any(v)}
+                for v in (t.get("videos") or [])
             ],
             "goal_progress": self._week_goal_progress(t, days, user, week_start),
             "completion": {
@@ -368,7 +376,8 @@ class ViewsMixin:
             t = w.get("tasks") or {}
             has_plan = bool(t.get("focus_kps") or t.get("lectures")
                             or t.get("hw_papers") or t.get("vocab_goal")
-                            or t.get("fce") or t.get("reading"))
+                            or t.get("fce") or t.get("reading")
+                            or t.get("videos"))
             done = total = 0
             bases: set[str] = set()
             if ws <= cur:  # 已开始的周才聚合完成度（未来周无信号）
@@ -398,6 +407,7 @@ class ViewsMixin:
                 "vocab_pct": t.get("vocab_pct"),
                 "vocab_goal": t.get("vocab_goal"),
                 "reading": t.get("reading") or {},
+                "videos": t.get("videos") or [],
                 "notes": w.get("notes") or "",
                 "done": done, "total": total,
                 "percent": completion_percent(done, total) if ws <= cur else None,

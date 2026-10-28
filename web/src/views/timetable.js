@@ -8,7 +8,7 @@ const WEEK_CN = ['周一', '周二', '周三', '周四', '周五', '周六', '�
 const TYPE_ICON = {
   lecture: '📚', fce: '🎧', paper: '📝', hw_paper: '🗒', article: '📄',
   reading: '📖', vocab: '🔤', speak: '🎤', wrong_words: '🔤',
-  micro_drill: '✏️', history: '•', plan: '•',
+  micro_drill: '✏️', video: '🎬', history: '•', plan: '•',
 }
 
 export async function mountTimetable(el) {
@@ -42,6 +42,12 @@ export async function mountTimetable(el) {
     summary.push(`📄 精读 ${names}`)
   } else if (tasks.articles?.length) {
     summary.push(`📄 精读 ${tasks.articles.length} 篇`)
+  }
+  const vidTitles = (d.video_titles || []).filter((v) => v.title)
+  if (vidTitles.length) {
+    summary.push(`🎬 视频 ${vidTitles.map((v) => escapeHtml(v.title.slice(0, 16))).join('、')}`)
+  } else if (tasks.videos?.length) {
+    summary.push(`🎬 视频 ${tasks.videos.length} 个`)
   }
   const rItems = d.breakdown?.reading_items || []
   if (rItems.length) {
@@ -84,6 +90,9 @@ export async function mountTimetable(el) {
       if (t.type === 'article')
         return `<a class="tt-task link ${ok ? 'ok' : 'plan'}" href="#/reading"
           title="${escapeHtml(tip)}">${inner}</a>`
+      if (t.type === 'video' && t.video_id)
+        return `<a class="tt-task link ${ok ? 'ok' : 'plan'}" href="#/videoStudy?vid=${encodeURIComponent(t.video_id)}"
+          title="${escapeHtml(tip || '看视频并复述')}">${inner}</a>`
       return `<div class="tt-task ${ok ? 'ok' : 'plan'}" title="${escapeHtml(tip)}">${inner}</div>`
     }
     // 已完成的学习（课程表=学习记录视角）：完成计划任务 +
