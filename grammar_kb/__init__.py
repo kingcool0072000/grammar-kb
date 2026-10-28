@@ -12,6 +12,8 @@
 - query        查询 API（按讲次/类别/标志词/全文）
 - ingest/cli   导入与命令行
 """
+from pathlib import Path
+
 from .models import (
     Lecture,
     KnowledgePoint,
@@ -22,7 +24,16 @@ from .models import (
     Category,
 )
 
-__version__ = "0.2.0"
+def _load_version() -> str:
+    """应用版本。唯一来源是同目录 VERSION；改版本只改那一行。"""
+    try:
+        text = Path(__file__).with_name("VERSION").read_text(encoding="utf-8")
+    except OSError:
+        return "0.0.0"
+    return text.strip() or "0.0.0"
+
+
+__version__ = _load_version()
 # 数据集版本（与代码版本解耦）：数据迭代时递增。可用环境变量 GRAMMAR_KB_DATA_VERSION 覆盖。
 DATA_VERSION = "data-v1"
 __all__ = [

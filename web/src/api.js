@@ -321,6 +321,26 @@ export const api = {
       done_keys: doneKeys,
       assigned_user: assignedUser,
     }),
+  // 服务端版本（免登录）。前端版本见 version.js，设置中心对照两边是否漂移。
+  version: () => req('/version'),
+  // 视频学习：清单/详情 + 复述录音提交与批改（教师）
+  videoStudyList: ({ includeDisabled = false } = {}) =>
+    req('/video-study', { searchParams: includeDisabled ? { include_disabled: 1 } : {} }),
+  // 教师看某学生的视频进度：本周安排 / 未完成 / 已完成 / 计划外
+  videoProgress: (user) =>
+    req('/video-study/progress', { searchParams: { user } }),
+  videoStudyItem: (vid) => req(`/video-study/items/${encodeURIComponent(vid)}`),
+  videoItemAdd: (rec) => reqJson('/video-study/items', 'POST', rec),
+  videoItemPut: (vid, rec) =>
+    reqJson(`/video-study/items/${encodeURIComponent(vid)}`, 'PUT', rec),
+  videoItemDelete: (vid) =>
+    reqJson(`/video-study/items/${encodeURIComponent(vid)}`, 'DELETE'),
+  videoRetells: ({ user, status, limit = 100 } = {}) =>
+    req('/video-study/retells', { searchParams: { user, status, limit } }),
+  videoRetellSubmit: (rec) => reqJson('/video-study/retells', 'POST', rec),
+  videoRetellGrade: (id, rec) =>
+    reqJson(`/video-study/retells/${id}`, 'PUT', rec),
+  videoRetellDelete: (id) => reqJson(`/video-study/retells/${id}`, 'DELETE'),
 }
 
 // multipart 上传（epub 等大文件）：带登录态，返回解包后的 data

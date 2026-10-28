@@ -228,4 +228,7 @@ class SignalsMixin:
         self._day_acts["study_min"] = round(
             (self._day_acts.get("focus_sec", 0)
              + self._day_acts.get("recite_sec", 0)) / 60)
+        # 视频复述：当天提交过录音即点亮 video:{vid}（待批也算完成）
+        for vid in self._retold_video_ids(day, nxt, user):
+            out[f"video:{vid}"] = True
         return out, read_titles

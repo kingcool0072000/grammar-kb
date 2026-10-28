@@ -139,6 +139,31 @@ try:
     class TopicAssignIn(BaseModel):
         assigned_to: str = Field(default="", max_length=240)
 
+    class VideoItemIn(BaseModel):
+        """教师新增/编辑视频学习条目。"""
+
+        vid: str = Field(min_length=11, max_length=16)
+        title: str = Field(min_length=1, max_length=120)
+        category: str = Field(default="", max_length=24)
+        duration_sec: int = Field(default=0, ge=0, le=4 * 3600)
+        vocab: Optional[list] = None
+        hints: str = Field(default="", max_length=2000)
+        enabled: bool = True
+
+    class VideoRetellIn(BaseModel):
+        """学生提交视频复述录音（base64，≤10 分钟）。"""
+
+        vid: str = Field(min_length=11, max_length=16)
+        audio_b64: str = Field(min_length=8)
+        mime: str = Field(default="audio/webm", max_length=40)
+        duration_sec: int = Field(default=0, ge=0, le=600)
+
+    class VideoGradeIn(BaseModel):
+        """教师给复述录音打分（10 分制）。"""
+
+        score: int = Field(ge=0, le=10)
+        comment: str = Field(default="", max_length=2000)
+
 except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
     ExamRecordIn = None
     FceSubmissionIn = None
@@ -150,4 +175,7 @@ except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
     ReciteSessionIn = None
     FocusSessionIn = None
     TopicProgressIn = None
+    VideoItemIn = None
+    VideoRetellIn = None
+    VideoGradeIn = None
 

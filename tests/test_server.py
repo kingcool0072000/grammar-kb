@@ -83,6 +83,18 @@ def test_envelope_success(client):
     assert body["data"]["knowledge_points"] >= 1
 
 
+def test_version_endpoint(client):
+    """GET /version 免登录，版本与 grammar_kb.VERSION 一致。"""
+    from grammar_kb import __version__
+
+    r = client.get("/version", headers={"Authorization": ""})
+    assert r.status_code == 200, r.text
+    data = r.json()["data"]
+    assert data["service"] == "grammar-kb"
+    assert data["version"] == __version__
+    assert isinstance(data["git"], str)
+
+
 def test_root(client):
     """/ 的双模式：web/dist 存在时返回前端 HTML；否则 API 信息 JSON。
 

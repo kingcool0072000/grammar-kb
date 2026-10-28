@@ -87,18 +87,21 @@ podman run -d --name hebaxue -p 8000:8000 \
 
 ```dockerfile
 FROM node:20-slim AS web
-WORKDIR /web
+WORKDIR /src/web
 COPY web/package*.json ./
 RUN npm ci
 COPY web/ ./
+# 前端版本从 grammar_kb/VERSION 注入（vite.config.js 读仓库根的上一级）
+COPY grammar_kb/VERSION /src/grammar_kb/VERSION
 RUN npm run build
 
 FROM python:3.13-slim
 WORKDIR /app
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir . && pip install fastapi "uvicorn[standard]"
+# 版本号在 grammar_kb/VERSION；pip 安装前就要能读到
 COPY grammar_kb/ grammar_kb/
-COPY --from=web /web/dist/ web/dist/
+RUN pip install --no-cache-dir . && pip install fastapi "uvicorn[standard]"
+COPY --from=web /src/web/dist/ web/dist/
 EXPOSE 8000
 CMD ["python", "-m", "uvicorn", "grammar_kb.server:app", "--host", "0.0.0.0", "--port", "8000"]
 ```

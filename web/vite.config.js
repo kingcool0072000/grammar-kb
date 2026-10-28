@@ -1,8 +1,38 @@
+import { execSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+
+function readAppVersion() {
+  try {
+    return readFileSync(resolve(repoRoot, 'grammar_kb/VERSION'), 'utf8').trim()
+  } catch {
+    return ''
+  }
+}
+
+function gitShort() {
+  try {
+    return execSync('git rev-parse --short HEAD', {
+      cwd: repoRoot,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).toString().trim()
+  } catch {
+    return ''
+  }
+}
 
 // 开发期把 /api 代理到 grammar-kb 后端，避免浏览器跨域。
 // 生产部署时由反向代理（nginx 等）承担同样的转发。
+// 版本号从仓库 grammar_kb/VERSION 注入，不在前端再写一份。
 export default defineConfig({
+  define: {
+    __GKB_VERSION__: JSON.stringify(readAppVersion()),
+    __GKB_GIT_SHA__: JSON.stringify(gitShort()),
+  },
   server: {
     port: 5180,
     proxy: {

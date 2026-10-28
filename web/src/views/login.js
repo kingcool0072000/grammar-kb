@@ -22,7 +22,6 @@ export function mountLogin(el, { onLogin }) {
           <button class="btn-primary login-submit" type="submit">登 录</button>
         </form>
       </div>
-      <p class="login-atlas">插画与单词录音来自 <a href="https://github.com/designfuchen/word-atlas" target="_blank" rel="noopener">词光 Word Atlas</a>，<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>，署名 Word Atlas contributors（词光）。</p>
     </div>
   `
 

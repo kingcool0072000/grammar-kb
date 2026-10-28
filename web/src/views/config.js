@@ -4,6 +4,7 @@
 import { speak, speakWithVoice, getTtsPref, setTtsPref, waitForVoices, ttsDiagnostics } from '../tts.js'
 import { aboutHtml, getAccent, setAccent } from '../atlas.js'
 import { api } from '../api.js'
+import { APP_GIT_SHA, APP_VERSION } from '../version.js'
 import { getReadPref, setReadPref, resetReadPref } from '../readpref.js'
 import { getFceAudioPref, setFceAudioPref } from './fceAudio.js'
 import { escapeHtml, escAttr } from '../render.js'
@@ -60,6 +61,13 @@ export async function mountConfig(el) {
       <p class="eyebrow">和爸学 · 隐藏设置</p>
       <h1>⚙️ 设置中心</h1>
       <p class="sub">发音、阅读排版这些不常用的偏好都收在这里。全部只影响本设备。</p>
+    </div>
+
+    <h2 class="cfg-section">🏷️ 版本</h2>
+    <div class="tts-box" id="cfg-version">
+      <p>前端 <b id="cfg-web-ver"></b></p>
+      <p>服务端 <b id="cfg-srv-ver">读取中…</b></p>
+      <span class="tts-vtag">改版本只改 grammar_kb/VERSION，再重新构建前端并重启服务。两边不一致时，说明 web/dist 和 Python 不是同一次发布。</span>
     </div>
 
     <!-- ====== 泛读馆 ====== -->
@@ -147,6 +155,20 @@ export async function mountConfig(el) {
   el.querySelector('#cfg-back').addEventListener('click', () => {
     if (history.length > 1) history.back()
     else location.hash = '/recite'
+  })
+
+  const verLabel = (version, sha) => {
+    const v = version || '—'
+    return sha ? `${v} · ${sha}` : v
+  }
+  el.querySelector('#cfg-web-ver').textContent = verLabel(APP_VERSION, APP_GIT_SHA)
+  api.version().then((info) => {
+    const node = el.querySelector('#cfg-srv-ver')
+    if (!node || !info) return
+    node.textContent = verLabel(info.version, info.git)
+  }).catch(() => {
+    const node = el.querySelector('#cfg-srv-ver')
+    if (node) node.textContent = '读取失败'
   })
 
   // ---- 泛读馆宽度 ----
