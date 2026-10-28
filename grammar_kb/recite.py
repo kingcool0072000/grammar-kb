@@ -22,6 +22,7 @@ from datetime import date, datetime, timedelta, timezone as _tz
 from pathlib import Path
 from typing import Optional
 
+from .atlas_vocab import canonical_word
 from .clock import CN_TZ, today_cn
 from .fce_query import _default_db_path
 
@@ -79,6 +80,136 @@ CREATE TABLE IF NOT EXISTS recite_review (
 );
 CREATE INDEX IF NOT EXISTS idx_rr_due ON recite_review(user, next_review);
 """
+
+
+def _headword(word: str) -> str:
+    """别名折到词光词头。没有别名表时原样返回。"""
+    return canonical_word(word)[:60]
+
+
+def _fold_alias_progress(conn: sqlite3.Connection) -> None:
+    """把派生词/拼写变体上的背词进度并到词光词头。
+
+    只改词这个键，right/wrong 相加，不删库、不清空。跑过的别名版本记在
+    recite_meta，别名表没变就不再扫。
+    """
+    from .atlas_vocab import load_alias_file
+
+    aliases = load_alias_file()
+    if not aliases:
+        return
+    import hashlib
+    revision = hashlib.sha256(
+        json.dumps(aliases, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()[:16]
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS recite_meta (key TEXT PRIMARY KEY, value TEXT)"
+    )
+    row = conn.execute(
+        "SELECT value FROM recite_meta WHERE key = 'atlas_alias_revision'"
+    ).fetchone()
+    if row and row[0] == revision:
+        return
+    targets = {alias: canonical_word(alias, aliases) for alias in aliases}
+    _fold_table(conn, "recite_word_progress", targets, progress=True)
+    _fold_table(conn, "recite_review", targets, progress=False)
+    _rewrite_session_words(conn, targets)
+    conn.execute(
+        "INSERT INTO recite_meta(key, value) VALUES('atlas_alias_revision', ?) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        (revision,),
+    )
+
+
+def _fold_table(conn, table: str, targets: dict[str, str], *, progress: bool) -> None:
+    names = {row[0] for row in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'"
+    )}
+    if table not in names:
+        return
+    rows = conn.execute(f"SELECT * FROM {table}").fetchall()
+    for row in rows:
+        alias = row["word"]
+        canon = targets.get(alias)
+        if not canon or canon == alias:
+            continue
+        parent = conn.execute(
+            f"SELECT * FROM {table} WHERE user = ? AND word = ?",
+            (row["user"], canon),
+        ).fetchone()
+        if parent is None:
+            conn.execute(
+                f"UPDATE {table} SET word = ? WHERE user = ? AND word = ?",
+                (canon, row["user"], alias),
+            )
+            continue
+        if progress:
+            firsts = [v for v in (parent["first_seen"], row["first_seen"]) if v]
+            lasts = [v for v in (parent["last_seen"], row["last_seen"]) if v]
+            mastered_vals = [v for v in (parent["mastered_at"], row["mastered_at"]) if v]
+            conn.execute(
+                "UPDATE recite_word_progress SET right = ?, wrong = ?, "
+                "mastered_at = ?, first_seen = ?, last_seen = ? "
+                "WHERE user = ? AND word = ?",
+                (
+                    parent["right"] + row["right"],
+                    parent["wrong"] + row["wrong"],
+                    min(mastered_vals) if mastered_vals else None,
+                    min(firsts) if firsts else None,
+                    max(lasts) if lasts else None,
+                    row["user"], canon,
+                ),
+            )
+        else:
+            conquered = parent["conquered_at"]
+            stage = parent["stage"]
+            nxt = parent["next_review"]
+            if not conquered and row["next_review"]:
+                if not nxt or row["next_review"] < nxt:
+                    nxt = row["next_review"]
+                    stage = row["stage"]
+            conn.execute(
+                "UPDATE recite_review SET wrong_count = ?, stage = ?, next_review = ? "
+                "WHERE user = ? AND word = ?",
+                (
+                    parent["wrong_count"] + row["wrong_count"],
+                    stage, nxt, row["user"], canon,
+                ),
+            )
+        conn.execute(
+            f"DELETE FROM {table} WHERE user = ? AND word = ?",
+            (row["user"], alias),
+        )
+
+
+def _rewrite_session_words(conn, targets: dict[str, str]) -> None:
+    names = {row[0] for row in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'"
+    )}
+    if "recite_sessions" not in names:
+        return
+    rows = conn.execute("SELECT id, wrong_words FROM recite_sessions").fetchall()
+    for row in rows:
+        try:
+            words = json.loads(row["wrong_words"] or "[]")
+        except (ValueError, TypeError):
+            continue
+        if not isinstance(words, list):
+            continue
+        changed = False
+        rewritten = []
+        for word in words:
+            text = str(word).strip().lower()
+            canon = targets.get(text, text)
+            if canon != text:
+                changed = True
+            if canon:
+                rewritten.append(canon)
+        if changed:
+            conn.execute(
+                "UPDATE recite_sessions SET wrong_words = ? WHERE id = ?",
+                (json.dumps(rewritten, ensure_ascii=False), row["id"]),
+            )
 
 
 def _calendar_today() -> str:
@@ -170,6 +301,7 @@ class ReciteStore:
             conn.execute(
                 "ALTER TABLE recite_word_progress ADD COLUMN first_seen TEXT"
             )
+        _fold_alias_progress(conn)
 
     def submit(
         self, user: str, total: int, wrong: int, acc: int, duration_sec: int,
@@ -178,7 +310,8 @@ class ReciteStore:
     ) -> dict:
         if total <= 0:
             raise ValueError("题数须为正")
-        wrong_words = [str(w)[:60] for w in (wrong_words or [])][:50]
+        wrong_words = [_headword(str(w)) for w in (wrong_words or [])][:50]
+        wrong_words = [w for w in wrong_words if w]
         now = datetime.now(_tz.utc).isoformat(timespec="seconds")
         today = _calendar_today()
         # 先按错词本口径回填并取逾期，再决定今天还能不能见新词。
@@ -222,9 +355,12 @@ class ReciteStore:
         """
         clean: dict[str, int] = {}
         for d in details or []:
-            w = str(d.get("word", "")).strip().lower()[:60]
-            if w:
-                clean[w] = 1 if d.get("correct") else 0
+            w = _headword(str(d.get("word", "")).strip().lower())
+            if not w:
+                continue
+            correct = 1 if d.get("correct") else 0
+            # 同一词头的别名一起交卷：有一次答错就记错。
+            clean[w] = correct if w not in clean else min(clean[w], correct)
         if not clean:
             return
         levels = self._vocab_levels(list(clean))
@@ -272,9 +408,14 @@ class ReciteStore:
         """
         clean: dict[str, int] = {}
         for d in details or []:
-            w = str(d.get("word", "")).strip().lower()[:60]
-            if w and w not in clean:
-                clean[w] = 1 if d.get("correct") else 0
+            w = _headword(str(d.get("word", "")).strip().lower())
+            if not w:
+                continue
+            correct = 1 if d.get("correct") else 0
+            if w not in clean:
+                clean[w] = correct
+            else:
+                clean[w] = min(clean[w], correct)
         if not clean:
             return {}
         today = _calendar_today()
@@ -438,7 +579,7 @@ class ReciteStore:
         user = (user or "").strip()[:60]
         clean: dict[str, tuple[int, int]] = {}
         for w, v in (data or {}).items():
-            w = str(w).strip().lower()[:60]
+            w = _headword(str(w).strip().lower())
             if not isinstance(v, dict):
                 continue
             try:
@@ -447,7 +588,8 @@ class ReciteStore:
             except (TypeError, ValueError):
                 continue
             if r or wr:
-                clean[w] = (r, wr)
+                prev = clean.get(w)
+                clean[w] = (max(prev[0], r), max(prev[1], wr)) if prev else (r, wr)
         if clean:
             levels = self._vocab_levels(list(clean))
             now = datetime.now(_tz.utc).isoformat(timespec="seconds")
@@ -505,7 +647,7 @@ class ReciteStore:
                 except (ValueError, TypeError):
                     ws = []
                 for w in ws:
-                    w = str(w).strip().lower()[:60]
+                    w = _headword(str(w).strip().lower())
                     if not w:
                         continue
                     counts[w] = counts.get(w, 0) + 1

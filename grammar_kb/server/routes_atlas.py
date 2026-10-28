@@ -12,9 +12,11 @@ from ..atlas import (
     count_entries,
     lookup_public,
     media_ready,
+    normalize_word,
     resolve_atlas_dir,
     resolve_media_file,
 )
+from ..atlas_vocab import alias_kind, canonical_word
 from .http import _ok
 
 _MIME = {".webp": "image/webp", ".mp3": "audio/mpeg"}
@@ -41,8 +43,30 @@ def register_atlas(app, ctx):
     @app.get("/atlas/{word:path}")
     def atlas_word(word: str):
         entry = lookup_public(kbq.db.conn, word, full=True)
+        queried = normalize_word(word)
+        canon = canonical_word(queried)
+        if entry is None and canon and canon != queried:
+            entry = lookup_public(kbq.db.conn, canon, full=True)
+            if entry is None:
+                entry = {
+                    "word": canon,
+                    "queried": queried,
+                    "alias_of": canon,
+                    "alias_kind": alias_kind(queried),
+                    "senses": [],
+                    "examples": [],
+                    "media": 0,
+                    "license": LICENSE,
+                    "attribution": ATTRIBUTION,
+                    "source": SOURCE_REPO,
+                }
         if entry is None:
             raise HTTPException(status_code=404, detail=f"词光词库未收录：{word}")
+        if canon and canon != queried:
+            entry = dict(entry)
+            entry["queried"] = queried
+            entry["alias_of"] = entry.get("word") or canon
+            entry["alias_kind"] = alias_kind(queried)
         return _ok(entry)
 
     @app.get("/atlas-media/{tail:path}")

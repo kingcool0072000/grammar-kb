@@ -309,7 +309,7 @@ def api(tmp_path, monkeypatch):
     conn.executemany(
         "INSERT INTO vocab_word VALUES (?,?,?,?,?,?,?)",
         [
-            ("library", 0, "[]", "图书馆", "[]", "{}", "{}"),
+            ("library", 0, "[]", "旧释义", "[]", "{}", "{}"),
             ("orbit", 3, "[]", "轨道", "[]", "{}", "{}"),
         ],
     )
@@ -352,6 +352,7 @@ def test_http_atlas_and_vocab_levels(api):
     levels = api.get("/vocab-levels?max_level=7", headers=student).json()["data"]
     words = {item["word"]: item for item in levels["items"]}
     assert words["library"]["gloss"] == "图书馆"
+    assert words["library"]["from_atlas"] is True
     assert words["library"]["level"] == 0
     assert words["library"]["atlas"]["id"] == "library"
     assert "examples" not in words["library"]["atlas"]

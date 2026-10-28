@@ -25,6 +25,7 @@ from datetime import datetime, timezone as _tz
 from pathlib import Path
 from typing import Optional
 
+from .atlas_vocab import exam_allowed
 from .clock import today_cn
 from .fce_query import _default_db_path
 
@@ -245,6 +246,8 @@ def load_level_words(level: int, limit: int = 0) -> list[dict]:
             meanings = []
         # L0 的 meanings[0] 常是语料例句而非释义（many→“都表示‘许多’…”），
         # 题面用 gloss（词典式紧凑释义）兜底切分
+        if not exam_allowed(r["extra"]):
+            continue
         gloss = (r["gloss"] or "").strip()
         meaning = gloss.split("/")[0].split(",")[0].strip() or gloss
         if not meaning and meanings and len(str(meanings[0])) <= 12:

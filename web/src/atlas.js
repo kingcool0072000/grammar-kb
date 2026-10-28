@@ -220,8 +220,12 @@ export function atlasDetailHtml(entry) {
     const pair = splitCol(item)
     return `<li>${escapeHtml(pair.en)}${pair.zh ? ` <span class="muted">${escapeHtml(pair.zh)}</span>` : ''}</li>`
   }).join('')
+  const see = entry.queried && entry.alias_of && entry.queried !== entry.word
+    ? `<p class="atlas-see">${escapeHtml(entry.queried)} 见 ${escapeHtml(entry.word || entry.alias_of)}</p>`
+    : ''
   return `
     <div class="atlas-detail">
+      ${see}
       ${head ? `<p class="atlas-meta">${head}</p>` : ''}
       ${entry.tip ? `<p class="atlas-tip">${escapeHtml(entry.tip)}</p>` : ''}
       ${entry.note ? `<p class="atlas-note">${escapeHtml(entry.note)}</p>` : ''}

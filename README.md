@@ -109,9 +109,9 @@ PDF ──► pdf_parser   去水印（字体+方向过滤）+ 重排行 + 还�
 ## 词光（Word Atlas）
 
 背单词时，和 [词光](https://github.com/designfuchen/word-atlas) 对得上的词会显示插画，
-并播放英音、美音和例句录音；没有文件就继续用浏览器语音。词光的 7298 条雅思词
-**没有**并进现有「雅思」级别。导入命令和服务器步骤见 [docs/word-atlas.md](docs/word-atlas.md)，
-署名见 [NOTICE](NOTICE)。
+并播放英音、美音和例句录音；没有文件就继续用浏览器语音。词表以词光词头为准
+（派生词并进去，只在词光里的词按 CEFR 补进初中 / 高中 / 雅思，且不进入试卷抽词池）。
+步骤见 [docs/word-atlas.md](docs/word-atlas.md)，署名见 [NOTICE](NOTICE)。
 
 ## 数据库 Schema（摘要）
 

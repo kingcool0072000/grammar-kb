@@ -198,7 +198,16 @@ def register_query(app, ctx):
             }
             atlas = atlas_by_word.get((r["word"] or "").strip().lower())
             if atlas:
-                item["atlas"] = atlas
+                item["atlas"] = {
+                    key: value for key, value in atlas.items()
+                    if key not in ("gloss", "example")
+                }
+                # 词光是释义和例句的优先来源；没有词光条目时仍用词表原文。
+                if atlas.get("gloss"):
+                    item["gloss"] = atlas["gloss"]
+                    item["from_atlas"] = True
+                if atlas.get("example"):
+                    item["example"] = atlas["example"]
             items.append(item)
         # L0 按语料词频降序（跟「背单词」原有顺序一致），L1+ 按字母序
         items.sort(key=lambda x: (

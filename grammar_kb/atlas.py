@@ -358,12 +358,27 @@ def compact_for_words(conn: sqlite3.Connection, words: Iterable[str]) -> dict[st
             chunk = wanted[offset:offset + 400]
             marks = ",".join("?" * len(chunk))
             rows = conn.execute(
-                "SELECT word, atlas_id, uk, us, cefr, topic, media "
+                "SELECT word, atlas_id, uk, us, cefr, topic, media, senses, examples "
                 f"FROM vocab_atlas WHERE word IN ({marks})",
                 chunk,
             ).fetchall()
             for row in rows:
-                out[row["word"]] = to_public(row, full=False)
+                item = to_public(row, full=False)
+                senses = _loads(row["senses"], "[]")
+                examples = _loads(row["examples"], "[]")
+                gloss = "；".join(
+                    str(sense.get("zh") or "").strip()
+                    for sense in senses
+                    if isinstance(sense, dict) and sense.get("zh")
+                )[:120]
+                if gloss:
+                    item["gloss"] = gloss
+                if examples and isinstance(examples[0], dict) and examples[0].get("en"):
+                    item["example"] = {
+                        "en": str(examples[0].get("en") or "")[:200],
+                        "zh": str(examples[0].get("zh") or "")[:160],
+                    }
+                out[row["word"]] = item
     except sqlite3.OperationalError:
         return {}
     return out

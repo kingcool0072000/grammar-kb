@@ -1177,6 +1177,7 @@ main {
   border-radius: 999px;
   padding: 0 8px;
 }
+.atlas-see { font-weight: 650; color: var(--ink); }
 .atlas-tip { color: var(--ink); }
 .atlas-note { color: #92400e; }
 .atlas-col { margin: 0; padding-left: 1.1em; }

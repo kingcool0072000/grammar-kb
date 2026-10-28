@@ -8,17 +8,25 @@
 
 署名：Word Atlas contributors（词光），CC BY 4.0。详见仓库根目录 `NOTICE`。
 
-## 为什么不并进「雅思」词表
+## 词表以词光词头为准
 
-现有级别是「第一次出现归到哪一层」：初中 → 高中 → 四级 → 六级 → 考研 →
-雅思 → 专四，层与层不重复。学生背单词界面只开放 L0–L5，雅思是 L6。
+`scripts/sync_word_atlas_vocab.py` 会改 `data/wordlists/`，并写出
+`data/vocab_alias.json`：
 
-词光 7298 条里，大约 6000 条已经出现在这些词表中（初中词表大约九成对得上）。
-只在词光里、现有词表没有的大约 1200 条，以 C1/C2 为主。把它们塞进雅思会
-加大 L6 的词数和以后的考卷，而孩子现在的背词队列根本看不到 L6。
+- 和爸学里有、又出现在某条词光词族里的词，不再单独做词头，别名指向词光词头
+  （happy → happiness，he/his → him）。
+- 英美拼写以词光为准（labour → labor），旧拼法留作别名。
+- 只在词光里的词：A1/A2 进初中，B1 进高中，B2/C1/C2 进雅思。这些新词
+  `exam: false`，**不进入**各级试卷抽词池，所以已存试卷的编号和内容不变，
+  新抽的本级卷也不会被这批词撑大。
+- 服务下次启动时，把 `fce.db` 里旧词头上的 right/wrong 加到新词头，不删库。
 
-所以词光是叠加层：对得上的词在背单词、词表、查词里出插画和录音；
-对不上的词仍可用 `/atlas/{word}` 查到，但不进入背词队列。
+整理词表之后还要重建级别表（只动 grammar.db 的 `vocab_word`，不动 fce.db）：
+
+```bash
+GRAMMAR_KB_DB=/opt/grammar-kb/data/grammar.db \
+  .venv/bin/python scripts/build_vocab_levels.py
+```
 
 ## 服务器（导入，不要在 Mac 上把媒体 rsync 上去）
 
