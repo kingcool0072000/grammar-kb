@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta, timezone as _tz
 
 from ..clock import cn_dt, monday_of, today_cn
 from .util import (
-    _paper_short, _short, add_days, completion_percent, task_public,
+    _paper_short, _short, _task_key, add_days, completion_percent, task_public,
 )
 
 _COMPLETION_NOTE = (
@@ -153,7 +153,7 @@ class ViewsMixin:
 
         维度口径（按周任务配置）：
         - 讲次：计划讲次数 vs 本周考过的讲次数
-        - 词汇：vocab_goal（级别百分比折算的累计词数）vs 周内新掌握词数
+        - 词汇：本周新掌握 = vocab_goal − 周初该级已会；分子是周内该级新 mastered_at
         - FCE：计划 Part 数 vs 周内提交覆盖数
         - 泛读：按各书周目标%（词数口径）vs 周内已读词数（实录汇总）
         - 精读：计划文章数 vs 已提交录音数
@@ -183,14 +183,23 @@ class ViewsMixin:
         # N 词」，周初已超额的显示满格。
         vg = t.get("vocab_goal")
         if vg:
-            lv_words = self._vocab_level_words(t.get("vocab_lv"))
+            lv = t.get("vocab_lv")
+            lv_words = self._vocab_level_words(lv)
             gained = self._vocab_actuals(week_start, add_days(week_start, 7), user, lv_words)
             base = self._vocab_mastered_before(week_start, user, lv_words)
+            # 分母就是「本周新掌握」个数。编辑器按 base + N 写入 vocab_goal，
+            # 老师看到的 N 和这里的 total 是同一个数。
+            if lv is None:
+                fresh = "本周新掌握"
+                done_note = "周初已达成"
+            else:
+                fresh = f"L{int(lv)} 本周新掌握"
+                done_note = f"L{int(lv)} · 周初已达成"
             if base >= vg:
-                dim("🔤", "词汇", vg, vg, extra="周初已达成")
+                dim("🔤", "词汇", vg, vg, extra=done_note)
             else:
                 denom = vg - base
-                dim("🔤", "词汇", min(gained, denom), denom)
+                dim("🔤", "词汇", min(gained, denom), denom, extra=fresh)
 
         fce = t.get("fce") or []
         if fce:
@@ -328,6 +337,60 @@ class ViewsMixin:
                 "week_start": week_start}
 
 
+    def week_preview(self, week_start: str, tasks: dict, user: str = "malin") -> dict:
+        """未保存的周计划 → 学生课表那 7 天。摊法与 week_daily_tasks 相同。
+
+        已冻结的日子仍用 plan_history_days，和正式课表一致。
+        不写 plan_weeks。
+        """
+        if not isinstance(tasks, dict):
+            raise ValueError("tasks 须为对象")
+        day0 = date.fromisoformat(week_start)
+        if week_start != monday_of(day0).isoformat():
+            raise ValueError("week_start 须为周一日期")
+        today_iso = today_cn().isoformat()
+        days = []
+        for i in range(7):
+            d = (day0 + timedelta(days=i)).isoformat()
+            future = d > today_iso
+            historical = None if future else self.history_day(user, d)
+            if historical is not None:
+                derived = historical
+            else:
+                derived = self.week_daily_tasks(
+                    week_start, for_date=d, user=user, planned=tasks)
+            if future:
+                days.append({
+                    "date": d, "future": True, "done": 0, "total": len(derived),
+                    "percent": None,
+                    "tasks": [task_public(x, future=True) for x in derived],
+                })
+                continue
+            comp = self.day_completion(
+                user, d, derived, historical=historical is not None)
+            acts = comp["acts"]
+            out = []
+            for row in derived:
+                key = _task_key(row)
+                info = comp["keys"].get(key) or {"done": False, "why": "no_signal"}
+                t2 = dict(row)
+                t2["key"] = key
+                t2["done"] = bool(info["done"])
+                t2["why"] = info["why"]
+                if (historical is None and t2.get("type") == "vocab"
+                        and t2.get("quota") and t2["done"]):
+                    t2["detail"] = f"已背 {acts.get('vocab_n', 0)} 词 ✓"
+                out.append(t2)
+            done_n = sum(1 for x in out if x["done"])
+            days.append({
+                "date": d, "future": False,
+                "done": done_n, "total": len(out),
+                "percent": completion_percent(done_n, len(out)),
+                "tasks": [task_public(x) for x in out],
+            })
+        return {"week_start": week_start, "days": days}
+
+
     def month_view(self, month: str, user: str = "malin") -> dict:
         """月历：某月每天 {date, in_month, future, done, total}，周一为每周之首。"""
         y, m = month.split("-")[:2]
@@ -406,6 +469,7 @@ class ViewsMixin:
                 "vocab_lv": t.get("vocab_lv"),
                 "vocab_pct": t.get("vocab_pct"),
                 "vocab_goal": t.get("vocab_goal"),
+                "vocab_new": t.get("vocab_new"),
                 "reading": t.get("reading") or {},
                 "videos": t.get("videos") or [],
                 "notes": w.get("notes") or "",

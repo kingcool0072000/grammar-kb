@@ -272,8 +272,15 @@ export const api = {
     req('/plan/goal-progress', { searchParams: { user } }),
   planGoals: ({ user } = {}) => req('/plan/goals', { searchParams: { user } }),
   planGoalsPut: (user, goals) => reqJson('/plan/goals', 'PUT', { user, goals }),
-  planEditorData: ({ user } = {}) =>
-    req('/plan/editor-data', { searchParams: { user } }),
+  planEditorData: ({ user, weekStart } = {}) =>
+    req('/plan/editor-data', {
+      searchParams: {
+        ...(user ? { user } : {}),
+        ...(weekStart ? { week_start: weekStart } : {}),
+      },
+    }),
+  planWeekPreview: ({ week_start, user, tasks }) =>
+    reqJson('/plan/week-preview', 'POST', { week_start, user, tasks }),
   // 教师周历视图：周拆解 + 逐日任务矩阵
   planMonthView: ({ month, user } = {}) =>
     req('/plan/month-view', { searchParams: { ...(month ? { month } : {}), ...(user ? { user } : {}) } }),

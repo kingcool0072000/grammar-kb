@@ -6,6 +6,7 @@ import json
 import re
 import sqlite3
 from pathlib import Path
+from typing import Optional
 
 from ..paths import data_path
 from .util import _paper_short
@@ -14,7 +15,8 @@ from .util import _paper_short
 class GoalsEditorMixin:
     """editor_data / goal_assets。完成态与总目标读写在 GoalsMixin。"""
 
-    def editor_data(self, user: str = "malin") -> dict:
+    def editor_data(self, user: str = "malin",
+                    week_start: Optional[str] = None) -> dict:
         """周计划编辑器的结构化选项源（全部来自真实备课内容）：
         lectures（48 讲）、fce_parts（Test×Paper×Part）、books（含必读章
         配置与词数、该生当前进度）、vocab（当前掌握词数）。
@@ -176,7 +178,69 @@ class GoalsEditorMixin:
         return {"lectures": lectures, "fce_parts": fce_parts, "books": books,
                 "articles": articles, "vocab_mastered": mastered,
                 "videos": videos,
-                "goal_assets": goal_assets, "goals": goals, "done": done}
+                "goal_assets": goal_assets, "goals": goals, "done": done,
+                "vocab_week": self.vocab_week_stats(user, week_start)}
+
+    def vocab_week_stats(self, user: str,
+                         week_start: Optional[str] = None) -> dict:
+        """编辑器提示用：每级周初已会、本周新掌握、最近在背的级别。
+
+        与周进度同一窗口（该级 mastered_at）。老师填的「本周新掌握 N 个」
+        保存成 vocab_goal = base + N，进度条分母就是 N。
+        """
+        from datetime import date as _date
+
+        from ..clock import monday_of, today_cn
+        from .util import add_days
+
+        if week_start:
+            week_start = monday_of(_date.fromisoformat(week_start)).isoformat()
+        else:
+            week_start = monday_of(today_cn()).isoformat()
+        hi = add_days(week_start, 7)
+        levels = []
+        for lv in range(6):
+            words = self._vocab_level_words(lv)
+            if not words:
+                levels.append({"level": lv, "words": 0, "base": 0, "gained": 0})
+                continue
+            levels.append({
+                "level": lv,
+                "words": len(words),
+                "base": self._vocab_mastered_before(week_start, user, words),
+                "gained": self._vocab_actuals(week_start, hi, user, words),
+            })
+        return {
+            "week_start": week_start,
+            "levels": levels,
+            "base_all": self._vocab_mastered_before(week_start, user, None),
+            "gained_all": self._vocab_actuals(week_start, hi, user, None),
+            "practicing_level": self._practicing_vocab_level(user),
+        }
+
+    def _practicing_vocab_level(self, user: str) -> Optional[int]:
+        """最近一次背词会话的 L{n}。没有就空，编辑器不猜。"""
+        try:
+            with self._connect() as conn:
+                names = {r[0] for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'")}
+                if "recite_sessions" not in names:
+                    return None
+                rows = conn.execute(
+                    "SELECT scope FROM recite_sessions WHERE user = ?"
+                    " ORDER BY id DESC LIMIT 12",
+                    (user,),
+                ).fetchall()
+        except sqlite3.Error:
+            return None
+        for r in rows:
+            m = re.match(r"^L(\d)$", str(r["scope"] or "").strip())
+            if not m:
+                continue
+            lv = int(m.group(1))
+            if 0 <= lv <= 5:
+                return lv
+        return None
 
     def goal_assets(self, lectures: list, fce_parts: list, books: list,
                     articles: list, user: str = "malin") -> dict:

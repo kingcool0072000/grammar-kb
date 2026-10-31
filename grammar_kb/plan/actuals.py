@@ -65,10 +65,9 @@ class ActualsMixin:
     def _vocab_level_words(self, level: Optional[int]) -> Optional[set[str]]:
         """目标词集（grammar.db vocab_word；level=None=不过滤）。
 
-        周计划 vocab_goal = words(L{lv})×pct% 是【级别内增量】目标
-        （L1 的 10% = L1 词库 1039×10% ≈ 104 词，与 L0 无关），词集取
-        level = lv；其他级别的掌握记录不进分子分母。词库不可用时返回
-        None（降级为全词口径，旧行为）。
+        周计划 vocab_goal 是这一级的累计目标词数（编辑器写成
+        周初已会 + 本周新掌握）。词集只取 level = lv，其他级别不进
+        分子分母。词库不可用时返回 None（降级为全词口径）。
         """
         if level is None:
             return None
