@@ -4,6 +4,7 @@ import {
   atlasFigure, bindAtlas, fillAtlasHost, getAccent, phoneticHtml,
   playPronunciation, rememberAtlas, speakWord, stopAtlasAudio, wordAudioUrl,
 } from '../atlas.js'
+import { getWordCard } from '../wordcard.js'
 
 // 背单词：全屏沉浸卡片。三种题型——中译英（看释义拼单词）、英译中（认词）、
 // 拼写挖空（缺字母补全），统一「翻面自评」作答；错词间隔重现直到答对。
@@ -25,7 +26,6 @@ const FORM_CN = {
 }
 const FORM_KEYS = ['past', 'past_participle', 'present_participle', 'third_singular', 'comparative', 'superlative', 'plural']
 const GROUP_SIZES = [20, 30]
-const WB_COLLAPSE_N = 60 // 错题本超过此数折叠，点「展开全部」看所有词
 const TTS_KEY = 'gkb-rc-tts-v1' // 翻面自动发音开关（默认开）
 
 function ttsOn() {
@@ -189,7 +189,6 @@ export async function mountRecite(el, { vocab, role }) {
 
   const state = { scope: 'all', size: 20, mode: 'flip' }
   let reviewSummary = null
-  let wbCache = null
   // 词库默认激活已解锁的最新级别（L0 只是兜底；解锁信息加载后校正）
   // 词库/云端进度加载完成前禁用开始钮：pool 为空时点击会静默无反应
   const startBtn = el.querySelector('#rc-start')
@@ -357,12 +356,8 @@ export async function mountRecite(el, { vocab, role }) {
     const e = levelVocab.find((x) => x.word === word)
       || vocab.find((x) => x.word === word)
       || { word, pos: [], meanings: [], gloss: '', level: -1, example: {}, extra: {} }
-    const cached = wbCache && (
-      (wbCache.in_cycle || []).find((x) => x.word === word)
-      || (wbCache.conquered || []).find((x) => x.word === word)
-    )
-    const gloss = e.gloss || (cached && cached.gloss) || ''
-    const meanings = (e.meanings && e.meanings.length) ? e.meanings : ((cached && cached.meanings) || [])
+    const gloss = e.gloss || ''
+    const meanings = (e.meanings && e.meanings.length) ? e.meanings : []
     return {
       ...e,
       gloss,
@@ -372,20 +367,35 @@ export async function mountRecite(el, { vocab, role }) {
     }
   }
 
+  // 词库里没有释义的错词，开练时再补最多 20 条，不在进页时拉整本错题。
+  async function hydrateGloss(entries) {
+    const missing = entries.filter((e) => !e.gloss && !(e.meanings && e.meanings.length))
+    if (!missing.length) return
+    try {
+      const rows = await api.reciteGloss(missing.map((e) => e.word))
+      const byWord = new Map((rows || []).map((r) => [String(r.word || '').toLowerCase(), r]))
+      for (const e of missing) {
+        const g = byWord.get(String(e.word || '').toLowerCase())
+        if (!g) continue
+        if (g.gloss) e.gloss = g.gloss
+        if (g.meanings && g.meanings.length) e.meanings = g.meanings
+        if (g.example && g.example.en) e.examples = [g.example]
+      }
+    } catch { /* 没有释义也能开练，卡片只显示单词 */ }
+  }
+
   // 攻克：只背错词本（到期 / 逾期 / 在周期），不掺新词。答对走原有艾宾浩斯节点。
-  function startConquer(words) {
+  async function startConquer(words) {
     const ordered = (words || []).filter(Boolean).slice(0, 20)
     const entries = shuffle(ordered.map((w) => entryFor(w)))
     if (!entries.length) return
+    await hydrateGloss(entries)
     startSession(el, {
       pool: entries,
       size: entries.length,
       mode: 'conquer',
       scope: 'wrongbook',
-      onFinish: () => {
-        refreshFromCloud()
-        setTimeout(renderWrongbook, 800)
-      },
+      onFinish: () => { refreshFromCloud() },
     })
   }
 
@@ -459,6 +469,7 @@ export async function mountRecite(el, { vocab, role }) {
     } catch { /* 摘要失败时沿用上一次 */ }
     renderBoard()
     renderReviewLoop()
+    renderWrongbook()
   }
 
 
@@ -511,23 +522,21 @@ export async function mountRecite(el, { vocab, role }) {
   }
   renderHistory()
 
-  // ---- 错题本（艾宾浩斯周期：在周期词 + 已攻克 + 复习日历） ----
-  const renderWrongbook = async () => {
+  // ---- 错题本：只留计数和开练入口。词列表和逐词详情不再拉、不再画。 ----
+  function renderWrongbook() {
     const host = el.querySelector('#rc-wrongbook')
     if (!host) return
-    let data
-    try {
-      data = await api.wrongbook()
-    } catch {
+    const s = reviewSummary
+    if (!s) {
       host.innerHTML = ''
       return
     }
-    wbCache = data || null
-    const inCycle = (data && data.in_cycle) || []
-    const dueToday = (data && data.due_today) || []
-    const conquered = (data && data.conquered) || []
-    const stats = (data && data.stats) || {}
-    if (!inCycle.length && !conquered.length) {
+    const inCycle = Number(s.in_cycle || 0)
+    const due = Number(s.due_today || 0)
+    const over = Number(s.overdue || 0)
+    const dueNow = due + over
+    const conqueredN = Number((s.conquered_n && s.conquered_n.total) || 0)
+    if (!inCycle && !conqueredN) {
       host.innerHTML = `
         <section class="fce-group">
           <div class="fce-group-title">📕 错题本</div>
@@ -535,154 +544,27 @@ export async function mountRecite(el, { vocab, role }) {
         </section>`
       return
     }
-    const stages = stats.stages || [1, 2, 4, 7, 15, 30]
-    const stageDist = stats.stage_dist || []
-    const today = new Date()
-    const dueByDay = new Map()
-    for (const w of inCycle) {
-      if (w.next_review) dueByDay.set(w.next_review, (dueByDay.get(w.next_review) || 0) + 1)
-    }
-    // 未来 14 天到期分布（含今天；过去顺延的也计入今天口径由后端 due 标记）
-    const horizon = [...Array(14)].map((_, i) => {
-      const d = new Date(today)
-      d.setDate(d.getDate() + i)
-      return d.toISOString().slice(0, 10)
-    })
-    const fmtDay = (iso) => {
-      const d = new Date(iso + 'T00:00:00')
-      const wk = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()]
-      return `${Number(iso.slice(8, 10))}日·周${wk}`
-    }
-    const todayIso = today.toISOString().slice(0, 10)
-    // 「今日到期」= 后端 due_today（next_review ≤ 今天，已含逾期未复习
-    // 顺延进来的词）——前端不要再把 next_review<今天的词加一遍，会双计
-    //（malin 曾显示 101 实际 53）
-    const dueNow = dueToday.length
-    // 14 天日历之外的排期（>13 天后）合并展示
-    let beyond = 0
-    for (const [iso, n] of dueByDay) {
-      if (!horizon.includes(iso) && iso >= todayIso) beyond += n
-    }
-    const findEntry = (w) =>
-      levelVocab.find((x) => x.word === w) ||
-      vocab.find((x) => x.word === w) || {
-        word: w, pos: [], meanings: [], gloss: '', level: -1,
-        // 最小可出题兜底：认词题至少有词本身
-        example: {}, extra: {},
-      }
-    // 优先后端聚合的 gloss/meanings（vocab_word 表，不受解锁层截断影响）
-    const itemOf = (w) => inCycle.find((x) => x.word === w) || conquered.find((x) => x.word === w) || {}
-    const glossOf = (w) => {
-      const item = itemOf(w)
-      if (item && (item.gloss || (item.meanings || []).length)) {
-        return item.meanings?.length ? item.meanings : [item.gloss].filter(Boolean)
-      }
-      const e = findEntry(w)
-      const m = e.meanings || []
-      if (m.length) return m
-      return e.gloss ? [e.gloss] : []
-    }
-    const stageLabel = (s) => `D+${stages[Math.min(s, stages.length - 1)]}`
-    const chipHtml = (w) => {
-      const e = findEntry(w.word)
-      const tip = `${stageLabel(w.stage || 0)} 轮 · 下次 ${w.next_review || '—'}${w.due ? '（已到期）' : ''}`
-      return `<span class="rc-wb-word ${w.due ? 'due' : ''}" data-word="${escapeHtml(w.word)}" title="${escapeHtml(tip)}｜${e && e.gloss ? escapeHtml(e.gloss.slice(0, 40)) : ''}">${escapeHtml(w.word)}<sup>${w.wrong_count || 1}</sup></span>`
-    }
+    const practiceN = Math.min(20, dueNow)
+    const drillN = Math.min(20, inCycle)
     host.innerHTML = `
       <section class="fce-group">
-        <div class="fce-group-title">📕 错题本 · 艾宾浩斯复习（在记 ${inCycle.length} 词 · 今日到期 <b class="rc-due-n">${dueNow}</b>）</div>
-        <div class="rc-eb-stages">
-          ${stages.map((d, i) => `<span class="rc-eb-stage ${stageDist[i] ? 'has' : ''}"><i>D+${d}</i><b>${stageDist[i] || 0}</b></span>`).join('')}
-        </div>
-        <div class="rc-eb-cal">
-          ${horizon.map((iso) => {
-            const n = iso === todayIso ? dueNow : (dueByDay.get(iso) || 0)
-            return `<div class="rc-eb-day ${n ? 'has' : ''} ${iso === todayIso ? 'today' : ''}">${n ? `<b>${n}</b>` : ''}<span>${fmtDay(iso)}</span></div>`
-          }).join('')}
-          ${beyond ? `<div class="rc-eb-day more" title="14 天以后的复习">${beyond}+<span>更远</span></div>` : ''}
-        </div>
+        <div class="fce-group-title">📕 错题本 · 艾宾浩斯复习（在记 ${inCycle} 词 · 今日到期 <b class="rc-due-n">${dueNow}</b>）</div>
+        <p class="reading-hint">今天到期 ${due} · 逾期 ${over}${conqueredN ? ` · 已攻克 ${conqueredN}` : ''}。点下面直接开练，不再展开错词列表。</p>
         <div class="chip-row" style="margin-top:10px">
-          ${dueNow ? `<button class="btn-primary" id="rc-wb-due">复习今日到期（${Math.min(20, dueNow)} 词）</button>` : ''}
-          ${inCycle.length ? `<button class="btn-primary ghost" id="rc-wb-drill">全部错词轮一遍（${Math.min(20, inCycle.length)} 词）</button>` : ''}
-          ${conquered.length ? `<button class="chip" id="rc-wb-cq">✅ 已攻克题本（${conquered.length} 词）›</button>` : ''}
-        </div>
-        <div class="rc-wb-words">
-          ${inCycle.slice(0, WB_COLLAPSE_N).map((w) => chipHtml(w)).join('')}
-          ${inCycle.length > WB_COLLAPSE_N ? `
-            <button class="reading-btn small" id="rc-wb-toggle">展开全部（${inCycle.length} 词）⌄</button>
-            <div class="rc-wb-rest" hidden>
-              ${inCycle.slice(WB_COLLAPSE_N).map((w) => chipHtml(w)).join('')}
-            </div>` : ''}
+          ${dueNow ? `<button class="btn-primary" id="rc-wb-due">复习今日到期（${practiceN} 词）</button>` : ''}
+          ${inCycle ? `<button class="btn-primary ghost" id="rc-wb-drill">全部错词轮一遍（${drillN} 词）</button>` : ''}
+          ${conqueredN ? `<button class="chip" id="rc-wb-cq">✅ 已攻克题本（${conqueredN} 词）›</button>` : ''}
         </div>
       </section>`
     const cqBtn = host.querySelector('#rc-wb-cq')
     if (cqBtn) cqBtn.addEventListener('click', () => { location.hash = '/conquered' })
-    const bindToggle = (btnId, sel) => {
-      const toggle = host.querySelector(btnId)
-      if (!toggle) return
-      toggle.addEventListener('click', () => {
-        const rest = host.querySelector(sel)
-        const open = !rest.hidden
-        rest.hidden = open
-        toggle.textContent = open ? `展开全部⌄` : '收起 ⌃'
-      })
-    }
-    bindToggle('#rc-wb-toggle', '.rc-wb-rest')
-    // 点击错词：行内展开中文释义 + 发音（无释义时查 /dict 兜底）
-    host.querySelectorAll('.rc-wb-word').forEach((chip) => {
-      chip.addEventListener('click', async () => {
-        const w = chip.dataset.word
-        if (ttsOn()) speakWord(w)
-        const show = (lines, note) => {
-          host.querySelectorAll('.rc-wb-detail').forEach((b) => b.remove())
-          const box = document.createElement('div')
-          box.className = 'rc-wb-detail'
-          box.innerHTML = `
-            <b>${escapeHtml(w)}</b>
-            ${lines.length ? `<p>${lines.map((l) => escapeHtml(String(l))).join('<br/>')}</p>` : ''}
-            ${note ? `<span class="muted">${escapeHtml(note)}</span>` : ''}
-            <div class="atlas-host"></div>`
-          chip.after(box)
-          fillAtlasHost(box.querySelector('.atlas-host'), w, null, { size: 'thumb' })
-        }
-        let lines = glossOf(w)
-        if (lines.length) return show(lines)
-        show([], '查询释义…')
-        try {
-          const d = await api.dict(w)
-          const gl = (d && d.gloss_lines) || []
-          const got = gl.length ? gl.map((g) => [g.pos, g.text].filter(Boolean).join('. ')) : (d && d.gloss ? [d.gloss] : [])
-          show(got, got.length ? '' : '词典未收录该词')
-        } catch {
-          show([], '词典未收录该词')
-        }
-      })
-    })
-    const startReview = (list) => {
-      startConquer((list || []).map((w) => w.word))
-    }
     const dueBtn = host.querySelector('#rc-wb-due')
-    if (dueBtn) {
-      dueBtn.addEventListener('click', () => {
-        const overdueSet = new Set(
-          inCycle.filter((w) => w.next_review && w.next_review < todayIso).map((w) => w.word),
-        )
-        const list = [
-          ...inCycle.filter((w) => w.due && !overdueSet.has(w.word)),
-          ...inCycle.filter((w) => overdueSet.has(w.word)),
-        ]
-        startReview(list)
-      })
-    }
-    const drill = host.querySelector('#rc-wb-drill')
-    if (drill) drill.addEventListener('click', () => {
-      const poolWords = (reviewSummary && reviewSummary.conquer_pool && reviewSummary.conquer_pool.length)
-        ? reviewSummary.conquer_pool
-        : inCycle.map((w) => w.word)
-      startConquer(poolWords)
+    if (dueBtn) dueBtn.addEventListener('click', () => {
+      startConquer([...(s.due_words || []), ...(s.overdue_words || [])])
     })
+    const drill = host.querySelector('#rc-wb-drill')
+    if (drill) drill.addEventListener('click', () => startConquer(s.conquer_pool || []))
   }
-  renderWrongbook()
 
   el.querySelectorAll('.chip-row').forEach((row) => {
     row.addEventListener('click', (e) => {
@@ -735,6 +617,7 @@ export async function mountRecite(el, { vocab, role }) {
   }
   renderReviewLoop()
   renderBoard()
+  renderWrongbook()
   maybeAutoReview()
 }
 
@@ -859,11 +742,13 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
     .map((s) => `<span class="rc-special">${escapeHtml(s)}</span>`)
     .join('')
   const example = (e.examples || [])[0] || (e.example && e.example.en ? e.example : null)
+  const card = getWordCard('recite')
   // 英译中正面已经露出单词，插画和录音按钮可以一起放。
   // 中译英 / 挖空正面不放插画和音标，避免把答案画出来。
+  // 题干释义是题目本身，不跟「词卡释义」开关走；插画/例句/词光释义才受开关控制。
   const promptHtml =
     q.type === 'en2zh'
-      ? `${atlasFigure(e.atlas)}
+      ? `${card.image ? atlasFigure(e.atlas) : ''}
          <div class="rc-word">${escapeHtml(e.display || e.word)}</div>
          <div class="rc-phonetic">${phoneticHtml(e)} ${posTags}</div>`
       : q.type === 'cloze'
@@ -914,23 +799,31 @@ function renderCard(overlay, { q, idx, total, mode, onAnswer, onQuit }) {
     const gl = glossLines()
     const forms = Object.entries(e.forms || {}).filter(([k]) => FORM_CN[k])
     const ex = example
-    const backMedia = q.type === 'en2zh'
+    const backMedia = q.type === 'en2zh' || !card.image
       ? ''
       : `${atlasFigure(e.atlas)}${e.atlas ? `<div class="rc-phonetic">${phoneticHtml(e)}</div>` : ''}`
+    const glossBlock = card.def && q.type === 'en2zh' && gl.length
+      ? `<div class="rc-gloss">${gl.map((l) => `<p>${escapeHtml(l)}</p>`).join('')}</div>`
+      : ''
+    const exBlock = card.example && ex
+      ? `<div class="rc-example">${escapeHtml(ex.en)}<br/><span class="muted">${escapeHtml(ex.zh || '')}</span></div>`
+      : ''
     $extra.innerHTML = `
       <div class="rc-detail">
         ${backMedia}
-        ${q.type !== 'en2zh' ? '' : gl.length ? `<div class="rc-gloss">${gl.map((l) => `<p>${escapeHtml(l)}</p>`).join('')}</div>` : ''}
+        ${glossBlock}
         ${specials ? `<div class="rc-special-row">${specials}</div>` : ''}
         ${forms.length ? `<div class="rc-forms">${forms.map(
           ([k, v]) => `<span class="rc-form"><i>${FORM_CN[k]}</i>${escapeHtml(v)}</span>`,
         ).join('')}</div>` : ''}
-        ${ex ? `<div class="rc-example">${escapeHtml(ex.en)}<br/><span class="muted">${escapeHtml(ex.zh || '')}</span></div>` : ''}
+        ${exBlock}
         <div class="atlas-host"></div>
       </div>
     `
     bindAtlas($extra)
-    fillAtlasHost($extra.querySelector('.atlas-host'), e.word, e.atlas, { image: false })
+    fillAtlasHost($extra.querySelector('.atlas-host'), e.word, e.atlas, {
+      feature: 'recite', image: false,
+    })
   }
 
   {

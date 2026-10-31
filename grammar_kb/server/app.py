@@ -180,6 +180,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("POST", "/recite/sessions"),
         ("GET", "/recite/sessions"),
         ("GET", "/recite/wrongbook"),  # 错词本（学生只看自己的）
+        ("GET", "/recite/conquered"),  # 已攻克词本分页
+        ("GET", "/recite/gloss"),  # 开练前按需补释义（最多 40 词）
         ("GET", "/recite/review-summary"),  # 复习闭环摘要（到期/逾期/攻克/新词额度）
         ("GET", "/recite/progress"),  # 云端逐词进度（出题与看板数据源）
         ("POST", "/recite/progress/sync"),  # 本地历史一次性上云合并

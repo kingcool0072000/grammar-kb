@@ -7,6 +7,7 @@ import { resolveRoute, tabsFor } from './shell/catalog.js'
 import { prepareTeacher, attachTeacherBack } from './shell/teacher.js'
 import { prepareStudent } from './shell/student.js'
 import { mountView } from './shell/mountView.js'
+import { loadWordCards } from './wordcard.js'
 
 // 专注模式：禁正文右键系统菜单（输入框保留）；查词交互只走我们的浮层
 document.addEventListener('contextmenu', (e) => {
@@ -72,6 +73,7 @@ async function bootstrap() {
     restartApp()
   })
 
+  const cardsReady = loadWordCards()
   const signalCtx = { points: [], byTense: new Map(), byMarker: new Map() }
   const drawer = createDrawer(signalCtx)
   app.append(drawer.el)
@@ -91,6 +93,7 @@ async function bootstrap() {
     state.vocab = []
   }
 
+  try { await cardsReady } catch { /* 词卡开关读不到时用默认 */ }
   boot.remove()
 
   const viewEl = h('div')

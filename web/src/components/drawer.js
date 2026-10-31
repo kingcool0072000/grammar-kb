@@ -2,6 +2,7 @@ import { api } from '../api.js'
 import { renderMd, escapeHtml, escAttr } from '../render.js'
 import { catColor } from '../theme.js'
 import { fillAtlasHost } from '../atlas.js'
+import { getWordCard } from '../wordcard.js'
 
 // 右侧详情抽屉：
 //  - openKp(point)：知识点详情，含「🎯 考点信号」双向区块
@@ -226,10 +227,11 @@ export function createDrawer(ctx = {}) {
     )
 
     let html = ''
+    const card = getWordCard('vocab')
     const glossLines = (e.gloss_lines && e.gloss_lines.length)
       ? e.gloss_lines
       : (e.gloss ? [{ pos: '', text: e.gloss }] : [])
-    if (glossLines.length) {
+    if (card.def && glossLines.length) {
       html +=
         `<h4>词典释义</h4><div class="gloss">` +
         glossLines
@@ -240,7 +242,7 @@ export function createDrawer(ctx = {}) {
           .join('') +
         `</div>`
     }
-    if (e.examples && e.examples.length) {
+    if (card.example && e.examples && e.examples.length) {
       const seenForms = Object.values(e.forms || {})
       html +=
         `<h4>例句（${e.examples.length}）</h4><div class="ex-list">` +
@@ -253,7 +255,7 @@ export function createDrawer(ctx = {}) {
           )
           .join('') +
         `</div>`
-    } else if (e.meanings && e.meanings.length) {
+    } else if (card.def && e.meanings && e.meanings.length) {
       html += `<h4>释义</h4><ol class="mean-list">${e.meanings
         .map((m) => `<li>${escapeHtml(m)}</li>`)
         .join('')}</ol>`
@@ -286,7 +288,9 @@ export function createDrawer(ctx = {}) {
     }
     if (!html) html = '<div class="empty">暂无详细信息。</div>'
     $body.innerHTML = `<div class="atlas-host"></div>${html}`
-    fillAtlasHost($body.querySelector('.atlas-host'), e.word, e.atlas || null, { size: 'full' })
+    fillAtlasHost($body.querySelector('.atlas-host'), e.word, e.atlas || null, {
+      feature: 'vocab', size: 'full',
+    })
     $body.scrollTop = 0
     open()
   }

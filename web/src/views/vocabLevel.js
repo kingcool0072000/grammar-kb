@@ -1,6 +1,7 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
 import { fillAtlasHost } from '../atlas.js'
+import { getWordCard } from '../wordcard.js'
 
 // 教师版 · 背单词级别详情（备课中心子页）：
 //   2.1 本级单词内容（词表+搜索，L0=哈一课本高频词=原词汇表）
@@ -158,18 +159,21 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
         const f = extra.forms || {}
         forms = Object.entries(f).map(([k, v]) => `${k}: ${v}`).join(' · ')
       } catch { /* 无词形 */ }
+      const card = getWordCard('vocab')
       dlg.innerHTML = `
         <div class="plan-editor-mask"></div>
         <div class="plan-editor-body card vl-word-dlg">
           <h3>${escapeHtml(w.word || '')} <i class="vl-dlg-pos">${(w.pos || []).join(' ')}</i></h3>
-          <div class="vl-dlg-sec"><b>释义</b><p>${escapeHtml(glossOf(w) || '（暂无）')}</p></div>
+          ${card.def ? `<div class="vl-dlg-sec"><b>释义</b><p>${escapeHtml(glossOf(w) || '（暂无）')}</p></div>` : ''}
           ${forms ? `<div class="vl-dlg-sec"><b>词形变化</b><p>${escapeHtml(forms)}</p></div>` : ''}
-          ${exEn ? `<div class="vl-dlg-sec"><b>例句</b><p class="vl-dlg-en">${escapeHtml(exEn)}</p>${exZh ? `<p class="vl-dlg-zh">${escapeHtml(exZh)}</p>` : ''}</div>` : ''}
+          ${card.example && exEn ? `<div class="vl-dlg-sec"><b>例句</b><p class="vl-dlg-en">${escapeHtml(exEn)}</p>${exZh ? `<p class="vl-dlg-zh">${escapeHtml(exZh)}</p>` : ''}</div>` : ''}
           <div class="atlas-host"></div>
           <div class="chip-row"><button class="chip" id="vl-dlg-close">关闭</button></div>
         </div>`
       document.body.appendChild(dlg)
-      fillAtlasHost(dlg.querySelector('.atlas-host'), w.word, w.atlas, { size: 'full' })
+      fillAtlasHost(dlg.querySelector('.atlas-host'), w.word, w.atlas, {
+        feature: 'vocab', size: 'full',
+      })
       const close = () => dlg.remove()
       dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
       dlg.querySelector('#vl-dlg-close').addEventListener('click', close)

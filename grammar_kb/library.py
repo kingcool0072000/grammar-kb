@@ -23,6 +23,31 @@ from .epub_parse import EpubParseError, parse_epub
 
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024  # 100MB
 
+# 词卡三档：释义（词光 + ECDICT）/ 插图 / 例句。按功能分别开关。
+# 泛读馆、阅读练习默认只留释义；背单词等词卡默认保持完整。
+WORD_CARD_FEATURES = ("library", "reading", "recite", "conquered", "vocab")
+WORD_CARD_KEYS = ("def", "image", "example")
+WORD_CARD_DEFAULTS = {
+    "library": {"def": True, "image": False, "example": False},
+    "reading": {"def": True, "image": False, "example": False},
+    "recite": {"def": True, "image": True, "example": True},
+    "conquered": {"def": True, "image": True, "example": True},
+    "vocab": {"def": True, "image": True, "example": True},
+}
+
+
+def word_cards_view(raw: object) -> dict:
+    """补齐各功能的三档开关。缺字段用默认，非法值忽略。"""
+    src = raw if isinstance(raw, dict) else {}
+    out: dict = {}
+    for feat, dft in WORD_CARD_DEFAULTS.items():
+        row = src.get(feat) if isinstance(src.get(feat), dict) else {}
+        out[feat] = {
+            key: row[key] if isinstance(row.get(key), bool) else dft[key]
+            for key in WORD_CARD_KEYS
+        }
+    return out
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS books (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -741,6 +766,7 @@ class LibraryStore:
             "focus": bool(s["student"].get("focus", True)),
             # 分层词库解锁（背单词）：0=仅 L0；N=已解锁到 L N（0-5）
             "vocabUnlock": max(0, min(5, int(s["student"].get("vocabUnlock") or 0))),
+            "wordCards": word_cards_view(s["student"].get("wordCards")),
         }
         has_key = bool(s["ai"].get("apiKey"))
         if not teacher:
@@ -797,6 +823,18 @@ class LibraryStore:
                 if not isinstance(vu, int) or isinstance(vu, bool) or not 0 <= vu <= 5:
                     raise LibraryError("student.vocabUnlock 须为 0-5 整数", status=422)
                 student["vocabUnlock"] = vu
+            if "wordCards" in student_patch:
+                incoming = student_patch["wordCards"]
+                if not isinstance(incoming, dict):
+                    raise LibraryError("student.wordCards 须为对象", status=422)
+                merged = word_cards_view(student.get("wordCards"))
+                for feat, row in incoming.items():
+                    if feat not in WORD_CARD_DEFAULTS or not isinstance(row, dict):
+                        continue
+                    for key in WORD_CARD_KEYS:
+                        if isinstance(row.get(key), bool):
+                            merged[feat][key] = row[key]
+                student["wordCards"] = merged
 
         with self._tx() as conn:
             conn.execute(

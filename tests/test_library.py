@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from grammar_kb import glm  # noqa: E402
 from grammar_kb.epub_parse import parse_epub  # noqa: E402
+from grammar_kb.library import WORD_CARD_DEFAULTS  # noqa: E402
 from grammar_kb.server import create_app  # noqa: E402
 from grammar_kb.wordfreq import DIFFICULTY_LEVELS, extract_hard_words  # noqa: E402
 
@@ -405,7 +406,10 @@ class TestSettings:
         assert data["ai"]["maxWords"] == 12
         assert data["ai"]["apiKey"] == ""
         assert data["dict"] == {"aiFallback": True}
-        assert data["student"] == {"preset": "paper", "fontFamily": "serif", "focus": True, "vocabUnlock": 0}
+        assert data["student"] == {
+            "preset": "paper", "fontFamily": "serif", "focus": True, "vocabUnlock": 0,
+            "wordCards": WORD_CARD_DEFAULTS,
+        }
         assert data["hasKey"] is False
         assert "defaultPrompt" in data and "辅导老师" in data["defaultPrompt"]
 
@@ -425,11 +429,31 @@ class TestSettings:
             "/library/settings", json={"student": {"preset": "night", "fontFamily": "kai"}}
         ).json()["data"]
         assert r2["ai"]["maxWords"] == 25  # 浅合并保留
-        assert r2["student"] == {"preset": "night", "fontFamily": "kai", "focus": True,
-                                 "vocabUnlock": 0}
+        assert r2["student"] == {
+            "preset": "night", "fontFamily": "kai", "focus": True,
+            "vocabUnlock": 0, "wordCards": WORD_CARD_DEFAULTS,
+        }
         # prompt 空串 = 恢复默认
         r3 = teacher.put("/library/settings", json={"ai": {"prompt": ""}}).json()["data"]
         assert r3["ai"]["prompt"] == ""
+
+    def test_word_cards_defaults_and_patch(self, teacher, student):
+        cards = teacher.get("/library/settings").json()["data"]["student"]["wordCards"]
+        assert cards["library"] == {"def": True, "image": False, "example": False}
+        assert cards["reading"]["image"] is False and cards["reading"]["example"] is False
+        assert cards["recite"] == {"def": True, "image": True, "example": True}
+        r = teacher.put("/library/settings", json={
+            "student": {"wordCards": {"library": {"image": True, "example": "no"}}},
+        })
+        assert r.status_code == 200
+        lib = r.json()["data"]["student"]["wordCards"]["library"]
+        assert lib == {"def": True, "image": True, "example": False}
+        assert r.json()["data"]["student"]["wordCards"]["recite"]["example"] is True
+        seen = student.get("/library/settings").json()["data"]["student"]["wordCards"]
+        assert seen["library"]["image"] is True
+        assert seen["conquered"]["def"] is True
+        bad = teacher.put("/library/settings", json={"student": {"wordCards": []}})
+        assert bad.status_code == 422
 
     def test_invalid_values_ignored(self, teacher):
         r = teacher.put(
