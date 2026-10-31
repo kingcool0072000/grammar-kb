@@ -210,42 +210,63 @@ class ScheduleMixin:
     def _append_video_tasks(self, tasks: list[dict], t: dict, user: str,
                             lo: str, ref: str, upto: str, dow: int,
                             wd_left: int) -> None:
-        """本周 videos 摊进当日清单。提交复述即完成，当天提交的行保留 ✓。"""
+        """工作日每天 1 个看+复述；周末每天至多补 1 个。当天提交的行保留 ✓。"""
         vids = [str(v).strip() for v in (t.get("videos") or []) if str(v).strip()]
         if not vids:
             return
         done_vids = self._retold_video_ids(lo, upto, user)
         today_vids = self._retold_video_ids(ref, upto, user)
         rest = [v for v in vids if v not in done_vids]
-        # 工作日按剩余工作日均摊；周末每天兜底 1 条，避免周六日清单空白。
-        if rest:
-            per = max(1, -(-len(rest) // wd_left)) if dow < 5 and wd_left else 1
-            for vid in rest[:per]:
-                tasks.append(self._video_task(vid))
+        # 欠账滚到后面的天，不在同一天堆多条（复述任务重）。
+        if rest and (dow >= 5 or wd_left):
+            detail = (
+                f"本周视频剩 {len(rest)} 个 · 周末补上" if dow >= 5
+                else f"本周视频剩 {len(rest)} 个 · 工作日每天 1 个"
+            )
+            for vid in rest:
+                row = self._video_task(vid, detail=detail)
+                if row:
+                    tasks.append(row)
+                    break
         have = {x.get("key") for x in tasks}
         for vid in vids:
             if vid in today_vids and f"video:{vid}" not in have:
-                tasks.append(self._video_task(vid, done_today=True))
+                row = self._video_task(vid, detail="今天已提交复述 ✓")
+                if row:
+                    tasks.append(row)
 
-    def _video_task(self, vid: str, *, done_today: bool = False) -> dict:
+    def _video_task(self, vid: str, *, detail: str) -> Optional[dict]:
         title = self._video_title(vid)
-        text = f"视频复述《{_short(title, 16)}》" if title else "视频复述"
-        detail = ("今天已提交复述 ✓" if done_today
-                  else "看完视频，用自己的话复述并提交录音")
+        if not title:
+            return None  # 已删除或下架：不出行（与学生可见清单一致）
         return {
-            "type": "video", "key": f"video:{vid}", "vid": vid,
-            "text": text, "detail": detail,
+            "type": "video", "video_id": vid, "vid": vid,
+            "key": f"video:{vid}",
+            "text": f"看视频+复述《{_short(title, 14)}》",
+            "detail": detail,
         }
 
-    def _video_title(self, vid: str) -> str:
+    def _video_title(self, vid: str) -> Optional[str]:
         try:
             with self._connect() as conn:
                 row = conn.execute(
-                    "SELECT title FROM video_item WHERE vid = ?", (vid,),
-                ).fetchone()
-                return (row["title"] or "") if row else ""
+                    "SELECT title FROM video_item WHERE vid = ? AND enabled = 1",
+                    (str(vid),)).fetchone()
+                title = (row["title"] or "").strip() if row else ""
+                return title or None
         except sqlite3.Error:
-            return ""
+            return None
+
+    def _video_title_any(self, vid: str) -> Optional[str]:
+        """视频标题（含已下架；课程表/周视图回显用，无 enabled 过滤）。"""
+        try:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT title FROM video_item WHERE vid = ?",
+                    (str(vid),)).fetchone()
+                return row["title"] if row else None
+        except sqlite3.Error:
+            return None
 
     def _retold_video_ids(self, lo: str, hi: str, user: str) -> set[str]:
         """[lo, hi) 内该生提交过复述的视频 vid。缺表时返回空集。"""
@@ -444,6 +465,7 @@ class ScheduleMixin:
                 "fce": t.get("fce") or [],
                 "reading": t.get("reading") or {},
                 "focus_kps": t.get("focus_kps") or [],
+                "videos": t.get("videos") or [],
             },
             "days": days,
             "done": done_n,

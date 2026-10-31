@@ -341,6 +341,7 @@ export async function mountPlan(el) {
       const books = ed.books || []
       const papers = ed.goal_assets?.vocab_papers || []
       const vLevels = ed.goal_assets?.vocab_levels || []
+      const videos = ed.videos || []
       const have = {
         lecture: new Set(tasks0.lectures || []),
         hw_paper: new Set(tasks0.hw_papers || []),
@@ -349,6 +350,7 @@ export async function mountPlan(el) {
         fce: new Set(tasks0.fce || []),
         paper: new Set(tasks0.vocab_papers || []),
         reading: new Set(Object.keys(tasks0.reading || {})),
+        video: new Set(tasks0.videos || []),
       }
       const dlg = document.createElement('div')
       dlg.className = 'plan-editor'
@@ -408,6 +410,7 @@ export async function mountPlan(el) {
             draft.paper_id = ''
             draft.book_id = ''
             draft.chapters = []
+            draft.videoIds = []
             draft.level = vLevels[0]?.level ?? 0
             draft.pct = tasks0.vocab_pct || 80
             draft.n = tasks0.speak || 2
@@ -475,6 +478,47 @@ export async function mountPlan(el) {
           })
           return
         }
+        if (draft.type === 'video') {
+          // 多选：默认收起已有视频；点「显示全部」可补选（保存时去重）
+          const avail = videos.filter((v) => !have.video.has(v.vid))
+          const already = videos.filter((v) => have.video.has(v.vid))
+          const pickRow = (v) => `
+            <button type="button" class="pe-pick ${draft.videoIds.includes(v.vid) ? 'on' : ''}" data-vid-pick="${escAttr(v.vid)}">
+              ${escapeHtml((v.title || v.vid).slice(0, 44))}
+              <i>${escapeHtml(v.category || '')} · ${Math.round((v.duration_sec || 0) / 60)} 分钟</i>
+            </button>`
+          const bindPicks = () => {
+            host.querySelectorAll('[data-vid-pick]').forEach((b) =>
+              b.addEventListener('click', () => {
+                const vid = b.dataset.vidPick
+                const i = draft.videoIds.indexOf(vid)
+                if (i >= 0) draft.videoIds.splice(i, 1)
+                else draft.videoIds.push(vid)
+                b.classList.toggle('on', draft.videoIds.includes(vid))
+                sync()
+              }))
+          }
+          host.innerHTML = `
+            <p class="pe-wiz-hint">勾选本周要看的视频（可多选，建议 5 个：工作日每天 1 个看+复述）。</p>
+            <div class="pe-wiz-picks">${avail.map(pickRow).join('')
+              || '<p class="muted">没有可选视频。先到备课中心添加。</p>'}</div>
+            <p class="pe-wiz-hint" id="wiz-vid-sum">已选 ${draft.videoIds.length} 个</p>
+            ${already.length ? `<button class="chip" id="wiz-vid-all" type="button">显示本周已有的 ${already.length} 个</button>` : ''}
+            <div style="margin-top:12px"><button class="btn-primary" id="wiz-next" type="button" ${draft.videoIds.length ? '' : 'disabled'}>下一步</button></div>`
+          const sync = () => {
+            host.querySelector('#wiz-vid-sum').textContent = `已选 ${draft.videoIds.length} 个`
+            host.querySelector('#wiz-next').disabled = !draft.videoIds.length
+          }
+          bindPicks()
+          const allBtn = host.querySelector('#wiz-vid-all')
+          if (allBtn) allBtn.addEventListener('click', () => {
+            host.querySelector('.pe-wiz-picks').innerHTML = videos.map(pickRow).join('')
+            bindPicks()
+            allBtn.remove()
+          })
+          host.querySelector('#wiz-next').addEventListener('click', () => { step = 3; paint() })
+          return
+        }
         const rows = pickRows()
         host.innerHTML = rows.length
           ? `<div class="pe-wiz-picks">${rows.join('')}</div>`
@@ -536,6 +580,7 @@ export async function mountPlan(el) {
           return { type: 'vocab', level: draft.level, pct: draft.pct, goal: draft.goal }
         }
         if (draft.type === 'speak') return { type: 'speak', n: draft.n }
+        if (draft.type === 'video') return { type: 'video', videoIds: [...draft.videoIds] }
         if (draft.type === 'reading') {
           return { type: 'reading', book_id: draft.book_id, chapters: draft.chapters }
         }
@@ -559,6 +604,13 @@ export async function mountPlan(el) {
         }
         if (draft.type === 'vocab') return `L${draft.level} 掌握 ${draft.goal} 词（${draft.pct}%）`
         if (draft.type === 'speak') return `每周朗读 ${draft.n} 篇`
+        if (draft.type === 'video') {
+          const names = draft.videoIds.map((vid) => {
+            const v = videos.find((x) => x.vid === vid)
+            return (v?.title || vid).slice(0, 18)
+          })
+          return `视频 ${draft.videoIds.length} 个${names.length ? `（${names.join('、')}）` : ''}`
+        }
         if (draft.type === 'reading') {
           const b = books.find((x) => String(x.id) === String(draft.book_id))
           return `泛读《${(b?.title || draft.book_id).slice(0, 24)}》${draft.chapters.length} 章`
@@ -605,7 +657,14 @@ export async function mountPlan(el) {
         }
         let tasks
         try {
-          tasks = appendPlanItem(tasks0, item)
+          // 视频是多选：向导产出 videoIds 数组，逐个并入 tasks.videos
+          if (item.type === 'video') {
+            tasks = tasks0
+            for (const vid of item.videoIds)
+              tasks = appendPlanItem(tasks, { type: 'video', vid })
+          } else {
+            tasks = appendPlanItem(tasks0, item)
+          }
         } catch (e) {
           alert(e.message)
           return
@@ -635,7 +694,7 @@ export async function mountPlan(el) {
     function dayCell(d, i, dayNames) {
       const dd = Number(d.date.slice(8))
       const isToday = d.date === today
-      const icon = { micro_drill: '✏️', wrong_words: '🔤', lecture: '📚', fce: '🎧', reading: '📖', speak: '🎤', article: '📄', paper: '📝', vocab: '🔤', hw_paper: '🗒' }
+      const icon = { micro_drill: '✏️', wrong_words: '🔤', lecture: '📚', fce: '🎧', reading: '📖', speak: '🎤', article: '📄', paper: '📝', vocab: '🔤', hw_paper: '🗒', video: '🎬' }
       // 已到的日子列出全部计划项，并带上完成原因。完成率来自学习信号，
       // 没有计划项时不显示 0%（避免被理解成「还没打卡」）。
       const taskRow = (x, ok) => {
@@ -654,6 +713,11 @@ export async function mountPlan(el) {
           return `<a class="pw-task link ${ok ? 'done' : `plan ${isToday ? 'today' : ''}`}"
             href="#/readingAdmin"
             title="${escapeHtml(tip || '阅读内容里查看/管理这篇文章')}">${inner}</a>`
+        // 视频任务可点：师生都直达视频学习详情（#/videoStudy?vid= 自动展开）
+        if (x.type === 'video' && x.video_id)
+          return `<a class="pw-task link ${ok ? 'done' : `plan ${isToday ? 'today' : ''}`}"
+            href="#/videoStudy?vid=${encodeURIComponent(x.video_id)}"
+            title="${escapeHtml(tip || '视频学习里看视频并复述')}">${inner}</a>`
         return `<div class="pw-task ${ok ? 'done' : `plan ${isToday ? 'today' : ''}`}"
           title="${escapeHtml(tip)}">${inner}</div>`
       }
@@ -738,6 +802,14 @@ export async function mountPlan(el) {
         }
       }
       if (t.articles?.length) chips.push(`📄 精读 ${t.articles.length} 篇`)
+      if (t.videos?.length) {
+        const pool = ed?.videos || []
+        const names = t.videos.map((vid) => {
+          const v = pool.find((x) => x.vid === vid)
+          return (v?.title || vid).slice(0, 12)
+        })
+        chips.push(`🎬 视频 ${names.join('、')}`)
+      }
       if (t.vocab_papers?.length) chips.push(`📝 试卷 ${t.vocab_papers.length} 卷`)
       if (t.speak) chips.push(`🎤 朗读 ${t.speak} 篇`)
       return chips
@@ -937,6 +1009,11 @@ export async function mountPlan(el) {
         }
       }
       const artSel = new Set(t.articles || [])
+      const vidSel = new Set(t.videos || [])
+      const videoChips = () => (ed.videos || []).map((v) => `
+        <button type="button" class="pe-part ${vidSel.has(v.vid) ? 'on' : ''}" data-vid="${escAttr(v.vid)}" title="${escAttr(v.title || v.vid)}">
+          🎬 ${escapeHtml((v.title || v.vid).slice(0, 18))}<i>${escapeHtml(v.category || '')}</i>
+        </button>`).join('')
       const artChips = () => (ed.articles || []).map((a) => `
         <button type="button" class="pe-part ${artSel.has(a.id) ? 'on' : ''}" data-art="${a.id}" title="${escapeHtml(a.title)} ${a.words} 词">
           ${a.kind === 'base' ? '📄' : '✍️'} ${escapeHtml(a.title.slice(0, 18))}<i>${a.words}</i>
@@ -1036,6 +1113,10 @@ export async function mountPlan(el) {
               <div class="pe-fce-parts" id="pe-articles">${artChipsPool((ed.articles || [])) || '<p class="muted">暂无精读文章</p>'}</div>
             </div>
             <div class="pe-sec">
+              <h4>🎬 视频学习 <i>看视频+复述，工作日每天 1 个；再点可取消</i></h4>
+              <div class="pe-fce-parts" id="pe-videos">${videoChips() || '<p class="muted">暂无上架视频。先到备课中心添加。</p>'}</div>
+            </div>
+            <div class="pe-sec">
               <h4>📖 泛读 <i>按章选择；chips 显示每章词数，点选/再点取消</i></h4>
               <div id="pe-books">${bookRows()}</div>
               <div class="pe-add-book">
@@ -1121,6 +1202,12 @@ export async function mountPlan(el) {
           const id = Number(b.dataset.art)
           if (artSel.has(id)) { artSel.delete(id); b.classList.remove('on') }
           else { artSel.add(id); b.classList.add('on') }
+        }))
+      dlg.querySelectorAll('[data-vid]').forEach((b) =>
+        b.addEventListener('click', () => {
+          const id = b.dataset.vid
+          if (vidSel.has(id)) { vidSel.delete(id); b.classList.remove('on') }
+          else { vidSel.add(id); b.classList.add('on') }
         }))
       dlg.querySelectorAll('[data-fce]').forEach((b) =>
         b.addEventListener('click', () => {
@@ -1212,6 +1299,7 @@ export async function mountPlan(el) {
         if (fceSel.size) tasks.fce = [...fceSel]
         if (readSel.size) tasks.reading = Object.fromEntries(readSel)
         if (artSel.size) tasks.articles = [...artSel]
+        if (vidSel.size) tasks.videos = [...vidSel]
         if (paperSel.size) tasks.vocab_papers = [...paperSel]
         if (dlg.querySelector('#pe-speak-on').checked) tasks.speak = Number(dlg.querySelector('#pe-speak-n').value) || 2
         const notes = w.notes || ''  // 重点区已移除，保留存量

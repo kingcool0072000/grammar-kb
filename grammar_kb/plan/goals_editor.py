@@ -150,6 +150,22 @@ class GoalsEditorMixin:
                 mastered = row["n"]
         except sqlite3.Error:
             pass
+        # 视频学习池（上架视频；计划向导「视频」类选项源）
+        videos = []
+        try:
+            with self._connect() as conn:
+                vrows = conn.execute(
+                    "SELECT vid, title, category, duration_sec FROM video_item"
+                    " WHERE enabled = 1 ORDER BY ord, vid"
+                ).fetchall()
+                videos = [
+                    {"vid": r["vid"], "title": (r["title"] or "")[:60],
+                     "category": r["category"] or "",
+                     "duration_sec": r["duration_sec"] or 0}
+                    for r in vrows
+                ]
+        except sqlite3.Error:
+            pass
         # ---- 目标管理选项源（六类，全部关联备课资产） ----
         goal_assets = self.goal_assets(lectures, fce_parts, books, articles,
                                        user=user)
@@ -159,6 +175,7 @@ class GoalsEditorMixin:
         done = self._completion_status(user)
         return {"lectures": lectures, "fce_parts": fce_parts, "books": books,
                 "articles": articles, "vocab_mastered": mastered,
+                "videos": videos,
                 "goal_assets": goal_assets, "goals": goals, "done": done}
 
     def goal_assets(self, lectures: list, fce_parts: list, books: list,

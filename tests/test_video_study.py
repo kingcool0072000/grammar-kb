@@ -216,3 +216,55 @@ def test_progress_endpoint(assigned_env):
     # 学生列表同步：done 分组
     sd = c.get("/video-study", headers=s).json()["data"]
     assert sd["categories"]["done"] == [vids[0]["vid"]]
+
+
+def test_plan_editor_video_pool_and_one_per_day(video_env):
+    """编辑器选项源只给上架视频；工作日/周末每天至多排 1 个，并带 video_id。"""
+    from datetime import date, timedelta
+
+    from grammar_kb.clock import current_monday
+
+    c = _client(video_env)
+    t = _login(c, "teacher")
+    vids = c.get("/video-study", headers=t).json()["data"]
+    ed = c.get("/plan/editor-data", headers=t).json()["data"]
+    pool = {v["vid"]: v for v in ed["videos"]}
+    assert vids[0]["vid"] in pool
+    assert pool[vids[0]["vid"]]["title"]
+    assert pool[vids[0]["vid"]]["duration_sec"] > 0
+    off = vids[0]
+    assert c.put(f"/video-study/items/{off['vid']}", headers=t, json={
+        "vid": off["vid"], "title": off["title"], "enabled": False,
+    }).status_code == 200
+    ed = c.get("/plan/editor-data", headers=t).json()["data"]
+    assert all(v["vid"] != off["vid"] for v in ed["videos"])
+
+    enabled = [v["vid"] for v in c.get("/video-study", headers=t).json()["data"]]
+    # 下架的排在最前：当天应跳过它，改出下一个仍上架的
+    four = [off["vid"], *enabled[:3]]
+    ws = current_monday()
+    r = c.put(f"/plan/weeks/{ws.isoformat()}", headers=t, json={
+        "tasks": {"videos": four}, "notes": "", "user": "malin"})
+    assert r.status_code == 200
+    friday = (ws + timedelta(days=4)).isoformat()
+    rows = [x for x in c.get(f"/plan/today?day={friday}&user=malin", headers=t)
+            .json()["data"]["tasks"] if x["type"] == "video"]
+    assert len(rows) == 1
+    assert rows[0]["video_id"] == enabled[0]
+    assert rows[0]["key"] == f"video:{enabled[0]}"
+    sunday = (ws + timedelta(days=6)).isoformat()
+    rows = [x for x in c.get(f"/plan/today?day={sunday}&user=malin", headers=t)
+            .json()["data"]["tasks"] if x["type"] == "video"]
+    assert len(rows) == 1 and rows[0]["video_id"] == enabled[0]
+
+    wv = c.get(f"/plan/week-view?week_start={ws.isoformat()}", headers=t).json()["data"]
+    assert wv["breakdown"]["video_count"] == 4
+    assert "视频复述" in wv["breakdown"]["drill_types"]
+    assert [x["vid"] for x in wv["video_titles"]] == four
+    assert wv["video_titles"][0]["title"] == off["title"]
+    assert all(x["title"] for x in wv["video_titles"])
+    dims = [d for d in wv["goal_progress"]["dims"] if d["name"] == "视频复述"]
+    assert dims and dims[0]["total"] == 4
+    todo = c.get("/plan/week-todo?user=malin", headers=t).json()["data"]
+    assert todo["goals"]["videos"] == four
+    assert date.fromisoformat(friday).weekday() == 4
