@@ -8,6 +8,7 @@ function copyTasks(tasks) {
   if (Array.isArray(t.articles)) t.articles = [...t.articles]
   if (Array.isArray(t.fce)) t.fce = [...t.fce]
   if (Array.isArray(t.vocab_papers)) t.vocab_papers = [...t.vocab_papers]
+  if (Array.isArray(t.videos)) t.videos = [...t.videos]
   if (t.reading && typeof t.reading === 'object') t.reading = { ...t.reading }
   return t
 }
@@ -54,6 +55,9 @@ export function appendPlanItem(tasks, item) {
       t.reading = reading
       break
     }
+    case 'video':
+      t.videos = pushUnique(t.videos, item.vid, false)
+      break
     default:
       throw new Error(`未知计划项：${item.type}`)
   }
@@ -67,6 +71,7 @@ export const PLAN_ADD_TYPES = [
   { id: 'vocab', label: '词汇目标', hint: '级别 × 百分比，覆盖本周词汇目标' },
   { id: 'fce', label: 'FCE 大题', hint: '周六输出型任务' },
   { id: 'article', label: '精读课文', hint: '提交朗读后自动勾完' },
+  { id: 'video', label: '视频学习', hint: '看视频+复述，工作日每天 1 个' },
   { id: 'reading', label: '泛读书目', hint: '按章加入，覆盖该书已选章' },
   { id: 'paper', label: '单词试卷', hint: '周日试卷任务' },
   { id: 'speak', label: '朗读篇数', hint: '本周安排 N 篇录音' },
