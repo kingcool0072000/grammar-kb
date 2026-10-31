@@ -32,7 +32,8 @@ def paper_task_detail(level: Optional[int]) -> str:
 class ScheduleMixin:
 
     def week_daily_tasks(self, week_start: str, for_date: Optional[str] = None,
-                         user: str = "malin") -> list[dict]:
+                         user: str = "malin",
+                         planned: Optional[dict] = None) -> list[dict]:
         """周目标 → for_date 当日的任务清单（逐日均摊，外循环第③步）。
 
         均摊节奏按家长 10-04 定的模板：工作日=讲次+背词+泛读，
@@ -41,8 +42,11 @@ class ScheduleMixin:
         剩余天——错过的日子欠账自动滚入后面的天。纯派生不落库。
         for_date 缺省=今天；不在本周时以本周一为锚（整周预览）。
         """
-        w = self._get_week(week_start, user=user)
-        t = w.get("tasks") or {}
+        if planned is None:
+            w = self._get_week(week_start, user=user)
+            t = w.get("tasks") or {}
+        else:
+            t = planned
         ref = for_date or today_cn().isoformat()
         if not (week_start <= ref <= add_days(week_start, 6)):
             ref = week_start
@@ -64,7 +68,6 @@ class ScheduleMixin:
         # 当天清单=今天做完的 ✓ + 今天新分配的灰）
         today_lecs = self.lecture_done(ref, upto, user, "lecture")
         today_hw = self.lecture_done(ref, upto, user, "hw")
-        vocab_done = self._vocab_actuals(lo, upto, user)
         fce_done = set(self._fce_actuals(lo, upto, user))
         tasks: list[dict] = []
 
@@ -114,13 +117,19 @@ class ScheduleMixin:
                     tasks.append(hw_row(lec))
             vg = t.get("vocab_goal")
             if vg and wd_left:
-                rem = max(0, int(vg) - vocab_done)
+                rem = self._vocab_week_remaining(t, lo, upto, user)
                 if rem > 0:
                     n = -(-rem // wd_left)
+                    lv = t.get("vocab_lv")
+                    detail = (
+                        f"本周这一级还要新掌握 {rem} 词 · 摊 {wd_left} 个工作日"
+                        if lv is not None
+                        else f"周目标剩 {rem} 词 · 摊 {wd_left} 个工作日"
+                    )
                     tasks.append({
                         "type": "vocab", "key": "vocabday", "quota": n,
                         "text": f"背词 {n} 词",
-                        "detail": f"周目标剩 {rem} 词 · 摊 {wd_left} 个工作日",
+                        "detail": detail,
                     })
             for book_key, pct in (t.get("reading") or {}).items():
                 tasks.append(self._reading_task(book_key, pct, user, days_left))
@@ -206,6 +215,36 @@ class ScheduleMixin:
                     tasks.append(hw_row(lec))
         self._append_video_tasks(tasks, t, user, lo, ref, upto, dow, wd_left)
         return tasks
+
+    def _vocab_week_remaining(self, t: dict, lo: str, upto: str, user: str) -> int:
+        """本周还要背的词数，摊到剩余工作日。
+
+        没标级别时，vocab_goal 仍是本周词数预算（旧周、旧测试）。
+        标了 vocab_lv 时与周进度同一口径：先算「目标词数 − 周初该级已会」，
+        再减去本周该级已经新掌握的。教师填的「本周新掌握 N 个」
+        会摊到工作日，而不是把级别里的累计目标整段摊出去。
+        """
+        try:
+            vg = int(t.get("vocab_goal") or 0)
+        except (TypeError, ValueError):
+            return 0
+        if vg <= 0:
+            return 0
+        lv = t.get("vocab_lv")
+        if lv is None:
+            gained = self._vocab_actuals(lo, upto, user)
+            return max(0, vg - gained)
+        try:
+            level = int(lv)
+        except (TypeError, ValueError):
+            gained = self._vocab_actuals(lo, upto, user)
+            return max(0, vg - gained)
+        words = self._vocab_level_words(level)
+        base = self._vocab_mastered_before(lo, user, words)
+        if base >= vg:
+            return 0
+        gained = self._vocab_actuals(lo, upto, user, words)
+        return max(0, (vg - base) - gained)
 
     def _append_video_tasks(self, tasks: list[dict], t: dict, user: str,
                             lo: str, ref: str, upto: str, dow: int,

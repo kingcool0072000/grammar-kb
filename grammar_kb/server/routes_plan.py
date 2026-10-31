@@ -222,10 +222,31 @@ def register_plan(app, ctx):
         return _ok({"user": user, "goals": plan.put_goals(user, goals)})
 
     @app.get("/plan/editor-data")
-    def plan_editor_data(request: "fastapi.Request", user: str = "malin"):
-        """周计划编辑器结构化选项源：讲次/FCE Part/书目(含必读章配置)/词汇现况。教师专属。"""
+    def plan_editor_data(request: "fastapi.Request", user: str = "malin",
+                         week_start: str = ""):
+        """周计划编辑器选项源。week_start 带上时，vocab_week 对应该周的
+        周初已会 / 本周新掌握（和进度条同一口径）。教师专属。"""
         _require_teacher(request)
-        return _ok(plan.editor_data(user=user))
+        try:
+            return _ok(plan.editor_data(
+                user=user, week_start=week_start or None))
+        except ValueError:
+            raise HTTPException(status_code=422, detail="week_start 须为 YYYY-MM-DD")
+
+    @app.post("/plan/week-preview")
+    def plan_week_preview(request: "fastapi.Request", payload: dict):
+        """未保存的周计划摊成周一到周日，和学生课表同一套均摊。不落库。"""
+        _require_teacher(request)
+        body = payload if isinstance(payload, dict) else {}
+        week_start = str(body.get("week_start") or "")
+        tasks = body.get("tasks")
+        user = str(body.get("user") or "malin")[:32]
+        if not isinstance(tasks, dict):
+            raise HTTPException(status_code=422, detail="tasks 须为对象")
+        try:
+            return _ok(plan.week_preview(week_start, tasks, user=user))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
 
     @app.get("/plan/month-view")
     def plan_month_view(request: "fastapi.Request", month: str = "",

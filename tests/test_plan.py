@@ -1081,3 +1081,90 @@ def test_goal_progress_dims_are_per_module(plan_env):
     lec = next(x for x in d["dims"] if x["name"] == "语法课程")
     assert lec["done"] == 0 and lec["total"] == 2
     assert len(d["dims"]) >= 5
+
+
+def test_leveled_vocab_quota_matches_weekly_new(plan_env, weekday_clock):
+    """标了级别时，每日背词配额和周进度分母都是「目标 − 周初已会」。
+
+    老师填的「本周新掌握 N 个」写成 vocab_goal = 周初已会 + N。
+    不能再把累计目标 61 整段摊进工作日。
+    """
+    con = sqlite3.connect(plan_env / "grammar.db")
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS vocab_word (word TEXT PRIMARY KEY, level INTEGER NOT NULL,"
+        " pos TEXT DEFAULT '[]', gloss TEXT DEFAULT '', meanings TEXT DEFAULT '[]',"
+        " example TEXT DEFAULT '', extra TEXT DEFAULT '{}')"
+    )
+    con.execute("INSERT INTO vocab_word (word, level) VALUES ('l1a', 1)")
+    con.commit()
+    con.close()
+
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    ht = _login(c, "teacher", "123456")
+    # 先走背词接口把表建出来，再把掌握时间拨到周初之前
+    c.post("/recite/sessions", headers=hs, json={
+        "total": 1, "wrong": 0, "acc": 100, "duration_sec": 5,
+        "wrong_words": [], "mode": "flip", "scope": "L2",
+        "details": [{"word": "l1a", "correct": True}],
+    })
+    old = (date.fromisoformat(MON) - timedelta(days=2)).isoformat() + "T12:00:00+00:00"
+    fce = sqlite3.connect(plan_env / "fce.db")
+    fce.execute(
+        "UPDATE recite_word_progress SET level = 1, mastered_at = ? WHERE word = 'l1a'",
+        (old,),
+    )
+    fce.commit()
+    fce.close()
+
+    # 周初已会 1，累计目标 61 → 本周新掌握 60
+    _put_week(c, ht, {"vocab_lv": 1, "vocab_pct": 100, "vocab_goal": 61, "vocab_new": 60})
+    d = c.get("/plan/today", headers=hs).json()["data"]
+    vocab = next(t for t in d["tasks"] if t["type"] == "vocab")
+    wd_left = 5 - today_cn().weekday()
+    expect = 60 // wd_left
+    assert expect != -(-61 // wd_left)
+    assert vocab["quota"] == expect
+    assert "新掌握" in (vocab.get("detail") or "")
+
+    view = c.get(f"/plan/week-view?week_start={MON}&user=malin", headers=ht).json()["data"]
+    dim = next(x for x in view["goal_progress"]["dims"] if x["name"] == "词汇")
+    assert dim["total"] == 60 and dim["done"] == 0
+    assert "本周新掌握" in (dim.get("extra") or "")
+
+    ed = c.get(f"/plan/editor-data?user=malin&week_start={MON}", headers=ht).json()["data"]
+    assert ed["vocab_week"]["week_start"] == MON
+    assert ed["vocab_week"]["practicing_level"] == 2
+    l1 = next(x for x in ed["vocab_week"]["levels"] if x["level"] == 1)
+    assert l1["words"] == 1 and l1["base"] == 1 and l1["gained"] == 0
+    bad = c.get("/plan/editor-data?user=malin&week_start=not-a-date", headers=ht)
+    assert bad.status_code == 422
+
+
+def test_week_preview_spreads_draft_without_saving(plan_env, weekday_clock):
+    """预览走和课表相同的逐日均摊，不把草稿写进 plan_weeks。"""
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    hs = _login(c, "malin", "123456")
+    body = {
+        "week_start": MON, "user": "malin",
+        "tasks": {"lectures": [25], "vocab_goal": 50, "fce": ["Test1 RUE"]},
+    }
+    assert c.post("/plan/week-preview", headers=hs, json=body).status_code == 403
+    r = c.post("/plan/week-preview", headers=ht, json=body)
+    assert r.status_code == 200, r.text
+    days = r.json()["data"]["days"]
+    assert len(days) == 7
+    today = next(d for d in days if d["date"] == today_cn().isoformat())
+    assert any(t["type"] == "lecture" for t in today["tasks"])
+    assert any(t["type"] == "vocab" for t in today["tasks"])
+    sat = next(d for d in days if date.fromisoformat(d["date"]).weekday() == 5)
+    assert any(t["type"] == "fce" for t in sat["tasks"])
+    weeks = c.get("/plan/weeks?user=malin", headers=ht).json()["data"]["weeks"]
+    assert all(w["week_start"] != MON for w in weeks)
+    bad = c.post("/plan/week-preview", headers=ht,
+                 json={"week_start": "2026-10-06", "user": "malin", "tasks": {}})
+    assert bad.status_code == 422
+    missing = c.post("/plan/week-preview", headers=ht,
+                     json={"week_start": MON, "user": "malin"})
+    assert missing.status_code == 422
