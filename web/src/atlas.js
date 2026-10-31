@@ -4,6 +4,7 @@
 import { api } from './api.js'
 import { escapeHtml, escAttr } from './render.js'
 import { speak } from './tts.js'
+import { getWordCard } from './wordcard.js'
 
 const ACCENT_KEY = 'gkb-atlas-accent'
 export const MEDIA = { img: 1, uk: 2, us: 4, ex: 8, ex2: 16 }
@@ -188,7 +189,7 @@ export function phoneticHtml(entry) {
   return `<span class="atlas-accents">${button('uk', atlas.uk, '英')}${button('us', atlas.us, '美')}</span>`
 }
 
-export function atlasDetailHtml(entry) {
+export function atlasDetailHtml(entry, { def = true, example = true } = {}) {
   if (!entry || !entry.id) return ''
   const senses = Array.isArray(entry.senses) ? entry.senses : []
   const examples = Array.isArray(entry.examples) ? entry.examples : []
@@ -229,8 +230,8 @@ export function atlasDetailHtml(entry) {
       ${head ? `<p class="atlas-meta">${head}</p>` : ''}
       ${entry.tip ? `<p class="atlas-tip">${escapeHtml(entry.tip)}</p>` : ''}
       ${entry.note ? `<p class="atlas-note">${escapeHtml(entry.note)}</p>` : ''}
-      ${senseHtml ? `<h4>词光释义</h4>${senseHtml}` : ''}
-      ${exampleHtml ? `<h4>词光例句</h4>${exampleHtml}` : ''}
+      ${def && senseHtml ? `<h4>词光释义</h4>${senseHtml}` : ''}
+      ${example && exampleHtml ? `<h4>词光例句</h4>${exampleHtml}` : ''}
       ${colHtml ? `<h4>搭配</h4><ul class="atlas-col">${colHtml}</ul>` : ''}
       ${family.length ? `<h4>词族</h4><p>${family.map((item) => escapeHtml(item)).join(' · ')}</p>` : ''}
       ${syn.length ? `<h4>近义</h4><p>${syn.map((item) => escapeHtml(item)).join(' · ')}</p>` : ''}
@@ -238,11 +239,23 @@ export function atlasDetailHtml(entry) {
     </div>`
 }
 
-/** 插画立刻用精简字段画；释义/例句等完整字段再请求一次。 */
-export function fillAtlasHost(host, word, compact, { image = true, size = 'thumb' } = {}) {
+/** 插画立刻用精简字段画；释义/例句等完整字段再请求一次。
+ *  feature 走词卡开关；显式 image/def/example 覆盖该功能的默认。 */
+export function fillAtlasHost(host, word, compact, opts = {}) {
   if (!host) return
+  const pref = opts.feature ? getWordCard(opts.feature) : null
+  const image = opts.image != null ? opts.image : (pref ? pref.image : true)
+  const showDef = opts.def != null ? opts.def : (pref ? pref.def : true)
+  const showEx = opts.example != null ? opts.example : (pref ? pref.example : true)
+  const size = opts.size || 'thumb'
   const known = compact || peekAudio(word)
   host.innerHTML = image ? atlasFigure(known, { size }) : ''
+  if (!image && !showDef && !showEx) return
+  const needDetail = showDef || showEx || (image && !host.querySelector('.atlas-illo'))
+  if (!needDetail) {
+    bindAtlas(host)
+    return
+  }
   host.insertAdjacentHTML('beforeend', '<div class="atlas-more"></div>')
   bindAtlas(host)
   const more = host.querySelector('.atlas-more')
@@ -255,7 +268,7 @@ export function fillAtlasHost(host, word, compact, { image = true, size = 'thumb
     if (image && !host.querySelector('.atlas-illo')) {
       more.insertAdjacentHTML('beforebegin', atlasFigure(full, { size }))
     }
-    more.innerHTML = atlasDetailHtml(full)
+    more.innerHTML = (showDef || showEx) ? atlasDetailHtml(full, { def: showDef, example: showEx }) : ''
     bindAtlas(host)
   })
 }

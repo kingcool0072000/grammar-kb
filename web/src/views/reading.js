@@ -289,6 +289,7 @@ async function renderDetail(el, id, role) {
   focusTracker.hooks.onReloc(0, `${art.title || ''}(${art.words}词)`.slice(0, 120))
   focusTracker.hooks.onReloc(100)
   const lookup = createLookupLayer(articleEl, {
+    feature: 'reading',
     onLookup: focusTracker.hooks.onLookup,
     onSpeak: focusTracker.hooks.onSpeak,
     onSelect: focusTracker.hooks.onSelect,
@@ -374,13 +375,11 @@ function setupSelectionLookup(articleEl, lookup, onUnmount) {
       if (!word) return
       const context = text.replace(/\s+/g, ' ').trim().slice(0, 200)
       const rect = range.getBoundingClientRect()
-      const host = articleEl.getBoundingClientRect()
       lookup.showSelection({
         word,
         context,
         range: range.cloneRange(),
-        x: rect.left - host.left + rect.width / 2,
-        y: rect.top - host.top,
+        rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
       })
     }, 250)
   }

@@ -1830,8 +1830,8 @@ main { --fce-fs: 15px; }
 }
 /* ---------------- 划词工具条（深色） ---------------- */
 .lib-selpop {
-  position: absolute;
-  z-index: 130; /* 移动端曾压不过 iframe 内容层（走查 M1），抬到所有内部层之上 */
+  position: fixed;
+  z-index: 140; /* 盖过阅读器顶栏和视线遮罩，仍在抽屉之下由阅读器层叠上下文约束 */
   display: flex;
   align-items: center;
   gap: 2px;
@@ -1839,17 +1839,16 @@ main { --fce-fs: 15px; }
   border-radius: 10px;
   padding: 4px;
   box-shadow: var(--lib-shadow-lg);
-  transform: translateX(-50%);
   animation: lib-pop-in 0.15s ease;
 }
 @keyframes lib-pop-in {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(4px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: none;
   }
 }
 .lib-selpop button {
@@ -1882,8 +1881,8 @@ main { --fce-fs: 15px; }
 
 /* ---------------- 查词浮层 ---------------- */
 .lib-dictpop {
-  position: absolute;
-  z-index: 75;
+  position: fixed;
+  z-index: 130;
   width: min(340px, calc(100vw - 32px));
   max-height: min(420px, 60vh);
   overflow-y: auto;
@@ -1909,7 +1908,12 @@ main { --fce-fs: 15px; }
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 4px;
+  margin: -18px -18px 8px;
+  padding: 14px 18px 8px;
+  position: sticky;
+  top: 0;
+  background: var(--lib-shell-bg);
+  z-index: 1;
 }
 .lib-dict-head .word {
   font-size: 21px;
@@ -2635,6 +2639,12 @@ li.open .topic-reveal-btn.reopen { display: inline-block; }
 .gd-focus-pager button[disabled] { opacity: .4; cursor: not-allowed; }
 
 /* ---------- 设置中心 #/config 分节标题 ---------- */
+.cfg-wc { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
+.cfg-wc th, .cfg-wc td { padding: 8px 6px; text-align: center; border-bottom: 1px solid var(--line, #e7e1d8); }
+.cfg-wc th:first-child, .cfg-wc td:first-child { text-align: left; }
+.cfg-wc small { display: block; color: var(--ink-faint, #8a8175); font-weight: 400; font-size: 12px; }
+.cfg-wc input { width: 18px; height: 18px; accent-color: var(--brand, #1d8578); }
+.cfg-wc-status { min-height: 1.2em; margin: 8px 0 0; font-size: 13px; color: var(--ink-soft, #6b645c); }
 .cfg-section { font-size: 17px; margin: 26px 4px 4px; color: var(--ink); }
 .cfg-section:first-of-type { margin-top: 14px; }
 /* 泛读馆宽度段复用 lib-seg，补窄适配 */

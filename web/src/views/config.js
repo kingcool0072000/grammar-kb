@@ -3,7 +3,11 @@
 // 旧 hash 由 main.js 路由重定向到本页，不留独立页面。
 import { speak, speakWithVoice, getTtsPref, setTtsPref, waitForVoices, ttsDiagnostics } from '../tts.js'
 import { aboutHtml, getAccent, setAccent } from '../atlas.js'
-import { api } from '../api.js'
+import { api, getAuth } from '../api.js'
+import {
+  getWordCard, loadWordCards, setWordCardCache, wordCardSnapshot,
+  WORD_CARD_FEATURES, WORD_CARD_FIELDS,
+} from '../wordcard.js'
 import { APP_GIT_SHA, APP_VERSION } from '../version.js'
 import { getReadPref, setReadPref, resetReadPref } from '../readpref.js'
 import { getFceAudioPref, setFceAudioPref } from './fceAudio.js'
@@ -46,6 +50,7 @@ function voiceRow(v, selected) {
 }
 
 export async function mountConfig(el) {
+  const isTeacher = ((getAuth() || {}).role) === 'teacher'
   // 旧入口（#/ttsconf #/readconf）归一地址栏（不触发额外渲染）
   if (/^#\/(ttsconf|readconf)\??$/.test(location.hash)) {
     history.replaceState(null, '', '#/config')
@@ -69,6 +74,14 @@ export async function mountConfig(el) {
       <p>服务端 <b id="cfg-srv-ver">读取中…</b></p>
       <span class="tts-vtag">改版本只改 grammar_kb/VERSION，再重新构建前端并重启服务。两边不一致时，说明 web/dist 和 Python 不是同一次发布。</span>
     </div>
+
+    ${isTeacher ? `
+    <h2 class="cfg-section">🃏 词卡内容</h2>
+    <div class="tts-box">
+      <p class="tts-vtag">各功能里单词卡片显示释义、插图、例句。保存在服务器，学生各端一起生效。泛读馆和阅读练习默认只开释义；背单词默认都开。</p>
+      <div id="cfg-wc">读取中…</div>
+      <p class="cfg-wc-status" id="cfg-wc-status"></p>
+    </div>` : ''}
 
     <!-- ====== 泛读馆 ====== -->
     <h2 class="cfg-section">📚 泛读馆</h2>
@@ -156,6 +169,61 @@ export async function mountConfig(el) {
     if (history.length > 1) history.back()
     else location.hash = '/recite'
   })
+
+  if (isTeacher) {
+    const host = el.querySelector('#cfg-wc')
+    const status = el.querySelector('#cfg-wc-status')
+    const paintCards = () => {
+      host.innerHTML = `
+        <table class="cfg-wc">
+          <thead>
+            <tr><th>功能</th>${WORD_CARD_FIELDS.map((f) => `<th>${f.label}</th>`).join('')}</tr>
+          </thead>
+          <tbody>
+            ${WORD_CARD_FEATURES.map((feat) => `
+              <tr>
+                <td>${feat.label}<small>${feat.hint}</small></td>
+                ${WORD_CARD_FIELDS.map((field) => {
+                  const on = getWordCard(feat.id)[field.id]
+                  return `<td><input type="checkbox" data-feat="${feat.id}" data-key="${field.id}" ${on ? 'checked' : ''}></td>`
+                }).join('')}
+              </tr>`).join('')}
+          </tbody>
+        </table>`
+    }
+    try {
+      const s = await api.librarySettings()
+      if (s && s.student && s.student.wordCards) setWordCardCache(s.student.wordCards)
+      else await loadWordCards()
+    } catch {
+      await loadWordCards()
+    }
+    paintCards()
+    let wcSeq = 0
+    host.addEventListener('change', async (e) => {
+      const input = e.target.closest('input[data-feat]')
+      if (!input) return
+      const next = wordCardSnapshot()
+      next[input.dataset.feat][input.dataset.key] = input.checked
+      setWordCardCache(next)
+      const mine = ++wcSeq
+      status.textContent = '保存中…'
+      try {
+        const saved = await api.librarySaveSettings({ student: { wordCards: next } })
+        if (mine !== wcSeq) return
+        const cards = saved && saved.student && saved.student.wordCards
+        if (cards) setWordCardCache(cards)
+        status.textContent = '已保存，学生端立即生效'
+      } catch (err) {
+        if (mine !== wcSeq) return
+        input.checked = !input.checked
+        const revert = wordCardSnapshot()
+        revert[input.dataset.feat][input.dataset.key] = input.checked
+        setWordCardCache(revert)
+        status.textContent = (err && err.message) || '保存失败'
+      }
+    })
+  }
 
   const verLabel = (version, sha) => {
     const v = version || '—'

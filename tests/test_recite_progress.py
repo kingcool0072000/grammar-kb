@@ -242,6 +242,66 @@ def test_review_backfill_from_history(recite_env):
     assert w["due"] is True  # 3 天前错的，D+1 早已过期
 
 
+def test_conquered_page_is_server_side(recite_env):
+    """已攻克词本按页返回，不把全集塞进一页；释义搜索走词表。"""
+    import json
+
+    c = _client(recite_env)
+    h = _login(c, "malin", "123456")
+    assert c.get("/recite/conquered", headers=h).status_code == 200
+    con = sqlite3.connect(recite_env / "fce.db")
+    for i in range(45):
+        con.execute(
+            "INSERT INTO recite_word_progress (user, word, level, right, wrong, mastered_at)"
+            " VALUES ('malin', ?, 0, 1, 0, ?)",
+            (f"w{i:03d}", f"2026-01-{(i % 27) + 1:02d}T00:00:00"),
+        )
+    con.execute(
+        "INSERT INTO recite_word_progress (user, word, level, right, wrong, mastered_at)"
+        " VALUES ('malin', 'apple', 0, 2, 0, '2026-02-01T00:00:00')",
+    )
+    con.commit()
+    con.close()
+    gdb = sqlite3.connect(recite_env / "grammar.db")
+    gdb.execute(
+        "CREATE TABLE IF NOT EXISTS vocab_word (word TEXT PRIMARY KEY, level INTEGER NOT NULL,"
+        " pos TEXT DEFAULT '[]', gloss TEXT DEFAULT '', meanings TEXT DEFAULT '[]',"
+        " example TEXT DEFAULT '', extra TEXT DEFAULT '{}')"
+    )
+    gdb.execute(
+        "INSERT INTO vocab_word (word, level, gloss, meanings) VALUES (?,?,?,?)",
+        ("apple", 0, "苹果", json.dumps(["n. 苹果"])),
+    )
+    gdb.commit()
+    gdb.close()
+
+    d = c.get("/recite/conquered?page=1&limit=40", headers=h).json()["data"]
+    assert d["total"] == 46
+    assert d["summary"]["total"] == 46
+    assert d["has_more"] is True
+    assert len(d["items"]) == 40
+    assert d["page"] == 1 and d["limit"] == 40
+    d2 = c.get("/recite/conquered?page=2&limit=40", headers=h).json()["data"]
+    assert len(d2["items"]) == 6
+    assert d2["has_more"] is False
+    assert not ({x["word"] for x in d["items"]} & {x["word"] for x in d2["items"]})
+    # 超限的 limit 夹到 100，仍然只是一页而不是 46 条以外的第二份全集
+    capped = c.get("/recite/conquered?limit=500", headers=h).json()["data"]
+    assert capped["limit"] == 100
+    assert len(capped["items"]) == 46 and capped["has_more"] is False
+    hit = c.get("/recite/conquered?q=w010", headers=h).json()["data"]
+    assert hit["total"] == 1 and hit["items"][0]["word"] == "w010"
+    gloss = c.get("/recite/conquered", headers=h, params={"q": "苹果"}).json()["data"]
+    assert [x["word"] for x in gloss["items"]] == ["apple"]
+    assert gloss["items"][0]["gloss"] == "苹果"
+    # 开练补释义：只回请求的词
+    rows = c.get("/recite/gloss?words=apple,missing", headers=h).json()["data"]
+    assert [x["word"] for x in rows] == ["apple"]
+    # 学生不能借 user 参数看别人的（端点会忽略并改看自己）
+    other = c.get("/recite/conquered?user=teacher", headers=h).json()["data"]
+    assert other["summary"]["total"] == 46
+
+
 def test_wrongbook_today_is_beijing_not_utc(recite_env):
     """答错日 / 下次复习按北京日历。UTC 仍是 10-23 时，今天必须是 10-24。"""
     c = _client(recite_env)

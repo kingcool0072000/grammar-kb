@@ -221,6 +221,10 @@ export const api = {
   atlasInfo: () => req('/atlas-info'),
   wrongbook: ({ user, limit = 500 } = {}) =>
     req('/recite/wrongbook', { searchParams: { user, limit } }),
+  conqueredPage: ({ user, page = 1, limit = 40, q = '' } = {}) =>
+    req('/recite/conquered', { searchParams: { user, page, limit, q } }),
+  reciteGloss: (words) =>
+    req('/recite/gloss', { searchParams: { words: (words || []).join(',') } }),
   // 复习闭环摘要：到期 / 逾期 / 近 7 日攻克 / 新词额度 / 教师告警
   reviewSummary: ({ user } = {}) =>
     req('/recite/review-summary', { searchParams: { user } }),

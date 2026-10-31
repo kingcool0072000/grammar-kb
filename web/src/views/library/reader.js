@@ -285,6 +285,7 @@ export function mountLibraryReader(viewEl, ctx) {
 
   // ---- 划词/查词浮层（onLookup/onSpeak 喂给专注力采集）----
   const lookup = createLookupLayer(bodyEl, {
+    feature: 'library',
     onLookup: focusTracker.hooks.onLookup,
     onSpeak: focusTracker.hooks.onSpeak,
     onSelect: focusTracker.hooks.onSelect,

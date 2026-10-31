@@ -247,8 +247,16 @@ export function createEpubRenderer(bookId, container, themeStyle, callbacks = {}
         context,
         // 原始选区 range（克隆）：lookup 层用它做装饰性锚点高亮（塌缩选区后仍能看见词位）
         range: range.cloneRange(),
-        x: frameRect.left - containerRect.left + rect.left + rect.width / 2,
-        y: frameRect.top - containerRect.top + rect.top,
+        // 视口坐标：iframe 内 getBoundingClientRect 要加上 frame 自身的位置，
+        // 查词浮层才能贴着单词，而不是落在阅读区底部。
+        rect: {
+          left: frameRect.left + rect.left,
+          top: frameRect.top + rect.top,
+          width: rect.width,
+          height: rect.height,
+        },
+        x: frameRect.left + rect.left + rect.width / 2,
+        y: frameRect.top + rect.top,
       })
     }
   }

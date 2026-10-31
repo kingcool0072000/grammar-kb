@@ -1,10 +1,12 @@
 // 泛读馆阅读器 · 划词工具条（SelectionPopup）+ 查词浮层（DictPopover）。
 // 直译自 FCEReadingLib client/src/components/reader/SelectionPopup.tsx。
-// 两个浮层挂在 .lib-body（position:relative）内，坐标为该容器坐标系。
+// 浮层 position:fixed，锚在单词的视口矩形上（epub iframe 内的选区要加上
+// frameElement 偏移）。靠近屏幕边缘时翻到词的另一侧，并限制高度可滚动。
 // 阅读练习模块（reading.js）也复用本层（container 参数化）。
 
 import { api } from '../../api.js'
 import { escapeHtml } from '../../render.js'
+import { getWordCard } from '../../wordcard.js'
 import { ICONS } from './icons.js'
 
 // TTS 发音的唯一实现在 ../../tts.js（#/ttsconf 配置默认音色/语速）。
@@ -22,10 +24,83 @@ export { speak }
  * 不传回调时行为完全不变（阅读练习 reading.js 复用本层不受影响）。
  * 返回 { showSelection, showDict, hideAll, destroy }。
  */
+/** 选区 / 锚点 mark 的视口矩形。iframe 里的坐标要加上 frame 在父页面的位置。 */
+function viewportBox(nodeOrRange) {
+  if (!nodeOrRange || !nodeOrRange.getBoundingClientRect) return null
+  const r = nodeOrRange.getBoundingClientRect()
+  if (!r || (!r.width && !r.height)) return null
+  let left = r.left
+  let top = r.top
+  const doc = nodeOrRange.ownerDocument
+    || (nodeOrRange.startContainer && nodeOrRange.startContainer.ownerDocument)
+  const frame = doc && doc.defaultView && doc.defaultView.frameElement
+  if (frame && frame.getBoundingClientRect) {
+    const f = frame.getBoundingClientRect()
+    left += f.left
+    top += f.top
+  }
+  return { left, top, width: r.width, height: r.height }
+}
+
+function boxOnScreen(box) {
+  if (!box) return false
+  const vw = window.innerWidth || 0
+  const vh = window.innerHeight || 0
+  return box.top + box.height > 0 && box.top < vh
+    && box.left + box.width > 0 && box.left < vw
+}
+
+/**
+ * 把浮层放在词旁边。preferAbove：工具条默认在词上方。
+ * limitHeight：查词卡过高时翻面，并限制 max-height 让关闭钮留在屏内。
+ */
+function placeNear(el, box, { preferAbove = false, limitHeight = false } = {}) {
+  if (!el || !box) return
+  const margin = 8
+  const gap = 8
+  const vw = window.innerWidth || 320
+  const vh = window.innerHeight || 640
+  el.style.position = 'fixed'
+  el.style.right = 'auto'
+  el.style.bottom = 'auto'
+  el.style.transform = 'none'
+  if (!limitHeight) el.style.maxHeight = ''
+  const prev = el.style.visibility
+  el.style.visibility = 'hidden'
+  el.style.display = el.classList.contains('lib-selpop') ? 'flex' : 'block'
+  const popW = el.offsetWidth || Math.min(340, vw - margin * 2)
+  const popH = el.offsetHeight || 48
+  let left = box.left + box.width / 2 - popW / 2
+  left = Math.max(margin, Math.min(left, Math.max(margin, vw - popW - margin)))
+  const wordBottom = box.top + box.height
+  const spaceAbove = box.top - gap - margin
+  const spaceBelow = vh - wordBottom - gap - margin
+  let above = preferAbove
+  if (limitHeight) {
+    above = spaceBelow < 140 && spaceAbove > spaceBelow
+  } else if (spaceAbove < popH + gap) {
+    above = false
+  }
+  let top = above ? box.top - gap - popH : wordBottom + gap
+  if (limitHeight) {
+    const room = above ? spaceAbove : Math.max(spaceBelow, 96)
+    const maxH = Math.max(96, Math.min(room, Math.round(vh * 0.62)))
+    el.style.maxHeight = `${Math.round(maxH)}px`
+    const h = Math.min(popH, maxH)
+    top = above ? box.top - gap - h : wordBottom + gap
+  }
+  if (top < margin) top = margin
+  if (top > vh - margin - 48) top = Math.max(margin, vh - margin - 48)
+  el.style.left = `${Math.round(left)}px`
+  el.style.top = `${Math.round(top)}px`
+  el.style.visibility = prev || ''
+}
+
 export function createLookupLayer(bodyEl, opts = {}) {
   const onLookupCb = typeof opts.onLookup === 'function' ? opts.onLookup : null
   const onSelectCb = typeof opts.onSelect === 'function' ? opts.onSelect : null
   const onSpeakCb = typeof opts.onSpeak === 'function' ? opts.onSpeak : null
+  const feature = opts.feature || 'library'
   // 双击单词：不弹工具条，直接开查词浮层并自动发音一次。
   // 拖选多词仍走工具条（发音/查词两钮），泛读馆与阅读练习行为一致。
   // 实现挂 dblclick（主文档 + iframe 文档）：selectionchange 防抖后
@@ -75,16 +150,13 @@ export function createLookupLayer(bodyEl, opts = {}) {
       if (!sel || !sel.rangeCount || !text || text.length > 80) return
       const word = text.replace(/[^A-Za-z'’-]/g, '')
       if (!word) return
-      const range = sel.getRangeAt(0)
-      const rect = range.getBoundingClientRect()
-      const host = bodyEl.getBoundingClientRect()
+      const range = sel.getRangeAt(0).cloneRange()
       suppressSelectionUntil = Date.now() + 900 // 压掉随后的 selectionchange 工具条
       collapseSelection()
       showDict({
         word,
         context: text.replace(/\s+/g, ' ').slice(0, 200),
-        x: rect.left - host.left + rect.width / 2,
-        y: rect.top - host.top,
+        range,
       })
       speakWord(word)
       if (onSpeakCb) onSpeakCb(word)
@@ -165,6 +237,7 @@ export function createLookupLayer(bodyEl, opts = {}) {
     } catch { /* 跨节点包裹失败则放弃锚点 */ }
   }
   let anchorEl = null
+  let anchorRect = null
   function clearAnchorMark() {
     if (!anchorEl) return
     try {
@@ -175,57 +248,100 @@ export function createLookupLayer(bodyEl, opts = {}) {
     } catch { /* ignore */ }
     anchorEl = null
   }
+  function currentBox() {
+    const marked = anchorEl && anchorEl.isConnected ? viewportBox(anchorEl) : null
+    return marked || anchorRect
+  }
+  function rememberAnchor(payload) {
+    const pre = (payload && payload.range && viewportBox(payload.range))
+      || (payload && payload.rect)
+      || null
+    anchorMark(payload)
+    anchorRect = (anchorEl && viewportBox(anchorEl)) || pre
+  }
+  function relayoutPop() {
+    if (popEl.style.display === 'none') return
+    const box = currentBox()
+    if (!boxOnScreen(box)) {
+      hideSelection()
+      return
+    }
+    placeNear(popEl, box, { preferAbove: true })
+  }
+  function relayoutDict() {
+    if (dictEl.style.display === 'none') return
+    const box = currentBox()
+    if (!boxOnScreen(box)) {
+      hideDict()
+      return
+    }
+    placeNear(dictEl, box, { limitHeight: true })
+  }
+  function onReflow() {
+    relayoutPop()
+    relayoutDict()
+  }
+  document.addEventListener('scroll', onReflow, true)
+  window.addEventListener('resize', onReflow)
+  dictEl.addEventListener('load', (e) => {
+    if (e.target && e.target.tagName === 'IMG') relayoutDict()
+  }, true)
 
   function showSelection(payload) {
-    hideDict()
+    // 换词时关掉上一次查词。不用 hideDict：那时工具条可能还开着，锚点会被留下。
+    dictSeq += 1
+    if (dictTimer) clearTimeout(dictTimer)
+    dictTimer = null
+    dictEl.style.display = 'none'
+    clearAnchorMark()
+    anchorRect = null
     // 双击直达查词后 900ms 内：selectionchange 的余波不再弹工具条
     if (directLookupOnDouble && Date.now() < suppressSelectionUntil) return
     currentSel = payload
     if (onSelectCb && payload && payload.word) onSelectCb(payload.word)
     collapseSelection()
-    anchorMark(payload)
+    rememberAnchor(payload)
     popEl.querySelector('.word-label').textContent = payload.word
-    const bodyW = bodyEl.clientWidth || 800
-    const HALF = 110
-    const left = Math.min(Math.max(payload.x, HALF), Math.max(HALF, bodyW - HALF))
-    popEl.style.left = `${left}px`
-    popEl.style.top = `${Math.max(8, payload.y - 52)}px`
-    popEl.style.display = 'flex'
+    const box = currentBox()
+    if (!box) return
+    placeNear(popEl, box, { preferAbove: true })
   }
 
   function hideSelection() {
     currentSel = null
     popEl.style.display = 'none'
-    clearAnchorMark()
+    if (dictEl.style.display === 'none') {
+      clearAnchorMark()
+      anchorRect = null
+    }
   }
 
   // ---- 查词浮层 ----
   function showDict(lookup) {
-    hideSelection()
-    if (onLookupCb) onLookupCb(lookup && lookup.word)
+    const payload = lookup || currentSel
+    popEl.style.display = 'none'
+    currentSel = null
+    if (!anchorEl) rememberAnchor(payload)
+    else anchorRect = viewportBox(anchorEl) || anchorRect
+    if (onLookupCb) onLookupCb(payload && payload.word)
     dictSeq += 1
     const seq = dictSeq
     if (dictTimer) clearTimeout(dictTimer)
-    dictWord = lookup.word
-    loadAtlas(lookup.word)
-    dictWordEl.textContent = lookup.word
+    dictWord = (payload && payload.word) || ''
+    const card = getWordCard(feature)
+    if (card.image || card.def || card.example) loadAtlas(dictWord)
+    dictWordEl.textContent = dictWord
     dictPhEl.textContent = ''
     dictSourceEl.textContent = ''
     dictBody.innerHTML = '<div class="lib-dict-loading"><span class="lib-spinner"></span></div>'
-    // 定位：clamp 在容器内
-    const bodyW = bodyEl.clientWidth || 800
-    const bodyH = bodyEl.clientHeight || 600
-    const W = Math.min(340, bodyW - 32)
-    const left = Math.min(Math.max(lookup.x - W / 2, 10), Math.max(10, bodyW - W - 10))
-    const top = Math.min(lookup.y + 16, Math.max(10, bodyH - 200))
-    dictEl.style.left = `${left}px`
-    dictEl.style.top = `${Math.max(10, top)}px`
-    dictEl.style.display = 'block'
+    const box = currentBox()
+    if (box) placeNear(dictEl, box, { limitHeight: true })
+    else dictEl.style.display = 'block'
 
     // 30ms debounce 后请求
     dictTimer = setTimeout(() => {
       api
-        .libraryDict(lookup.word, lookup.context)
+        .libraryDict(dictWord, payload && payload.context)
         .then((r) => {
           if (seq !== dictSeq) return
           renderEntry(r && r.entry)
@@ -233,6 +349,7 @@ export function createLookupLayer(bodyEl, opts = {}) {
         .catch((e) => {
           if (seq !== dictSeq) return
           dictBody.innerHTML = `<div class="lib-dict-empty">${escapeHtml((e && e.message) || '查词失败')}</div>`
+          relayoutDict()
         })
     }, 30)
   }
@@ -242,10 +359,15 @@ export function createLookupLayer(bodyEl, opts = {}) {
     if (dictTimer) clearTimeout(dictTimer)
     dictTimer = null
     dictEl.style.display = 'none'
+    if (popEl.style.display === 'none') {
+      clearAnchorMark()
+      anchorRect = null
+    }
   }
 
   function renderEntry(entry) {
     const e = entry || {}
+    const card = getWordCard(feature)
     dictPhEl.textContent = e.phonetic || ''
     if (e.source === 'ecdict') {
       dictSourceEl.innerHTML = '<span class="src">内置词典 · ECDICT</span>'
@@ -256,36 +378,45 @@ export function createLookupLayer(bodyEl, opts = {}) {
     }
 
     const senses = Array.isArray(e.senses) ? e.senses : []
+    const showAtlas = card.image || card.def || card.example
     if (e.source === 'not_found' || (!senses.length && !e.meaning)) {
-      dictBody.innerHTML = '<div class="atlas-host"></div><div class="lib-dict-empty">词典未收录该词</div>'
-      fillAtlasHost(dictBody.querySelector('.atlas-host'), dictWord, e.atlas || null)
-      loadAtlas(dictWord).then((full) => {
-        const empty = dictBody.querySelector('.lib-dict-empty')
-        if (full && empty) empty.remove()
-      })
+      dictBody.innerHTML = showAtlas
+        ? '<div class="atlas-host"></div><div class="lib-dict-empty">词典未收录该词</div>'
+        : '<div class="lib-dict-empty">词典未收录该词</div>'
+      if (showAtlas) {
+        fillAtlasHost(dictBody.querySelector('.atlas-host'), dictWord, e.atlas || null, { feature })
+        loadAtlas(dictWord).then((full) => {
+          const empty = dictBody.querySelector('.lib-dict-empty')
+          if (full && empty) empty.remove()
+          relayoutDict()
+        })
+      }
+      relayoutDict()
       return
     }
 
-    let html = '<div class="atlas-host"></div>'
+    let html = showAtlas ? '<div class="atlas-host"></div>' : ''
     if (senses.length) {
-      // ECDICT / AI 结构化释义：pos 胶囊 + gloss + 斜体例句
       for (const s of senses) {
-        const pos = s.pos ? `<span class="pos">${escapeHtml(s.pos)}</span>` : ''
-        const defs = escapeHtml(s.gloss || '')
-        const exs = (s.examples || [])
-          .filter(Boolean)
-          .map((ex) => `<div class="example">“${escapeHtml(ex)}”</div>`)
-          .join('')
-        html += `<div class="lib-dict-sense">${pos}<div class="def">${defs}</div>${exs}</div>`
+        const pos = card.def && s.pos ? `<span class="pos">${escapeHtml(s.pos)}</span>` : ''
+        const defs = card.def ? `<div class="def">${escapeHtml(s.gloss || '')}</div>` : ''
+        const exs = card.example
+          ? (s.examples || []).filter(Boolean)
+            .map((ex) => `<div class="example">“${escapeHtml(ex)}”</div>`).join('')
+          : ''
+        if (pos || defs || exs) html += `<div class="lib-dict-sense">${pos}${defs}${exs}</div>`
       }
-    } else {
-      // AI 扁平条目：pos + meaning + example
-      const pos = e.pos ? `<span class="pos">${escapeHtml(e.pos)}</span>` : ''
-      const ex = e.example ? `<div class="example">“${escapeHtml(e.example)}”</div>` : ''
-      html += `<div class="lib-dict-sense">${pos}<div class="def">${escapeHtml(e.meaning || '')}</div>${ex}</div>`
+    } else if (card.def || (card.example && e.example)) {
+      const pos = card.def && e.pos ? `<span class="pos">${escapeHtml(e.pos)}</span>` : ''
+      const defs = card.def ? `<div class="def">${escapeHtml(e.meaning || '')}</div>` : ''
+      const ex = card.example && e.example ? `<div class="example">“${escapeHtml(e.example)}”</div>` : ''
+      html += `<div class="lib-dict-sense">${pos}${defs}${ex}</div>`
     }
-    dictBody.innerHTML = html
-    fillAtlasHost(dictBody.querySelector('.atlas-host'), dictWord, e.atlas || null)
+    dictBody.innerHTML = html || '<div class="lib-dict-empty">已按设置隐藏释义、插图和例句</div>'
+    if (showAtlas) {
+      fillAtlasHost(dictBody.querySelector('.atlas-host'), dictWord, e.atlas || null, { feature })
+    }
+    relayoutDict()
   }
 
   function hideAll() {
@@ -296,8 +427,20 @@ export function createLookupLayer(bodyEl, opts = {}) {
     hideDict()
   }
 
+  let dead = false
+  // 阅读练习换页时不会显式 destroy：正文节点被卸掉后自己摘掉 document 监听。
+  const detachObserver = new MutationObserver(() => {
+    if (!bodyEl.isConnected) destroy()
+  })
+  detachObserver.observe(document.body, { childList: true, subtree: true })
+
   function destroy() {
+    if (dead) return
+    dead = true
     hideAll()
+    document.removeEventListener('scroll', onReflow, true)
+    window.removeEventListener('resize', onReflow)
+    detachObserver.disconnect()
     if (directLookupOnDouble) bodyEl.removeEventListener('dblclick', dblclickHandler)
     iframeCleanups.forEach((fn) => fn())
     popEl.remove()

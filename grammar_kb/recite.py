@@ -623,6 +623,46 @@ class ReciteStore:
                         )
         return self.progress(user, include_words=True)
 
+    def _backfill_review(self, conn: sqlite3.Connection, user: str, limit: int = 500) -> None:
+        """历史会话错过但尚无 recite_review 行的词，按最近答错日回填。"""
+        today = _calendar_today()
+        rows = conn.execute(
+            "SELECT wrong_words, created_at FROM recite_sessions"
+            " WHERE user = ? ORDER BY id DESC LIMIT ?",
+            (user, int(limit)),
+        ).fetchall()
+        wrong_at: dict[str, str] = {}
+        counts: dict[str, int] = {}
+        for r in rows:  # 由新到旧：setdefault 拿到最近答错时间
+            try:
+                ws = json.loads(r["wrong_words"] or "[]")
+            except (ValueError, TypeError):
+                ws = []
+            for w in ws:
+                w = _headword(str(w).strip().lower())
+                if not w:
+                    continue
+                counts[w] = counts.get(w, 0) + 1
+                wrong_at.setdefault(w, r["created_at"] or "")
+        if not counts:
+            return
+        have = {r[0] for r in conn.execute(
+            "SELECT word FROM recite_review WHERE user = ?", (user,)
+        ).fetchall()}
+        missing = [w for w in counts if w not in have]
+        if not missing:
+            return
+        levels = self._vocab_levels(missing)
+        for w in missing:
+            last_day = _cn_day_of(wrong_at.get(w) or "") or today
+            conn.execute(
+                "INSERT INTO recite_review (user, word, level, wrong_count,"
+                " stage, first_wrong_at, next_review, last_review_at)"
+                " VALUES (?,?,?,?,?,?,?,?)",
+                (user, w, levels.get(w), counts[w], 0, last_day,
+                 _add_days(last_day, EB_STAGES[0]), last_day),
+            )
+
     def wrongbook(self, user: str, limit: int = 500) -> dict:
         """错词本（艾宾浩斯口径）：在周期词（含到期/节点/日程）+ 已攻克词本。
 
@@ -634,40 +674,7 @@ class ReciteStore:
         user = (user or "").strip()[:60]
         today = _calendar_today()
         with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT wrong_words, created_at FROM recite_sessions"
-                " WHERE user = ? ORDER BY id DESC LIMIT ?",
-                (user, int(limit)),
-            ).fetchall()
-            wrong_at: dict[str, str] = {}
-            counts: dict[str, int] = {}
-            for r in rows:  # 由新到旧：setdefault 拿到最近答错时间
-                try:
-                    ws = json.loads(r["wrong_words"] or "[]")
-                except (ValueError, TypeError):
-                    ws = []
-                for w in ws:
-                    w = _headword(str(w).strip().lower())
-                    if not w:
-                        continue
-                    counts[w] = counts.get(w, 0) + 1
-                    wrong_at.setdefault(w, r["created_at"] or "")
-            if counts:
-                have = {r[0] for r in conn.execute(
-                    "SELECT word FROM recite_review WHERE user = ?", (user,)
-                ).fetchall()}
-                missing = [w for w in counts if w not in have]
-                if missing:
-                    levels = self._vocab_levels(missing)
-                    for w in missing:
-                        last_day = _cn_day_of(wrong_at.get(w) or "") or today
-                        conn.execute(
-                            "INSERT INTO recite_review (user, word, level, wrong_count,"
-                            " stage, first_wrong_at, next_review, last_review_at)"
-                            " VALUES (?,?,?,?,?,?,?,?)",
-                            (user, w, levels.get(w), counts[w], 0, last_day,
-                             _add_days(last_day, EB_STAGES[0]), last_day),
-                        )
+            self._backfill_review(conn, user, limit)
             rr = conn.execute(
                 "SELECT word, level, wrong_count, stage, first_wrong_at, next_review,"
                 " last_review_at, conquered_at FROM recite_review WHERE user = ?",
@@ -729,6 +736,102 @@ class ReciteStore:
                 "total": len(in_cycle), "due": len(due_today),
                 "conquered_n": len(conquered),
                 "stages": list(EB_STAGES), "stage_dist": stage_dist,
+            },
+        }
+
+    def conquered_page(
+        self, user: str, *, page: int = 1, limit: int = 40,
+        q: str = "", also_words: Optional[list] = None,
+    ) -> dict:
+        """已攻克词本一页。不把全集交给调用方。
+
+        items 为当前页；total / has_more 按筛选后的条数；
+        summary 是未筛选的全集计数（一遍过 / 从错题攻克）。
+        also_words：释义命中的词头，和 q 的词面子串一起筛。
+        """
+        user = (user or "").strip()[:60]
+        page = max(1, int(page or 1))
+        limit = min(100, max(1, int(limit or 40)))
+        q = (q or "").strip().lower()[:40]
+        extra: list[str] = []
+        for raw in also_words or []:
+            w = str(raw or "").strip().lower()[:60]
+            if w and w not in extra:
+                extra.append(w)
+            if len(extra) >= 300:
+                break
+        where = ""
+        filt: list = []
+        if q:
+            like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+            clauses = ["lower(word) LIKE ? ESCAPE '\\'"]
+            filt.append(like)
+            if extra:
+                marks = ",".join("?" * len(extra))
+                clauses.append(f"lower(word) IN ({marks})")
+                filt.extend(extra)
+            where = " WHERE " + " OR ".join(clauses)
+        src = """
+            FROM (
+              SELECT p.word AS word, p.level AS level, p.right AS right, p.wrong AS wrong,
+                     p.mastered_at AS mastered_at, p.last_seen AS last_seen,
+                     COALESCE(r.wrong_count, 0) AS wrong_count,
+                     r.conquered_at AS conquered_at
+              FROM recite_word_progress p
+              LEFT JOIN recite_review r ON r.user = p.user AND r.word = p.word
+              WHERE p.user = ? AND p.right >= max(p.wrong, 1)
+              UNION ALL
+              SELECT r.word, r.level, 0, 0, r.conquered_at, NULL,
+                     COALESCE(r.wrong_count, 0), r.conquered_at
+              FROM recite_review r
+              WHERE r.user = ? AND r.conquered_at IS NOT NULL
+                AND NOT EXISTS (
+                  SELECT 1 FROM recite_word_progress p
+                  WHERE p.user = r.user AND p.word = r.word
+                    AND p.right >= max(p.wrong, 1)
+                )
+            )
+        """
+        with self._connect() as conn:
+            self._backfill_review(conn, user, 500)
+            base_args = (user, user)
+            summary = conn.execute(
+                "SELECT COUNT(*) AS n,"
+                " SUM(CASE WHEN conquered_at IS NOT NULL OR wrong_count > 0"
+                " THEN 1 ELSE 0 END) AS fr" + src,
+                base_args,
+            ).fetchone()
+            total = conn.execute(
+                "SELECT COUNT(*) AS n" + src + where, (*base_args, *filt),
+            ).fetchone()["n"]
+            offset = (page - 1) * limit
+            rows = conn.execute(
+                "SELECT word, level, right, wrong, mastered_at, last_seen,"
+                " wrong_count, conquered_at" + src + where
+                + " ORDER BY COALESCE(mastered_at, '') DESC, word"
+                + " LIMIT ? OFFSET ?",
+                (*base_args, *filt, limit, offset),
+            ).fetchall()
+        items = [
+            {
+                "word": r["word"], "level": r["level"],
+                "right": r["right"], "wrong": r["wrong"],
+                "wrong_count": r["wrong_count"] or 0,
+                "mastered_at": r["mastered_at"], "last_seen": r["last_seen"],
+                "conquered_at": r["conquered_at"],
+            }
+            for r in rows
+        ]
+        all_n = int(summary["n"] or 0)
+        return {
+            "items": items,
+            "total": int(total or 0),
+            "page": page,
+            "limit": limit,
+            "has_more": offset + len(items) < int(total or 0),
+            "summary": {
+                "total": all_n,
+                "from_review": int(summary["fr"] or 0),
             },
         }
 
