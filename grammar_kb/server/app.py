@@ -55,7 +55,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     ``exam_db_path`` 为成绩库路径（默认 data/exam.db）。"""
     from fastapi import FastAPI, HTTPException
     from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import JSONResponse
+    from fastapi.responses import JSONResponse, ORJSONResponse
 
     from ..exam_store import ExamStore, default_exam_db_path
     from ..auth import UserStore, make_token, read_token
@@ -101,6 +101,10 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     # 泛读馆（整本书英文泛读）：路径解析沿 fce_query 模式
     # （GRAMMAR_KB_LIBRARY_DB/GRAMMAR_KB_LIBRARY_DIR → data/）
     library = LibraryStore()
+    # library.db 启用 WAL：其连接不经 dbreg.connect（LibraryStore 自持短
+    # 连接），而 WAL 是持久属性，启动时设一次后续连接自动继承。
+    # fce.db 由 dbreg.connect 对每个可写连接幂等设置，无需在此处理。
+    dbreg.enable_wal(library.db_path)
     prep_queue = PrepQueue(library)
 
     # 派生文范读 WAV 目录（{article_id}.wav）：TTS 导出后部署放置，不入
@@ -111,6 +115,10 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         title="grammar-kb 题库 API",
         version=__version__,
         description="PDF 讲义/教材知识点库的只读查询服务",
+        # orjson 序列化：MB 级 JSON 响应（/points 等）比标准 json 快数倍，
+        # ensure_ascii=False 原样输出中文（体积还更小）。依赖在 pyproject
+        # dependencies 里，部署机同步 pip install 即可
+        default_response_class=ORJSONResponse,
     )
 
     # ---- CORS ----
@@ -125,9 +133,11 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     )
 
     # ---- 响应压缩：JS/CSS/JSON gzip（bundle 770K → ~250K，2C1G 小机与
-    # 公网带宽下的首屏主瓶颈）。音频 wav/mp3 已压缩格式，最低阈值跳过
+    # 公网带宽下的首屏主瓶颈）。音频 wav/mp3 已压缩格式，最低阈值跳过。
+    # compresslevel=6：默认 9 对 MB 级 JSON 每响应多花 0.3-0.8s 纯 CPU，
+    # 6 的压缩率只差 ~2%，小机上明显更划算
     from fastapi.middleware.gzip import GZipMiddleware
-    app.add_middleware(GZipMiddleware, minimum_size=1024)
+    app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
     # ---- 统一错误响应 ----
     @app.exception_handler(HTTPException)

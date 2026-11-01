@@ -31,7 +31,8 @@ export function mountView(route, container, { role, state, ctx, pointsById }) {
   if (route === 'courses') {
     return mountCourses(container, { lectures: state.lectures, openLecture: ctx.openLecture })
   }
-  if (route === 'recite') return mountRecite(container, { vocab: state.vocab, role })
+  // 词汇表走 Promise（启动时后台预取，见 main.js bootstrap）：recite 页自行 await
+  if (route === 'recite') return mountRecite(container, { vocabPromise: state.vocabPromise, role })
   if (route === 'timetable') return mountTimetable(container)
   if (route === 'conquered') return mountConquered(container)
   if (route === 'topics') {

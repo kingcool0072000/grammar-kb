@@ -74,13 +74,20 @@ def register_library(app, ctx):
 
     @app.post("/library/books")
     async def lib_books_upload(request: "fastapi.Request", file: "fastapi.UploadFile"):
-        """上传 epub（教师）：仅 .epub ≤100MB；内存解析成功后事务落库+文件落盘。"""
+        """上传 epub（教师）：仅 .epub ≤100MB；内存解析成功后事务落库+文件落盘。
+
+        epub 解析是纯 CPU 密集（解压+逐章清洗），≤100MB 时可达数秒——
+        下放到线程池跑，避免阻塞事件循环卡死全部并发请求。
+        """
         _require_teacher_lib(request)
         content = await file.read()
+        import anyio
         try:
-            book = library.add_book(
-                _request_user(request), file.filename or "",
-                file.content_type or "", content,
+            book = await anyio.to_thread.run_sync(
+                lambda: library.add_book(
+                    _request_user(request), file.filename or "",
+                    file.content_type or "", content,
+                )
             )
         except LibraryError as e:
             raise HTTPException(status_code=e.status, detail=str(e))

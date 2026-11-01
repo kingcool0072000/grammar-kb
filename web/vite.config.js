@@ -44,14 +44,15 @@ export default defineConfig({
     },
   },
   build: {
-    // 修复：同名 chunk（如 readingReview-C88fsjRt.js）内容更新后浏览器强缓存不刷新。
-    // vite 默认 hash 只看模块内容，构建配置变化不参与——改为显式带时间戳的文件名，
-    // 每次构建必然换名，no-cache 的 index.html 会引用新名，彻底破缓存。
+    // 产物文件名用内容 hash：内容不变则文件名不变，跨发版浏览器缓存继续
+    // 命中；内容变则名变，no-cache 的 index.html 必然引用到新文件。
+    // （曾用 Date.now() 时间戳强制每次换名——代价是所有用户每次发版都全量
+    // 重新下载；服务端对带 hash 资源已回 immutable 一年，内容 hash 是正解。）
     rollupOptions: {
       output: {
-        chunkFileNames: (ci) => `assets/${ci.name}-${Date.now().toString(36)}.js`,
-        entryFileNames: `assets/[name]-${Date.now().toString(36)}.js`,
-        assetFileNames: `assets/[name]-${Date.now().toString(36)}[extname]`,
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]',
       },
     },
   },

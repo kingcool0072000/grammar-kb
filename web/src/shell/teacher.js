@@ -49,9 +49,18 @@ export async function prepareTeacher(state, boot, signalCtx) {
       })
       bar.style.width = '100%'
       msg.textContent = `整理 ${state.points.length} 个知识点…`
-      try {
-        localStorage.setItem(key, JSON.stringify(state.points))
-      } catch { /* 配额不足则跳过缓存 */ }
+      // 缓存结构/key 不动，但失败不能无人知晓：写失败=每次刷新都重拉 /points
+      const serialized = JSON.stringify(state.points)
+      if (serialized.length > 4 * 1024 * 1024) {
+        // localStorage 配额一般 5MB：超限写入必失败，提前跳过并留痕
+        console.warn(`[teacher] 知识点缓存 ${(serialized.length / 1048576).toFixed(1)}MB 超过 4MB，跳过写入（每次启动将重新拉取 /points）`)
+      } else {
+        try {
+          localStorage.setItem(key, serialized)
+        } catch (e) {
+          console.warn(`[teacher] 知识点缓存写入失败（${e && e.name ? e.name : e}），跳过缓存（每次启动将重新拉取 /points）`, e)
+        }
+      }
     }
   } catch (e) {
     boot.querySelector('#boot-msg').innerHTML =

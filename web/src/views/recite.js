@@ -21,19 +21,65 @@ import { migrateLegacyProgress, shuffle, startSession } from './recite/engine.js
 // 看板/历史/错题本渲染、进度拉取与页面级事件编排。会话状态机
 // （出题队列/逐题推进/结算上传）见 ./recite/engine.js，翻面卡片见
 // ./recite/cards.js，共用开关见 ./recite/shared.js。
+//
+// 加载编排：进页同发四路（逐词进度 / counts_only 层级计数 / 会话 / 复习摘要，
+// 原先七步纯串行），渲染分两波——进度+会话到齐即出主体（chips/看板/历史），
+// 复习摘要到达再补复习环/错题本；全量词条（1MB+）懒加载+模块级缓存，
+// 只在选词池路径上等待。「开始背单词」解禁只等选词池就绪，不等摘要。
 
 const GROUP_SIZES = [20, 30]
+const LEVEL_MAX = 5
+
+// ---- 分层词条：懒加载 + 模块级缓存 ---------------------------------------
+// 全量 items 只服务于「开始背单词 / 复习开练」的选词池与词条兜底，不再
+// 在进页关键路径上串行等待；按 maxLevel 键缓存，切 Tab 回来不重拉。
+const levelItemsCache = new Map() // maxLevel -> 标准化后的词条数组
+let levelItemsReq = null // 进行中的拉取（并发去重；失败清空以便下次重试）
+
+function normalizeLevelItems(items) {
+  // 标准化：/vocab-levels 把 forms/phonetic/special_spellings 放在
+  // extra 里，卡片与出题读顶层——这里提升一次（历史 bug：顶层读
+  // 拿不到 forms，词形变化题从未出过、音标不显示）
+  return (items || []).map((it) => {
+    const ex = it.extra || {}
+    if (it.atlas) rememberAtlas(it.word, it.atlas)
+    return {
+      ...it,
+      forms: it.forms || ex.forms || {},
+      phonetic: it.phonetic || ex.phonetic || '',
+      special_spellings: it.special_spellings || ex.special_spellings || [],
+    }
+  })
+}
+
+function loadLevelItems(maxLevel = LEVEL_MAX) {
+  if (levelItemsCache.has(maxLevel)) return Promise.resolve(levelItemsCache.get(maxLevel))
+  if (!levelItemsReq) {
+    levelItemsReq = api
+      .vocabLevels({ maxLevel })
+      .then((d) => {
+        const norm = normalizeLevelItems((d && d.items) || [])
+        levelItemsCache.set(maxLevel, norm)
+        return norm
+      })
+      .catch(() => {
+        levelItemsReq = null // 失败不缓存：下次进页/点击重试（与原先每次进页重拉的兜底一致）
+        return [] // 接口失败时仍可用基础词表兜底
+      })
+  }
+  return levelItemsReq
+}
 
 // ---- 视图 ----------------------------------------------------------------- //
 
-export async function mountRecite(el, { vocab, role }) {
+export async function mountRecite(el, { vocabPromise, role }) {
   // 学生只能提交记录，不能清除（与成绩管理权限一致）
   const canClear = role === 'teacher'
 
   el.innerHTML = `
     <div class="view-head">
       <h1>背单词</h1>
-      <p>基于词汇表（${vocab.length} 词）的全屏卡片：中译英、英译中、拼写挖空。翻面自动发音，答错的词按艾宾浩斯记忆法复习（1、2、4、7、15、30 天），直到攻克。</p>
+      <p>基于词汇表（<span id="rc-vocab-n">…</span> 词）的全屏卡片：中译英、英译中、拼写挖空。翻面自动发音，答错的词按艾宾浩斯记忆法复习（1、2、4、7、15、30 天），直到攻克。</p>
       <p class="atlas-footnote">部分单词的插画和录音来自 <a href="https://github.com/designfuchen/word-atlas" target="_blank" rel="noopener">词光 Word Atlas</a>，<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>，署名 Word Atlas contributors（词光）。没有录音时仍用浏览器语音。<a href="#/config">发音设置</a></p>
     </div>
     <div id="rc-loop"></div>
@@ -59,42 +105,48 @@ export async function mountRecite(el, { vocab, role }) {
   const state = { scope: 'all', size: 20, mode: 'flip' }
   let reviewSummary = null
   // 词库默认激活已解锁的最新级别（L0 只是兜底；解锁信息加载后校正）
-  // 词库/云端进度加载完成前禁用开始钮：pool 为空时点击会静默无反应
+  // 选词池就绪前禁用开始钮：pool 为空时点击会静默无反应
   const startBtn = el.querySelector('#rc-start')
   startBtn.disabled = true
 
-  // ---- 旧本地进度一次性迁移上云（malin 的 559 词次历史无缝衔接）----
-  const migrated = await migrateLegacyProgress()
-  if (migrated) console.info('[recite] 本地历史进度已合并上云')
+  // ---- L0 兜底词表（契约：第二参为 vocabPromise，可能 reject/undefined）----
+  // 不在进页路径上阻塞等待：头部件数与兜底 chips 由 vocabReady 异步补齐
+  let vocabArr = []
+  const vocabReady = (async () => {
+    try {
+      vocabArr = (await vocabPromise) || []
+    } catch {
+      vocabArr = []
+    }
+    const $n = el.querySelector('#rc-vocab-n')
+    if ($n) $n.textContent = String(vocabArr.length)
+    // 只有 counts 拉失败（chips 走基础表兜底）时，chips 文案才依赖词数
+    if (!Object.keys(levelCounts).length) renderScopeChips()
+  })()
 
   // ---- 云端逐词进度（看板与出题「未掌握词池」的唯一数据源）----
   let cloudProgress = { total_seen: 0, mastered: 0, levels: {}, words: [] }
-  try {
-    cloudProgress = await api.reciteProgress({ includeWords: true })
-  } catch {
-    // 接口不可用（离线）：进度看板为空态，仍可背词但不上进度
+  const wordProgress = new Map()
+  const masteredSet = new Set()
+  const applyProgress = (cp) => {
+    wordProgress.clear()
+    ;(cp.words || []).forEach((w) => wordProgress.set(w.word, w))
+    masteredSet.clear()
+    ;(cp.words || []).filter((w) => w.mastered).forEach((w) => masteredSet.add(w.word))
   }
 
-  const wordProgress = new Map((cloudProgress.words || []).map((w) => [w.word, w]))
-  const masteredSet = new Set(
-    (cloudProgress.words || []).filter((w) => w.mastered).map((w) => w.word),
-  )
-
-  // ---- 词库层级选择（/vocab-levels 按解锁截断：拿不到的层=锁定） ----
-  const LEVEL_MAX = 5
+  // ---- 词库层级选择（/vocab-levels counts_only：首拉只取 counts/unlocked）----
   let levelCounts = {}
   let unlocked = 0
-  try {
-    const d = await api.vocabLevels({ maxLevel: LEVEL_MAX })
-    levelCounts = d.counts || {}
-    unlocked = Number(d.unlocked ?? 0)
-  } catch { /* 兜底：chips 退化为基础一项 */ }
+
+  // 分层词条（懒加载，poolReady 就绪时填充；词条失败时兜底用 vocabArr）
+  let levelVocab = []
 
   function renderScopeChips() {
     const row = el.querySelector('#rc-scope')
     if (!row) return
     if (!Object.keys(levelCounts).length) {
-      row.innerHTML = `<button class="chip active" data-scope="all">基础（哈一 ${vocab.length} 词）</button>`
+      row.innerHTML = `<button class="chip active" data-scope="all">基础（哈一 ${vocabArr.length} 词）</button>`
       state.scope = 'all'
       return
     }
@@ -113,7 +165,6 @@ export async function mountRecite(el, { vocab, role }) {
       })
       .join('')
   }
-  renderScopeChips()
 
   // 看板 + 统计一起渲染（云端口径：当前层词进度）
   function renderBoard() {
@@ -121,7 +172,8 @@ export async function mountRecite(el, { vocab, role }) {
     const $stats = el.querySelector('#rc-stats')
     const scopeLevel = state.scope === 'all' ? 0 : Number(state.scope)
     const lvWords = (cloudProgress.words || []).filter((w) => w.level === scopeLevel)
-    const total = pool().length
+    // 词条懒加载未到位时，总词数用 counts_only 的层级计数兜底（与全量 items 同口径）
+    const total = pool().length || Number(levelCounts[String(scopeLevel)]) || 0
     const learned = lvWords.length
     const mastered = lvWords.filter((w) => w.mastered).length
     const hardN = lvWords.filter((w) => w.wrong > w.right).length
@@ -169,35 +221,12 @@ export async function mountRecite(el, { vocab, role }) {
       })
   }
 
-  // 分层词库词条（/vocab-levels 与上面 chips 共用同一次加载思路；
-  // （独立请求 items，与 chips 那次分开，避免耦合渲染顺序）
-  let levelVocab = []
-  try {
-    const items = (await api.vocabLevels({ maxLevel: LEVEL_MAX })).items || []
-    // 标准化：/vocab-levels 把 forms/phonetic/special_spellings 放在
-    // extra 里，卡片与出题读顶层——这里提升一次（历史 bug：顶层读
-    // 拿不到 forms，词形变化题从未出过、音标不显示）
-    levelVocab = items.map((it) => {
-      const ex = it.extra || {}
-      if (it.atlas) rememberAtlas(it.word, it.atlas)
-      return {
-        ...it,
-        forms: it.forms || ex.forms || {},
-        phonetic: it.phonetic || ex.phonetic || '',
-        special_spellings: it.special_spellings || ex.special_spellings || [],
-      }
-    })
-  } catch {
-    levelVocab = [] // 接口失败时仍可用基础词表（下方兜底）
-  } finally {
-    startBtn.disabled = false
-  }
   const byLevel = (lv) => levelVocab.filter((e) => e.level === lv)
 
   function pool() {
     if (state.scope === 'all') {
-      // 兜底：接口失败时用传入的哈一基础表（与 L0 同源）
-      return levelVocab.length ? byLevel(0) : vocab
+      // 兜底：词条没就位时用传入的哈一基础表（与 L0 同源）
+      return levelVocab.length ? byLevel(0) : vocabArr
     }
     return byLevel(Number(state.scope))
   }
@@ -223,7 +252,7 @@ export async function mountRecite(el, { vocab, role }) {
 
   function entryFor(word) {
     const e = levelVocab.find((x) => x.word === word)
-      || vocab.find((x) => x.word === word)
+      || vocabArr.find((x) => x.word === word)
       || { word, pos: [], meanings: [], gloss: '', level: -1, example: {}, extra: {} }
     const gloss = e.gloss || ''
     const meanings = (e.meanings && e.meanings.length) ? e.meanings : []
@@ -255,6 +284,7 @@ export async function mountRecite(el, { vocab, role }) {
 
   // 攻克：只背错词本（到期 / 逾期 / 在周期），不掺新词。答对走原有艾宾浩斯节点。
   async function startConquer(words) {
+    await poolReady // 词条懒加载：开练前确保选词池就绪（首次等待拉取，之后命中缓存立即返回）
     const ordered = (words || []).filter(Boolean).slice(0, 20)
     const entries = shuffle(ordered.map((w) => entryFor(w)))
     if (!entries.length) return
@@ -328,10 +358,7 @@ export async function mountRecite(el, { vocab, role }) {
   const refreshFromCloud = async () => {
     try {
       cloudProgress = await api.reciteProgress({ includeWords: true })
-      wordProgress.clear()
-      ;(cloudProgress.words || []).forEach((w) => wordProgress.set(w.word, w))
-      masteredSet.clear()
-      ;(cloudProgress.words || []).filter((w) => w.mastered).forEach((w) => masteredSet.add(w.word))
+      applyProgress(cloudProgress)
     } catch { /* 离线：保留旧快照 */ }
     try {
       reviewSummary = await api.reviewSummary()
@@ -343,22 +370,27 @@ export async function mountRecite(el, { vocab, role }) {
 
 
   // ---- 我的练习记录（云端；时长汇总也来自这里）----
+  // 首拉一次 limit=100：看板「累计」汇总与历史列表共用这一份（原先 sessions
+  // 拉了两次）；renderHistory 只取前 50 条渲染，不再发第二个请求。
+  // 会话结束后由 onFinish 延迟 800ms 重拉（上报有网络延迟，稍等再拉历史）。
   let cloudSessions = []
-  try {
-    cloudSessions = await api.reciteSessions({ limit: 100 })
-  } catch {
-    cloudSessions = []
+  let sessionsLoaded = false
+  const fetchSessions = async () => {
+    try {
+      cloudSessions = (await api.reciteSessions({ limit: 100 })) || []
+      sessionsLoaded = true
+    } catch {
+      // 首拉失败：历史区保持隐藏（接口不可用，离线等）；重拉失败：沿用旧快照
+    }
   }
-  const renderHistory = async () => {
+  const renderHistory = () => {
     const $h = el.querySelector('#rc-history')
     if (!$h) return
-    let recs
-    try {
-      recs = await api.reciteSessions({ limit: 50 })
-    } catch {
-      $h.innerHTML = ''
-      return // 接口不可用（离线等）静默隐藏
+    if (!sessionsLoaded) {
+      $h.innerHTML = '' // 接口不可用（离线等）静默隐藏
+      return
     }
+    const recs = cloudSessions.slice(0, 50)
     if (!recs.length) {
       $h.innerHTML = `
         <section class="fce-group">
@@ -389,7 +421,6 @@ export async function mountRecite(el, { vocab, role }) {
         ${hardWords.length ? `<p class="reading-hint">易错词（最近 20 组）：${hardWords.map(([w, n]) => `${escapeHtml(w)}×${n}`).join('、')}</p>` : ''}
       </section>`
   }
-  renderHistory()
 
   // ---- 错题本：只留计数和开练入口。词列表和逐词详情不再拉、不再画。 ----
   function renderWrongbook() {
@@ -474,18 +505,48 @@ export async function mountRecite(el, { vocab, role }) {
       onFinish: () => {
         refreshFromCloud()
         // 上报有网络延迟，稍等再拉历史
-        setTimeout(renderHistory, 800)
+        setTimeout(() => { fetchSessions().then(renderHistory) }, 800)
       },
     })
   })
 
-  try {
-    reviewSummary = await api.reviewSummary()
-  } catch {
-    reviewSummary = null
+  // ---- 选词池就绪：「开始背单词」解禁只等这个，不等 review-summary ----
+  // 词条懒加载立即开始（与下面四路请求并行、不挡任何渲染），就绪后解禁；
+  // loadLevelItems/vocabReady 自带兜底，此处不会 reject。
+  const poolReady = (async () => {
+    levelVocab = await loadLevelItems(LEVEL_MAX)
+    await vocabReady
+    startBtn.disabled = false
+  })()
+
+  // ---- 旧本地进度一次性迁移上云（malin 的 559 词次历史无缝衔接）----
+  // 通常纯 localStorage 读写瞬时完成；先行执行保证首拉进度包含刚合并的历史
+  const migrated = await migrateLegacyProgress()
+  if (migrated) console.info('[recite] 本地历史进度已合并上云')
+
+  // ---- 四路并行同发（原先七步纯串行）----
+  const pProgress = api.reciteProgress({ includeWords: true }).catch(() => null)
+  const pCounts = api.vocabLevels({ maxLevel: LEVEL_MAX, countsOnly: true }).catch(() => null)
+  const pSessions = fetchSessions()
+  const pSummary = api.reviewSummary().catch(() => null)
+
+  // ---- 渲染第一波：进度/层级计数/会话到齐即出主体（不等 2s+ 的复习摘要）----
+  const [progRes, countsRes] = await Promise.all([pProgress, pCounts, pSessions])
+  if (progRes) {
+    cloudProgress = progRes
+    applyProgress(cloudProgress)
   }
-  renderReviewLoop()
+  if (countsRes) {
+    levelCounts = countsRes.counts || {}
+    unlocked = Number(countsRes.unlocked ?? 0)
+  }
+  renderScopeChips()
   renderBoard()
+  renderHistory()
+
+  // ---- 渲染第二波：复习摘要到达，再补复习环 / 错题本区块 ----
+  reviewSummary = await pSummary
+  renderReviewLoop()
   renderWrongbook()
   maybeAutoReview()
 }

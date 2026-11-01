@@ -1,6 +1,7 @@
 """复习闭环：摘要计数、攻克池、新词额度、教师告警阈值。"""
 from __future__ import annotations
 
+import json
 import sqlite3
 from datetime import datetime, timedelta, timezone as _tz
 
@@ -452,3 +453,113 @@ def test_alert_thresholds(recite_env):
     s = _summary(c, h)
     assert s["alert"] is True
     assert s["conquered_n"]["d7"] >= 1  # blast 今天掌握，学生卡近 7 日仍看得见
+
+
+def _seed_session(env, wrong_words, user="malin"):
+    """直接落一条历史会话（绕过 submit，模拟旧版本/存量数据）。"""
+    store = ReciteStore(str(env / "fce.db"))
+    with store._connect() as conn:
+        conn.execute(
+            "INSERT INTO recite_sessions (user, total, wrong, acc, duration_sec,"
+            " wrong_words, mode, scope, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+            (user, len(wrong_words), len(wrong_words), 0, 5,
+             json.dumps(wrong_words), "flip", "all",
+             datetime.now(_tz.utc).isoformat(timespec="seconds")),
+        )
+
+
+def test_backfill_incremental_watermark(recite_env):
+    """错词回填增量化：首次全量回填并记水位；无新会话零重扫；新会话只
+    增量回填（不重算旧词、不重复插行）；重复读幂等。"""
+    _seed_session(recite_env, ["oldword"])
+    c = _client(recite_env)
+    h = _login(c, "malin", "123456")
+    wb = c.get("/recite/wrongbook", headers=h).json()["data"]
+    assert [w["word"] for w in wb["in_cycle"]] == ["oldword"]
+    con = sqlite3.connect(recite_env / "fce.db")
+    max_sid = con.execute("SELECT MAX(id) FROM recite_sessions").fetchone()[0]
+    marks = dict(con.execute(
+        "SELECT key, value FROM recite_meta WHERE key LIKE 'backfill_max_%'"
+    ).fetchall())
+    assert marks["backfill_max_id:malin"] == str(max_sid)
+    n_rows = con.execute("SELECT COUNT(*) FROM recite_review").fetchone()[0]
+    con.close()
+
+    # 无新会话再读：不重扫、不重复回填
+    wb = c.get("/recite/wrongbook", headers=h).json()["data"]
+    assert [w["word"] for w in wb["in_cycle"]] == ["oldword"]
+    con = sqlite3.connect(recite_env / "fce.db")
+    assert con.execute("SELECT COUNT(*) FROM recite_review").fetchone()[0] == n_rows
+    con.close()
+
+    # 新会话（含旧词 + 新错词）：只增量回填新词，旧词不重算
+    _seed_session(recite_env, ["freshone", "freshone", "oldword"])
+    wb = c.get("/recite/wrongbook", headers=h).json()["data"]
+    words = {w["word"]: w for w in wb["in_cycle"]}
+    assert set(words) == {"oldword", "freshone"}
+    assert words["freshone"]["wrong_count"] == 2  # 新批次内错了两次
+    assert words["oldword"]["wrong_count"] == 1   # 已有周期行不因重扫累加
+    # 水位推进到新会话；重复读幂等
+    con = sqlite3.connect(recite_env / "fce.db")
+    max_sid = con.execute("SELECT MAX(id) FROM recite_sessions").fetchone()[0]
+    marks = dict(con.execute(
+        "SELECT key, value FROM recite_meta WHERE key LIKE 'backfill_max_%'"
+    ).fetchall())
+    assert marks["backfill_max_id:malin"] == str(max_sid)
+    assert con.execute(
+        "SELECT COUNT(*) FROM recite_review WHERE user='malin'"
+    ).fetchone()[0] == 2
+    con.close()
+    wb = c.get("/recite/wrongbook", headers=h).json()["data"]
+    assert {w["word"] for w in wb["in_cycle"]} == {"oldword", "freshone"}
+
+
+def test_backfill_watermark_resets_on_clear(recite_env):
+    """教师清空进度连带清回填水位：下次读错词本按旧口径重新全量回填。"""
+    _seed_session(recite_env, ["regrow"])
+    c = _client(recite_env)
+    h = _login(c, "malin", "123456")
+    assert c.get("/recite/wrongbook", headers=h).json()["data"]["stats"]["total"] == 1
+    ht = _login(c, "teacher", "123456")
+    r = c.delete("/recite/progress?user=malin", headers=ht)
+    assert r.status_code == 200
+    con = sqlite3.connect(recite_env / "fce.db")
+    assert con.execute("SELECT COUNT(*) FROM recite_review").fetchone()[0] == 0
+    assert con.execute(
+        "SELECT COUNT(*) FROM recite_meta WHERE key LIKE 'backfill_max_%:malin'"
+    ).fetchone()[0] == 0
+    con.close()
+    # 水位已清：下次读按旧口径重新回填，历史错词回到周期
+    wb = c.get("/recite/wrongbook", headers=h).json()["data"]
+    assert [w["word"] for w in wb["in_cycle"]] == ["regrow"]
+
+
+def test_vocab_level_totals_cached(recite_env, monkeypatch):
+    """_vocab_level_totals 进程级缓存：首查后库再变也不重查；
+    并发首查（FastAPI 线程池场景）结果一致。"""
+    import grammar_kb.recite as recite_mod
+
+    monkeypatch.setenv("GRAMMAR_KB_DB", str(recite_env / "grammar.db"))  # create_app 前设
+    monkeypatch.setattr(recite_mod, "_VOCAB_TOTALS_CACHE", None)  # 隔离进程缓存，测完还原
+    con = sqlite3.connect(recite_env / "grammar.db")
+    con.execute("CREATE TABLE vocab_word (word TEXT PRIMARY KEY, level INTEGER NOT NULL)")
+    con.executemany(
+        "INSERT INTO vocab_word VALUES (?, 1)", [(f"w{i}",) for i in range(3)],
+    )
+    con.commit()
+    con.close()
+    store = ReciteStore(str(recite_env / "fce.db"))
+    assert store._vocab_level_totals() == {1: 3}
+    # 词库再变：进程生命周期缓存不重查
+    con = sqlite3.connect(recite_env / "grammar.db")
+    con.execute("INSERT INTO vocab_word VALUES ('zz', 2)")
+    con.commit()
+    con.close()
+    assert store._vocab_level_totals() == {1: 3}
+    # 并发首查：缓存已重置，线程池并发重查（含 zz 行的最新库态），结果一致
+    monkeypatch.setattr(recite_mod, "_VOCAB_TOTALS_CACHE", None)
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(lambda _: store._vocab_level_totals(), range(16)))
+    assert all(r == {1: 3, 2: 1} for r in results)

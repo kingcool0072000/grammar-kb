@@ -188,6 +188,11 @@ class GrammarDB:
         except Exception:
             self.conn.rollback()
             raise
+        finally:
+            # marker/relation 的全部写入路径都经 transaction（insert_kp、
+            # clear_lecture、reset_all）：写后作废子表缓存，commit 与
+            # rollback 都可能改变子表内容（见 _kp_children）
+            _KP_CHILDREN_CACHE.pop(id(self.conn), None)
 
     # ---- 讲次 ------------------------------------------------------------ #
 
@@ -480,7 +485,46 @@ def _row_to_lecture(r: sqlite3.Row) -> Lecture:
     )
 
 
+# _row_to_kp 的子表（marker/relation）缓存：conn id → [conn 强引用,
+# data_version, {kp_id: (marker 行, relation 行)}]。/points 这类全量列表
+# 原来每条 KP 各发 2 条子表查询（marker 无 kp_id 索引，每查即全表扫），
+# 324 条即 648 条查询；现在每连接首次用到时 2 条全量取回，之后纯内存组装。
+# 三重失效保障：
+# - 同连接写入：GrammarDB.transaction() 退出即清本连接缓存（全部写入路径
+#   都走 transaction）；
+# - 他连接/他进程写入：每次取用前比对 PRAGMA data_version（外部提交会使其
+#   变化），变了整体重取；
+# - conn 消亡后 id 复用：条目强引用 conn，复用地址必然过不了 `ent[0] is
+#   conn` 校验；另设上限防无限驻留（grammar.db 进程级单连接，实际只一条）。
+_KP_CHILDREN_CACHE: dict[int, list] = {}
+_KP_CHILDREN_CACHE_MAX = 8
+
+
+def _kp_children(conn: sqlite3.Connection, kp_id: int):
+    """某 KP 的 marker/relation 行，行序与原逐条查询一致（rowid 序）。"""
+    key = id(conn)
+    ent = _KP_CHILDREN_CACHE.get(key)
+    dv = conn.execute("PRAGMA data_version").fetchone()[0]
+    if ent is None or ent[0] is not conn or ent[1] != dv:
+        markers: dict[int, list] = {}
+        relations: dict[int, list] = {}
+        # id 是 INTEGER PRIMARY KEY（= rowid 别名）：按 id 排序即原 WHERE
+        # kp_id 查询的实际返回序（无 ORDER BY 时按 rowid 顺序返回）
+        for mr in conn.execute("SELECT * FROM marker ORDER BY id"):
+            markers.setdefault(mr["kp_id"], []).append(mr)
+        for rr in conn.execute("SELECT * FROM relation ORDER BY id"):
+            relations.setdefault(rr["kp_id"], []).append(rr)
+        ent = [conn, dv, (markers, relations)]
+        while len(_KP_CHILDREN_CACHE) >= _KP_CHILDREN_CACHE_MAX:
+            _KP_CHILDREN_CACHE.pop(next(iter(_KP_CHILDREN_CACHE)))
+        _KP_CHILDREN_CACHE[key] = ent
+    markers, relations = ent[2]
+    # 全量表已扫描：不在映射中 = 该 KP 本无子行
+    return markers.get(kp_id, []), relations.get(kp_id, [])
+
+
 def _row_to_kp(r: sqlite3.Row, conn: sqlite3.Connection) -> KnowledgePoint:
+    marker_rows, relation_rows = _kp_children(conn, r["id"])
     markers = [
         Marker(
             marker=mr["marker"],
@@ -488,15 +532,11 @@ def _row_to_kp(r: sqlite3.Row, conn: sqlite3.Connection) -> KnowledgePoint:
             tense=mr["tense"],
             note=mr["note"],
         )
-        for mr in conn.execute(
-            "SELECT * FROM marker WHERE kp_id=?", (r["id"],)
-        ).fetchall()
+        for mr in marker_rows
     ]
     relations = [
         Relation(type=rr["type"], to_kp_id=rr["to_kp_id"], note=rr["note"])
-        for rr in conn.execute(
-            "SELECT * FROM relation WHERE kp_id=?", (r["id"],)
-        ).fetchall()
+        for rr in relation_rows
     ]
     try:
         tags = json.loads(r["tags_json"] or "[]")

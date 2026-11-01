@@ -98,6 +98,37 @@ def audio_reading_dir() -> str:
     return str(data_path("audio", "reading"))
 
 
+# WAL 白名单（按文件名匹配：测试会把库指到 tmp 下的同名文件）：
+# - fce.db：recite/reading/topics/plan/video 等多 Store 在同一请求里高频
+#   短连接交错读写，delete 模式写锁互斥易 SQLITE_BUSY，WAL 读写不互斥。
+# - library.db：epub 上传事务大且 AI 预习后台任务并发写，同理。
+# grammar.db 进程级单连接、exam.db 极小、ecdict.db 纯只读——不启用。
+_WAL_DB_NAMES = frozenset({"fce.db", "library.db"})
+
+
+def enable_wal(path: str) -> str:
+    """对白名单库幂等启用 ``journal_mode=WAL``，返回实际生效的模式。
+
+    WAL 是持久属性（写入库文件头），设一次此后任何连接（含 library.py
+    这类不经 :func:`connect` 的裸连接）都运行在 WAL 下。非白名单库原样
+    返回 ``delete``；库忙/打不开时不抛错返回当前模式（调用点多为启动期，
+    后续任一可写连接会再次尝试）。
+    """
+    if os.path.basename(path) not in _WAL_DB_NAMES:
+        return "delete"
+    try:
+        conn = sqlite3.connect(path, timeout=5.0)
+    except sqlite3.Error:
+        return "delete"
+    try:
+        row = conn.execute("PRAGMA journal_mode=WAL").fetchone()
+        return str(row[0]) if row else "delete"
+    except sqlite3.Error:
+        return "delete"
+    finally:
+        conn.close()
+
+
 @contextmanager
 def connect(
     path: str,
@@ -112,6 +143,10 @@ def connect(
       调用方按既有惯例先判存在）。
     - ``timeout``：sqlite 忙等待秒数（readingmore 用 10）。
     - ``foreign_keys``：library.db 需要外键约束，按需打开。
+    - fce.db / library.db 可写连接自动处于 WAL（见 :func:`enable_wal`；
+      只读连接跳过——只读连接改不了 journal_mode，且 WAL 是持久属性，
+      可写连接早已设好）。正常 close 时 SQLite 自动 checkpoint 并清理
+      -wal/-shm，即用即关模式不会留下游离 -wal 残留。
     """
     if readonly:
         conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=timeout)
@@ -120,6 +155,11 @@ def connect(
     conn.row_factory = sqlite3.Row
     if foreign_keys:
         conn.execute("PRAGMA foreign_keys = ON")
+    if not readonly and os.path.basename(path) in _WAL_DB_NAMES:
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.Error:
+            pass  # 忙时跳过：WAL 持久化，任一可写连接设成即生效
     try:
         with conn:
             yield conn

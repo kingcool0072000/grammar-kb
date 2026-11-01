@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from typing import Optional
 
 from ..clock import cn_dt, monday_of, today_cn, week_bounds
+from .ctx import WeekCtx
 from .util import _short, _task_key, add_days, completion_percent, task_public
 
 
@@ -33,7 +34,8 @@ class ScheduleMixin:
 
     def week_daily_tasks(self, week_start: str, user: str,
                          for_date: Optional[str] = None,
-                         planned: Optional[dict] = None) -> list[dict]:
+                         planned: Optional[dict] = None,
+                         ctx: Optional[WeekCtx] = None) -> list[dict]:
         """周目标 → for_date 当日的任务清单（逐日均摊，外循环第③步）。
 
         均摊节奏按家长 10-04 定的模板：工作日=讲次+背词+泛读，
@@ -41,9 +43,13 @@ class ScheduleMixin:
         剩余量动态重摊：按「周目标 − 截至 for_date 已完成」重算后摊给
         剩余天——错过的日子欠账自动滚入后面的天。纯派生不落库。
         for_date 缺省=今天；不在本周时以本周一为锚（整周预览）。
+        ``ctx``：周级信号缓存（week_view/overview 逐日复用一次预取），
+        缺省自建单日 ctx，行为不变。
         """
+        if ctx is None:
+            ctx = WeekCtx(self, user, week_start)
         if planned is None:
-            w = self._get_week(week_start, user=user)
+            w = ctx.week_tasks(week_start)
             t = w.get("tasks") or {}
         else:
             t = planned
@@ -62,13 +68,13 @@ class ScheduleMixin:
         # ---- 截至 ref（含）的已完成——欠账重摊的基数 ----
         lo, _ = week_bounds(week_start)
         upto = (rd + timedelta(days=1)).isoformat()
-        done_lecs = self.lecture_done(lo, upto, user, "lecture")
-        done_hw = self.lecture_done(lo, upto, user, "hw")
+        done_lecs = ctx.lecture_done(lo, upto, "lecture")
+        done_hw = ctx.lecture_done(lo, upto, "hw")
         # 今天已完成的讲次/卷——保留出行为（完成信号会点亮 ✓，
         # 当天清单=今天做完的 ✓ + 今天新分配的灰）
-        today_lecs = self.lecture_done(ref, upto, user, "lecture")
-        today_hw = self.lecture_done(ref, upto, user, "hw")
-        fce_done = set(self._fce_actuals(lo, upto, user))
+        today_lecs = ctx.lecture_done(ref, upto, "lecture")
+        today_hw = ctx.lecture_done(ref, upto, "hw")
+        fce_done = set(ctx.fce_actuals(lo, upto))
         tasks: list[dict] = []
 
         def hw_row(lec: int) -> dict:
@@ -117,7 +123,7 @@ class ScheduleMixin:
                     tasks.append(hw_row(lec))
             vg = t.get("vocab_goal")
             if vg and wd_left:
-                rem = self._vocab_week_remaining(t, lo, upto, user)
+                rem = self._vocab_week_remaining(t, lo, upto, user, ctx=ctx)
                 if rem > 0:
                     n = -(-rem // wd_left)
                     lv = t.get("vocab_lv")
@@ -132,14 +138,15 @@ class ScheduleMixin:
                         "detail": detail,
                     })
             for book_key, pct in (t.get("reading") or {}).items():
-                tasks.append(self._reading_task(book_key, pct, user, days_left))
+                tasks.append(self._reading_task(book_key, pct, user, days_left,
+                                                ctx=ctx))
             # 周中已提前提交朗读的精读篇目：当天清单补 ✓ 行（否则只进
             # 「计划外朗读」实录，计划内完成度看不见——孩子提前做完
             # 反而显示没完成）
-            today_arts = self._done_article_ids(ref, upto, user)
+            today_arts = ctx.done_article_ids(ref, upto)
             for aid in (t.get("articles") or []):
                 if aid in today_arts:
-                    title = self._article_title(aid)
+                    title = ctx.article_title(aid)
                     if title:
                         tasks.append({
                             "type": "article", "article_id": aid,
@@ -158,9 +165,9 @@ class ScheduleMixin:
                     "detail": "周六大题 · 先看预习词表再限时做",
                 })
             arts = [a for a in (t.get("articles") or [])
-                    if a not in (self._done_article_ids(lo, upto, user))]
+                    if a not in (ctx.done_article_ids(lo, upto))]
             for aid in arts[:2]:
-                title = self._article_title(aid)
+                title = ctx.article_title(aid)
                 if title:
                     tasks.append({
                         "type": "article", "article_id": aid,
@@ -171,11 +178,11 @@ class ScheduleMixin:
             # 今天刚提交朗读的计划内文章：上面按「周内已朗」滤剩余时把它也
             # 滤掉了，清单无行 → 计划表看不见 ✓（孩子做完了反而像没做）。
             # 仿讲次 today_lecs 补行：完成的也要看得见。
-            today_arts = self._done_article_ids(ref, upto, user)
+            today_arts = ctx.done_article_ids(ref, upto)
             have_arts = {x.get("article_id") for x in tasks}
             for aid in (t.get("articles") or []):
                 if aid in today_arts and aid not in have_arts:
-                    title = self._article_title(aid)
+                    title = ctx.article_title(aid)
                     if title:
                         tasks.append({
                             "type": "article", "article_id": aid,
@@ -188,7 +195,7 @@ class ScheduleMixin:
                 tasks.append(self._reading_task(book_key, pct, user, days_left))
         else:
             # ---- 周日：错词再练 + 试卷 + 补泛读（周日晚留白复盘）----
-            wrong_words = self._wrong_words_count(user)
+            wrong_words = ctx.wrong_words_count()
             if wrong_words:
                 n = min(30, wrong_words)
                 tasks.append({
@@ -197,7 +204,7 @@ class ScheduleMixin:
                     "detail": f"云端错题本共 {wrong_words} 词，周日清一档",
                 })
             for pid in (t.get("vocab_papers") or []):
-                plv = self._paper_level(pid)
+                plv = ctx.paper_level(pid)
                 tasks.append({
                     "type": "paper", "key": f"paper:{pid}",
                     "text": f"单词试卷练习（{pid}）",
@@ -205,14 +212,14 @@ class ScheduleMixin:
                 })
             # 周日泛读兜底：周六前（含周六）仍未读完的剩余量周日一天清
             for book_key, pct in (t.get("reading") or {}).items():
-                tasks.append(self._reading_task(book_key, pct, user, 1))
+                tasks.append(self._reading_task(book_key, pct, user, 1, ctx=ctx))
             # 今天刚提交朗读的计划内文章也要出 ✓ 行（周日同样：孩子做完了
             # 反而像没做，与周六分支同修）
-            today_arts = self._done_article_ids(ref, upto, user)
+            today_arts = ctx.done_article_ids(ref, upto)
             have_arts = {x.get("article_id") for x in tasks}
             for aid in (t.get("articles") or []):
                 if aid in today_arts and aid not in have_arts:
-                    title = self._article_title(aid)
+                    title = ctx.article_title(aid)
                     if title:
                         tasks.append({
                             "type": "article", "article_id": aid,
@@ -242,10 +249,12 @@ class ScheduleMixin:
                     })
                 if lec in today_hw:
                     tasks.append(hw_row(lec))
-        self._append_video_tasks(tasks, t, user, lo, ref, upto, dow, wd_left)
+        self._append_video_tasks(tasks, t, user, lo, ref, upto, dow, wd_left,
+                                 ctx=ctx)
         return tasks
 
-    def _vocab_week_remaining(self, t: dict, lo: str, upto: str, user: str) -> int:
+    def _vocab_week_remaining(self, t: dict, lo: str, upto: str, user: str,
+                              ctx: Optional[WeekCtx] = None) -> int:
         """本周还要背的词数，摊到剩余工作日。
 
         没标级别时，vocab_goal 仍是本周词数预算（旧周、旧测试）。
@@ -261,29 +270,37 @@ class ScheduleMixin:
             return 0
         lv = t.get("vocab_lv")
         if lv is None:
-            gained = self._vocab_actuals(lo, upto, user)
+            gained = self._vocab_actuals(lo, upto, user) if ctx is None \
+                else ctx.vocab_actuals(lo, upto)
             return max(0, vg - gained)
         try:
             level = int(lv)
         except (TypeError, ValueError):
-            gained = self._vocab_actuals(lo, upto, user)
+            gained = self._vocab_actuals(lo, upto, user) if ctx is None \
+                else ctx.vocab_actuals(lo, upto)
             return max(0, vg - gained)
-        words = self._vocab_level_words(level)
-        base = self._vocab_mastered_before(lo, user, words)
+        words = (self._vocab_level_words(level) if ctx is None
+                 else ctx.level_words(level))
+        base = (self._vocab_mastered_before(lo, user, words) if ctx is None
+                else ctx.vocab_mastered_before(lo, words))
         if base >= vg:
             return 0
-        gained = self._vocab_actuals(lo, upto, user, words)
+        gained = (self._vocab_actuals(lo, upto, user, words) if ctx is None
+                  else ctx.vocab_actuals(lo, upto, words))
         return max(0, (vg - base) - gained)
 
     def _append_video_tasks(self, tasks: list[dict], t: dict, user: str,
                             lo: str, ref: str, upto: str, dow: int,
-                            wd_left: int) -> None:
+                            wd_left: int,
+                            ctx: Optional[WeekCtx] = None) -> None:
         """工作日每天 1 个看+复述；周末每天至多补 1 个。当天提交的行保留 ✓。"""
+        if ctx is None:
+            ctx = WeekCtx(self, user, monday_of(date.fromisoformat(ref)).isoformat())
         vids = [str(v).strip() for v in (t.get("videos") or []) if str(v).strip()]
         if not vids:
             return
-        done_vids = self._retold_video_ids(lo, upto, user)
-        today_vids = self._retold_video_ids(ref, upto, user)
+        done_vids = ctx.retold_video_ids(lo, upto)
+        today_vids = ctx.retold_video_ids(ref, upto)
         rest = [v for v in vids if v not in done_vids]
         # 欠账滚到后面的天，不在同一天堆多条（复述任务重）。
         if rest and (dow >= 5 or wd_left):
@@ -292,19 +309,21 @@ class ScheduleMixin:
                 else f"本周视频剩 {len(rest)} 个 · 工作日每天 1 个"
             )
             for vid in rest:
-                row = self._video_task(vid, detail=detail)
+                row = self._video_task(vid, detail=detail, ctx=ctx)
                 if row:
                     tasks.append(row)
                     break
         have = {x.get("key") for x in tasks}
         for vid in vids:
             if vid in today_vids and f"video:{vid}" not in have:
-                row = self._video_task(vid, detail="今天已提交复述 ✓")
+                row = self._video_task(vid, detail="今天已提交复述 ✓", ctx=ctx)
                 if row:
                     tasks.append(row)
 
-    def _video_task(self, vid: str, *, detail: str) -> Optional[dict]:
-        title = self._video_title(vid)
+    def _video_task(self, vid: str, *, detail: str,
+                    ctx: Optional[WeekCtx] = None) -> Optional[dict]:
+        title = (ctx.video_title(vid) if ctx is not None
+                 else self._video_title(vid))
         if not title:
             return None  # 已删除或下架：不出行（与学生可见清单一致）
         return {
@@ -415,21 +434,25 @@ class ScheduleMixin:
 
     # ---- 内循环：学生今日任务 / 周清单（完成只看学习信号） ----
 
-    def today_tasks(self, user: str, day: Optional[str] = None) -> dict:
+    def today_tasks(self, user: str, day: Optional[str] = None,
+                    ctx: Optional[WeekCtx] = None) -> dict:
         """学生某日的任务清单（内循环核心）。
 
         任务由本周 plan_weeks.tasks 派生（与教师驾驶舱「每日任务展开」
         同一规则）。完成态只认 ``day_completion``——学生做了即亮。
-        ``plan_day_checks`` 不进 done，也不进 percent。
+        ``plan_day_checks`` 不读、不写。
         某日若已有 ``plan_history_days`` 快照，用快照代替派生清单
         （可选回填，不是每日流水）。
+        ``ctx``：周级信号缓存；缺省自建（单日语义不变）。
         """
         d = day or today_cn().isoformat()
         ws = monday_of(date.fromisoformat(d)).isoformat()
-        historical = self.history_day(user, d)
-        derived = historical if historical is not None else self.week_daily_tasks(ws, for_date=d, user=user)
+        if ctx is None:
+            ctx = WeekCtx(self, user, ws)
+        historical = ctx.history_day(d)
+        derived = historical if historical is not None else self.week_daily_tasks(ws, for_date=d, user=user, ctx=ctx)
         comp = self.day_completion(
-            user, d, derived, historical=historical is not None)
+            user, d, derived, historical=historical is not None, ctx=ctx)
         acts_out = comp["acts"]
         out = []
         for t in derived:
@@ -447,7 +470,8 @@ class ScheduleMixin:
             if historical is None and t.get("type") == "speak" and t2["done"]:
                 names = []
                 for aid in acts_out.get("all_speak_articles", []):
-                    ti = self._article_title(aid)
+                    ti = (ctx.article_title(aid) if ctx is not None
+                          else self._article_title(aid))
                     if ti:
                         names.append(ti[:16])
                 if names:
@@ -464,19 +488,23 @@ class ScheduleMixin:
 
 
     def _signals_and_acts(self, user: str, day: str,
-                          planned_articles: set) -> tuple[dict, list, dict]:
+                          planned_articles: set,
+                          ctx: Optional[WeekCtx] = None) -> tuple[dict, list, dict]:
         """当天活动信号 + 量化实录（历史日快照路径同样调用）。
 
         计划内任务已按信号打勾；实录补两类信息：
         1) 计划外的朗读提交（计划没排该篇，但学生做了——原逻辑直接不可见）
         2) 量化实录：泛读分钟+词数 / 背单词个数+分钟（无论是否在计划内）
+
+        acts 由 ``_auto_done_full`` 随返回值带回（原先写在 Store 单例的
+        ``_day_acts`` 字段上，并发请求互相覆盖，已废除）。
         """
-        auto, read_titles = self._auto_done(user, day)
-        acts = getattr(self, "_day_acts", None) or {}
+        auto, read_titles, acts = self._auto_done_full(user, day, ctx=ctx)
         extra_speaks = []
         for aid in acts.get("speak_articles", []):
             if aid not in planned_articles:
-                title = self._article_title(aid)
+                title = (ctx.article_title(aid) if ctx is not None
+                         else self._article_title(aid))
                 extra_speaks.append({
                     "type": "speak", "done": True,
                     "text": f"朗读《{title[:16]}》" if title else f"朗读提交（文章{aid}）",
@@ -500,11 +528,12 @@ class ScheduleMixin:
         ws = monday_of(today_cn()).isoformat()
         w = self._get_week(ws, user=user)
         t = w.get("tasks") or {}
+        ctx = WeekCtx(self, user, ws)
         days = []
         for i in range(7):
             d = (date.fromisoformat(ws) + timedelta(days=i)).isoformat()
             if d > today_iso:
-                fut = self.week_daily_tasks(ws, for_date=d, user=user)
+                fut = self.week_daily_tasks(ws, for_date=d, user=user, ctx=ctx)
                 days.append({
                     "date": d, "future": True,
                     "done": 0, "total": len(fut),
@@ -513,7 +542,7 @@ class ScheduleMixin:
                     "tasks": [task_public(x, future=True) for x in fut],
                 })
                 continue
-            td = self.today_tasks(user=user, day=d)
+            td = self.today_tasks(user=user, day=d, ctx=ctx)
             days.append({
                 "date": d, "future": False,
                 "done": td["done"], "total": td["total"],

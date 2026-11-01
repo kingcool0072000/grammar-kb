@@ -6,10 +6,14 @@ import json
 import re
 import sqlite3
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from ..paths import data_path
 from .util import _chapter_at_words, _short, fmt_w
+
+if TYPE_CHECKING:
+    from .ctx import WeekCtx
+
 class BooksMixin:
 
     def _lib_connect(self) -> Optional[sqlite3.Connection]:
@@ -158,19 +162,28 @@ class BooksMixin:
 
 
     def _reading_task(self, book_key: str, goal_val, user: str,
-                      days_left: int) -> dict:
+                      days_left: int, ctx: Optional["WeekCtx"] = None) -> dict:
         """泛读任务行。goal_val 两种格式：
         - list（新）：选章 idx 列表 → 目标=读完这些章（词数=章和）
         - number（旧）：全书目标 % → 按必读配置/全书口径
-        匹配不到书则回退百分比文案。"""
-        row = self._match_book(book_key, user)
+        匹配不到书则回退百分比文案。
+        ``ctx``：书目/进度请求内 memo（周视图逐日复用，词数与进度不随日变，
+        只有 days_left 进文案）。
+        """
+        row = (ctx.match_book(book_key) if ctx is not None
+               else self._match_book(book_key, user))
         short = (_short(row["title"], 14) if row else _short(str(book_key), 14))
         if isinstance(goal_val, list) and row:
             # 新章选格式：目标词数=选章词数和；已读=该生全书有效阅读
             # 区段 ∩ 选章的词数（水位区段跨会话去重，且只数选章内）
-            goal_words = self._chapters_words_sum({str(row["id"]): goal_val})
-            done_w = self._read_words_in_chapters(user, row["id"], goal_val)
-            nos = self._chapter_nos(row["id"], goal_val)
+            goal_words = (ctx.chapters_words_sum({str(row["id"]): goal_val})
+                          if ctx is not None else
+                          self._chapters_words_sum({str(row["id"]): goal_val}))
+            done_w = (ctx.read_words_in_chapters(row["id"], goal_val)
+                      if ctx is not None else
+                      self._read_words_in_chapters(user, row["id"], goal_val))
+            nos = (ctx.chapter_nos(row["id"], goal_val) if ctx is not None
+                   else self._chapter_nos(row["id"], goal_val))
             rng = (f"第{nos[0]}–{nos[-1]}章" if len(nos) > 1
                    else f"第{nos[0]}章") if nos else f"{len(goal_val)} 章"
             if done_w >= goal_words and goal_words > 0:
@@ -190,7 +203,9 @@ class BooksMixin:
             }
         goal_pct = float(goal_val or 100)
         if row:
-            st = self._book_reading_state(row["id"], goal_pct, user)
+            st = (ctx.book_reading_state(row["id"], goal_pct)
+                  if ctx is not None
+                  else self._book_reading_state(row["id"], goal_pct, user))
             if st:
                 cfg_txt = (f"必读 {st['configured_chapters']} 章"
                            if st.get("configured_chapters") else f"目标 {goal_pct}%")

@@ -5,9 +5,10 @@ import contextlib
 import sqlite3
 from datetime import date, datetime, timedelta, timezone as _tz
 
-from ..clock import cn_dt, monday_of, today_cn
+from ..clock import monday_of, today_cn
+from .ctx import WeekCtx
 from .util import (
-    _paper_short, _short, _task_key, add_days, completion_percent, task_public,
+    _short, _task_key, add_days, completion_percent, task_public,
 )
 
 _COMPLETION_NOTE = (
@@ -25,6 +26,11 @@ class ViewsMixin:
         - 题型类数（微练习讲数 + FCE 项数 + 讲次测验，去重类目）
         已到的日子一律 ``today_tasks``（信号；有快照才改走回填）。
         没有计划项时 percent 为 null，不显示成 0%。
+
+        7 天共用一个 ``WeekCtx``：lecture_done / _vocab_actuals /
+        _fce_actuals / _done_article_ids / _retold_video_ids 等周窗口
+        信号每周只查一次，逐日前缀在 ctx 内切片（原先每天重扫一遍，
+        同一周窗口 O(天²)）。
         """
         w = self._get_week(week_start, user=user)
         t = w.get("tasks") or {}
@@ -32,19 +38,20 @@ class ViewsMixin:
         in_week = week_start <= today_iso <= add_days(week_start, 6)
         days_left = max(1, (date.fromisoformat(add_days(week_start, 6))
                             - date.fromisoformat(today_iso)).days + 1) if in_week else 7
+        ctx = WeekCtx(self, user, week_start)
 
         # ---- 周拆解 ----
         reading_items = []
         for book_key, goal_val in (t.get("reading") or {}).items():
-            row = self._match_book(book_key, user)
+            row = ctx.match_book(book_key)
             # 章选格式（list）不做全书百分比状态（_book_reading_state 只吃
             # float——此前 list 直接传入会 500，周计划选章后周历/课程表必炸）
-            st = (self._book_reading_state(row["id"], float(goal_val), user)
+            st = (ctx.book_reading_state(row["id"], float(goal_val))
                   if row and not isinstance(goal_val, list) else None)
             # 章选格式补展示章区间（「第6–7章」）——学生课程表摘要直接引用
             chapter_range = None
             if isinstance(goal_val, list) and row:
-                nos = self._chapter_nos(row["id"], goal_val)
+                nos = ctx.chapter_nos(row["id"], goal_val)
                 if len(nos) > 1:
                     chapter_range = f"第{nos[0]}–{nos[-1]}章"
                 elif nos:
@@ -98,14 +105,15 @@ class ViewsMixin:
                 # 未来日带出均摊后的当日计划（done=False 灰显），教师/学生
                 # 都能提前看到「那天该做什么」；total 即当日任务数。
                 # 未来日不进完成率，percent 保持 null，避免空打卡被看成 0%。
-                fut = self.week_daily_tasks(week_start, for_date=d, user=user)
+                fut = self.week_daily_tasks(week_start, for_date=d, user=user,
+                                            ctx=ctx)
                 days.append({
                     "date": d, "future": True, "done": 0, "total": len(fut),
                     "percent": None, "basis": "signals",
                     "tasks": [task_public(x, future=True) for x in fut],
                 })
                 continue
-            td = self.today_tasks(user=user, day=d)
+            td = self.today_tasks(user=user, day=d, ctx=ctx)
             days.append({
                 "date": d, "future": False,
                 "done": td["done"], "total": td["total"],
@@ -128,7 +136,7 @@ class ViewsMixin:
             "breakdown": breakdown, "days": days, "current_week": in_week,
             # 精读任务补标题（学生课程表摘要显示文章名，不止「N 篇」）
             "article_titles": [
-                {"id": aid, "title": self._article_title(aid)}
+                {"id": aid, "title": ctx.article_title(aid)}
                 for aid in (t.get("articles") or [])
             ],
             # 视频任务补标题（学生课程表/计划卡显示片名；已删除的为 null）
@@ -136,7 +144,8 @@ class ViewsMixin:
                 {"vid": v, "title": self._video_title_any(v)}
                 for v in (t.get("videos") or [])
             ],
-            "goal_progress": self._week_goal_progress(t, days, user, week_start),
+            "goal_progress": self._week_goal_progress(t, days, user, week_start,
+                                                      ctx=ctx),
             "completion": {
                 "done": done_n, "total": total_n,
                 "percent": completion_percent(done_n, total_n),
@@ -147,7 +156,8 @@ class ViewsMixin:
 
 
     def _week_goal_progress(self, t: dict, days: list, user: str,
-                            week_start: str) -> dict:
+                            week_start: str,
+                            ctx: WeekCtx | None = None) -> dict:
         """周目标的各维度目标+进度（与总目标 goal_progress 的 dims 同构，
         供前端同一张「目标+进度」卡切换展示）。
 
@@ -168,14 +178,20 @@ class ViewsMixin:
 
         lecs = t.get("lectures") or []
         if lecs:
-            done_lec = len(set(lecs) & self.lecture_done(
-                week_start, add_days(week_start, 7), user, "lecture"))
+            done_lec = len(set(lecs) & (
+                ctx.lecture_done(week_start, add_days(week_start, 7), "lecture")
+                if ctx is not None else
+                self.lecture_done(week_start, add_days(week_start, 7),
+                                  user, "lecture")))
             dim("📚", "语法课程", done_lec, len(lecs))
 
         hw_papers = t.get("hw_papers") or []
         if hw_papers:
-            done_hw = len(set(hw_papers) & self.lecture_done(
-                week_start, add_days(week_start, 7), user, "hw"))
+            done_hw = len(set(hw_papers) & (
+                ctx.lecture_done(week_start, add_days(week_start, 7), "hw")
+                if ctx is not None else
+                self.lecture_done(week_start, add_days(week_start, 7),
+                                  user, "hw")))
             dim("📝", "作业卷", done_hw, len(hw_papers))
 
         # 词汇差额口径（级别内增量）：分母 = 目标词数 − 周初该级别已掌握
@@ -184,9 +200,15 @@ class ViewsMixin:
         vg = t.get("vocab_goal")
         if vg:
             lv = t.get("vocab_lv")
-            lv_words = self._vocab_level_words(lv)
-            gained = self._vocab_actuals(week_start, add_days(week_start, 7), user, lv_words)
-            base = self._vocab_mastered_before(week_start, user, lv_words)
+            lv_words = (ctx.level_words(lv) if ctx is not None
+                        else self._vocab_level_words(lv))
+            gained = (ctx.vocab_actuals(week_start, add_days(week_start, 7),
+                                        lv_words) if ctx is not None else
+                      self._vocab_actuals(week_start, add_days(week_start, 7),
+                                          user, lv_words))
+            base = (ctx.vocab_mastered_before(week_start, lv_words)
+                    if ctx is not None else
+                    self._vocab_mastered_before(week_start, user, lv_words))
             # 分母就是「本周新掌握」个数。编辑器按 base + N 写入 vocab_goal，
             # 老师看到的 N 和这里的 total 是同一个数。
             if lv is None:
@@ -203,19 +225,12 @@ class ViewsMixin:
 
         fce = t.get("fce") or []
         if fce:
-            try:
-                with self._connect() as conn:
-                    rows = conn.execute(
-                        "SELECT test_id, paper, part FROM fce_submission"
-                        f" WHERE user = ? AND {cn_dt('created_at')} >= ?"
-                        f" AND {cn_dt('created_at')} < ?",
-                        (user, f"{week_start} 00:00:00",
-                         f"{add_days(week_start, 7)} 00:00:00")).fetchall()
-                    got = {f"Test {r['test_id']} · {_paper_short(r['paper'])} P{r['part']}"
-                           for r in rows}
-                done_fce = sum(1 for x in fce if x in got)
-            except sqlite3.Error:
-                done_fce = 0
+            # 与 actuals._fce_actuals 同一窗口与标签构造（ctx 有预取则切片）
+            got = set(
+                ctx.fce_actuals(week_start, add_days(week_start, 7))
+                if ctx is not None else
+                self._fce_actuals(week_start, add_days(week_start, 7), user))
+            done_fce = sum(1 for x in fce if x in got)
             dim("🎧", "FCE真题", done_fce, len(fce))
 
         reading_map = t.get("reading") or {}
@@ -322,8 +337,10 @@ class ViewsMixin:
 
         videos = [str(v).strip() for v in (t.get("videos") or []) if str(v).strip()]
         if videos:
-            done_ids = self._retold_video_ids(
-                week_start, add_days(week_start, 7), user)
+            done_ids = (ctx.retold_video_ids(week_start, add_days(week_start, 7))
+                        if ctx is not None else
+                        self._retold_video_ids(week_start, add_days(week_start, 7),
+                                               user))
             dim("🎬", "视频复述", len(set(videos) & done_ids), len(videos))
 
         total_items = sum(d["total"] for d in dims)
@@ -341,7 +358,7 @@ class ViewsMixin:
         """未保存的周计划 → 学生课表那 7 天。摊法与 week_daily_tasks 相同。
 
         已冻结的日子仍用 plan_history_days，和正式课表一致。
-        不写 plan_weeks。
+        不写 plan_weeks。7 天共用一个 WeekCtx（同 week_view 的批量口径）。
         """
         if not isinstance(tasks, dict):
             raise ValueError("tasks 须为对象")
@@ -349,16 +366,17 @@ class ViewsMixin:
         if week_start != monday_of(day0).isoformat():
             raise ValueError("week_start 须为周一日期")
         today_iso = today_cn().isoformat()
+        ctx = WeekCtx(self, user, week_start)
         days = []
         for i in range(7):
             d = (day0 + timedelta(days=i)).isoformat()
             future = d > today_iso
-            historical = None if future else self.history_day(user, d)
+            historical = None if future else ctx.history_day(d)
             if historical is not None:
                 derived = historical
             else:
                 derived = self.week_daily_tasks(
-                    week_start, for_date=d, user=user, planned=tasks)
+                    week_start, for_date=d, user=user, planned=tasks, ctx=ctx)
             if future:
                 days.append({
                     "date": d, "future": True, "done": 0, "total": len(derived),
@@ -367,7 +385,7 @@ class ViewsMixin:
                 })
                 continue
             comp = self.day_completion(
-                user, d, derived, historical=historical is not None)
+                user, d, derived, historical=historical is not None, ctx=ctx)
             acts = comp["acts"]
             out = []
             for row in derived:
@@ -392,25 +410,36 @@ class ViewsMixin:
 
 
     def month_view(self, month: str, user: str) -> dict:
-        """月历：某月每天 {date, in_month, future, done, total}，周一为每周之首。"""
+        """月历：某月每天 {date, in_month, future, done, total}，周一为每周之首。
+
+        同一周的日期共用一个 ``WeekCtx``（信号预取每周一次，约 6 周池）。
+        """
         y, m = month.split("-")[:2]
         first = date(int(y), int(m), 1)
         nxt_month = (date(int(y) + 1, 1, 1) if int(m) == 12
                      else date(int(y), int(m) + 1, 1))
         today_iso = today_cn().isoformat()
         grid_start = monday_of(first)
+        ctxs: dict[str, WeekCtx] = {}
+
+        def _ctx(ws: str) -> WeekCtx:
+            if ws not in ctxs:
+                ctxs[ws] = WeekCtx(self, user, ws)
+            return ctxs[ws]
+
         days = []
         d = grid_start
         while d < nxt_month:
             iso_ = d.isoformat()
             cell = {"date": iso_, "in_month": d.month == first.month,
                     "future": iso_ > today_iso}
+            ws = monday_of(d).isoformat()
             if iso_ > today_iso:
                 td = self.week_daily_tasks(
-                    monday_of(d).isoformat(), for_date=iso_, user=user)
+                    ws, for_date=iso_, user=user, ctx=_ctx(ws))
                 cell.update({"done": 0, "total": len(td), "percent": None})
             else:
-                td = self.today_tasks(user=user, day=iso_)
+                td = self.today_tasks(user=user, day=iso_, ctx=_ctx(ws))
                 cell.update({
                     "done": td["done"], "total": td["total"],
                     "percent": td["percent"],
@@ -444,12 +473,13 @@ class ViewsMixin:
             done = total = 0
             bases: set[str] = set()
             if ws <= cur:  # 已开始的周才聚合完成度（未来周无信号）
+                wctx = WeekCtx(self, user, ws)
                 for i in range(7):
                     d = (date.fromisoformat(ws) + timedelta(days=i)).isoformat()
                     if d > today_iso:
                         continue
                     # 过去的周也走信号。没有回填快照时不再把整周算成 0/0。
-                    td = self.today_tasks(user=user, day=d)
+                    td = self.today_tasks(user=user, day=d, ctx=wctx)
                     done += td["done"]
                     total += td["total"]
                     if td["total"]:

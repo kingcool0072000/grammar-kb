@@ -13,7 +13,12 @@ class RulesMixin:
     # ---- 完成判定规则（注册表 + 按学生开关） ----
 
     def _flag(self, user: str, rule_id: str) -> int:
-        """读某学生某规则的开关值（缺行=注册表默认）。"""
+        """读某学生某规则的开关值（缺行=注册表默认）。
+
+        只读：plan_rule_flags 由 PlanStore.__init__ 的 SCHEMA 保证存在
+        （懒补写逻辑保留在 set_rule 写路径）。原先每次读都 executescript
+        ——建表语句走一遍还落一个写事务，week_view 一次要开几十次。
+        """
         for r in RULES:
             if r["id"] == rule_id:
                 dft = int(r["default"])
@@ -22,7 +27,6 @@ class RulesMixin:
             return 0
         try:
             with self._connect() as conn:
-                conn.executescript(SCHEMA)  # 老库懒补 plan_rule_flags
                 row = conn.execute(
                     "SELECT value FROM plan_rule_flags"
                     " WHERE user = ? AND rule_id = ?",

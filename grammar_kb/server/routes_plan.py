@@ -24,13 +24,23 @@ def register_plan(app, ctx):
 
     @app.get("/plan/weeks")
     def plan_weeks(request: "fastapi.Request", user: str = "malin"):
-        """全部周计划 + 每周实时完成度 + 当前周的上周回顾。教师专属。"""
+        """全部周计划 + 每周实时完成度 + 当前周的上周回顾。教师专属。
+
+        完成度改批量：已开始的周（week_start ≤ 今天）对整个窗口一次
+        聚合分桶；未开始的周直接零值，不查库（actuals 结构不变）。
+        """
         _require_teacher(request)
         weeks = plan.list_weeks(user=user)
-        for w in weeks:
-            w["actuals"] = plan.week_actuals(w["week_start"], user=user)
-        from ..clock import current_monday
+        from ..clock import current_monday, today_cn
         cur_mon = current_monday().isoformat()
+        today_iso = today_cn().isoformat()
+        live = [w["week_start"] for w in weeks if w["week_start"] <= today_iso]
+        bulk = plan.weeks_actuals_bulk(live, user=user) if live else {}
+        zero = {"lectures": [], "vocab_mastered": 0, "fce_parts": [],
+                "reading": []}
+        for w in weeks:
+            w["actuals"] = (bulk.get(w["week_start"]) if w["week_start"] <= today_iso
+                            else None) or dict(zero)
         return _ok({
             "weeks": weeks,
             "current_week": cur_mon,

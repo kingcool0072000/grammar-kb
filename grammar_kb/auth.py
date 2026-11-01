@@ -123,17 +123,36 @@ def _secret_path() -> Path:
     return Path(env) if env else _default_dir() / "auth_secret.key"
 
 
+# 签名秘钥进程内缓存（路径 → 内容）：签发/校验每个请求都要读秘钥，
+# 原来 exists()+read_bytes() 每请求两次文件系统调用；秘钥启动后不变，
+# 首次读入内存即可。按路径做键——测试把 GRAMMAR_KB_AUTH_SECRET 指到
+# 各自 tmp 路径时各取各的，互不串味；直接重写秘钥文件后调
+# _reset_secret_cache() 失效缓存。
+_secret_cache: dict[str, bytes] = {}
+
+
 def _load_secret() -> bytes:
     p = _secret_path()
+    key = str(p)
+    cached = _secret_cache.get(key)
+    if cached is not None:
+        return cached
     if p.exists():
-        return p.read_bytes()
-    s = secrets.token_bytes(32)
-    try:
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_bytes(s)
-    except Exception:
-        pass
+        s = p.read_bytes()
+    else:
+        s = secrets.token_bytes(32)
+        try:
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_bytes(s)
+        except Exception:
+            pass
+    _secret_cache[key] = s
     return s
+
+
+def _reset_secret_cache() -> None:
+    """测试/换钥钩子：清空秘钥缓存，下次 _load_secret 重新读盘/生成。"""
+    _secret_cache.clear()
 
 
 def make_token(user: str, role: str, ttl: int = TOKEN_TTL) -> str:

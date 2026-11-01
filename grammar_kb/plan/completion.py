@@ -7,9 +7,12 @@
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from .util import _task_key
+
+if TYPE_CHECKING:
+    from .ctx import WeekCtx
 
 
 class CompletionMixin:
@@ -22,6 +25,7 @@ class CompletionMixin:
         tasks: Optional[list] = None,
         *,
         historical: bool = False,
+        ctx: Optional["WeekCtx"] = None,
     ) -> dict:
         """返回 ``{date, keys, read_titles, acts, signals}``。
 
@@ -30,12 +34,14 @@ class CompletionMixin:
         ``historical`` 时：行上带 ``done`` 的按冻结值回放（不把未完成改成完成）；
         旧回填行没有 ``done`` 时仍视为该条已完成。实录仍按日算。
         ``plan_day_checks`` 不读、不写。
+        ``ctx``：周级信号缓存（week_view 逐日复用），缺省自建单日语义不变。
         """
         rows = list(tasks or [])
         planned = {
             t.get("article_id") for t in rows if t.get("article_id") is not None
         }
-        auto, read_titles, acts = self._signals_and_acts(user, day, planned)
+        auto, read_titles, acts = self._signals_and_acts(user, day, planned,
+                                                         ctx=ctx)
         keys: dict[str, dict] = {}
         if historical:
             for t in rows:

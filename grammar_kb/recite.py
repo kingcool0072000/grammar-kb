@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import threading
 from datetime import date, datetime, timedelta, timezone as _tz
 from pathlib import Path
 from typing import Optional
@@ -39,6 +40,16 @@ ALERT_IN_CYCLE = 50
 ALERT_QUIET_DAYS = 14
 # 学生卡「近 7 日攻克」窗口（含今天，北京日历）
 CONQUERED_RECENT_DAYS = 7
+# recite_meta 里记「错词回填水位」的 key 前缀（按用户）：已增量回填到的
+# 会话最大 id / created_at。有水位后错词本读取只扫水位之后的新会话。
+BACKFILL_META_ID = "backfill_max_id:"
+BACKFILL_META_TS = "backfill_max_ts:"
+
+# 词库总量（vocab_word 按 level 计数）进程级缓存：词库只在重建脚本后变化，
+# 进程生命周期缓存即可，grammar.db 每次新开连接 GROUP BY 九千行是
+# /recite/progress 的固定开销。锁防 FastAPI 线程池并发首查重复建连。
+_VOCAB_TOTALS_LOCK = threading.Lock()
+_VOCAB_TOTALS_CACHE: Optional[dict[int, int]] = None
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS recite_sessions (
@@ -79,6 +90,10 @@ CREATE TABLE IF NOT EXISTS recite_review (
     PRIMARY KEY (user, word)
 );
 CREATE INDEX IF NOT EXISTS idx_rr_due ON recite_review(user, next_review);
+CREATE TABLE IF NOT EXISTS recite_meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+);
 """
 
 
@@ -570,6 +585,17 @@ class ReciteStore:
         return out
 
     def _vocab_level_totals(self) -> dict[int, int]:
+        """vocab_word 按 level 的总量（进程级缓存）。
+
+        词库只在重建脚本后变化，进程生命周期内查一次即可。库缺失/查询
+        异常（含空结果）不缓存：下次调用重试，库补好后自愈。返回副本，
+        调用方改不动缓存本体。
+        """
+        global _VOCAB_TOTALS_CACHE
+        with _VOCAB_TOTALS_LOCK:
+            cached = _VOCAB_TOTALS_CACHE
+        if cached is not None:
+            return dict(cached)
         try:
             path = dbreg.grammar_db_path()
             if not Path(path).exists():
@@ -579,9 +605,13 @@ class ReciteStore:
                 rows = conn.execute(
                     "SELECT level, COUNT(*) n FROM vocab_word GROUP BY level"
                 ).fetchall()
-                return {r["level"]: r["n"] for r in rows}
+                totals = {r["level"]: r["n"] for r in rows}
         except Exception:
             return {}
+        if totals:
+            with _VOCAB_TOTALS_LOCK:
+                _VOCAB_TOTALS_CACHE = totals
+        return totals
 
     def mastered_words(self, user: str) -> set[str]:
         """已掌握词集合（出题剔除用；right >= max(wrong, 1)）。"""
@@ -605,6 +635,12 @@ class ReciteStore:
                 "DELETE FROM recite_word_progress WHERE user = ?", (user,)
             )
             conn.execute("DELETE FROM recite_review WHERE user = ?", (user,))
+            # 回填水位一并清：下次读错词本按旧口径重新全量回填（与清库前
+            # 「每次读都从最近会话补」的行为一致）
+            conn.execute(
+                "DELETE FROM recite_meta WHERE key IN (?, ?)",
+                self._backfill_meta_keys(user),
+            )
             return cur.rowcount
 
     def merge_progress(self, user: str, data: dict) -> dict:
@@ -660,17 +696,56 @@ class ReciteStore:
                         )
         return self.progress(user, include_words=True)
 
+    @staticmethod
+    def _backfill_meta_keys(user: str) -> tuple[str, str]:
+        return (BACKFILL_META_ID + user, BACKFILL_META_TS + user)
+
     def _backfill_review(self, conn: sqlite3.Connection, user: str, limit: int = 500) -> None:
-        """历史会话错过但尚无 recite_review 行的词，按最近答错日回填。"""
+        """历史会话错过但尚无 recite_review 行的词，按最近答错日回填。
+
+        增量化：recite_meta 记每用户已回填到的会话水位（最大 id 和
+        created_at 各一条）。无水位（首次/清进度后）按最近 limit 条全量
+        回填一次，口径与旧版逐行一致；有水位后每次只扫水位之后的新会话
+        ——生产 review-summary 不再每次重扫最近 500 条并逐条 JSON parse。
+        created_at 兜底是因为测试/运维可能删过最大 id 会话（rowid 复用）。
+        指针在回填行落库之后、同一事务内推进：插入失败整体回滚，指针不前
+        移，不会漏词；重复读同一批会话由 INSERT OR IGNORE 幂等兜住。
+        """
         today = _calendar_today()
-        rows = conn.execute(
-            "SELECT wrong_words, created_at FROM recite_sessions"
-            " WHERE user = ? ORDER BY id DESC LIMIT ?",
-            (user, int(limit)),
-        ).fetchall()
+        key_id, key_ts = self._backfill_meta_keys(user)
+        marks = {
+            r["key"]: r["value"] for r in conn.execute(
+                "SELECT key, value FROM recite_meta WHERE key IN (?, ?)",
+                (key_id, key_ts),
+            ).fetchall()
+        }
+        since_id_s = marks.get(key_id)
+        if since_id_s is None:
+            # 首次：按最近 limit 条回填（与旧口径一致），统一转 id 升序处理
+            rows = conn.execute(
+                "SELECT id, wrong_words, created_at FROM ("
+                "  SELECT id, wrong_words, created_at FROM recite_sessions"
+                "  WHERE user = ? ORDER BY id DESC LIMIT ?"
+                ") ORDER BY id ASC",
+                (user, int(limit)),
+            ).fetchall()
+        else:
+            try:
+                since_id = int(since_id_s)
+            except ValueError:
+                since_id = 0
+            since_ts = marks.get(key_ts) or ""
+            rows = conn.execute(
+                "SELECT id, wrong_words, created_at FROM recite_sessions"
+                " WHERE user = ? AND (id > ? OR created_at > ?)"
+                " ORDER BY id ASC LIMIT ?",
+                (user, since_id, since_ts, int(limit)),
+            ).fetchall()
+        if not rows:
+            return  # 无新会话：直接走存量 recite_review，零重扫
         wrong_at: dict[str, str] = {}
         counts: dict[str, int] = {}
-        for r in rows:  # 由新到旧：setdefault 拿到最近答错时间
+        for r in reversed(rows):  # 由新到旧：setdefault 拿到最近答错时间
             try:
                 ws = json.loads(r["wrong_words"] or "[]")
             except (ValueError, TypeError):
@@ -681,24 +756,29 @@ class ReciteStore:
                     continue
                 counts[w] = counts.get(w, 0) + 1
                 wrong_at.setdefault(w, r["created_at"] or "")
-        if not counts:
-            return
-        have = {r[0] for r in conn.execute(
-            "SELECT word FROM recite_review WHERE user = ?", (user,)
-        ).fetchall()}
-        missing = [w for w in counts if w not in have]
-        if not missing:
-            return
-        levels = self._vocab_levels(missing)
-        for w in missing:
-            last_day = _cn_day_of(wrong_at.get(w) or "") or today
-            conn.execute(
-                "INSERT INTO recite_review (user, word, level, wrong_count,"
-                " stage, first_wrong_at, next_review, last_review_at)"
-                " VALUES (?,?,?,?,?,?,?,?)",
-                (user, w, levels.get(w), counts[w], 0, last_day,
-                 _add_days(last_day, EB_STAGES[0]), last_day),
-            )
+        if counts:
+            have = {r[0] for r in conn.execute(
+                "SELECT word FROM recite_review WHERE user = ?", (user,)
+            ).fetchall()}
+            missing = [w for w in counts if w not in have]
+            levels = self._vocab_levels(missing) if missing else {}
+            for w in missing:
+                last_day = _cn_day_of(wrong_at.get(w) or "") or today
+                # OR IGNORE：并发同读时另一连接可能已插同一词，幂等不炸
+                conn.execute(
+                    "INSERT OR IGNORE INTO recite_review (user, word, level,"
+                    " wrong_count, stage, first_wrong_at, next_review, last_review_at)"
+                    " VALUES (?,?,?,?,?,?,?,?)",
+                    (user, w, levels.get(w), counts[w], 0, last_day,
+                     _add_days(last_day, EB_STAGES[0]), last_day),
+                )
+        # 水位最后写：上面任何一步抛错，整个事务回滚，指针不动（不丢数据）
+        max_ts = max((r["created_at"] or "" for r in rows), default="")
+        conn.executemany(
+            "INSERT INTO recite_meta(key, value) VALUES(?, ?)"
+            " ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            [(key_id, str(rows[-1]["id"])), (key_ts, max_ts)],
+        )
 
     def wrongbook(self, user: str, limit: int = 500) -> dict:
         """错词本（艾宾浩斯口径）：在周期词（含到期/节点/日程）+ 已攻克词本。
@@ -955,10 +1035,29 @@ class ReciteStore:
 
     @staticmethod
     def _count_new_used_conn(conn: sqlite3.Connection, user: str, today: str) -> int:
+        """今天的首见新词数。
+
+        首见时间统一按 UTC ISO 串落库，先用 SQL 把「北京今天」的窗口筛
+        出来（北京时间 0 点 = UTC 前一日 16:00；窗口 ±1 天放宽），不再把
+        用户全部 first_seen 行拉回 Python。窗口内的少数边界/怪格式行仍交
+        给 _cn_day_of 精筛，计数口径与逐行过滤完全一致。
+        """
+        try:
+            base = date.fromisoformat((today or "")[:10])
+        except ValueError:
+            rows = conn.execute(
+                "SELECT first_seen FROM recite_word_progress"
+                " WHERE user = ? AND first_seen IS NOT NULL",
+                (user,),
+            ).fetchall()
+            return sum(1 for r in rows if _cn_day_of(r["first_seen"]) == today)
+        lo = (base - timedelta(days=1)).isoformat() + "T00:00:00+00:00"
+        hi = (base + timedelta(days=1)).isoformat() + "T00:00:00+00:00"
         rows = conn.execute(
             "SELECT first_seen FROM recite_word_progress"
-            " WHERE user = ? AND first_seen IS NOT NULL",
-            (user,),
+            " WHERE user = ? AND first_seen IS NOT NULL"
+            " AND first_seen >= ? AND first_seen < ?",
+            (user, lo, hi),
         ).fetchall()
         return sum(1 for r in rows if _cn_day_of(r["first_seen"]) == today)
 

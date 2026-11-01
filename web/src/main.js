@@ -78,19 +78,16 @@ async function bootstrap() {
   const drawer = createDrawer(signalCtx)
   app.append(drawer.el)
 
-  const state = { stats: null, lectures: [], points: [], vocab: [] }
+  const state = { stats: null, lectures: [], points: [], vocabPromise: null }
+  // 词汇表（~528KB）计划表等首屏用不到：只发起不 await，与知识点加载并行，
+  // 消费者（背单词页）自行 await 这个 Promise。失败兜底收进 catch（空数组）。
+  state.vocabPromise = api.vocabulary().catch(() => [])
   if (role === 'teacher') {
     const ok = await prepareTeacher(state, boot, signalCtx)
     if (!ok) return
   } else {
     const ok = await prepareStudent()
     if (!ok) return
-  }
-
-  try {
-    state.vocab = await api.vocabulary()
-  } catch {
-    state.vocab = []
   }
 
   try { await cardsReady } catch { /* 词卡开关读不到时用默认 */ }

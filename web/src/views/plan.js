@@ -41,6 +41,9 @@ export async function mountPlan(el) {
 
   async function mountCalendar(body) {
     body.innerHTML = '<p class="muted">加载中…</p>'
+    // ---- 第 1 波：/plan/weeks ∥ /users（互不依赖，同发）----
+    // weeks 失败则整页报错（兜底与原逻辑一致）；users 失败保持默认名单
+    const usersPromise = api.users().catch(() => null)
     let data
     try {
       data = await api.planWeeks({ user: state.student })
@@ -57,11 +60,11 @@ export async function mountPlan(el) {
     // 视图：week 周 | month 月 | overview 全览
     const view = { mode: 'week' }
     let students = ['malin']
-    try {
-      const ur = await api.users()
+    const ur = await usersPromise
+    if (ur) {
       const studs = (ur.users || []).filter((u) => u.role === 'student').map((u) => u.user)
       if (studs.length) students = studs
-    } catch { /* 保持默认 */ }
+    }
     if (!students.includes(state.student)) state.student = students[0]
     // 学生管理页跳转携带的学生
     const fromStore = sessionStorage.getItem('gkb-plan-student')
@@ -69,14 +72,23 @@ export async function mountPlan(el) {
       state.student = fromStore
       sessionStorage.removeItem('gkb-plan-student')
     }
-    let goals = null
-    try { goals = (await api.planGoals({ user: state.student })).goals } catch { goals = null }
+
+    // ---- 第 2 波：学生在此定档，以下请求都只依赖学生名，互不依赖，全部同发 ----
+    // week-view 的 week_start 后端默认 current_monday（routes_plan.py），与
+    // /plan/weeks 的 current_week 同值，对 weeks 响应无真实依赖。
+    const goalsPromise = api.planGoals({ user: state.student }).then((d) => d.goals).catch(() => null)
+    const goalProgPromise = api.planGoalProgress({ user: state.student }).catch(() => null)
+    const weekViewPromise = api.planWeekView({ weekStart: viewWeek, user: state.student })
+    weekViewPromise.catch(() => {}) // 切去月历/全览不消费它时，失败别抛 unhandled
+    const reviewPromise = api.reviewSummary({ user: state.student }).catch(() => null)
+    const rulesPromise = api.planRules({ user: state.student }).then((d) => d.rules).catch(() => null)
 
     let goalProg = null
-    try { goalProg = await api.planGoalProgress({ user: state.student }) } catch { goalProg = null }
     // 目标卡模式：week 周（默认，随翻周联动）/ total 总
     let goalMode = 'week'
     let weekProg = null // 当前展示周的周目标进度（week-view 返回）
+    // week-view 未就绪前目标卡先占位，别把「加载中」闪成「本周未排计划」
+    let goalCardReady = false
 
     body.innerHTML = `
       <div class="pw-stubar">
@@ -94,12 +106,12 @@ export async function mountPlan(el) {
       ${'' /* 目标卡容器：周/总切换内容由 renderGoalCard 填充 */}
       <div id="review-alert"></div>
       <div id="goal-card"></div>
-      <div id="rules-card"></div>
+      <div id="rules-card"><p class="muted">规则加载中…</p></div>
       <div id="plan-view"></div>
     `
     renderGoalCard()
-    renderReviewAlert()
-    renderRulesCard()
+    renderReviewAlert(reviewPromise)
+    renderRulesCard(rulesPromise)
     body.querySelector('#pw-cfg-goal').addEventListener('click', () => {
       sessionStorage.setItem('gkb-open-goal', state.student)
       const t = el.querySelector('[data-ptab="students"]')
@@ -129,12 +141,21 @@ export async function mountPlan(el) {
       mountCalendar(body)
     })
 
-    function renderView() {
+    // 总目标进度后到：只补渲染「总目标」模式（周模式由 renderWeeks 填充）。
+    // 学生已切走时旧响应作废，防止覆盖新看板。
+    const whoAtFire = state.student
+    goalProgPromise.then((gp) => {
+      if (state.student !== whoAtFire) return
+      goalProg = gp
+      if (goalCardReady && goalMode === 'total') renderGoalCard()
+    })
+
+    function renderView(prefetched) {
       if (view.mode === 'month') renderMonth()
       else if (view.mode === 'overview') renderOverview()
-      else renderWeeks()
+      else renderWeeks(prefetched)
     }
-    renderView()
+    renderView(weekViewPromise)
 
 
 
@@ -184,12 +205,13 @@ export async function mountPlan(el) {
       </div>`
     }
 
-    async function renderReviewAlert() {
+    // 消费第 2 波已发出的 review-summary Promise（不再自行发请求）
+    async function renderReviewAlert(summaryPromise) {
       const host = body.querySelector('#review-alert')
       if (!host) return
       const who = state.student
       let s = null
-      try { s = await api.reviewSummary({ user: who }) } catch { s = null }
+      try { s = await summaryPromise } catch { s = null }
       if (state.student !== who || !body.querySelector('#review-alert')) return
       if (!s || !s.alert) { host.innerHTML = ''; return }
       host.innerHTML = `
@@ -201,6 +223,10 @@ export async function mountPlan(el) {
     function renderGoalCard() {
       const host = body.querySelector('#goal-card')
       if (!host) return
+      if (!goalCardReady) {
+        host.innerHTML = '<p class="muted">目标加载中…</p>'
+        return
+      }
       host.innerHTML = progressCardHtml()
       host.querySelectorAll('[data-gmode]').forEach((b) =>
         b.addEventListener('click', () => {
@@ -221,13 +247,11 @@ export async function mountPlan(el) {
     // 规则本体（人话描述与默认值）在后端 RULES 注册表，这里只渲染与回写。
     // 曾因「第N讲完成了吗」多处各写一套口径而反复出错——现在判定统一
     // 走后端内核，此卡是教师看得见、可调整的唯一入口。
-    async function renderRulesCard() {
+    // 消费传入的规则 Promise（初始为第 2 波那发；展开/收起时按现状重拉一份）
+    async function renderRulesCard(rulesPromise) {
       const host = body.querySelector('#rules-card')
       if (!host) return
-      let rules = null
-      try {
-        rules = (await api.planRules({ user: state.student })).rules
-      } catch { rules = null }
+      const rules = await rulesPromise
       if (!rules || !rules.length) { host.innerHTML = ''; return }
       const open = sessionStorage.getItem('gkb-rules-open') === '1'
       host.innerHTML = `
@@ -251,7 +275,7 @@ export async function mountPlan(el) {
         </div>`
       host.querySelector('#pw-rules-toggle').addEventListener('click', () => {
         sessionStorage.setItem('gkb-rules-open', open ? '0' : '1')
-        renderRulesCard()
+        renderRulesCard(api.planRules({ user: state.student }).then((d) => d.rules).catch(() => null))
       })
       host.querySelectorAll('[data-rule]').forEach((chk) =>
         chk.addEventListener('change', async () => {
@@ -259,6 +283,7 @@ export async function mountPlan(el) {
           try {
             await api.planRuleSet(id, { value: chk.checked ? 1 : 0, user: state.student })
             // 规则变化直接影响完成度：刷新目标卡与当前视图
+            let refreshed = null
             try {
               const [gp, wv] = await Promise.all([
                 api.planGoalProgress({ user: state.student }),
@@ -266,9 +291,11 @@ export async function mountPlan(el) {
               ])
               goalProg = gp
               weekProg = { ...(wv.goal_progress || null), week_label: weekLabel(wv.week_start) }
+              refreshed = wv
             } catch { /* 刷新失败保留旧值 */ }
             renderGoalCard()
-            renderView()
+            // 规则变化后的 week-view 上面刚拉过，直接复用（拉取失败则 renderWeeks 现拉兜底）
+            renderView(refreshed ? Promise.resolve(refreshed) : undefined)
           } catch (e) {
             alert(`规则保存失败：${e.message}`)
             chk.checked = !chk.checked
@@ -277,14 +304,20 @@ export async function mountPlan(el) {
     }
 
     // ---- 周历视图：← 本周 → 翻周，7 天格子逐日任务 ----
-    async function renderWeeks() {
+    // 初始渲染消费第 2 波已发出的 week-view（prefetched）；翻周/回周时现拉。
+    async function renderWeeks(prefetched) {
       const host = viewHost
       host.innerHTML = '<p class="muted">周历加载中…</p>'
       let wv
       try {
-        wv = await api.planWeekView({ weekStart: viewWeek, user: state.student })
+        wv = await (prefetched || api.planWeekView({ weekStart: viewWeek, user: state.student }))
       } catch (e) {
         host.innerHTML = `<p style="color:#b42318">周历加载失败：${escapeHtml(e.message)}</p>`
+        if (prefetched) {
+          // 首屏 week-view 失败：目标卡按「本周未排计划」兜底（与原首屏渲染等价）
+          goalCardReady = true
+          renderGoalCard()
+        }
         return
       }
       const t = wv.tasks || {}
@@ -293,6 +326,7 @@ export async function mountPlan(el) {
       const earliest = seeded.length ? seeded[0] : iso(new Date(new Date(curWeek + 'T00:00:00').getTime() - 14 * 86400000))
       // 周目标进度进统一目标卡（翻周联动；目标卡默认显示周模式）
       weekProg = { ...(wv.goal_progress || null), week_label: weekLabel(wv.week_start) }
+      goalCardReady = true
       renderGoalCard()
 
       const dayNames = ['一', '二', '三', '四', '五', '六', '日']
