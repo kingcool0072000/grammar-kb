@@ -14,54 +14,25 @@ from typing import Iterable, Optional
 from .atlas import normalize_word
 from .paths import data_path
 
-ORDER = ["初中", "高中", "四级", "六级", "考研", "雅思", "专四"]
-CEFR_LEVEL = {
-    "A1": "初中",
-    "A2": "初中",
-    "B1": "高中",
-    "B2": "雅思",
-    "C1": "雅思",
-    "C2": "雅思",
-}
 
+def _load_meta() -> dict:
+    """语言学元数据（data/atlas_vocab_meta.json）：级别顺序、英美拼写对、
+    词缀变换规则、错词更正。此前内嵌本模块，数据出代码后迁到 data/。"""
+    return json.loads(data_path("atlas_vocab_meta.json").read_text(encoding="utf-8"))
+
+
+_META = _load_meta()
+# 词表级别顺序（初中 → 专四）
+ORDER: list[str] = _META["order"]
+CEFR_LEVEL: dict[str, str] = _META["cefr_level"]
 # 明确的错词。值是进度要并过去的正确词；空字符串表示只删除。
-DROP_TYPOS = {
-    "rusia": "russia",
-    "behavious": "behaviour",
-}
+DROP_TYPOS: dict[str, str] = _META["drop_typos"]
 # 正确拼写还不在词表里：改词头，不丢掉这条释义。
-RENAME_TYPOS = {
-    "relinguish": "relinquish",
-}
-
+RENAME_TYPOS: dict[str, str] = _META["rename_typos"]
 # 英美拼写。只在「一边只在和爸学、另一边只在词光」时收成一对，避免误伤真词。
-_EXPL = {
-    "grey": "gray", "tyre": "tire", "cheque": "check", "aluminium": "aluminum",
-    "plough": "plow", "mould": "mold", "pyjamas": "pajamas", "jewellery": "jewelry",
-    "judgement": "judgment", "ageing": "aging", "enquire": "inquire",
-    "enquiry": "inquiry", "cosy": "cozy", "kerb": "curb", "sceptical": "skeptical",
-    "draught": "draft", "moustache": "mustache", "storey": "story",
-    "programme": "program", "catalogue": "catalog", "dialogue": "dialog",
-    "analogue": "analog", "practise": "practice", "licence": "license",
-    "defence": "defense", "offence": "offense", "pretence": "pretense",
-    "manoeuvre": "maneuver", "oestrogen": "estrogen", "foetus": "fetus",
-    "paediatric": "pediatric", "axe": "ax", "gaol": "jail", "whisky": "whiskey",
-    "doughnut": "donut", "sulphur": "sulfur", "fulfil": "fulfill", "enrol": "enroll",
-    "instil": "instill", "skilful": "skillful", "wilful": "willful",
-    "distil": "distill", "speciality": "specialty", "neighbour": "neighbor",
-    "towards": "toward", "learnt": "learned", "spelt": "spelled", "burnt": "burned",
-    "dreamt": "dreamed",
-}
+_EXPL: dict[str, str] = _META["spelling_pairs"]
 _EXPL_R = {v: k for k, v in _EXPL.items()}
-_SUBS = [
-    ("our", "or"), ("or", "our"), ("ise", "ize"), ("ize", "ise"),
-    ("isation", "ization"), ("ization", "isation"), ("yse", "yze"), ("yze", "yse"),
-    ("tre", "ter"), ("ter", "tre"), ("ence", "ense"), ("ense", "ence"),
-    ("ogue", "og"), ("og", "ogue"), ("lled", "led"), ("led", "lled"),
-    ("lling", "ling"), ("ling", "lling"), ("ller", "ler"), ("ler", "ller"),
-    ("ae", "e"), ("oe", "e"), ("mme", "m"), ("ising", "izing"), ("izing", "ising"),
-    ("ised", "ized"), ("ized", "ised"),
-]
+_SUBS: list[tuple[str, str]] = [tuple(x) for x in _META["suffix_subs"]]
 
 
 def canon_key(word: str) -> str:

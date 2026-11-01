@@ -1,5 +1,6 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
+import { fmtDuration, POS_CN, FORM_CN } from '../fmt.js'
 import {
   atlasFigure, bindAtlas, fillAtlasHost, getAccent, phoneticHtml,
   playPronunciation, rememberAtlas, speakWord, stopAtlasAudio, wordAudioUrl,
@@ -19,11 +20,7 @@ import { getWordCard } from '../wordcard.js'
 //
 // 词库来自 /vocab-levels（L0 哈一课本语料词，L1-L5 分层词表，教师解锁）。
 
-const POS_CN = { v: '动词', n: '名词', adj: '形容词', adv: '副词', prep: '介词', conj: '连词', pron: '代词', num: '数词', proper: '专名' }
-const FORM_CN = {
-  past: '过去式', past_participle: '过去分词', present_participle: '现在分词',
-  third_singular: '第三人称单数', plural: '复数', comparative: '比较级', superlative: '最高级',
-}
+// POS_CN / FORM_CN 从共享模块 ../fmt.js 导入（全称口径）
 const FORM_KEYS = ['past', 'past_participle', 'present_participle', 'third_singular', 'comparative', 'superlative', 'plural']
 const GROUP_SIZES = [20, 30]
 const TTS_KEY = 'gkb-rc-tts-v1' // 翻面自动发音开关（默认开）
@@ -147,12 +144,6 @@ async function migrateLegacyProgress() {
   } catch {
     return false // 离线/接口异常：保留本地数据，下次再迁移
   }
-}
-
-function fmtDuration(sec) {
-  if (sec < 60) return `${sec} 秒`
-  if (sec < 3600) return `${Math.floor(sec / 60)} 分 ${sec % 60} 秒`
-  return `${Math.floor(sec / 3600)} 时 ${Math.floor((sec % 3600) / 60)} 分`
 }
 
 // ---- 视图 ----------------------------------------------------------------- //

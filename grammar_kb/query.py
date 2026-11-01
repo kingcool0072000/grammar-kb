@@ -200,6 +200,16 @@ class Query:
     def kps_of_category(self, category: str) -> list[KnowledgePoint]:
         return self.db.kps_of_category(category)
 
+    def points(self) -> list[KnowledgePoint]:
+        """全部知识点（按讲次排序）——教师备课中心全量列表。
+
+        前端此前用 9 个高频字探测式 /search 聚合（覆盖 95%+），
+        本端点一次给全，条目结构与 /search 完全一致。
+        """
+        rows = self.db.conn.execute(
+            "SELECT * FROM knowledge_point ORDER BY lecture_number, id").fetchall()
+        return [_row_to_kp(r, self.db.conn) for r in rows]
+
     def search_kps(
         self,
         query: str,

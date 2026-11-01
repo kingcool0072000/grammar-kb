@@ -1,5 +1,7 @@
 import { api } from '../api.js'
 import { escapeHtml, escAttr } from '../render.js'
+import { fmtMinCn as fmtMin } from '../fmt.js'
+import { subTabBar, bindSubTabs } from '../tabs.js'
 
 // 教师版 · 视频学习管理（完整管理）：
 //   📚 内容管理：视频清单 CRUD（vid/标题/类目/时长/生僻词/提示/上下架）
@@ -30,14 +32,10 @@ export async function mountVideoAdmin(el) {
           </select>
         </label>
       </div>` : ''}
-      <div class="ana-tabs plan-subtabs">
-        <button class="reading-btn ${state.tab === 'content' ? 'primary' : ''}" data-atab="content">📚 内容管理</button>
-        <button class="reading-btn ${state.tab === 'progress' ? 'primary' : ''}" data-atab="progress">📊 学生进度</button>
-      </div>
+      ${subTabBar('atab', [['content', '📚 内容管理'], ['progress', '📊 学生进度']], state.tab)}
       <div id="va-body"></div>
     `
-    el.querySelectorAll('[data-atab]').forEach((b) =>
-      b.addEventListener('click', () => { state.tab = b.dataset.atab; render() }))
+    bindSubTabs(el, 'atab', (t) => { state.tab = t; render() })
     const sel = el.querySelector('#va-user')
     if (sel) sel.addEventListener('change', (e) => {
       state.student = e.target.value
@@ -274,9 +272,4 @@ export async function mountVideoAdmin(el) {
       }),
     )
   }
-}
-
-function fmtMin(sec) {
-  const m = Math.round((sec || 0) / 60)
-  return m >= 1 ? `${m} 分钟` : `${sec || 0} 秒`
 }

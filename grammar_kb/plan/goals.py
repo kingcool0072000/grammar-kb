@@ -36,7 +36,7 @@ class GoalsMixin:
             )
         return goals
 
-    def goal_progress(self, user: str = "malin") -> dict:
+    def goal_progress(self, user: str) -> dict:
         """总目标进度：六维度 done/goal 覆盖 + 总百分比。
 
         维度完成口径（与 _completion_status 一致）：讲次=考过；FCE Part=提交过；

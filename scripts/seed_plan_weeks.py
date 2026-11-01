@@ -97,7 +97,7 @@ def main() -> int:
     args = ap.parse_args()
 
     store = PlanStore(args.fce_db, exam_db_path=args.exam_db)
-    existing = {w["week_start"]: w for w in store.list_weeks()}
+    existing = {w["week_start"]: w for w in store.list_weeks(user="malin")}
 
     # 周表覆盖校验：从 START 到 END 每周一都要有
     want = []
@@ -120,7 +120,7 @@ def main() -> int:
                   f" / {tasks.get('fce') or '—'} / {notes[:18]}")
             n_written += 1
             continue
-        store.put_week(week_start, tasks, notes)
+        store.put_week(week_start, tasks, notes, user="malin")
         n_written += 1
     print(f"完成：写入 {n_written} 周，跳过已有 {n_skip} 周"
           f"{'（dry-run 未落库）' if args.dry_run else ''}")

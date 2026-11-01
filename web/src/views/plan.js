@@ -1,5 +1,6 @@
 import { api } from '../api.js'
 import { escapeHtml, escAttr, todayIso, studyGoalMin, taskWhy, taskWhyShort } from '../render.js'
+import { subTabBar, bindSubTabs } from '../tabs.js'
 import { openWeekEditor } from './planEditor.js'
 
 function vocabPaperHead(level) {
@@ -22,14 +23,10 @@ export async function mountPlan(el) {
 
   function render() {
     el.innerHTML = `
-      <div class="ana-tabs plan-subtabs">
-        <button class="reading-btn ${state.tab === 'board' ? 'primary' : ''}" data-ptab="board">📋 计划看板</button>
-        <button class="reading-btn ${state.tab === 'students' ? 'primary' : ''}" data-ptab="students">🎒 学生管理</button>
-      </div>
+      ${subTabBar('ptab', [['board', '📋 计划看板'], ['students', '🎒 学生管理']], state.tab)}
       <div id="plan-body"></div>
     `
-    el.querySelectorAll('[data-ptab]').forEach((b) =>
-      b.addEventListener('click', () => { state.tab = b.dataset.ptab; render() }))
+    bindSubTabs(el, 'ptab', (t) => { state.tab = t; render() })
     const body = el.querySelector('#plan-body')
     if (state.tab === 'students') {
       import('./students.js').then(({ mountStudents }) => {

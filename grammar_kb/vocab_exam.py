@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Optional
 
 from .atlas_vocab import exam_allowed
+from .paper_html import render_template
 from .clock import today_cn
 from . import dbreg
 
@@ -324,66 +325,9 @@ def render_paper_html(paper: dict, student: str = "") -> str:
     ans_d = rows(spell_items, lambda w, i: f'<b class="en">{esc(w["word"])}</b>')
 
     name_line = esc(student) or "＿＿＿＿＿"
-    return f"""<!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="UTF-8">
-<title>词汇级别考卷 L{lvl} → L{lvl+1}</title>
-<style>
-  @page {{ size: A4; margin: 16mm 14mm; }}
-  * {{ box-sizing: border-box; }}
-  body {{ font-family: "PingFang SC","Songti SC","Times New Roman",serif;
-         color:#222; line-height:1.7; margin:0; padding:24px; max-width:800px; margin:0 auto; }}
-  h1 {{ font-size:20px; text-align:center; margin:0 0 4px; letter-spacing:2px; }}
-  .meta {{ text-align:center; font-size:13px; color:#555; margin-bottom:18px; }}
-  .meta b {{ color:#222; }}
-  .head-line {{ display:flex; justify-content:space-between; font-size:14px;
-                border-bottom:2px solid #222; padding-bottom:8px; margin-bottom:14px; }}
-  h2 {{ font-size:15px; margin:18px 0 6px; }}
-  h2 small {{ font-weight:400; color:#666; font-size:12px; }}
-  .q {{ display:flex; align-items:baseline; gap:8px; padding:7px 2px; border-bottom:1px dotted #ccc; }}
-  .no {{ flex:0 0 24px; color:#555; font-size:13px; }}
-  .en {{ font-family:"Times New Roman",serif; }}
-  .mono {{ letter-spacing:1px; font-family:"Menlo",monospace; }}
-  .zh {{ font-size:14px; }}
-  .muted {{ color:#777; font-size:12px; margin-left:8px; }}
-  .blank-line {{ flex:1; border-bottom:1px solid #999; min-height:20px; }}
-  .blank-line.short {{ flex:0 1 200px; }}
-  .dict-hint {{ color:#999; font-size:12px; }}
-  .pagebreak {{ page-break-before:always; }}
-  .score-box {{ float:right; border:2px solid #222; padding:6px 18px; font-size:15px; }}
-  .tips {{ background:#f6f2e7; border:1px solid #e2d9c0; border-radius:8px;
-           padding:10px 14px; font-size:12.5px; color:#555; margin:10px 0 0; }}
-  ol.tips-list {{ margin:4px 0 0; padding-left:18px; }}
-  @media print {{ body {{ padding:0; }} .tips {{ background:#fff; }} }}
-</style></head><body>
-<div class="score-box">得分：＿＿＿＿</div>
-<h1>词汇级别考卷 · L{lvl} → L{lvl+1}</h1>
-<div class="meta">共 50 题 · 每题 2 分 · 满分 100 · <b>80 分解锁 L{lvl+1}</b> · {today}</div>
-<div class="head-line"><span>姓名：{name_line}</span><span>用时：＿＿＿ 分钟</span></div>
-<div class="tips">考试说明：独立完成，不查词不提示。
-<ol class="tips-list">
-<li>第一部分「听写」由家长按答案页朗读英文单词（每词读两遍），孩子听音拼写；</li>
-<li>「中译英」写英文单词（注意拼写），「英译中」写中文意思；</li>
-<li>「拼写补全」把下划线处补全成完整单词。</li>
-</ol></div>
-
-<h2>一、听写（家长读音，写英文单词）<small>15 题 × 2 分</small></h2>
-{sec_a}
-<h2>二、中译英（写英文单词）<small>15 题 × 2 分</small></h2>
-{sec_b}
-<h2>三、英译中（写中文意思）<small>15 题 × 2 分</small></h2>
-{sec_c}
-<h2>四、拼写补全<small>5 题 × 2 分</small></h2>
-{sec_d}
-
-<div class="pagebreak"></div>
-<h1>答案页（家长保管）</h1>
-<div class="meta">L{lvl} → L{lvl+1} · 听写部分按行朗读（每词两遍）· 每题 2 分</div>
-<h2>一、听写答案<small>（读音用）</small></h2>
-{ans_a}
-<h2>二、中译英答案</h2>
-{ans_b}
-<h2>三、英译中答案</h2>
-{ans_c}
-<h2>四、拼写补全答案</h2>
-{ans_d}
-</body></html>"""
+    return render_template(
+        "exam_paper.html",
+        lvl=lvl, next_lvl=lvl + 1, today=today, name_line=name_line,
+        sec_a=sec_a, sec_b=sec_b, sec_c=sec_c, sec_d=sec_d,
+        ans_a=ans_a, ans_b=ans_b, ans_c=ans_c, ans_d=ans_d,
+    )

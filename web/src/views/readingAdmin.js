@@ -250,7 +250,3 @@ function dlTextGlobal(name, text) {
   dlFileGlobal(u, name)
   setTimeout(() => URL.revokeObjectURL(u), 5000)
 }
-
-function fmtDur(sec) {
-  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
-}

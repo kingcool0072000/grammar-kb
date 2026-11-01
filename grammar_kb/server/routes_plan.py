@@ -75,7 +75,9 @@ def register_plan(app, ctx):
         _require_teacher(request)
         from ..clock import current_monday
         cur_mon = current_monday().isoformat()
-        return _ok({"week_start": cur_mon, "tasks": plan.week_daily_tasks(cur_mon)})
+        return _ok({"week_start": cur_mon,
+                    "tasks": plan.week_daily_tasks(cur_mon,
+                                                   user=_request_user(request))})
 
     @app.get("/plan/week-view")
     def plan_week_view(request: "fastapi.Request", week_start: str = "",
@@ -128,6 +130,14 @@ def register_plan(app, ctx):
         """全部作业卷总览：讲次 × 题数 × 已同步历次覆盖。教师专属。"""
         _require_teacher(request)
         return _ok({"papers": homework_admin.papers()})
+
+    @app.get("/homework-admin/wrong-bank")
+    def homework_wrong_bank(request: "fastapi.Request"):
+        """错题题库（讲次 → 题号 → {q, exp}）。教师专属：含作业卷答案与
+        解析，不进学生白名单（此前内嵌前端 JS 随 bundle 人人可见，顺手收紧）。"""
+        _require_teacher(request)
+        from ..homework_admin import load_wrong_bank
+        return _ok(load_wrong_bank())
 
     @app.get("/homework-admin/paper/{lecture}")
     def hw_paper_detail(lecture: int, request: "fastapi.Request"):

@@ -1,5 +1,7 @@
 import { api, getAuth } from '../api.js'
 import { escapeHtml, todayIso } from '../render.js'
+import { fmtDur, fmtTick as fmtMin } from '../fmt.js'
+import { subTabBar, bindSubTabs } from '../tabs.js'
 import { renderReadingReview } from './readingReview.js'
 import { renderVideoReview, videoRetellRow } from './videoReview.js'
 
@@ -36,15 +38,10 @@ export async function mountGrading(el) {
           </select>
         </label>
       </div>` : ''}
-      <div class="ana-tabs plan-subtabs">
-        <button class="reading-btn ${state.tab === 'board' ? 'primary' : ''}" data-gtab="board">📋 批改看板</button>
-        <button class="reading-btn ${state.tab === 'log' ? 'primary' : ''}" data-gtab="log">📚 学习日志</button>
-        <button class="reading-btn ${state.tab === 'analytics' ? 'primary' : ''}" data-gtab="analytics">📊 学情分析</button>
-      </div>
+      ${subTabBar('gtab', [['board', '📋 批改看板'], ['log', '📚 学习日志'], ['analytics', '📊 学情分析']], state.tab)}
       <div id="gd-body"></div>
     `
-    el.querySelectorAll('[data-gtab]').forEach((b) =>
-      b.addEventListener('click', () => { state.tab = b.dataset.gtab; render() }))
+    bindSubTabs(el, 'gtab', (t) => { state.tab = t; render() })
     const sel = el.querySelector('#gd-user')
     if (sel) sel.addEventListener('change', (e) => {
       state.student = e.target.value
@@ -1063,13 +1060,6 @@ function fmtCnTime(iso, withDate = true) {
   return yr + hm
 }
 
-/** 秒 → m:ss / mm:ss 刻度文字 */
-function fmtMin(sec) {
-  const m = Math.floor(sec / 60)
-  const r = Math.round(sec % 60)
-  return m === 0 ? `${r}s` : `${m}:${String(r).padStart(2, '0')}`
-}
-
 function drawFocusIntensity(canvas, session) {
   if (!canvas) return
   const poly = Array.isArray(session.polyline) ? session.polyline : []
@@ -1375,10 +1365,6 @@ export function go(target) {
     // 背单词全量趋势在学情分析板块；改 query 触发 hashchange 重挂子 Tab
     location.hash = '#/grading?tab=analytics'
   }
-}
-
-function fmtDur(sec) {
-  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
 }
 
 function scopeCn(scope) {

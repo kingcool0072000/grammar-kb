@@ -1,5 +1,6 @@
 import { api, getAuth } from '../api.js'
 import { escapeHtml, escAttr } from '../render.js'
+import { fmtDurPad as fmtDur } from '../fmt.js'
 import { createSpectrumPlayer, getFceAudioPref } from './fceAudio.js'
 
 // FCE 真题练习（青少版模拟卷，data/fce.db）：按「一个大题（Part）」为练习单位。
@@ -593,10 +594,6 @@ function updateProgress(el) {
   const text = el.querySelector('#fce-prog-text')
   if (text) text.textContent = `${done}/${items.length} 已作答`
   if (bar) bar.style.width = `${items.length ? Math.round((done / items.length) * 100) : 0}%`
-}
-
-function fmtDur(sec) {
-  return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`
 }
 
 function renderResult(box, res, qs, isEssay, $form, dur) {

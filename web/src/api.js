@@ -113,6 +113,10 @@ export const api = {
   homework: (lecture) => req(`/homework/${lecture}`),
   homeworkBatch: (lectures) =>
     req('/homework', { searchParams: { lectures: lectures.join(',') } }),
+  // 全量知识点（教师备课中心；替代旧的探测式 /search 聚合）
+  points: () => req('/points'),
+  // 错题题库（教师专属：含作业卷答案+解析）
+  homeworkWrongBank: () => req('/homework-admin/wrong-bank'),
   // 哈一作业成绩（后端 exam.db 持久化；学生只可提交，管理需教师）
   examsList: (user) => req('/exams', { searchParams: user ? { user } : {} }),
   examsAdd: (rec) => reqJson('/exams', 'POST', rec),
@@ -391,47 +395,14 @@ function normalizePoint(p) {
   }
 }
 
-// 后端没有「列出全部知识点」端点，search 是关键词检索。
-// 用一组几乎必现的高频字去检索并按 id 去重，可覆盖绝大多数知识点。
-// （实测可取回 95%+；剩余少量纯英文知识点可后续给后端加列表端点补齐。）
-const PROBE_WORDS = ['的', '是', '时', '句', '词', '语态', '从句', '时态', '用法']
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-
 export async function fetchAllPoints(onProgress) {
-  // 后端（uvicorn 单 worker + sqlite）扛不住并发检索，
-  // 多个 /search 同时到达会大面积 500。因此这里串行发起，
-  // 每个词失败再退避重试一次，整体 ~0.5s 即可取回绝大多数知识点。
-  const words = [...PROBE_WORDS]
-  const map = new Map()
-  const absorb = (items) => {
-    if (!Array.isArray(items)) return
-    for (const it of items) {
-      const p = normalizePoint(it)
-      map.set(p.id, { ...(map.get(p.id) || {}), ...p })
-    }
+  // 全量知识点一次拉取（GET /points，教师专属端点）
+  const items = (await api.points())?.items
+  if (!Array.isArray(items) || !items.length) {
+    throw new Error('知识点列表拉取失败，请确认后端 /points 可用')
   }
-
-  for (let i = 0; i < words.length; i++) {
-    let items = null
-    try {
-      items = (await api.search(words[i], { limit: 500 }))?.items
-    } catch {
-      await sleep(150)
-      try {
-        items = (await api.search(words[i], { limit: 500 }))?.items
-      } catch {
-        /* 单个词失败不影响其余 */
-      }
-    }
-    if (onProgress) onProgress(i + 1, words.length)
-    absorb(items)
-  }
-
-  if (map.size === 0) {
-    throw new Error('知识点检索全部失败，请确认后端 /search 可用')
-  }
-  return [...map.values()].sort(
+  if (onProgress) onProgress(1, 1)
+  return items.map(normalizePoint).sort(
     (a, b) => a.lectureNumber - b.lectureNumber || a.ord - b.ord,
   )
 }

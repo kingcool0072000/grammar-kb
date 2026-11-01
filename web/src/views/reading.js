@@ -1,5 +1,6 @@
 import { api, getAuth } from '../api.js'
 import { escapeHtml } from '../render.js'
+import { fmtDur as fmtSec } from '../fmt.js'
 import { createLookupLayer } from './library/lookup.js'
 import { applyReadPref } from '../readpref.js'
 import { createFocusTracker } from './library/focus.js'
@@ -683,8 +684,4 @@ function blobToB64(blob) {
     r.onerror = reject
     r.readAsDataURL(blob)
   })
-}
-
-function fmtSec(s) {
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }

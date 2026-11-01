@@ -1,5 +1,6 @@
 import { api, getAuth } from '../api.js'
 import { escapeHtml, escAttr } from '../render.js'
+import { fmtDur } from '../fmt.js'
 
 // 视频复述批改（共享模块，仿 readingReview.js）：试听 + 10 分制打分 +
 // 评语 + 删除；音频走二进制端点直连（token 查询参数）。
@@ -87,8 +88,4 @@ export function videoRetellRow(r) {
       ${score}
       <span class="fce-his-date">${fmtDur(r.duration_sec || 0)} · ${(r.created_at || '').slice(0, 10)}</span>
     </div>`
-}
-
-function fmtDur(sec) {
-  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
 }

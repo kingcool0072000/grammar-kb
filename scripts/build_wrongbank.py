@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
 """重建 wrongbank.js：默认内容来自测验平台错题导出 JSON；
 讲次 28 的解析覆盖为「四步推理链」（english-grammar-reasoning 输出）。
-用法：uv run python scripts/build_wrongbank.py
+用法：uv run python scripts/build_wrongbank.py --src <测验平台导出.json> [--out data/wrongbank.json]
+（--src 也可用环境变量 WRONGBANK_SRC；导出文件在仓库外，按需指定）
 """
+import argparse
 import json
+import os
 import re
+from pathlib import Path
 
-SRC = '/Users/maxiangyu/.zcode/workspace/default/quiz_wrong_questions_3350581.json'
-OUT = '/Users/maxiangyu/Code/grammar-kb/web/src/data/wrongbank.js'
+REPO = Path(__file__).resolve().parent.parent
+DEFAULT_OUT = REPO / 'data' / 'wrongbank.json'
 
 # 第28讲推理链（结构/锚点/约束/答案；选择题加排除法）
 L28_OVERRIDES = {
@@ -116,12 +120,15 @@ L28_OVERRIDES = {
 }
 
 
-def esc(s: str) -> str:
-    return json.dumps(s, ensure_ascii=False)
-
-
 def main() -> None:
-    data = json.load(open(SRC, encoding='utf-8'))
+    ap = argparse.ArgumentParser(description='重建错题题库 data/wrongbank.json')
+    ap.add_argument('--src', default=os.environ.get('WRONGBANK_SRC', ''),
+                    help='测验平台错题导出 JSON 路径（或环境变量 WRONGBANK_SRC）')
+    ap.add_argument('--out', default=str(DEFAULT_OUT))
+    args = ap.parse_args()
+    if not args.src:
+        ap.error('需要 --src 或环境变量 WRONGBANK_SRC 指向测验平台导出 JSON')
+    data = json.load(open(args.src, encoding='utf-8'))
     bank = {}
     for d in data:
         lec = int(re.search(r'(\d{1,2})\.', d['测验']).group(1))
@@ -134,22 +141,16 @@ def main() -> None:
     for num, chain in L28_OVERRIDES.items():
         bank.setdefault(28, {})[num] = {'q': bank[28][num]['q'], 'exp': chain}
 
-    out = [
-        '// 哈一错题题库：题目内容 + 解析，按 讲次 → 题号 索引。',
-        '// 来源：测验平台错题导出 JSON；讲次 28 的解析为四步推理链（结构/锚点/约束/答案）。',
-        '// 数据重新导出后需再生成一次（scripts/build_wrongbank.py）。',
-        'export const WRONG_BANK = {',
-    ]
-    for lec in sorted(bank):
-        out.append(f'  {lec}: {{')
-        for num in sorted(bank[lec]):
-            it = bank[lec][num]
-            out.append(f'    {num}: {{ q: {esc(it["q"])}, exp: {esc(it["exp"])} }},')
-        out.append('  },')
-    out.append('}')
-    open(OUT, 'w', encoding='utf-8').write('\n'.join(out))
+    out_path = Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        str(lec): {str(num): bank[lec][num] for num in sorted(bank[lec])}
+        for lec in sorted(bank)
+    }
+    out_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=1), encoding='utf-8')
     n = sum(len(v) for v in bank.values())
-    print(f'重建 {OUT}：{len(bank)} 讲 / {n} 题（L28 覆盖 {len(L28_OVERRIDES)} 条推理链）')
+    print(f'重建 {out_path}：{len(bank)} 讲 / {n} 题（L28 覆盖 {len(L28_OVERRIDES)} 条推理链）')
 
 
 if __name__ == '__main__':

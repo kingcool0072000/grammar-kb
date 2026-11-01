@@ -1,0 +1,187 @@
+{
+ "order": [
+  "初中",
+  "高中",
+  "四级",
+  "六级",
+  "考研",
+  "雅思",
+  "专四"
+ ],
+ "cefr_level": {
+  "A1": "初中",
+  "A2": "初中",
+  "B1": "高中",
+  "B2": "雅思",
+  "C1": "雅思",
+  "C2": "雅思"
+ },
+ "drop_typos": {
+  "rusia": "russia",
+  "behavious": "behaviour"
+ },
+ "rename_typos": {
+  "relinguish": "relinquish"
+ },
+ "spelling_pairs": {
+  "grey": "gray",
+  "tyre": "tire",
+  "cheque": "check",
+  "aluminium": "aluminum",
+  "plough": "plow",
+  "mould": "mold",
+  "pyjamas": "pajamas",
+  "jewellery": "jewelry",
+  "judgement": "judgment",
+  "ageing": "aging",
+  "enquire": "inquire",
+  "enquiry": "inquiry",
+  "cosy": "cozy",
+  "kerb": "curb",
+  "sceptical": "skeptical",
+  "draught": "draft",
+  "moustache": "mustache",
+  "storey": "story",
+  "programme": "program",
+  "catalogue": "catalog",
+  "dialogue": "dialog",
+  "analogue": "analog",
+  "practise": "practice",
+  "licence": "license",
+  "defence": "defense",
+  "offence": "offense",
+  "pretence": "pretense",
+  "manoeuvre": "maneuver",
+  "oestrogen": "estrogen",
+  "foetus": "fetus",
+  "paediatric": "pediatric",
+  "axe": "ax",
+  "gaol": "jail",
+  "whisky": "whiskey",
+  "doughnut": "donut",
+  "sulphur": "sulfur",
+  "fulfil": "fulfill",
+  "enrol": "enroll",
+  "instil": "instill",
+  "skilful": "skillful",
+  "wilful": "willful",
+  "distil": "distill",
+  "speciality": "specialty",
+  "neighbour": "neighbor",
+  "towards": "toward",
+  "learnt": "learned",
+  "spelt": "spelled",
+  "burnt": "burned",
+  "dreamt": "dreamed"
+ },
+ "suffix_subs": [
+  [
+   "our",
+   "or"
+  ],
+  [
+   "or",
+   "our"
+  ],
+  [
+   "ise",
+   "ize"
+  ],
+  [
+   "ize",
+   "ise"
+  ],
+  [
+   "isation",
+   "ization"
+  ],
+  [
+   "ization",
+   "isation"
+  ],
+  [
+   "yse",
+   "yze"
+  ],
+  [
+   "yze",
+   "yse"
+  ],
+  [
+   "tre",
+   "ter"
+  ],
+  [
+   "ter",
+   "tre"
+  ],
+  [
+   "ence",
+   "ense"
+  ],
+  [
+   "ense",
+   "ence"
+  ],
+  [
+   "ogue",
+   "og"
+  ],
+  [
+   "og",
+   "ogue"
+  ],
+  [
+   "lled",
+   "led"
+  ],
+  [
+   "led",
+   "lled"
+  ],
+  [
+   "lling",
+   "ling"
+  ],
+  [
+   "ling",
+   "lling"
+  ],
+  [
+   "ller",
+   "ler"
+  ],
+  [
+   "ler",
+   "ller"
+  ],
+  [
+   "ae",
+   "e"
+  ],
+  [
+   "oe",
+   "e"
+  ],
+  [
+   "mme",
+   "m"
+  ],
+  [
+   "ising",
+   "izing"
+  ],
+  [
+   "izing",
+   "ising"
+  ],
+  [
+   "ised",
+   "ized"
+  ],
+  [
+   "ized",
+   "ised"
+  ]
+ ]
+}

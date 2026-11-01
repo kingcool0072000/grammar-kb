@@ -1,13 +1,10 @@
 import { escapeHtml } from '../render.js'
 import { api } from '../api.js'
+import { POS_CN_SHORT as POS_CN } from '../fmt.js'
 
 // 词汇表视图：基于后端 /vocabulary（讲义语料中英对照例句提取的单词表）。
 // 支持词性筛选、关键词搜索、按词频/字母排序；点击单词在抽屉里看释义、词形变化与来源知识点。
 const POS_LIST = ['全部', 'v', 'n', 'adj', 'adv', 'prep', 'conj', 'pron', 'num', 'proper', '其它']
-const POS_CN = {
-  v: '动词', n: '名词', adj: '形', adv: '副', prep: '介',
-  conj: '连', pron: '代', num: '数', proper: '专名', 其它: '其它',
-}
 
 export function mountVocabulary(el, { vocab, openWord, openDictWord }) {
   // 给每个词条打上原数组下标，卡片点击后用它回查

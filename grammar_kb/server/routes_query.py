@@ -46,6 +46,11 @@ def register_query(app, ctx):
             raise HTTPException(status_code=404, detail=f"知识点 id={kp_id} 不存在")
         return _ok({"id": kp_id, "format": format, "content": content})
 
+    @app.get("/points")
+    def points():
+        """全量知识点（教师备课中心全量列表；不在学生白名单，学生 403）。"""
+        return _ok({"items": [asdict(k) for k in kbq.points()]})
+
     @app.get("/search")
     def search(
         q: str = FQuery(..., description="关键词"),

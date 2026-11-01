@@ -16,7 +16,7 @@ _COMPLETION_NOTE = (
 )
 class ViewsMixin:
 
-    def week_view(self, week_start: str, user: str = "malin") -> dict:
+    def week_view(self, week_start: str, user: str) -> dict:
         """教师周视图：周拆解汇总 + 周一至周日逐日任务（含完成态）。
 
         周拆解（用户要的「自动拆解」）从 tasks 推导：
@@ -337,7 +337,7 @@ class ViewsMixin:
                 "week_start": week_start}
 
 
-    def week_preview(self, week_start: str, tasks: dict, user: str = "malin") -> dict:
+    def week_preview(self, week_start: str, tasks: dict, user: str) -> dict:
         """未保存的周计划 → 学生课表那 7 天。摊法与 week_daily_tasks 相同。
 
         已冻结的日子仍用 plan_history_days，和正式课表一致。
@@ -391,7 +391,7 @@ class ViewsMixin:
         return {"week_start": week_start, "days": days}
 
 
-    def month_view(self, month: str, user: str = "malin") -> dict:
+    def month_view(self, month: str, user: str) -> dict:
         """月历：某月每天 {date, in_month, future, done, total}，周一为每周之首。"""
         y, m = month.split("-")[:2]
         first = date(int(y), int(m), 1)
@@ -420,7 +420,7 @@ class ViewsMixin:
         return {"month": first.isoformat()[:7], "days": days}
 
 
-    def overview(self, user: str = "malin") -> dict:
+    def overview(self, user: str) -> dict:
         """全览：最早已排计划周（无则回看 2 周）到冲刺线 2027-01-31 的逐周汇总。"""
         with self._connect() as conn:
             rows = conn.execute(

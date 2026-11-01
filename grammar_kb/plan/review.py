@@ -11,7 +11,7 @@ from ..clock import today_cn, week_bounds
 from ..paths import data_path
 class ReviewMixin:
 
-    def last_week_review(self, week_start: str, user: str = "malin") -> dict:
+    def last_week_review(self, week_start: str, user: str) -> dict:
         """上周回顾：自动摘要 + 上周的 notes（编辑当前周时作参照）。"""
         prev = (date.fromisoformat(week_start) - timedelta(days=7)).isoformat()
         lo, hi = week_bounds(prev)
@@ -31,7 +31,7 @@ class ReviewMixin:
         }
 
 
-    def get_week_notes(self, week_start: str, user: str = "malin") -> str:
+    def get_week_notes(self, week_start: str, user: str) -> str:
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT notes FROM plan_weeks WHERE user = ? AND week_start = ?",
@@ -108,7 +108,7 @@ class ReviewMixin:
             return {}
 
 
-    def week_review(self, week_start: str, user: str = "malin") -> dict:
+    def week_review(self, week_start: str, user: str) -> dict:
         """周验收（外循环第④步）：对照上周 focus_kps 判收敛/滚动/升级。
 
         判据（讲次级，数据可得性优先）：
@@ -117,7 +117,7 @@ class ReviewMixin:
         - rolling：其余（默认路径，下周继续）
         """
         prev = (date.fromisoformat(week_start) - timedelta(days=7)).isoformat()
-        prev_week = self._get_week(prev)
+        prev_week = self._get_week(prev, user=user)
         focus = (prev_week.get("tasks") or {}).get("focus_kps") or []
         lo, hi = week_bounds(prev)
         try:

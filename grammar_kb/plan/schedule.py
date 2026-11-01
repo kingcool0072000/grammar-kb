@@ -31,8 +31,8 @@ def paper_task_detail(level: Optional[int]) -> str:
 
 class ScheduleMixin:
 
-    def week_daily_tasks(self, week_start: str, for_date: Optional[str] = None,
-                         user: str = "malin",
+    def week_daily_tasks(self, week_start: str, user: str,
+                         for_date: Optional[str] = None,
                          planned: Optional[dict] = None) -> list[dict]:
         """周目标 → for_date 当日的任务清单（逐日均摊，外循环第③步）。
 
@@ -415,7 +415,7 @@ class ScheduleMixin:
 
     # ---- 内循环：学生今日任务 / 周清单（完成只看学习信号） ----
 
-    def today_tasks(self, user: str = "malin", day: Optional[str] = None) -> dict:
+    def today_tasks(self, user: str, day: Optional[str] = None) -> dict:
         """学生某日的任务清单（内循环核心）。
 
         任务由本周 plan_weeks.tasks 派生（与教师驾驶舱「每日任务展开」
@@ -494,7 +494,7 @@ class ScheduleMixin:
         return auto, read_titles, acts_out
 
 
-    def week_todo(self, user: str = "malin") -> dict:
+    def week_todo(self, user: str) -> dict:
         """学生周清单：本周目标 + 周一至周日逐日任务完成矩阵。"""
         today_iso = today_cn().isoformat()
         ws = monday_of(today_cn()).isoformat()

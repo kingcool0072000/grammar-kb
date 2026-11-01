@@ -16,7 +16,7 @@ from .util import _paper_short
 class GoalsEditorMixin:
     """editor_data / goal_assets。完成态与总目标读写在 GoalsMixin。"""
 
-    def editor_data(self, user: str = "malin",
+    def editor_data(self, user: str,
                     week_start: Optional[str] = None) -> dict:
         """周计划编辑器的结构化选项源（全部来自真实备课内容）：
         lectures（48 讲）、fce_parts（Test×Paper×Part）、books（含必读章
@@ -244,7 +244,7 @@ class GoalsEditorMixin:
         return None
 
     def goal_assets(self, lectures: list, fce_parts: list, books: list,
-                    articles: list, user: str = "malin") -> dict:
+                    articles: list, user: str) -> dict:
         """目标配置的选项源：
         4.1 哈一课程（带考卷存在标记）4.2 单词级别+词数 4.3 FCE Part
         4.4 精读文章 4.5 泛读书-章节（必读章配置+增量词数）4.6 单词考试试卷资产。

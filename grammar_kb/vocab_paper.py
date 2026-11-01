@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Optional
 
 from .atlas_vocab import exam_allowed
+from .paper_html import render_template
 from .vocab_exam import _grammar_db_path, VocabExamStore
 
 
@@ -506,38 +507,8 @@ def render_new_paper_html(paper: dict, title: str = "") -> str:
     a3 = "　".join(f'{i}.{e(w["spell_answer"])}'
                    for i, w in enumerate(paper["spell"], 1))
 
-    return f'''<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
-<title>{e(t)}</title>
-<style>
-  body {{ font-family: "Songti SC","SimSun",serif; margin: 32px; color: #111; }}
-  h1 {{ font-size: 20px; text-align: center; margin: 0 0 4px; }}
-  .meta {{ text-align: center; font-size: 12px; color: #555; margin-bottom: 16px; }}
-  h2 {{ font-size: 15px; margin: 14px 0 8px; }}
-  .q {{ display: flex; align-items: baseline; gap: 8px; margin-bottom: 9px; }}
-  .n {{ width: 22px; font-weight: 700; }}
-  .pos {{ font-size: 11px; color: #666; white-space: nowrap; min-width: 72px; }}
-  .zh {{ font-size: 14px; }}
-  .en {{ font-size: 14px; font-family: Georgia,serif; }}
-  .line {{ flex: 1; border-bottom: 1px solid #999; height: 14px; }}
-  .line.short {{ max-width: 220px; }}
-  .blanked {{ font-family: "Courier New",monospace; font-size: 15px; letter-spacing: 2px; }}
-  .pagebreak {{ page-break-before: always; }}
-  .ans-sec {{ margin-bottom: 12px; font-size: 13px; line-height: 1.8; }}
-  .ans-sec b {{ display: block; margin-bottom: 4px; }}
-  @media print {{ body {{ margin: 14px; }} }}
-</style></head><body>
-<h1>{e(t)}</h1>
-<div class="meta">卷号 {e(pid)} · 姓名__________ · 得分______</div>
-<h2>一、中译英（20 题 · 每题 2.5 分）</h2>
-{zh2en}
-<h2>二、英译中（20 题 · 每题 2.5 分）</h2>
-{en2zh}
-<h2>三、拼写（10 题 · 每题 5 分 · 在空格处填写字母）</h2>
-{spell}
-<div class="pagebreak"></div>
-<h1>{e(t)} · 答案页</h1>
-<div class="meta">卷号 {e(pid)}（本页可撕开）</div>
-<div class="ans-sec"><b>一、中译英</b><p>{a1}</p></div>
-<div class="ans-sec"><b>二、英译中</b><p>{a2}</p></div>
-<div class="ans-sec"><b>三、拼写挖空</b><p>{a3}</p></div>
-</body></html>'''
+    return render_template(
+        "new_paper.html",
+        title_esc=e(t), pid_esc=e(pid),
+        zh2en=zh2en, en2zh=en2zh, spell=spell, a1=a1, a2=a2, a3=a3,
+    )

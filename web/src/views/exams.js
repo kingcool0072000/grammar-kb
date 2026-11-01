@@ -248,10 +248,10 @@ export function mountExams(el, { lectures }) {
       $w.innerHTML = '<div class="empty">还没有错题记录，保持下去！</div>'
       return
     }
-    // 题目详情：答案+解析来自静态题库（测验平台错题导出），题干+选项来自后端作业卷库
+    // 题目详情：答案+解析来自后端错题库（教师专属端点），题干+选项来自后端作业卷库
     if (!wrongBank) {
       try {
-        wrongBank = (await import('../data/wrongbank.js')).WRONG_BANK
+        wrongBank = await api.homeworkWrongBank()
       } catch {
         wrongBank = {}
       }

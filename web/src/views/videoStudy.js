@@ -1,5 +1,6 @@
 import { api, getAuth } from '../api.js'
-import { escapeHtml } from '../render.js'
+import { escapeHtml, escAttr } from '../render.js'
+import { fmtDur as fmtSec, fmtDurCn as fmtDur } from '../fmt.js'
 import { speak } from '../tts.js'
 import { loadYouTubeApi } from '../youtube.js'
 
@@ -520,15 +521,4 @@ function blobToB64(blob) {
     r.onerror = reject
     r.readAsDataURL(blob)
   })
-}
-
-function fmtSec(s) {
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
-}
-function fmtDur(sec) {
-  const m = Math.floor(sec / 60)
-  return m >= 1 ? `${m} 分${sec % 60 ? ` ${sec % 60} 秒` : ''}` : `${sec} 秒`
-}
-function escAttr(s) {
-  return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
 }

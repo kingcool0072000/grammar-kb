@@ -1,5 +1,6 @@
 import { api, getAuth } from '../api.js'
 import { escapeHtml, escAttr } from '../render.js'
+import { fmtDur } from '../fmt.js'
 
 // 精读录音批改（共享模块）：从 readingAdmin 抽出，批改中心承载。v2 缓存刷新。
 // 含：批改视图（renderReview，试听+10 分制打分+评语+导出）、
@@ -206,10 +207,6 @@ async function renderReview(el, recs, onBack) {
     } catch { /* 回退到路由 */ }
     location.hash = '/grading?tab=board&from=review'
   })
-}
-
-function fmtDur(sec) {
-  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
 }
 
 function dlFileGlobal(blobUrl, name) {

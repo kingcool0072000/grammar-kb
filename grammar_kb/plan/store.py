@@ -100,7 +100,7 @@ class PlanStore(
 
     # ---- plan_weeks 读写 ----
 
-    def list_weeks(self, user: str = "malin") -> list[dict]:
+    def list_weeks(self, user: str) -> list[dict]:
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT * FROM plan_weeks WHERE user = ? ORDER BY week_start",
@@ -110,7 +110,7 @@ class PlanStore(
 
 
     def put_week(self, week_start: str, tasks: dict, notes: str,
-                 user: str = "malin") -> dict:
+                 user: str) -> dict:
         date.fromisoformat(week_start)  # 非法日期抛 ValueError → 422
         if week_start != monday_of(date.fromisoformat(week_start)).isoformat():
             raise ValueError("week_start 须为周一日期")
@@ -216,7 +216,7 @@ class PlanStore(
         return {"user": user, "day": day, "count": len(clean), "note": note}
 
 
-    def _get_week(self, week_start: str, user: str = "malin") -> dict:
+    def _get_week(self, week_start: str, user: str) -> dict:
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT * FROM plan_weeks WHERE user = ? AND week_start = ?",

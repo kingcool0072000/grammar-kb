@@ -13,7 +13,7 @@ class ActualsMixin:
 
     # ---- 周完成度实时聚合 ----
 
-    def week_actuals(self, week_start: str, user: str = "malin") -> dict:
+    def week_actuals(self, week_start: str, user: str) -> dict:
         """某周的实际完成情况（课程/词汇/FCE/阅读），供 GET 拼装与上周回顾。"""
         lo, hi = week_bounds(week_start)
         out: dict = {

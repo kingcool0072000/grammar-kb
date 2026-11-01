@@ -1,5 +1,6 @@
 import { api } from '../api.js'
 import { renderMd, escapeHtml, escAttr } from '../render.js'
+import { POS_CN_FULLNAME as POS_CN, FORM_CN_SHORT as FORM_CN } from '../fmt.js'
 import { catColor } from '../theme.js'
 import { fillAtlasHost } from '../atlas.js'
 import { getWordCard } from '../wordcard.js'
@@ -187,19 +188,7 @@ export function createDrawer(ctx = {}) {
   }
 
   // ---------- 单词详情（词汇表）----------
-  const FORM_CN = {
-    past: '过去式',
-    past_participle: '过去分词',
-    present_participle: '现在分词',
-    third_singular: '三单',
-    plural: '复数',
-    comparative: '比较级',
-    superlative: '最高级',
-  }
-  const POS_CN = {
-    v: '动词', n: '名词', adj: '形容词', adv: '副词', prep: '介词',
-    conj: '连词', pron: '代词', num: '数词', proper: '专有名词',
-  }
+  // POS_CN / FORM_CN 从共享模块 ../fmt.js 导入（抽屉口径：proper=专有名词、三单缩写）
 
   // 例句中把目标词（含词形变化）加粗：先 escape 再匹配，按长度降序避免短词先命中
   function highlightWord(en, word, forms) {

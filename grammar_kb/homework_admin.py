@@ -12,11 +12,35 @@
 """
 from __future__ import annotations
 
+import json
 import sqlite3
 from typing import Optional
 
 from . import dbreg
 from .aicloud_sync import AiCloudClient, _lecture_of
+from .paths import data_path
+
+# ---- 错题题库（data/wrongbank.json：测验平台错题导出，含作业卷答案+解析） ----
+
+_WRONG_BANK_CACHE: Optional[dict] = None
+
+
+def load_wrong_bank() -> dict:
+    """错题题库：讲次 → 题号 → {q 题面, exp 解析}，进程内缓存。
+
+    由 scripts/build_wrongbank.py 从测验平台导出生成；此前内嵌前端
+    wrongbank.js（随 bundle 人人可见），出代码后收到后端数据文件，
+    只经教师专属端点下发。
+    """
+    global _WRONG_BANK_CACHE
+    if _WRONG_BANK_CACHE is None:
+        try:
+            _WRONG_BANK_CACHE = json.loads(
+                data_path("wrongbank.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            _WRONG_BANK_CACHE = {}
+    return _WRONG_BANK_CACHE
+
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS homework_q_result (
