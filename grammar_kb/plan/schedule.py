@@ -168,6 +168,21 @@ class ScheduleMixin:
                         "text": f"精读+朗读《{_short(title, 14)}》",
                         "detail": "阅读训练里读全文 + 提交朗读录音",
                     })
+            # 今天刚提交朗读的计划内文章：上面按「周内已朗」滤剩余时把它也
+            # 滤掉了，清单无行 → 计划表看不见 ✓（孩子做完了反而像没做）。
+            # 仿讲次 today_lecs 补行：完成的也要看得见。
+            today_arts = self._done_article_ids(ref, upto, user)
+            have_arts = {x.get("article_id") for x in tasks}
+            for aid in (t.get("articles") or []):
+                if aid in today_arts and aid not in have_arts:
+                    title = self._article_title(aid)
+                    if title:
+                        tasks.append({
+                            "type": "article", "article_id": aid,
+                            "key": f"article:{aid}",
+                            "text": f"精读+朗读《{_short(title, 14)}》",
+                            "detail": "今天已提交朗读 ✓",
+                        })
             # 周六补一段泛读（周中没读完的量周六兜底，量小自然显示小目标）
             for book_key, pct in (t.get("reading") or {}).items():
                 tasks.append(self._reading_task(book_key, pct, user, days_left))
