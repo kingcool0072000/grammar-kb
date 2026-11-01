@@ -16,9 +16,14 @@ from grammar_kb.server import create_app  # noqa: E402
 
 @pytest.fixture()
 def recite_env(tmp_path, monkeypatch):
-    """空 fce.db + 独立认证 / 成绩库（vocab_word 总量缺省时 levels.total 为 None）。"""
+    """空 fce.db + 独立认证 / 成绩库（vocab_word 总量缺省时 levels.total 为 None）。
+
+    防重窗口关掉：既有用例大量连续 submit（连发是它们要测的行为），
+    防重语义由 test_submit_dedup_within_window 单独覆盖（它自行开窗）。
+    """
     monkeypatch.setenv("GRAMMAR_KB_USERS", str(tmp_path / "users.json"))
     monkeypatch.setenv("GRAMMAR_KB_AUTH_SECRET", str(tmp_path / "secret.key"))
+    monkeypatch.setenv("RECITE_DEDUP_WINDOW_SEC", "0")
     sqlite3.connect(tmp_path / "grammar.db").close()  # 合法空库
     return tmp_path
 
@@ -319,3 +324,49 @@ def test_wrongbook_today_is_beijing_not_utc(recite_env):
     assert w["first_wrong_at"] == "2026-10-24"
     assert w["next_review"] == "2026-10-25"
     assert w["due"] is False
+
+
+def test_submit_dedup_within_window(recite_env, monkeypatch):
+    """防重兜底：同用户短窗口内的第二条会话 429 拒收，不落库不推进节点。
+
+    背景：前端「到期」卡连点无防抖，一分钟落 19 条假会话，每条还各推
+    一次艾宾浩斯节点。窗口过后、不同用户不受影响。
+    """
+    monkeypatch.setenv("RECITE_DEDUP_WINDOW_SEC", "10")  # 本用例开窗
+    c = _client(recite_env)
+    h = _login(c, "malin", "123456")
+    when = datetime(2026, 10, 24, 10, 0, 0, tzinfo=CN_TZ)
+    with freeze_clock(when):
+        r1 = c.post("/recite/sessions", headers=h, json={
+            "total": 1, "wrong": 0, "acc": 100, "duration_sec": 30,
+            "wrong_words": [], "mode": "conquer", "scope": "wrongbook",
+            "details": [{"word": "dup", "correct": True}],
+        })
+        assert r1.status_code == 200
+        # 窗口内紧跟的第二条：拒收
+        r2 = c.post("/recite/sessions", headers=h, json={
+            "total": 2, "wrong": 0, "acc": 100, "duration_sec": 31,
+            "wrong_words": [], "mode": "conquer", "scope": "wrongbook",
+            "details": [{"word": "dup", "correct": True}],
+        })
+        assert r2.status_code == 429
+        d = c.get("/recite/progress?include_words=true", headers=h).json()["data"]
+        words = {w["word"]: w for w in d["words"]}
+        assert words["dup"]["right"] == 1  # 第二条没有重复计入
+    # 窗口过后（+11s）：正常放行
+    with freeze_clock(when + timedelta(seconds=11)):
+        r3 = c.post("/recite/sessions", headers=h, json={
+            "total": 1, "wrong": 0, "acc": 100, "duration_sec": 30,
+            "wrong_words": [], "mode": "flip", "scope": "all",
+            "details": [{"word": "dup", "correct": True}],
+        })
+        assert r3.status_code == 200
+    # 不同用户互不影响（教师另开客户端上报）
+    ht = _login(c, "teacher", "123456")
+    with freeze_clock(when + timedelta(seconds=12)):
+        r4 = c.post("/recite/sessions", headers=ht, json={
+            "total": 1, "wrong": 0, "acc": 100, "duration_sec": 30,
+            "wrong_words": [], "mode": "flip", "scope": "all",
+            "details": [{"word": "other", "correct": True}],
+        })
+        assert r4.status_code == 200

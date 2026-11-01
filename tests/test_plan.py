@@ -40,6 +40,8 @@ def plan_env(tmp_path, monkeypatch):
     # 阅读实况聚合会开 library.db（环境变量优先）——指向测试库防读生产数据
     monkeypatch.setenv("GRAMMAR_KB_LIBRARY_DB", str(tmp_path / "library.db"))
     monkeypatch.setenv("GRAMMAR_KB_LIBRARY_DIR", str(tmp_path / "files"))
+    # 背词防重窗口关掉：完成度用例里两次上报间隔几秒（连发是它们要测的）
+    monkeypatch.setenv("RECITE_DEDUP_WINDOW_SEC", "0")
     sqlite3.connect(tmp_path / "grammar.db").close()
     return tmp_path
 

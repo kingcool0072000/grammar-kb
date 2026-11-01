@@ -623,7 +623,16 @@ export async function mountRecite(el, { vocab, role }) {
 
 // ---- 全屏会话 -------------------------------------------------------------- //
 
+// 会话守卫：同一时间只允许一个全屏背词会话。曾因「到期」卡连点每击各开
+// 一个 overlay，旧会话计时器仍在走、逐题结算各发一条 recite_session，
+// 10-31 一晚刷出 49 条假会话（每条还各推一次艾宾浩斯节点）。所有入口
+// （开始背单词 / 到期 / 逾期 / 再来一组）都经 startSession 收口。
+let sessionActive = false
+
 function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
+  if (sessionActive) return
+  sessionActive = true
+  const releaseSession = () => { sessionActive = false }
   // 播放队列：初始题 + 错词重现（答错后间隔 3 题再插一次）
   let queue = buildQuiz(pool, size)
   let done = 0
@@ -632,6 +641,7 @@ function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
   const totalFirst = queue.length
   let idx = 0
   let overlay = null
+  let finishing = false // 末题连点守卫：finish 只结算一次
   const t0 = Date.now() // 本组计时（结算页与累计时长都用）
 
   function currentQ() {
@@ -644,6 +654,8 @@ function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
   }
 
   async function finish() {
+    if (finishing) return
+    finishing = true
     const total = done
     // 注意：wrongEntries 只记首答错；重现答对不影响它
     const uniqWrong = [...new Set(wrongEntries.map((e) => e.word))]
@@ -652,6 +664,7 @@ function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
     try {
       await uploadSession(total, uniqWrong, sec, details)
     } catch { /* 离线/未登录时静默丢弃 */ }
+    releaseSession()
     overlay.remove()
     overlay = null
     mountResult(rootEl, {
@@ -718,6 +731,7 @@ function startSession(rootEl, { pool, size, mode, scope = '', onFinish }) {
         cleanupKeys()
         overlay.remove()
         overlay = null
+        releaseSession()
         // 中途退出：已作答部分照常上报（答对计云端进度、答错进艾宾浩斯
         // 周期、按已答题数记一组部分成绩），避免白背。
         if (done > 0) {

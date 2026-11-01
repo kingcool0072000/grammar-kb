@@ -8,6 +8,7 @@ from fastapi import HTTPException
 
 from .http import _ok, _request_user, _require_teacher
 from .schemas import ReciteSessionIn, FocusSessionIn, TopicProgressIn, TopicImportIn, TopicFlagIn, TopicAssignIn
+from ..recite import DuplicateSessionError
 
 def _fill_word_gloss(kbq, items: list) -> None:
     """给词条补 vocab_word 释义（大小写不敏感）。只查这一批，不扫全库。"""
@@ -109,6 +110,9 @@ def register_study(app, ctx):
                 user, rec.total, rec.wrong, rec.acc, rec.duration_sec,
                 rec.wrong_words, rec.mode, rec.scope, details=rec.details,
             ))
+        except DuplicateSessionError as e:
+            # 连点/重试的兜底拦截：窗口内重复会话直接拒，不落库不推进节点
+            raise HTTPException(status_code=429, detail=str(e))
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
 
