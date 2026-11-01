@@ -677,6 +677,43 @@ def test_weekday_speak_completion_visible(plan_env):
         f"已提交朗读的文章不应再排周六未完成: {sat_arts}"
 
 
+def test_saturday_speak_completion_visible(plan_env):
+    """周六当天提交朗读：清单也要出「今天已提交朗读 ✓」行。
+
+    回归背景（11-01 生产）：周六分支按「周内已朗」滤剩余时把当天刚提交
+    的也滤掉——清单无行、计划表看不见 ✓，孩子做完了像没做。信号链本身
+    是通的（completion keys 里 article:done=True），缺的是清单行。
+    """
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    hs = _login(c, "malin", "123456")
+    _put_week(c, ht, {"articles": [61]})
+    con = sqlite3.connect(plan_env / "fce.db")
+    con.execute("""CREATE TABLE IF NOT EXISTS reading_article (
+        id INTEGER PRIMARY KEY, title TEXT, source TEXT DEFAULT '',
+        text TEXT DEFAULT '', cefr TEXT DEFAULT '', created_at TEXT DEFAULT '')""")
+    con.execute("INSERT OR REPLACE INTO reading_article (id, title, text)"
+                " VALUES (61, 'Too Many Climbers on Mt. Fuji', 'x')")
+    con.execute("""CREATE TABLE IF NOT EXISTS reading_recordings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT, article_id INTEGER,
+        file TEXT DEFAULT '', note TEXT DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT '')""")
+    # 录音就落在周六（北京时区上午）——cn_dt 日切后在周六窗口内
+    sat = date.fromisoformat(MON) + timedelta(days=5)
+    con.execute("INSERT INTO reading_recordings (user, article_id, created_at)"
+                " VALUES ('malin', 61, ?)",
+                (f"{sat.isoformat()}T01:30:00+00:00",))
+    con.commit()
+    con.close()
+    d = c.get("/plan/today", headers=hs,
+              params={"day": sat.isoformat()}).json()["data"]
+    arts = [t for t in d["tasks"] if t.get("type") == "article"]
+    assert any(t.get("article_id") == 61 and t.get("done") for t in arts), \
+        f"周六当天提交朗读的计划内文章应显示完成行: {d['tasks']}"
+    done_row = next(t for t in arts if t.get("article_id") == 61)
+    assert "今天已提交朗读" in (done_row.get("detail") or "")
+
+
 def test_rules_registry_and_switch(plan_env):
     """完成判定规则：默认值生效 + 教师可开关 + 关闭后专题不再点亮讲次。"""
     c = _client(plan_env)
