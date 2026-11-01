@@ -21,7 +21,7 @@ export const STUDENT_TABS = [
 const TEACHER_ALLOWED = new Set([
   ...TEACHER_TABS.map((t) => t.key),
   // 备课 / 批改 / 计划跳进来的工具页
-  'courses', 'vocab', 'taxonomy', 'fce', 'fceListen', 'exams', 'vocabLevel', 'vocabExam',
+  'courses', 'taxonomy', 'fceListen', 'exams', 'vocabLevel', 'vocabExam',
   'students', 'paperAdmin', 'readingAdmin', 'readingList', 'topicsAdmin',
   'videoAdmin',
   'libraryManage', 'librarySettings',

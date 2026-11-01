@@ -1,7 +1,6 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
-// 专题清单动态加载：TOPICS 是整本静态手册（大内容块），拉进首包会显著
-// 增大 index bundle——只在备课中心需要计数，await 动态 import 取。
+// 专题数从 topics-admin/list 接口取（v2 结构化专题；v1 静态手册已退役）。
 
 // 教师版 · 备课中心：教学内容管理按两大板块组织——
 //   哈1 语法（初中语法课 / 知识点体系 / 词汇表 / 作业题库）
@@ -128,11 +127,8 @@ async function mountContent(el) {
             <button class="prep-card" data-go="fceListen">
               <b>🎧 16 段</b><span>FCE 听力播放台</span>
             </button>
-            <button class="prep-card" data-go="fce">
-              <b>FCE 知识库</b><span>19 天语法专题</span>
-            </button>
           </div>
-          <p class="reading-hint">真题库查看四套试卷与练习明细；听力播放台带频谱进度条（平坦段=空白时间）；FCE 知识库为语法专题手册。</p>
+          <p class="reading-hint">真题库查看四套试卷与练习明细；听力播放台带频谱进度条（平坦段=空白时间）。</p>
         </div>
       </section>
 

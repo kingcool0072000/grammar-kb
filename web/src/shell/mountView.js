@@ -1,10 +1,8 @@
 import { routeSegs } from './dom.js'
 import { mountCourses } from '../views/courses.js'
-import { mountVocabulary } from '../views/vocabulary.js'
 import { mountRecite } from '../views/recite.js'
 import { mountTaxonomy } from '../views/taxonomy.js'
 import { mountExams } from '../views/exams.js'
-import { mountFce } from '../views/fce.js'
 import { mountFcePapers } from '../views/fcePapers.js'
 import { mountReading } from '../views/reading.js'
 import { mountReadingAdmin } from '../views/readingAdmin.js'
@@ -33,9 +31,6 @@ export function mountView(route, container, { role, state, ctx, pointsById }) {
   if (route === 'courses') {
     return mountCourses(container, { lectures: state.lectures, openLecture: ctx.openLecture })
   }
-  if (route === 'vocab') {
-    return mountVocabulary(container, { vocab: state.vocab, openWord: (e) => ctx.openWord(e) })
-  }
   if (route === 'recite') return mountRecite(container, { vocab: state.vocab, role })
   if (route === 'timetable') return mountTimetable(container)
   if (route === 'conquered') return mountConquered(container)
@@ -51,7 +46,6 @@ export function mountView(route, container, { role, state, ctx, pointsById }) {
   if (route === 'taxonomy') {
     return mountTaxonomy(container, { pointsById, openKp: ctx.openKp })
   }
-  if (route === 'fce') return mountFce(container)
   if (route === 'fcePapers') return mountFcePapers(container, { role })
   if (route === 'fceListen') return mountFceListen(container)
   if (route === 'readingList') return mountReadingList(container)

@@ -1,54 +1,24 @@
-// 专题学习：自学手册页。内容静态打包（由讲义 HTML 精简迁移），
-// 「我学完了」按钮把该主题 key 并入 done_keys 写后端
-// （PUT /topics/{id}/progress——谁登录记谁的行，跨设备同步）。
-// 专题对学生的可见性在前端清单里声明 assignedTo：'malin' 表示仅 malin 可见。
+// 专题学习：v2 结构化专题（topic_content 表）。列表/内容全走接口，
+// 学生只看被开放（assigned_to 为空=全员，或含自己）的专题；
+// 「我学完了」按节点 key 写后端（PUT /topics/{id}/progress——谁登录记谁的行）。
+// v1 静态手册（topicsV1.js）已退役：接口失败明确报错，不再静态兜底。
 import { api, getAuth } from '../api.js'
 import { escapeHtml } from '../render.js'
 import { createFocusTracker } from './library/focus.js'
-import { TOPICS } from '../data/topicsV1.js'
-
-// 专题数据本体在 ../data/topicsV1.js；此处再导出，保持「topics.js 导出 TOPICS」的旧引用兼容
-export { TOPICS }
-
-// ---- 渲染 ----------------------------------------------------------------- //
-
-function visibleTopics(user) {
-  return TOPICS.filter(
-    (t) => !t.assignedTo || t.assignedTo === user,
-  )
-}
-
-function qList(items, cls) {
-  return items
-    .map(
-      ([tag, text, key, why]) => `
-<li>
-  <span class="topic-qtag">${escapeHtml(tag)}</span>
-  <p class="topic-qtext">${text}</p>
-  <button class="topic-reveal-btn">看答案</button>
-  <div class="topic-answer"><span class="key">${escapeHtml(key)}</span><div class="why">${escapeHtml(why)}</div></div>
-</li>`,
-    )
-    .join('')
-}
 
 export async function mountTopics(el, { role } = {}) {
-  const auth = getAuth()
-  const me = auth ? auth.user : ''
-  // v2 优先：结构化专题（topic_content 表）——列表从接口拿（含开放过滤）；
-  // 接口不可用降级静态清单（迁移兼容期兜底）
-  let v2list = []
-  try { v2list = await api.topicsV2() } catch { v2list = [] }
-  const staticList = visibleTopics(me)
-  const isV2 = (id) => v2list.some((x) => x.topic_id === id)
+  // 结构化专题（topic_content 表）：列表从接口拿（含开放过滤）。
+  // 接口失败直接报错（v1 静态兜底已退役）。
+  let v2list
+  try { v2list = await api.topicsV2() } catch (e) {
+    el.innerHTML = `<div class="topic-page"><p class="topic-empty">专题内容加载失败：${escapeHtml(e.message)}</p></div>`
+    return
+  }
 
-  const list = [
-    ...v2list.map((x) => ({
-      id: x.topic_id, title: x.title, subtitle: x.subtitle,
-      emoji: x.emoji, assignedTo: x.assigned_to, v2: true, nodeCount: x.node_count,
-    })),
-    ...staticList.filter((x) => !isV2(x.id)).map((x) => ({ ...x, v2: false })),
-  ]
+  const list = v2list.map((x) => ({
+    id: x.topic_id, title: x.title, subtitle: x.subtitle,
+    emoji: x.emoji, assignedTo: x.assigned_to, nodeCount: x.node_count,
+  }))
 
   el.innerHTML = `
     <div class="topic-page">
@@ -68,12 +38,12 @@ export async function mountTopics(el, { role } = {}) {
 
   const listEl = el.querySelector('#topic-list')
 
-  // ---- 专题卡片入口（v2 用 node_count；静态用 themes 数）----
+  // ---- 专题卡片入口 ----
   async function renderList(progressMap) {
     listEl.innerHTML = list
       .map((t) => {
         const p = progressMap[t.id] || { done_keys: [] }
-        const total = t.v2 ? t.nodeCount : t.themes.length
+        const total = t.nodeCount
         const done = (p.done_keys || []).length
         const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0
         return `
@@ -239,126 +209,9 @@ export async function mountTopics(el, { role } = {}) {
     cleanups.push(() => tracker.destroy())
   }
 
-  // ---- 手册详情页（hash: #/topics/{id}）----
-  async function renderDetail(topicId) {
-    if (isV2(topicId)) {
-      await renderDetailV2(topicId)
-      return
-    }
-    const t = list.find((x) => x.id === topicId)
-    if (!t) {
-      location.hash = '/topics'
-      return
-    }
-    let p
-    try {
-      p = await api.topicProgress(topicId)
-    } catch {
-      p = { done_keys: [] }
-    }
-    const doneSet = new Set(p.done_keys || [])
-
-    el.innerHTML = `
-    <div class="topic-page">
-      <button class="fce-back-btn" id="topic-back">← 返回专题列表</button>
-      <div class="topic-hero detail" style="--tc:${t.themes[0].color}">
-        <p class="eyebrow">和爸学 · 专题学习${t.assignedTo ? ` · ${escapeHtml(t.assignedTo)} 的专属专题` : ''}</p>
-        <h1>${t.emoji} ${escapeHtml(t.title)}</h1>
-        <p class="sub">${escapeHtml(t.subtitle)}</p>
-        <div class="topic-progress-row">
-          <div class="topic-bar"><i id="topic-bar-i"></i></div>
-          <span id="topic-progress-label"></span>
-        </div>
-      </div>
-      <nav class="topic-toc" id="topic-toc">
-        ${t.themes
-          .map(
-            (x) =>
-              `<a href="#th-${x.key}" data-key="${x.key}" style="--tc:${x.color}"><i class="dot"></i>${escapeHtml(x.no)} ${escapeHtml(x.title.split('——')[0])}</a>`,
-          )
-          .join('')}
-      </nav>
-      ${t.themes
-        .map((th) => {
-          const done = doneSet.has(th.key)
-          return `
-      <section class="topic-theme" id="th-${th.key}" style="--tc:${th.color};--tcs:${th.soft}" data-key="${th.key}">
-        <div class="topic-theme-head">
-          <span class="topic-no">${escapeHtml(th.no)}</span>
-          <h2>${escapeHtml(th.title)}</h2>
-          <span class="topic-score">${escapeHtml(th.score)}</span>
-        </div>
-        <p class="topic-lead">${th.lead}</p>
-        ${th.cards
-          .map(
-            (c) => `
-        <h3 class="topic-sub">${escapeHtml(c.h)}</h3>
-        <div class="topic-cardbox">${c.body}</div>`,
-          )
-          .join('')}
-        <h3 class="topic-sub">错题回放（先想再点开）</h3>
-        <ul class="topic-replay">${qList(th.replay)}</ul>
-        <h3 class="topic-sub">变式练习（换马甲的同款题）</h3>
-        <ul class="topic-drill">${qList(th.drills)}</ul>
-        <div class="topic-done-row">
-          <button class="topic-done-btn ${done ? 'done' : ''}" data-key="${th.key}">
-            ${done ? '✅ 这个主题我学完了' : '🌱 这个主题我学完了'}
-          </button>
-          <span class="topic-done-hint">${done ? '已记录 · 点一下可取消' : '学完点这里，爸爸能看到'}</span>
-        </div>
-      </section>`
-        })
-        .join('')}
-    </div>`
-
-    el.querySelector('#topic-back').addEventListener('click', () => {
-      location.hash = '/topics'
-    })
-
-    // 揭示答案
-    el.querySelectorAll('.topic-reveal-btn').forEach((btn) => {
-      btn.addEventListener('click', () => btn.closest('li').classList.add('open'))
-    })
-
-    // 进度条
-    const barI = el.querySelector('#topic-bar-i')
-    const label = el.querySelector('#topic-progress-label')
-    function refreshProgress() {
-      const total = t.themes.length
-      const done = t.themes.filter((x) => doneSet.has(x.key)).length
-      barI.style.width = `${total ? Math.round((done / total) * 100) : 0}%`
-      label.textContent = `${done}/${total} 个主题`
-      // 导航点同步打勾态
-      el.querySelectorAll('#topic-toc a').forEach((a) => {
-        a.classList.toggle('done', doneSet.has(a.dataset.key))
-      })
-    }
-    refreshProgress()
-
-    // 我学完了：乐观更新 + PUT 后端
-    el.querySelectorAll('.topic-done-btn').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const key = btn.dataset.key
-        const nowDone = !doneSet.has(key)
-        nowDone ? doneSet.add(key) : doneSet.delete(key)
-        btn.classList.toggle('done', nowDone)
-        btn.textContent = nowDone ? '✅ 这个主题我学完了' : '🌱 这个主题我学完了'
-        btn.closest('.topic-done-row').querySelector('.topic-done-hint').textContent =
-          nowDone ? '已记录 · 点一下可取消' : '学完点这里，爸爸能看到'
-        refreshProgress()
-        try {
-          await api.topicPutProgress(t.id, [...doneSet], t.assignedTo || '')
-        } catch {
-          btn.closest('.topic-done-row').querySelector('.topic-done-hint').textContent =
-            '⚠️ 保存失败，稍后会重试（进度暂存本页）'
-        }
-      })
-    })
-  }
-
-  // 路由：#/topics 列表；#/topics/{id} 详情
+  // 路由：#/topics 列表；#/topics/{id} 详情（全 v2 结构化专题）
   const segs = (location.hash.replace(/^#\/?/, '') || '').split('?')[0].split('/')
   if (segs[0] === 'topics' && segs[1]) {
-    await renderDetail(segs[1])
+    await renderDetailV2(segs[1])
   }
 }
