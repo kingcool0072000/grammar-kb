@@ -573,9 +573,10 @@ class TestPrep:
 # ---- API：查词（ECDICT 真库；AI 兜底 mock） ----
 
 def _real_ecdict_available() -> bool:
-    from grammar_kb.dict_db import DEFAULT_DB
+    from grammar_kb.dict_db import default_db_path
 
-    return DEFAULT_DB.is_file() and DEFAULT_DB.stat().st_size > 1_000_000
+    db = default_db_path()
+    return db.is_file() and db.stat().st_size > 1_000_000
 
 
 requires_real_ecdict = pytest.mark.skipif(

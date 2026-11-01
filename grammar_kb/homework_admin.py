@@ -13,9 +13,9 @@
 from __future__ import annotations
 
 import sqlite3
-from pathlib import Path
 from typing import Optional
 
+from . import dbreg
 from .aicloud_sync import AiCloudClient, _lecture_of
 
 _SCHEMA = """
@@ -31,9 +31,8 @@ CREATE TABLE IF NOT EXISTS homework_q_result (
 
 
 def _db_path() -> str:
-    import os
-    return os.environ.get("GRAMMAR_KB_DB") or str(
-        Path(__file__).resolve().parent.parent / "data" / "grammar.db")
+    """grammar.db 路径：$GRAMMAR_KB_DB → 仓库根 data/grammar.db（dbreg 统一口径）。"""
+    return dbreg.grammar_db_path()
 
 
 class HomeworkAdmin:

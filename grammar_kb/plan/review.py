@@ -6,6 +6,7 @@ import sqlite3
 from datetime import date, timedelta
 from pathlib import Path
 
+from .. import dbreg
 from ..clock import today_cn, week_bounds
 from ..paths import data_path
 class ReviewMixin:
@@ -53,7 +54,7 @@ class ReviewMixin:
         排序：错题总数降序（主）+ 最近出现时间降序（次），无错题的讲次不出现。
         """
         try:
-            with sqlite3.connect(f"file:{self._exam_db()}?mode=ro", uri=True) as conn:
+            with dbreg.connect(self._exam_db(), readonly=True) as conn:
                 conn.row_factory = sqlite3.Row
                 rows = conn.execute(
                     "SELECT lecture, date, score, wrong FROM exam_records"
@@ -96,7 +97,7 @@ class ReviewMixin:
         if not Path(path).exists():
             return {}
         try:
-            with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
+            with dbreg.connect(path, readonly=True) as conn:
                 conn.row_factory = sqlite3.Row
                 rows = conn.execute(
                     "SELECT number, title, category FROM lecture"
@@ -120,7 +121,7 @@ class ReviewMixin:
         focus = (prev_week.get("tasks") or {}).get("focus_kps") or []
         lo, hi = week_bounds(prev)
         try:
-            with sqlite3.connect(f"file:{self._exam_db()}?mode=ro", uri=True) as conn:
+            with dbreg.connect(self._exam_db(), readonly=True) as conn:
                 conn.row_factory = sqlite3.Row
                 rows = conn.execute(
                     "SELECT lecture, date, wrong FROM exam_records"

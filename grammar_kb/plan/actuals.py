@@ -5,6 +5,7 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
+from .. import dbreg
 from ..clock import cn_date, cn_dt, week_bounds
 from ..paths import data_path
 from .util import _chapter_at_words, _paper_short
@@ -34,7 +35,7 @@ class ActualsMixin:
         if not path or not Path(path).exists():
             return []
         try:
-            with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
+            with dbreg.connect(path, readonly=True) as conn:
                 conn.row_factory = sqlite3.Row
                 cols = {r[1] for r in conn.execute(
                     "PRAGMA table_info(exam_records)")}
@@ -76,7 +77,7 @@ class ActualsMixin:
         if not Path(path).exists():
             return None
         try:
-            with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
+            with dbreg.connect(path, readonly=True) as conn:
                 return {r[0] for r in conn.execute(
                     "SELECT word FROM vocab_word WHERE level = ?", (int(level),))}
         except sqlite3.Error:
@@ -169,7 +170,7 @@ class ActualsMixin:
         if not Path(path).exists():
             return []
         try:
-            with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
+            with dbreg.connect(path, readonly=True) as conn:
                 conn.row_factory = sqlite3.Row
                 rows = conn.execute(
                     "SELECT b.id AS book_id, b.title, b.chapter_count,"

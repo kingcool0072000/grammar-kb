@@ -27,7 +27,7 @@ from typing import Optional
 
 from .atlas_vocab import exam_allowed
 from .clock import today_cn
-from .fce_query import _default_db_path
+from . import dbreg
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS vocab_unlock (
@@ -67,20 +67,16 @@ class VocabExamStore:
     """vocab_exams 读写 + 解锁级别计算。"""
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or _default_db_path()
-        if Path(self.db_path).exists():
-            with self._connect() as conn:
-                conn.executescript(SCHEMA)
+        self.db_path = db_path or dbreg.fce_db_path()
+        with self._connect() as conn:
+            # 老库先补列再跑 SCHEMA——executescript 里的 CREATE INDEX 引用
+            # paper_id，列不存在时（executescript 自动提交绕过 ALTER 顺序）
+            # 会直接 OperationalError
+            _ensure_paper_col(conn)
+            conn.executescript(SCHEMA)
 
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        # 老库先补列再跑 SCHEMA——executescript 里的 CREATE INDEX 引用
-        # paper_id，列不存在时（executescript 自动提交绕过 ALTER 顺序）
-        # 会直接 OperationalError
-        _ensure_paper_col(conn)
-        conn.executescript(SCHEMA)
-        return conn
+    def _connect(self):
+        return dbreg.connect(self.db_path)
 
     def record(self, user: str, level: int, score: int, exam_date: str,
                note: str = "", paper_id: str = "") -> dict:
@@ -102,6 +98,12 @@ class VocabExamStore:
                 "SELECT * FROM vocab_exams WHERE id = ?", (cur.lastrowid,)
             ).fetchone()
         return dict(row)
+
+    def delete_exam(self, exam_id: int) -> int:
+        """删一条考试记录，返回删除行数（0=不存在）。"""
+        with self._connect() as conn:
+            cur = conn.execute("DELETE FROM vocab_exams WHERE id = ?", (exam_id,))
+        return cur.rowcount
 
     def exams_for_papers(self, paper_ids: list[str]) -> dict[str, list[dict]]:
         """按试卷 id 反查已登记成绩（批改中心打分卡：标记哪卷已登分）。"""
@@ -221,8 +223,7 @@ class VocabExamStore:
 
 def _grammar_db_path() -> Optional[str]:
     try:
-        from .ingest import default_db_path
-        p = default_db_path()
+        p = dbreg.grammar_db_path()
         return p if Path(p).exists() else None
     except Exception:
         return None

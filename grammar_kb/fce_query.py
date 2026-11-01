@@ -14,6 +14,10 @@ from datetime import datetime, timezone as _tz
 from pathlib import Path
 from typing import Optional
 
+from . import dbreg
+from .wordutil import (_FUNCTION_WORDS, _IRREG_FORMS, _lemma_candidates,
+                       _vocab_level_map, _vocab_pos_map, _proper_nouns)
+
 # paper 展示顺序与中文名
 PAPER_ORDER = [
     "Reading and Use of English",
@@ -29,20 +33,6 @@ PAPER_CN = {
 }
 
 
-def _default_db_path() -> str:
-    """fce.db 默认路径：环境变量 → 项目 data/。
-
-    真实数据只认生产服务器上的库；本机 data/fce.db 仅作开发测试
-    （含题库与练习/录音提交等全部表）。
-    """
-    import os
-
-    env = os.environ.get("GRAMMAR_KB_FCE_DB")
-    if env:
-        return env
-    return str(Path(__file__).resolve().parent.parent / "data" / "fce.db")
-
-
 class FcePaperStore:
     """fce.db 只读访问。db 不存在时各方法返回空结果（端点给 404/空列表）。"""
 
@@ -52,12 +42,10 @@ class FcePaperStore:
         return lookup(word)[1]
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or _default_db_path()
+        self.db_path = db_path or dbreg.fce_db_path()
 
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(f"file:{self.db_path}?mode=ro", uri=True)
-        conn.row_factory = sqlite3.Row
-        return conn
+    def _connect(self):
+        return dbreg.connect(self.db_path, readonly=True)
 
     def list_papers(self) -> list[dict]:
         """概览：每套 Test 的 paper/part → 题数。库不存在返回 []。"""
@@ -101,16 +89,12 @@ class FcePaperStore:
             ).fetchall()
         if not rows:
             return []
-        from .reading import (_FUNCTION_WORDS, _IRREG_FORMS, _lemma_candidates,
-                              _vocab_level_map, _vocab_pos_map, _proper_nouns)
-
         vm = _vocab_level_map()
         pm = _vocab_pos_map()
         # 释义（点击词时前端展示）：vocab_word gloss 第一义项
         gm: dict[str, str] = {}
         try:
-            from .ingest import default_db_path as _gdb
-            gpath = _gdb()
+            gpath = dbreg.grammar_db_path()
             if Path(gpath).exists():
                 with sqlite3.connect(f"file:{gpath}?mode=ro", uri=True) as gconn:
                     for wd, gl in gconn.execute(
@@ -315,19 +299,13 @@ class FceSubmissionStore:
     """练习提交（fce.db 同库，独立表；需与 FcePaperStore 同一 db 路径）。"""
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or _default_db_path()
-        if Path(self.db_path).exists():
-            conn = self._connect()
+        self.db_path = db_path or dbreg.fce_db_path()
+        with self._connect() as conn:
             conn.executescript(SUBMISSION_SCHEMA)
-            conn.commit()
-            conn.close()
+            _ensure_duration_column(conn)
 
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        conn.executescript(SUBMISSION_SCHEMA)
-        _ensure_duration_column(conn)
-        return conn
+    def _connect(self):
+        return dbreg.connect(self.db_path)
 
     def submit(
         self, user: str, test_id: int, paper: str, part: int, answers: dict,

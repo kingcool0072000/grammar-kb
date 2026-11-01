@@ -20,7 +20,11 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
-DEFAULT_DB = Path(__file__).resolve().parent.parent / "data" / "ecdict.db"
+def default_db_path() -> Path:
+    """ecdict.db 默认路径：$GRAMMAR_KB_ECDICT_DB → data/ecdict.db（dbreg 统一口径）。"""
+    from . import dbreg
+
+    return Path(dbreg.ecdict_db_path())
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS dict (
@@ -75,9 +79,9 @@ def _parse_pos(lines: list[str]) -> list[str]:
     return pos
 
 
-def import_ecdict(csv_path: str | Path, db_path: str | Path = DEFAULT_DB) -> int:
+def import_ecdict(csv_path: str | Path, db_path: str | Path | None = None) -> int:
     """全量导入 ecdict.csv，返回导入词条数（幂等：重建表）。"""
-    db_path = Path(db_path)
+    db_path = Path(db_path) if db_path else default_db_path()
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
     try:
@@ -124,8 +128,8 @@ def import_ecdict(csv_path: str | Path, db_path: str | Path = DEFAULT_DB) -> int
 class DictDB:
     """词典查询层。线程安全性依赖 SQLite 连接的 check_same_thread=False（由 server 传入）。"""
 
-    def __init__(self, db_path: str | Path = DEFAULT_DB):
-        self.path = Path(db_path)
+    def __init__(self, db_path: str | Path | None = None):
+        self.path = Path(db_path) if db_path else default_db_path()
         self._conn: Optional[sqlite3.Connection] = None
 
     @property

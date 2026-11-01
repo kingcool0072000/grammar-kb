@@ -173,9 +173,10 @@ HARD_TEXT = (
 def test_difficulty_report_dimensions(monkeypatch, tmp_path):
     """三维报告：科普文比日常文难；结构检出含讲次映射；题材分类正确。"""
     import grammar_kb.reading as rd
+    import grammar_kb.wordutil as wu
 
     monkeypatch.setenv("GRAMMAR_KB_DB", str(tmp_path / "grammar.db"))
-    rd._vocab_map_cache.clear()
+    wu._vocab_map_cache.clear()
     try:
         easy = rd.difficulty_report(
             "Tom and his friends played football at school on Saturday. "
@@ -198,12 +199,13 @@ def test_difficulty_report_dimensions(monkeypatch, tmp_path):
         assert hard["dims"]["topic"]["label"] == "太空与科学前沿"
         assert easy["dims"]["topic"]["label"] in ("日常生活", "运动与冒险")
     finally:
-        rd._vocab_map_cache.clear()
+        wu._vocab_map_cache.clear()
 
 
 def test_difficulty_vocab_lemmatization(monkeypatch, tmp_path):
     """词形还原：vocab_word 只存原形，bears/conditions 应按 bear/condition 命中。"""
     import grammar_kb.reading as rd
+    import grammar_kb.wordutil as wu
 
     db = tmp_path / "grammar.db"
     con = sqlite3.connect(str(db))
@@ -216,7 +218,7 @@ def test_difficulty_vocab_lemmatization(monkeypatch, tmp_path):
     con.commit()
     con.close()
     monkeypatch.setenv("GRAMMAR_KB_DB", str(db))
-    rd._vocab_map_cache.clear()
+    wu._vocab_map_cache.clear()
     try:
         # can 是功能词；frozen 未入库 → off-list；其余 4 词均按原形/变形命中
         rep = rd.difficulty_report(
@@ -230,12 +232,13 @@ def test_difficulty_vocab_lemmatization(monkeypatch, tmp_path):
         assert v["dist"]["0"] == 1 and v["dist"]["1"] == 1 and v["dist"]["2"] == 1 \
             and v["dist"]["6"] == 1
     finally:
-        rd._vocab_map_cache.clear()
+        wu._vocab_map_cache.clear()
 
 
 def test_annotate_tokens(monkeypatch, tmp_path):
     """逐词标注：句首/连词/动词/词层级 + tokens 端点权限。"""
     import grammar_kb.reading as rd
+    import grammar_kb.wordutil as wu
 
     db = tmp_path / "grammar.db"
     con = sqlite3.connect(str(db))
@@ -250,8 +253,8 @@ def test_annotate_tokens(monkeypatch, tmp_path):
     con.commit()
     con.close()
     monkeypatch.setenv("GRAMMAR_KB_DB", str(db))
-    rd._vocab_map_cache.clear()
-    rd._pos_map_cache.clear()
+    wu._vocab_map_cache.clear()
+    wu._pos_map_cache.clear()
     try:
         text = "A study shows bears survive. Water is known to be scarce, but bears can live."
         toks = rd.annotate_tokens(text)
@@ -272,17 +275,17 @@ def test_annotate_tokens(monkeypatch, tmp_path):
         # L3+：survive=L4、microscopic 不在文本但 survive 在
         assert [t for t in words if t["lv"] is not None and t["lv"] >= 3][0]["t"] == "survive"
     finally:
-        rd._vocab_map_cache.clear()
-        rd._pos_map_cache.clear()
+        wu._vocab_map_cache.clear()
+        wu._pos_map_cache.clear()
 
 
 def test_tokens_endpoint(reading_env, monkeypatch):
     """tokens 端点：学生可读派生文；不存在 404。"""
-    import grammar_kb.reading as rd
+    import grammar_kb.wordutil as wu
 
     monkeypatch.setenv("GRAMMAR_KB_DB", str(reading_env / "grammar.db"))
-    rd._vocab_map_cache.clear()
-    rd._pos_map_cache.clear()
+    wu._vocab_map_cache.clear()
+    wu._pos_map_cache.clear()
     try:
         c = _client(reading_env)
         t, s = _login(c, "teacher"), _login(c, "malin")
@@ -295,17 +298,17 @@ def test_tokens_endpoint(reading_env, monkeypatch):
         assert any(x["ss"] for x in toks)  # 有句首
         assert c.get("/reading/articles/99999/tokens", headers=s).status_code == 404
     finally:
-        rd._vocab_map_cache.clear()
-        rd._pos_map_cache.clear()
+        wu._vocab_map_cache.clear()
+        wu._pos_map_cache.clear()
 
 
 def test_difficulty_endpoint(reading_env, monkeypatch):
     """端点：教师可查、学生 403；新增派生文后出现在难度列表。"""
-    import grammar_kb.reading as rd
+    import grammar_kb.wordutil as wu
 
     # 隔离词库（空 grammar.db → 词汇维度降级为全 off-list，不报错）
     monkeypatch.setenv("GRAMMAR_KB_DB", str(reading_env / "grammar.db"))
-    rd._vocab_map_cache.clear()
+    wu._vocab_map_cache.clear()
     try:
         c = _client(reading_env)
         t, s = _login(c, "teacher"), _login(c, "malin")
@@ -327,7 +330,7 @@ def test_difficulty_endpoint(reading_env, monkeypatch):
         assert c.get("/reading/difficulty", headers=t, params={"ids": "99999"}).json()["data"] == []
         assert c.get("/reading/difficulty", headers=t, params={"ids": "x"}).status_code == 400
     finally:
-        rd._vocab_map_cache.clear()
+        wu._vocab_map_cache.clear()
 
 
 def test_fce_submission_teacher_delete(reading_env):

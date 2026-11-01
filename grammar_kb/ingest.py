@@ -5,6 +5,7 @@ import glob
 import os
 from dataclasses import dataclass
 
+from . import dbreg
 from .db import GrammarDB, _now
 from .models import Lecture
 from .structure import structure_from_file
@@ -81,12 +82,8 @@ def ingest_dir(
 
 
 def default_db_path() -> str:
-    """默认 DB 路径：环境变量优先，否则项目内 data/grammar.db。"""
-    env = os.environ.get("GRAMMAR_KB_DB")
-    if env:
-        return env
-    # 放在 cwd 下的 data 目录，便于用户定位
-    return os.path.join(os.getcwd(), "data", "grammar.db")
+    """默认 DB 路径：$GRAMMAR_KB_DB → 仓库根 data/grammar.db（dbreg 统一口径，与 cwd 无关）。"""
+    return dbreg.grammar_db_path()
 
 
 def open_db(path: str | None = None) -> GrammarDB:

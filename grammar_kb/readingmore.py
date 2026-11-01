@@ -11,8 +11,8 @@ Bearer token 访问；数据按 user 隔离（统计属个人学习数据）。
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -20,14 +20,14 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from . import dbreg
+
 _router = APIRouter(prefix="/readingmore/api")
 
 
 def _db_path() -> Path:
     """惰性解析库路径：环境变量可能在模块导入后才设（测试隔离场景）。"""
-    data_dir = Path(os.environ.get("GRAMMAR_KB_DATA_DIR")
-                    or Path(__file__).resolve().parent.parent / "data")
-    return data_dir / "readingmore.db"
+    return Path(dbreg.readingmore_db_path())
 
 
 def _conn() -> sqlite3.Connection:
@@ -39,8 +39,19 @@ def _conn() -> sqlite3.Connection:
     return c
 
 
+@contextmanager
+def _tx():
+    """连接即用即关（sqlite3 的 with 只管事务、不关连接）。"""
+    c = _conn()
+    try:
+        with c:
+            yield c
+    finally:
+        c.close()
+
+
 def _init_db() -> None:
-    with _conn() as c:
+    with _tx() as c:
         c.executescript("""
         CREATE TABLE IF NOT EXISTS rm_sessions (
             id           TEXT PRIMARY KEY,          -- 客户端生成，跨心跳幂等
@@ -116,7 +127,7 @@ def post_session(rec: SessionHeartbeat, request: Request) -> dict:
     user = _user_of(request)
     now = int(datetime.now(timezone.utc).timestamp() * 1000)
     lookups = rec.new_lookups[:200]
-    with _conn() as c:
+    with _tx() as c:
         owner = c.execute(
             "SELECT user FROM rm_sessions WHERE id = ?", (rec.id,)
         ).fetchone()
@@ -180,7 +191,7 @@ def list_sessions(request: Request, user: str = "", limit: int = 100) -> dict:
     if getattr(request.state, "role", "") != "teacher":
         raise HTTPException(status_code=403, detail="仅教师可查看")
     lim = _clamp_int(limit, 1, 200)
-    with _conn() as c:
+    with _tx() as c:
         rows = c.execute(
             """SELECT s.id, s.user, s.device, s.book, s.start,
                       s.total_ms, s.engaged_ms, s.turn_count, s.vocab_ops,
@@ -216,7 +227,7 @@ def _agg(c: sqlite3.Connection, sql: str, args: tuple = ()) -> Any:
 def get_stats(request: Request) -> dict:
     """聚合统计（当前登录用户全部会话）。"""
     user = _user_of(request)
-    with _conn() as c:
+    with _tx() as c:
         row = c.execute(
             """SELECT COUNT(*) n, COALESCE(SUM(total_ms),0) total_ms,
                       COALESCE(SUM(focus_ms),0) focus_ms,

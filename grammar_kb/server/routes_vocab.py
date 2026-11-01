@@ -244,9 +244,7 @@ def register_vocab(app, ctx):
     def vocab_exam_del(exam_id: int, request: "fastapi.Request"):
         """删一条考试记录（教师专属，误登记用）。"""
         _require_teacher(request)
-        with vocab_exam._connect() as conn:
-            cur = conn.execute("DELETE FROM vocab_exams WHERE id = ?", (exam_id,))
-        if not cur.rowcount:
+        if not vocab_exam.delete_exam(exam_id):
             raise HTTPException(status_code=404, detail=f"记录 id={exam_id} 不存在")
         return _ok({"id": exam_id})
 

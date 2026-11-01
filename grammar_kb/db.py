@@ -420,6 +420,31 @@ class GrammarDB:
 
     # ---- 统计 ------------------------------------------------------------ #
 
+    # ---- 分层词库（vocab_word，server /vocab-levels 出口） ----
+
+    def vocab_level_counts(self, max_level: int) -> dict[int, int]:
+        """各级词数（level <= max_level）；锁定层也计数供前端展示。"""
+        return {lv: n for lv, n in self.conn.execute(
+            "SELECT level, COUNT(*) FROM vocab_word"
+            " WHERE level <= ? GROUP BY level", (max_level,)).fetchall()}
+
+    def vocab_level_words(self, level: Optional[int],
+                          max_level: int) -> list[sqlite3.Row]:
+        """分层词条：level=n 取该级，否则取 level <= max_level。"""
+        if level is not None:
+            return self.conn.execute(
+                "SELECT word, level, pos, gloss, meanings, example, extra"
+                " FROM vocab_word WHERE level = ?", (level,)).fetchall()
+        return self.conn.execute(
+            "SELECT word, level, pos, gloss, meanings, example, extra"
+            " FROM vocab_word WHERE level <= ?", (max_level,)).fetchall()
+
+    def vocab_atlas_compact(self, words: list[str]) -> dict:
+        """词光条目（word → 紧凑词条；无词光库时给空映射）。"""
+        from .atlas import compact_for_words
+
+        return compact_for_words(self.conn, words)
+
     def stats(self) -> dict:
         n_lec = self.conn.execute("SELECT COUNT(*) c FROM lecture").fetchone()["c"]
         n_kp = self.conn.execute("SELECT COUNT(*) c FROM knowledge_point").fetchone()["c"]

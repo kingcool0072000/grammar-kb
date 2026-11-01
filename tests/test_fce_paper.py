@@ -125,7 +125,7 @@ def test_listening_vocab(tmp_path, monkeypatch):
     """听力预习词表：transcript 分词 → 未掌握词三档排序（L2+ 优先）。"""
     import sqlite3 as sq
     from grammar_kb.fce_query import FcePaperStore
-    from grammar_kb import reading
+    from grammar_kb import wordutil
 
     db = tmp_path / "fce.db"
     con = sq.connect(db)
@@ -159,8 +159,8 @@ def test_listening_vocab(tmp_path, monkeypatch):
     g.commit()
     g.close()
     monkeypatch.setenv("GRAMMAR_KB_DB", str(gdb))
-    reading._vocab_map_cache.clear()
-    reading._pos_map_cache.clear()
+    wordutil._vocab_map_cache.clear()
+    wordutil._pos_map_cache.clear()
     try:
         store = FcePaperStore(str(db))
         mastered = {"student", "way"}  # 这两个已掌握
@@ -177,5 +177,5 @@ def test_listening_vocab(tmp_path, monkeypatch):
         lv0 = out[0]["words"][0]["level"]
         assert lv0 is not None and lv0 >= 2
     finally:
-        reading._vocab_map_cache.clear()
-        reading._pos_map_cache.clear()
+        wordutil._vocab_map_cache.clear()
+        wordutil._pos_map_cache.clear()

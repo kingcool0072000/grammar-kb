@@ -7,7 +7,7 @@ from typing import Optional
 import fastapi  # noqa: F401  FastAPI 解析注解里的 fastapi.Request
 from fastapi import HTTPException, Query as FQuery
 
-from ..atlas import compact_for_words, lookup_public
+from ..atlas import lookup_public
 from .http import _ok, _request_user
 
 def register_query(app, ctx):
@@ -158,33 +158,17 @@ def register_query(app, ctx):
             except (ValueError, TypeError):
                 return _json.loads(dft)
 
-        with kbq.db.conn as conn:
-            counts_all = dict(
-                (lv, n)
-                for lv, n in conn.execute(
-                    "SELECT level, COUNT(*) FROM vocab_word WHERE level <= ?"
-                    " GROUP BY level",
-                    (req_level,),
-                ).fetchall()
-            )
-            if counts_only:
-                return _ok({"counts": counts_all, "unlocked": unlocked,
-                            "items": []})
-            if level_filter is not None and level_filter > unlocked:
-                rows = []
-            elif level_filter is not None:
-                rows = conn.execute(
-                    "SELECT word, level, pos, gloss, meanings, example, extra"
-                    " FROM vocab_word WHERE level = ?",
-                    (level_filter,),
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    "SELECT word, level, pos, gloss, meanings, example, extra"
-                    " FROM vocab_word WHERE level <= ?",
-                    (unlocked,),
-                ).fetchall()
-        atlas_by_word = compact_for_words(conn, [r["word"] for r in rows])
+        counts_all = kbq.db.vocab_level_counts(req_level)
+        if counts_only:
+            return _ok({"counts": counts_all, "unlocked": unlocked,
+                        "items": []})
+        if level_filter is not None and level_filter > unlocked:
+            rows: list = []
+        elif level_filter is not None:
+            rows = kbq.db.vocab_level_words(level_filter, unlocked)
+        else:
+            rows = kbq.db.vocab_level_words(None, unlocked)
+        atlas_by_word = kbq.db.vocab_atlas_compact([r["word"] for r in rows])
         items = []
         for r in rows:
             item = {

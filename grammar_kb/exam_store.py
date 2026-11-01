@@ -1,9 +1,7 @@
 """作业成绩持久化（SQLite，独立于主库 grammar.db）。
 
-库文件路径解析顺序（:func:`default_exam_db_path`）：
-
-1. 环境变量 ``GRAMMAR_KB_EXAM_DB``
-2. ``<cwd>/data/exam.db``
+库文件路径解析顺序（:func:`default_exam_db_path`，经 :mod:`grammar_kb.dbreg` 统一口径）：
+环境变量 ``GRAMMAR_KB_EXAM_DB`` → 仓库根 ``data/exam.db``（与进程 cwd 无关）。
 
 真实数据只认生产服务器上的库；本机 data/exam.db 仅作开发测试。
 """
@@ -13,6 +11,8 @@ import json
 import os
 import sqlite3
 from contextlib import closing, contextmanager
+
+from . import dbreg
 from typing import Any, Iterator, Optional
 
 _SCHEMA = """
@@ -28,11 +28,8 @@ CREATE TABLE IF NOT EXISTS exam_records (
 
 
 def default_exam_db_path() -> str:
-    """成绩库默认路径：环境变量 → 项目 data/。"""
-    env = os.environ.get("GRAMMAR_KB_EXAM_DB")
-    if env:
-        return env
-    return os.path.join(os.getcwd(), "data", "exam.db")
+    """成绩库默认路径：$GRAMMAR_KB_EXAM_DB → 仓库根 data/exam.db（dbreg 统一口径）。"""
+    return dbreg.exam_db_path()
 
 
 class ExamStore:

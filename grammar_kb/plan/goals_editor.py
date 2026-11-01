@@ -8,6 +8,7 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
+from .. import dbreg
 from ..paths import data_path
 from .util import _paper_short
 
@@ -27,7 +28,7 @@ class GoalsEditorMixin:
             data_path("grammar.db"))
         if Path(gp).exists():
             try:
-                with sqlite3.connect(f"file:{gp}?mode=ro", uri=True) as conn:
+                with dbreg.connect(gp, readonly=True) as conn:
                     conn.row_factory = sqlite3.Row
                     rows = conn.execute(
                         "SELECT number, title, category FROM lecture ORDER BY number"
@@ -255,7 +256,7 @@ class GoalsEditorMixin:
             data_path("grammar.db"))
         if Path(gp).exists():
             try:
-                with sqlite3.connect(f"file:{gp}?mode=ro", uri=True) as conn:
+                with dbreg.connect(gp, readonly=True) as conn:
                     for r in conn.execute(
                         "SELECT lecture_number, COUNT(*) FROM homework_question"
                         " GROUP BY lecture_number"):
@@ -277,7 +278,7 @@ class GoalsEditorMixin:
         vocab_counts: dict[int, int] = {}
         if Path(gp).exists():
             try:
-                with sqlite3.connect(f"file:{gp}?mode=ro", uri=True) as conn:
+                with dbreg.connect(gp, readonly=True) as conn:
                     for r in conn.execute(
                         "SELECT level, COUNT(*) FROM vocab_word WHERE level <= 5"
                         " GROUP BY level"):

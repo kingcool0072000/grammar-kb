@@ -934,3 +934,82 @@ def infer_pos(word: str, d: dict, dict_entry=None) -> list[str]:
     if suf:
         return suf
     return []
+
+
+# ---- 服务端词条释义补充（背词/错题本/已攻克页；SQL 收拢在本模块） ----
+
+
+def fill_word_gloss(conn, items: list) -> None:
+    """给词条补 vocab_word 释义（大小写不敏感）。只查这一批，不扫全库。"""
+    import json as _json
+    import sqlite3 as _sqlite3
+
+    want = {str(x.get("word") or "").lower() for x in items if x.get("word")}
+    if not want:
+        return
+    gloss_map: dict = {}
+    ordered = sorted(want)
+    for i in range(0, len(ordered), 400):
+        chunk = ordered[i:i + 400]
+        ph = ",".join("?" * len(chunk))
+        try:
+            rows = conn.execute(
+                f"SELECT word, gloss, meanings, pos, example FROM vocab_word"
+                f" WHERE lower(word) IN ({ph})",
+                chunk,
+            ).fetchall()
+        except (_sqlite3.Error, AttributeError):
+            break
+        for r in rows:
+            try:
+                meanings = _json.loads(r["meanings"] or "[]")
+            except (ValueError, TypeError):
+                meanings = []
+            try:
+                pos = _json.loads(r["pos"] or "[]")
+            except (ValueError, TypeError):
+                pos = []
+            try:
+                example = _json.loads(r["example"] or "{}")
+            except (ValueError, TypeError):
+                example = {}
+            gloss_map[str(r["word"]).lower()] = {
+                "gloss": r["gloss"] or "",
+                "meanings": meanings if isinstance(meanings, list) else [],
+                "pos": pos if isinstance(pos, list) else [],
+                "example": example if isinstance(example, dict) else {},
+            }
+    for x in items:
+        g = gloss_map.get(str(x.get("word") or "").lower())
+        if not g:
+            continue
+        x["gloss"] = g["gloss"]
+        x["meanings"] = g["meanings"]
+        x["pos"] = g["pos"]
+        x["example"] = g["example"]
+
+
+def vocab_match_words(conn, q: str) -> list[str]:
+    """释义 / 词面命中的词头（最多 300），供已攻克页跨库筛选。"""
+    import sqlite3 as _sqlite3
+
+    q = (q or "").strip().lower()[:40]
+    if not q:
+        return []
+    like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+    try:
+        rows = conn.execute(
+            "SELECT word FROM vocab_word WHERE lower(word) LIKE ? ESCAPE '\\'"
+            " OR lower(gloss) LIKE ? ESCAPE '\\'"
+            " OR lower(COALESCE(meanings, '')) LIKE ? ESCAPE '\\'"
+            " LIMIT 300",
+            (like, like, like),
+        ).fetchall()
+    except (_sqlite3.Error, AttributeError):
+        return []
+    out: list[str] = []
+    for r in rows:
+        w = str(r["word"] or "").strip().lower()
+        if w and w not in out:
+            out.append(w)
+    return out

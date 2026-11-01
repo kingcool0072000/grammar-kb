@@ -642,8 +642,9 @@ def test_weekday_speak_completion_visible(plan_env):
     con.execute("""CREATE TABLE IF NOT EXISTS reading_article (
         id INTEGER PRIMARY KEY, title TEXT, source TEXT DEFAULT '',
         text TEXT DEFAULT '', cefr TEXT DEFAULT '', created_at TEXT DEFAULT '')""")
-    con.execute("INSERT OR REPLACE INTO reading_article (id, title, text)"
-                " VALUES (61, 'Too Many Climbers on Mt. Fuji', 'x')")
+    con.execute("INSERT OR REPLACE INTO reading_article"
+                " (id, kind, base_key, title, text)"
+                " VALUES (61, 'derived', 'T1P5', 'Too Many Climbers on Mt. Fuji', 'x')")
     con.execute("""CREATE TABLE IF NOT EXISTS reading_recordings (
         id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT, article_id INTEGER,
         file TEXT DEFAULT '', note TEXT DEFAULT '',
@@ -655,8 +656,9 @@ def test_weekday_speak_completion_visible(plan_env):
     # 会看到 0 篇精读，因为录音在周一。
     wed = date.fromisoformat(MON) + timedelta(days=2)
     rec_day = wed if wed <= today else date.fromisoformat(MON)
-    con.execute("INSERT INTO reading_recordings (user, article_id, created_at)"
-                " VALUES ('malin', 61, ?)",
+    con.execute("INSERT INTO reading_recordings"
+                " (user, article_id, audio_b64, created_at)"
+                " VALUES ('malin', 61, 'x', ?)",
                 (f"{rec_day.isoformat()}T12:00:00+00:00",))
     con.commit()
     con.close()
@@ -692,16 +694,18 @@ def test_saturday_speak_completion_visible(plan_env):
     con.execute("""CREATE TABLE IF NOT EXISTS reading_article (
         id INTEGER PRIMARY KEY, title TEXT, source TEXT DEFAULT '',
         text TEXT DEFAULT '', cefr TEXT DEFAULT '', created_at TEXT DEFAULT '')""")
-    con.execute("INSERT OR REPLACE INTO reading_article (id, title, text)"
-                " VALUES (61, 'Too Many Climbers on Mt. Fuji', 'x')")
+    con.execute("INSERT OR REPLACE INTO reading_article"
+                " (id, kind, base_key, title, text)"
+                " VALUES (61, 'derived', 'T1P5', 'Too Many Climbers on Mt. Fuji', 'x')")
     con.execute("""CREATE TABLE IF NOT EXISTS reading_recordings (
         id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT, article_id INTEGER,
         file TEXT DEFAULT '', note TEXT DEFAULT '',
         created_at TEXT NOT NULL DEFAULT '')""")
     # 录音就落在周六（北京时区上午）——cn_dt 日切后在周六窗口内
     sat = date.fromisoformat(MON) + timedelta(days=5)
-    con.execute("INSERT INTO reading_recordings (user, article_id, created_at)"
-                " VALUES ('malin', 61, ?)",
+    con.execute("INSERT INTO reading_recordings"
+                " (user, article_id, audio_b64, created_at)"
+                " VALUES ('malin', 61, 'x', ?)",
                 (f"{sat.isoformat()}T01:30:00+00:00",))
     con.commit()
     con.close()
@@ -734,8 +738,8 @@ def test_rules_registry_and_switch(plan_env):
         updated_at TEXT DEFAULT '', UNIQUE(user, topic_id))""")
     content = '{"nodes": [{"key": "a"}, {"key": "b"}]}'
     now = f"{today_cn().isoformat()}T12:00:00+00:00"
-    con.execute("INSERT OR REPLACE INTO topic_content (topic_id, content)"
-                " VALUES ('lecture-29-passive-1', ?)", (content,))
+    con.execute("INSERT OR REPLACE INTO topic_content (topic_id, title, content)"
+                " VALUES ('lecture-29-passive-1', '第29讲·被动语态', ?)", (content,))
     con.execute("INSERT OR REPLACE INTO topic_progress"
                 " (user, topic_id, done_keys, completed_at, updated_at)"
                 " VALUES ('malin', 'lecture-29-passive-1', ?, ?, ?)",
@@ -793,8 +797,8 @@ def test_week_goal_progress_counts_topic(plan_env):
         updated_at TEXT DEFAULT '', UNIQUE(user, topic_id))""")
     content = '{"nodes": [{"key": "a"}, {"key": "b"}]}'
     now = f"{today_cn().isoformat()}T12:00:00+00:00"
-    con.execute("INSERT OR REPLACE INTO topic_content (topic_id, content)"
-                " VALUES ('lecture-29-passive-1', ?)", (content,))
+    con.execute("INSERT OR REPLACE INTO topic_content (topic_id, title, content)"
+                " VALUES ('lecture-29-passive-1', '第29讲·被动语态', ?)", (content,))
     con.execute("INSERT OR REPLACE INTO topic_progress"
                 " (user, topic_id, done_keys, completed_at, updated_at)"
                 " VALUES ('malin', 'lecture-29-passive-1', ?, ?, ?)",
@@ -804,8 +808,8 @@ def test_week_goal_progress_counts_topic(plan_env):
                 " (user, topic_id, done_keys, completed_at, updated_at)"
                 " VALUES ('mxy', 'lecture-30-x', ?, ?, ?)",
                 ('["a", "b"]', now, now))
-    con.execute("INSERT OR REPLACE INTO topic_content (topic_id, content)"
-                " VALUES ('lecture-30-x', ?)", (content,))
+    con.execute("INSERT OR REPLACE INTO topic_content (topic_id, title, content)"
+                " VALUES ('lecture-30-x', '第30讲·被动语态进阶', ?)", (content,))
     con.commit()
     con.close()
     d = c.get(f"/plan/week-view?week_start={MON}&user=malin",
@@ -829,11 +833,11 @@ def test_editor_data_excludes_base_articles(plan_env):
         created_at TEXT DEFAULT '')""")
     # base id 1-3（学生端不可见） + derived id 52/53
     for i in (1, 2, 3):
-        con.execute("INSERT OR REPLACE INTO reading_article (id, kind, title, text)"
-                    " VALUES (?, 'base', ?, 'x')", (i, f"base-{i}"))
+        con.execute("INSERT OR REPLACE INTO reading_article (id, kind, base_key, title, text)"
+                    " VALUES (?, 'base', ?, ?, 'x')", (i, f"base-{i}", f"base-{i}"))
     for i in (52, 53):
-        con.execute("INSERT OR REPLACE INTO reading_article (id, kind, title, text)"
-                    " VALUES (?, 'derived', ?, 'x')", (i, f"derived-{i}"))
+        con.execute("INSERT OR REPLACE INTO reading_article (id, kind, base_key, title, text)"
+                    " VALUES (?, 'derived', ?, ?, 'x')", (i, f"base-{i}", f"derived-{i}"))
     con.commit()
     con.close()
     arts = c.get("/plan/editor-data?user=malin", headers=ht).json()["data"]["articles"]

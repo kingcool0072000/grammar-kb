@@ -17,8 +17,8 @@ from datetime import datetime, timezone as _tz
 from pathlib import Path
 from typing import Optional
 
-from .fce_query import _default_db_path
-from .reading import _MAX_AUDIO_B64, _transcode_for_safari
+from . import dbreg
+from .audioutil import MAX_AUDIO_B64, transcode_for_safari
 
 VIDEO_SCHEMA = """
 CREATE TABLE IF NOT EXISTS video_item (
@@ -174,7 +174,7 @@ class VideoStore:
     """video_item / video_retell 读写（fce.db 同库）。"""
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or _default_db_path()
+        self.db_path = db_path or dbreg.fce_db_path()
         if not Path(self.db_path).exists():
             Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         # 先探表再建 schema（_connect 会直接建表，探晚了种子永远不触发）
@@ -190,11 +190,8 @@ class VideoStore:
         finally:
             conn.close()
 
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        conn.executescript(VIDEO_SCHEMA)
-        return conn
+    def _connect(self):
+        return dbreg.connect(self.db_path)
 
     @staticmethod
     def _seed(conn: sqlite3.Connection) -> None:
@@ -269,14 +266,14 @@ class VideoStore:
         audio_b64 = (audio_b64 or "").strip()
         if not audio_b64:
             raise ValueError("录音数据为空")
-        if len(audio_b64) > _MAX_AUDIO_B64:
+        if len(audio_b64) > MAX_AUDIO_B64:
             raise ValueError("录音过大（超过 9MB），请缩短录音时长")
         try:
             base64.b64decode(audio_b64, validate=False)
         except Exception as e:  # noqa: BLE001
             raise ValueError(f"录音数据无效: {e}") from e
         dur = max(0, min(int(duration_sec or 0), 10 * 60))
-        audio_b64, mime = _transcode_for_safari(audio_b64, mime or "audio/webm")
+        audio_b64, mime = transcode_for_safari(audio_b64, mime or "audio/webm")
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT vid, enabled FROM video_item WHERE vid = ?", (vid,)).fetchone()

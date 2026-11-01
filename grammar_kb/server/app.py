@@ -9,9 +9,9 @@ import os
 from pathlib import Path as _P
 from typing import Optional
 
-from .. import __version__
+from .. import __version__, dbreg
 from ..ingest import open_db
-from ..paths import ROOT, data_path
+from ..paths import ROOT
 from ..query import Query
 from .ctx import AppCtx
 from .http import _ok
@@ -105,8 +105,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
 
     # 派生文范读 WAV 目录（{article_id}.wav）：TTS 导出后部署放置，不入
     # git。默认随代码仓 data/audio/reading/，生产可用 GRAMMAR_KB_AUDIO_DIR 改指
-    audio_dir = _P(os.environ.get("GRAMMAR_KB_AUDIO_DIR")
-                   or data_path("audio", "reading"))
+    audio_dir = _P(dbreg.audio_reading_dir())
 
     app = FastAPI(
         title="grammar-kb 题库 API",

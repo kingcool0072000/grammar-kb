@@ -22,9 +22,9 @@ from datetime import date, datetime, timedelta, timezone as _tz
 from pathlib import Path
 from typing import Optional
 
+from . import dbreg
 from .atlas_vocab import canonical_word
 from .clock import CN_TZ, now_cn, today_cn
-from .fce_query import _default_db_path
 
 # 艾宾浩斯复习节点（天）：D 为本轮周期首次答错日
 EB_STAGES = (1, 2, 4, 7, 15, 30)
@@ -298,17 +298,14 @@ class ReciteStore:
     """recite_sessions 读写。"""
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or _default_db_path()
-        if Path(self.db_path).exists():
-            with self._connect() as conn:
-                conn.executescript(SCHEMA)
+        self.db_path = db_path or dbreg.fce_db_path()
+        # SCHEMA/迁移只在建 Store 时跑一次（dbreg.connect 负责提交）
+        with self._connect() as conn:
+            conn.executescript(SCHEMA)
+            self._migrate(conn)
 
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        conn.executescript(SCHEMA)
-        self._migrate(conn)
-        return conn
+    def _connect(self):
+        return dbreg.connect(self.db_path)
 
     @staticmethod
     def _migrate(conn: sqlite3.Connection) -> None:
@@ -514,12 +511,10 @@ class ReciteStore:
         """从 grammar.db vocab_word 取词的层级（小写 join；库缺失返回空）。"""
         out: dict[str, int] = {}
         try:
-            import sqlite3 as _sq
-            from .ingest import default_db_path as _grammar_db
-            path = _grammar_db()
+            path = dbreg.grammar_db_path()
             if not Path(path).exists():
                 return out
-            with _sq.connect(f"file:{path}?mode=ro", uri=True) as conn:
+            with dbreg.connect(path, readonly=True) as conn:
                 conn.row_factory = sqlite3.Row
                 marks = ",".join("?" * len(words))
                 rows = conn.execute(
@@ -576,12 +571,10 @@ class ReciteStore:
 
     def _vocab_level_totals(self) -> dict[int, int]:
         try:
-            import sqlite3 as _sq
-            from .ingest import default_db_path as _grammar_db
-            path = _grammar_db()
+            path = dbreg.grammar_db_path()
             if not Path(path).exists():
                 return {}
-            with _sq.connect(f"file:{path}?mode=ro", uri=True) as conn:
+            with dbreg.connect(path, readonly=True) as conn:
                 conn.row_factory = sqlite3.Row
                 rows = conn.execute(
                     "SELECT level, COUNT(*) n FROM vocab_word GROUP BY level"

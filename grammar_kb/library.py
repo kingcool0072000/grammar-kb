@@ -3,22 +3,21 @@
 直译自 FCEReadingLib server/src/db.ts + routes/* 的库访问逻辑，差异：
 - 不建 users 表——用户列直接存用户名字符串（复用 grammar-kb 现有 auth）
 - 每方法独立短连接（项目惯例，天然线程安全，供预习队列后台线程复用）
-路径解析沿 fce_query 模式：GRAMMAR_KB_LIBRARY_DB → data/library.db；
+路径解析经 dbreg 统一口径：GRAMMAR_KB_LIBRARY_DB → 仓库根 data/library.db；
 文件目录 GRAMMAR_KB_LIBRARY_DIR → data/library/{books,covers}。
 """
 from __future__ import annotations
 
 import contextlib
 import json
-import os
 import re
 import secrets
 import sqlite3
 from pathlib import Path
 from typing import Optional
 
-from . import glm
-from .dict_db import DEFAULT_DB as _DEFAULT_ECDICT, DictDB
+from . import dbreg, glm
+from .dict_db import DictDB
 from .epub_parse import EpubParseError, parse_epub
 
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024  # 100MB
@@ -132,20 +131,6 @@ class LibraryError(Exception):
         self.status = status
 
 
-def _default_db_path() -> str:
-    env = os.environ.get("GRAMMAR_KB_LIBRARY_DB")
-    if env:
-        return env
-    return str(Path(__file__).resolve().parent.parent / "data" / "library.db")
-
-
-def _default_dir() -> Path:
-    env = os.environ.get("GRAMMAR_KB_LIBRARY_DIR")
-    if env:
-        return Path(env)
-    return Path(__file__).resolve().parent.parent / "data" / "library"
-
-
 # ---- 查词归一化（直译 dict.ts normalizeWord） ----
 _POSSESSIVE_RE = re.compile(r"(?:'|\u2019)s$", re.I)
 
@@ -186,13 +171,13 @@ class LibraryStore:
 
     def __init__(self, db_path: Optional[str] = None, data_dir: Optional[str] = None,
                  ecdict_path=None):
-        self.db_path = db_path or _default_db_path()
-        self.dir = Path(data_dir) if data_dir else _default_dir()
+        self.db_path = db_path or dbreg.library_db_path()
+        self.dir = Path(data_dir) if data_dir else Path(dbreg.library_dir())
         self.books_dir = self.dir / "books"
         self.covers_dir = self.dir / "covers"
         self.books_dir.mkdir(parents=True, exist_ok=True)
         self.covers_dir.mkdir(parents=True, exist_ok=True)
-        self.dict_db = DictDB(ecdict_path) if ecdict_path else DictDB(_DEFAULT_ECDICT)
+        self.dict_db = DictDB(ecdict_path) if ecdict_path else DictDB()
 
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         with contextlib.closing(self._connect()) as conn:

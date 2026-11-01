@@ -5,6 +5,7 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
+from .. import dbreg
 from ..clock import now_cn
 from .schema import RULES, SCHEMA
 class RulesMixin:
@@ -65,7 +66,7 @@ class RulesMixin:
             return set()
         scope = self._flag(user, "exam_user_scope")
         try:
-            with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
+            with dbreg.connect(path, readonly=True) as conn:
                 cols = {r[1] for r in conn.execute(
                     "PRAGMA table_info(exam_records)")}
                 kind_col = ("COALESCE(kind, 'lecture')" if "kind" in cols

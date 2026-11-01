@@ -18,7 +18,7 @@ from datetime import datetime, timezone as _tz
 from pathlib import Path
 from typing import Optional
 
-from .fce_query import _default_db_path
+from . import dbreg
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS topic_progress (
@@ -68,21 +68,14 @@ class TopicStore:
 
     def __init__(self, db_path: Optional[str] = None,
                  grammar_db_path: Optional[str] = None):
-        self.db_path = db_path or _default_db_path()
-        self.grammar_db_path = grammar_db_path or str(
-            Path(__file__).resolve().parent.parent / "data" / "grammar.db")
-        if Path(self.db_path).exists():
-            # 打开一次触发建表（SCHEMA 在 _connect 内执行）
-            self._connect().close()
+        self.db_path = db_path or dbreg.fce_db_path()
+        self.grammar_db_path = grammar_db_path or dbreg.grammar_db_path()
+        with self._connect() as conn:
+            conn.executescript(SCHEMA)
+            self._migrate_completed_meaning(conn)
 
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        conn.executescript(SCHEMA)
-        if self._migrate_completed_meaning(conn):
-            # __init__ 只 close() 不进 with，不提交的话迁移会回滚
-            conn.commit()
-        return conn
+    def _connect(self):
+        return dbreg.connect(self.db_path)
 
     # ---- 读取 ----
     def get(self, user: str, topic_id: str) -> dict:

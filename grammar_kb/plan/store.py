@@ -7,13 +7,11 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 from datetime import date, datetime, timezone as _tz
-from pathlib import Path
 from typing import Optional
 
+from .. import dbreg
 from ..clock import monday_of
-from ..fce_query import _default_db_path
 from .schema import SCHEMA
 from .util import _week_out
 from .actuals import ActualsMixin
@@ -53,27 +51,20 @@ class PlanStore(
                  exam_db_path: Optional[str] = None,
                  grammar_db_path: Optional[str] = None,
                  library_db_path: Optional[str] = None):
-        self.db_path = db_path or _default_db_path()
+        self.db_path = db_path or dbreg.fce_db_path()
         self.exam_db_path = exam_db_path
-        # 主库默认路径与 ingest.default_db_path 同口径（GRAMMAR_KB_DB →
-        # cwd/data/grammar.db）——此前 None 时 _vocab_level_words 各自兜底
-        # 到「代码仓库 data/」，与 server 实际打开的库可能不是同一个
-        if grammar_db_path is None:
-            import os as _os
-            env = _os.environ.get("GRAMMAR_KB_DB")
-            grammar_db_path = env or str(Path.cwd() / "data" / "grammar.db")
-        self.grammar_db_path = grammar_db_path
-        # 与 LibraryStore 同口径：环境变量优先（测试注入/生产改库都用它）
+        # 各库默认路径统一走 dbreg（环境变量 → 仓库根 data/，与 cwd 无关）
+        self.grammar_db_path = grammar_db_path or dbreg.grammar_db_path()
+        # library 路径保持惰性（None = 使用时再解析），测试后设环境变量也能生效
         import os as _os
         self.library_db_path = (
             library_db_path
             or _os.environ.get("GRAMMAR_KB_LIBRARY_DB")
             or None
         )
-        if Path(self.db_path).exists():
-            with self._connect() as conn:
-                conn.executescript(SCHEMA)
-                self._migrate_plan_weeks(conn)
+        with self._connect() as conn:
+            conn.executescript(SCHEMA)
+            self._migrate_plan_weeks(conn)
 
 
     @staticmethod
@@ -103,11 +94,8 @@ class PlanStore(
         """)
 
 
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        conn.executescript(SCHEMA)
-        return conn
+    def _connect(self):
+        return dbreg.connect(self.db_path)
 
 
     # ---- plan_weeks 读写 ----

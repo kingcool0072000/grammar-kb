@@ -7,6 +7,7 @@ import sqlite3
 from datetime import date, timedelta
 from pathlib import Path
 
+from .. import dbreg
 from ..clock import cn_date, cn_dt, monday_of
 from ..topics import node_keys_from_content
 
@@ -87,7 +88,7 @@ class SignalsMixin:
         exam_path = self._exam_db()
         if exam_path and Path(exam_path).exists():
             try:
-                with sqlite3.connect(f"file:{exam_path}?mode=ro", uri=True) as conn:
+                with dbreg.connect(exam_path, readonly=True) as conn:
                     cols = {r[1] for r in conn.execute(
                         "PRAGMA table_info(exam_records)")}
                     sql = "SELECT DISTINCT lecture FROM exam_records WHERE date = ?"
