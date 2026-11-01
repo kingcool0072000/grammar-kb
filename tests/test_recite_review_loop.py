@@ -25,6 +25,9 @@ def recite_env(tmp_path, monkeypatch):
     monkeypatch.setenv("GRAMMAR_KB_USERS", str(tmp_path / "users.json"))
     monkeypatch.setenv("GRAMMAR_KB_AUTH_SECRET", str(tmp_path / "secret.key"))
     monkeypatch.delenv("RECITE_NEW_WORD_CAP", raising=False)
+    # 防重窗口关掉：本文件用例大量连续 submit（复习闭环连推节点），
+    # 防重语义由 test_recite_progress.py::test_submit_dedup_within_window 覆盖
+    monkeypatch.setenv("RECITE_DEDUP_WINDOW_SEC", "0")
     sqlite3.connect(tmp_path / "grammar.db").close()
     return tmp_path
 

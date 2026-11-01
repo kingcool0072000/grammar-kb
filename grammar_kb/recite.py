@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Optional
 
 from .atlas_vocab import canonical_word
-from .clock import CN_TZ, today_cn
+from .clock import CN_TZ, now_cn, today_cn
 from .fce_query import _default_db_path
 
 # 艾宾浩斯复习节点（天）：D 为本轮周期首次答错日
@@ -277,6 +277,23 @@ def effective_new_cap(overdue: int, base: int) -> Optional[int]:
     return base
 
 
+class DuplicateSessionError(ValueError):
+    """同用户短时间内重复提交背词会话（连点/重试的兜底拦截）。"""
+
+
+# 防重窗口（秒）：上一条会话落库后这么久内的新提交会被拒。
+# 正常一组至少十几秒；曾因前端无防抖一分钟落 19 条假会话。
+# RECITE_DEDUP_WINDOW_SEC 为非负整数时覆盖（0=关，测试用）。
+SUBMIT_DEDUP_WINDOW_SEC = 10
+
+
+def _dedup_window_sec() -> int:
+    raw = os.environ.get("RECITE_DEDUP_WINDOW_SEC", "").strip()
+    if raw.isdigit():
+        return min(int(raw), 3600)
+    return SUBMIT_DEDUP_WINDOW_SEC
+
+
 class ReciteStore:
     """recite_sessions 读写。"""
 
@@ -303,6 +320,28 @@ class ReciteStore:
             )
         _fold_alias_progress(conn)
 
+    def _recent_submit(self, user: str, now_iso: str) -> bool:
+        """防重窗口内该用户是否刚提交过会话。缺表容错返回 False。"""
+        window = _dedup_window_sec()
+        if window <= 0:
+            return False
+        try:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT MAX(created_at) m FROM recite_sessions WHERE user = ?",
+                    (user,),
+                ).fetchone()
+        except sqlite3.Error:
+            return False
+        if not row or not row["m"]:
+            return False
+        try:
+            gap = (datetime.fromisoformat(now_iso)
+                   - datetime.fromisoformat(row["m"])).total_seconds()
+        except ValueError:
+            return False
+        return 0 <= gap < window
+
     def submit(
         self, user: str, total: int, wrong: int, acc: int, duration_sec: int,
         wrong_words: Optional[list], mode: str = "", scope: str = "",
@@ -312,8 +351,13 @@ class ReciteStore:
             raise ValueError("题数须为正")
         wrong_words = [_headword(str(w)) for w in (wrong_words or [])][:50]
         wrong_words = [w for w in wrong_words if w]
-        now = datetime.now(_tz.utc).isoformat(timespec="seconds")
+        now = now_cn().astimezone(_tz.utc).isoformat(timespec="seconds")
         today = _calendar_today()
+        # 防重兜底：同用户短窗口内只收一条会话。曾因前端入口连点无防抖，
+        # 同一分钟落了 19 条递增假会话（每条还各推一次艾宾浩斯节点）。
+        # 正常节奏下一组至少十几秒；连续两条提交只可能是连点或重试。
+        if self._recent_submit(user, now):
+            raise DuplicateSessionError("提交太频繁，请稍候再试（上一组刚提交）")
         # 先按错词本口径回填并取逾期，再决定今天还能不能见新词。
         pre = self.review_summary(user)
         cap = pre["new_cap"]
