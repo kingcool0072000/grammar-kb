@@ -751,10 +751,6 @@ def _gloss_lines(raw) -> list[dict]:
     return out
 
 
-def _gloss_join(raw) -> str:
-    return " / ".join(x["text"] for x in _gloss_lines(raw))
-
-
 def build_vocabulary(
     kps: list[KnowledgePoint],
     limit: int = 300,

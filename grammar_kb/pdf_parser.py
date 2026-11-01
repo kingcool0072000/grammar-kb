@@ -322,11 +322,6 @@ def extract_tables(page) -> list[TableData]:
     return [td for td, _ in detect_tables(page)]
 
 
-def table_bboxes(page) -> list[tuple[float, float, float, float]]:
-    """仅返回各表格 bbox（与 extract_tables 同序、同量）。"""
-    return [bb for _, bb in detect_tables(page)]
-
-
 # --------------------------------------------------------------------------- #
 # 组合：page → 有序元素流（文本行 / 表格）
 # --------------------------------------------------------------------------- #

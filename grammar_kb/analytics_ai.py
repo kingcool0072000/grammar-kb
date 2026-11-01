@@ -84,15 +84,6 @@ def _parse_ts(ts: Optional[str]) -> Optional[datetime]:
     return t
 
 
-def _week_key_of(iso_like: str) -> Optional[str]:
-    """YYYY-MM-DD（或含时间）→ 所在周周一日期；解析失败返回 None。"""
-    try:
-        d = date.fromisoformat((iso_like or "")[:10])
-    except ValueError:
-        return None
-    return (d - timedelta(days=d.weekday())).isoformat()
-
-
 class AnalyticsAI:
     def __init__(self, exam_db_path: str | Path):
         self.db_path = str(exam_db_path)

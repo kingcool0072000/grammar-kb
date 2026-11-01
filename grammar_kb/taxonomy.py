@@ -324,7 +324,3 @@ THEME_ORDER: dict[str, list[str]] = {
              "反义疑问句", "特殊疑问句", "倒装句", "其它"],
     "固定搭配": ["动词固定搭配", "介词固定搭配", "固定句型", "其它"],
 }
-
-
-def classify_all(kps: list[KnowledgePoint]) -> dict[int, tuple[str, str]]:
-    return {kp.id: classify(kp) for kp in kps}

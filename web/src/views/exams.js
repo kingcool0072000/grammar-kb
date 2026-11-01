@@ -410,7 +410,7 @@ export function mountExams(el, { lectures }) {
     const blob = new Blob([JSON.stringify(await fetchRecords(el), null, 2)], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `哈一作业成绩-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `哈一作业成绩-${todayIso()}.json`
     a.click()
     URL.revokeObjectURL(a.href)
   })
