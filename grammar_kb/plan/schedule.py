@@ -206,6 +206,20 @@ class ScheduleMixin:
             # 周日泛读兜底：周六前（含周六）仍未读完的剩余量周日一天清
             for book_key, pct in (t.get("reading") or {}).items():
                 tasks.append(self._reading_task(book_key, pct, user, 1))
+            # 今天刚提交朗读的计划内文章也要出 ✓ 行（周日同样：孩子做完了
+            # 反而像没做，与周六分支同修）
+            today_arts = self._done_article_ids(ref, upto, user)
+            have_arts = {x.get("article_id") for x in tasks}
+            for aid in (t.get("articles") or []):
+                if aid in today_arts and aid not in have_arts:
+                    title = self._article_title(aid)
+                    if title:
+                        tasks.append({
+                            "type": "article", "article_id": aid,
+                            "key": f"article:{aid}",
+                            "text": f"精读+朗读《{_short(title, 14)}》",
+                            "detail": "今天已提交朗读 ✓",
+                        })
         # 讲次/FCE 剩余但本日类型无槽位（如 ref 已周六、讲次还没排完）→ 兜底行；
         # 今天考过的讲次/作业卷在周末也要有 ✓ 行（完成即视，不再隐形）
         if dow >= 5:
