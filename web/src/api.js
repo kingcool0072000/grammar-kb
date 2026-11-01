@@ -94,6 +94,9 @@ async function reqBlob(path) {
 export const api = {
   login: (user, password) => reqJson('/auth/login', 'POST', { user, password }),
   stats: () => req('/stats'),
+  // 学情聚合（教师端）：user 缺省=教师看板默认学生，month 缺省=北京当前月
+  analyticsSummary: (user, month) =>
+    req('/analytics/summary', { searchParams: { user, month } }),
   lectures: () => req('/lectures'),
   lecture: (number, format = 'markdown') =>
     req(`/lectures/${number}`, { searchParams: { format } }),

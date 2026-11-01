@@ -15,6 +15,7 @@ from ..paths import ROOT
 from ..query import Query
 from .ctx import AppCtx
 from .http import _ok
+from .routes_analytics import register_analytics
 from .routes_atlas import register_atlas
 from .routes_library import register_library
 from .routes_plan import register_plan
@@ -160,8 +161,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         "/", "/api-info", "/version", "/docs", "/redoc", "/openapi.json", "/auth/login",
     })
     # 静态前端资源（web/dist 挂载时）：HTML/JS/CSS/字体免登录
+    # （analytics-report.html 静态月报已下线公开访问，数据改走
+    #  /analytics/summary 鉴权端点）
     _STATIC_PREFIXES = ("/assets/", "/favicon", "/vite.svg",
-                        "/analytics-report.html",  # 学情静态报告（public 资源）
                         "/readingmore",  # 杂志阅读器静态页（API 另走 Bearer 鉴权）
                         # 词光插画/录音：<img>/<audio> 带不上 Authorization。
                         # 内容是 CC BY 公开素材，不是学生进度。
@@ -335,6 +337,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     register_plan(app, ctx)
     register_video(app, ctx)
     register_library(app, ctx)
+    # 学情月报（教师端聚合，dbreg 四库只读 + 300s TTL 缓存）
+    register_analytics(app, ctx)
 
     # ---- 静态前端（可选）：web/dist 构建产物由本进程直接服务 ----
     # 前端以 /api 调后端；开发期走 Vite 代理（剥前缀），部署期由下面
