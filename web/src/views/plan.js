@@ -397,6 +397,11 @@ export async function mountPlan(el) {
           <span title="${escapeHtml(x.text)}">${escapeHtml(x.text)}</span>
           <em>✓</em>
         </div>`).join('')
+        // 微练习是独立线上功能：不占计划行、不进 done/total 分母，
+        // 当天 3 题做完在这里点亮并给完成率 +10（规则可关，bonus=false 不显示加分）
+        + (acts.micro_done && acts.micro_done.done
+          ? `<div class="pw-task done"><i>✏️</i><span>微练习 3 题</span>${acts.micro_done.bonus === false ? '' : '<small class="pw-why">+10</small>'}<em>✓</em></div>`
+          : '')
       const statRows = []
       for (const r of acts.readings || []) {
         const ch = r.from != null ? ` 第${r.from}${r.to !== r.from ? `–${r.to}` : ''}章` : ''

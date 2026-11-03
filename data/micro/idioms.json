@@ -1,0 +1,1526 @@
+{
+  "entries": [
+    {
+      "phrase": "look forward to",
+      "meaning_zh": "期待，盼望",
+      "example_en": "We are looking forward to seeing you next week.",
+      "example_zh": "我们盼着下周见到你。",
+      "level": "初中"
+    },
+    {
+      "phrase": "give up",
+      "meaning_zh": "放弃",
+      "example_en": "Don't give up! You can do it if you try again.",
+      "example_zh": "别放弃！再试一次你就能做到。",
+      "level": "初中"
+    },
+    {
+      "phrase": "take part in",
+      "meaning_zh": "参加（活动、比赛等）",
+      "example_en": "All the students took part in the cleaning activity.",
+      "example_zh": "全体学生参加了清洁活动。",
+      "level": "初中"
+    },
+    {
+      "phrase": "catch up with",
+      "meaning_zh": "赶上，追上（某人）",
+      "example_en": "He ran fast to catch up with his friends.",
+      "example_zh": "他跑得很快，好赶上朋友们。",
+      "level": "中考"
+    },
+    {
+      "phrase": "run out of",
+      "meaning_zh": "用完，耗尽",
+      "example_en": "We have run out of milk, so I'll buy some after school.",
+      "example_zh": "我们的牛奶喝完了，所以放学后我去买一些。",
+      "level": "中考"
+    },
+    {
+      "phrase": "come up with",
+      "meaning_zh": "想出，提出（主意、办法）",
+      "example_en": "She came up with a great idea for the project.",
+      "example_zh": "她为这个项目想出了一个好主意。",
+      "level": "中考"
+    },
+    {
+      "phrase": "break down",
+      "meaning_zh": "（车、机器）出故障，抛锚",
+      "example_en": "Our car broke down on the way to the airport.",
+      "example_zh": "我们的车在去机场的路上抛锚了。",
+      "level": "中考"
+    },
+    {
+      "phrase": "put off",
+      "meaning_zh": "推迟，延期",
+      "example_en": "They put off the meeting until next Friday.",
+      "example_zh": "他们把会议推迟到下周五。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "look up to",
+      "meaning_zh": "尊敬，钦佩（某人）",
+      "example_en": "Students look up to teachers who are kind and patient.",
+      "example_zh": "学生们敬仰善良又有耐心的老师。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "get along with",
+      "meaning_zh": "与……相处融洽",
+      "example_en": "He gets along well with all his classmates.",
+      "example_zh": "他和所有同学都相处融洽。",
+      "level": "中考"
+    },
+    {
+      "phrase": "look after",
+      "meaning_zh": "照顾，照料",
+      "example_en": "Can you look after my little brother for an hour?",
+      "example_zh": "你能帮我照看弟弟一个小时吗？",
+      "level": "初中"
+    },
+    {
+      "phrase": "set up",
+      "meaning_zh": "建立；创办",
+      "example_en": "My uncle set up a small bookshop in our town.",
+      "example_zh": "我叔叔在我们镇上开了一家小书店。",
+      "level": "初中"
+    },
+    {
+      "phrase": "turn down",
+      "meaning_zh": "拒绝；调低",
+      "example_en": "He turned down my invitation because he was busy.",
+      "example_zh": "他因为忙而拒绝了我的邀请。",
+      "level": "中考"
+    },
+    {
+      "phrase": "give in",
+      "meaning_zh": "让步；屈服",
+      "example_en": "After arguing for an hour, Tom finally gave in.",
+      "example_zh": "争论了一个小时后，汤姆终于让步了。",
+      "level": "中考"
+    },
+    {
+      "phrase": "carry on",
+      "meaning_zh": "继续进行",
+      "example_en": "Carry on with your homework — I'll be back soon.",
+      "example_zh": "继续做作业，我很快就回来。",
+      "level": "中考"
+    },
+    {
+      "phrase": "get over",
+      "meaning_zh": "克服；从（疾病、打击）中恢复",
+      "example_en": "It took her a week to get over the flu.",
+      "example_zh": "她花了一周时间才从流感中恢复过来。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "take after",
+      "meaning_zh": "（外貌或性格）像（某位家人）",
+      "example_en": "Mary takes after her father in both looks and character.",
+      "example_zh": "玛丽在外貌和性格上都像她父亲。",
+      "level": "中考"
+    },
+    {
+      "phrase": "come across",
+      "meaning_zh": "偶然遇见；偶然发现",
+      "example_en": "I came across this old photo while cleaning my desk.",
+      "example_zh": "我整理书桌时偶然发现了这张旧照片。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "bring up",
+      "meaning_zh": "抚养；养育",
+      "example_en": "His grandparents brought him up in a small village.",
+      "example_zh": "他的祖父母在一个小村庄里把他抚养长大。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "put up with",
+      "meaning_zh": "忍受；容忍",
+      "example_en": "I can't put up with the noise any longer.",
+      "example_zh": "我再也无法忍受这噪音了。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "turn up",
+      "meaning_zh": "出现；到场；把（音量等）调大",
+      "example_en": "He promised to come, but he didn't turn up until eight o'clock.",
+      "example_zh": "他答应要来，但直到八点才出现。",
+      "level": "初中"
+    },
+    {
+      "phrase": "put on",
+      "meaning_zh": "穿上；戴上；增加（体重）",
+      "example_en": "Put on your coat — it's cold outside.",
+      "example_zh": "把外套穿上，外面很冷。",
+      "level": "初中"
+    },
+    {
+      "phrase": "take off",
+      "meaning_zh": "（飞机）起飞；脱下；（事业）迅速走红",
+      "example_en": "The plane took off on time despite the heavy rain.",
+      "example_zh": "尽管下着大雨，飞机还是准时起飞了。",
+      "level": "初中"
+    },
+    {
+      "phrase": "find out",
+      "meaning_zh": "查明；弄清楚（真相、信息）",
+      "example_en": "I need to find out when the train leaves.",
+      "example_zh": "我需要查明火车什么时候发车。",
+      "level": "初中"
+    },
+    {
+      "phrase": "look out",
+      "meaning_zh": "当心；小心",
+      "example_en": "Look out! The floor is wet.",
+      "example_zh": "当心！地板是湿的。",
+      "level": "中考"
+    },
+    {
+      "phrase": "come up",
+      "meaning_zh": "（问题、话题等）出现；被提出",
+      "example_en": "A strange question came up during the interview.",
+      "example_zh": "面试中出现了一个奇怪的问题。",
+      "level": "中考"
+    },
+    {
+      "phrase": "fall behind",
+      "meaning_zh": "落后；跟不上",
+      "example_en": "He was ill for a month and fell behind in his studies.",
+      "example_zh": "他病了一个月，学习落下了。",
+      "level": "中考"
+    },
+    {
+      "phrase": "call off",
+      "meaning_zh": "取消（活动、计划等）",
+      "example_en": "The football match was called off because of the storm.",
+      "example_zh": "由于暴风雨，足球赛被取消了。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "work out",
+      "meaning_zh": "解决；算出；（情况）发展顺利；锻炼",
+      "example_en": "Don't worry — everything will work out fine in the end.",
+      "example_zh": "别担心，最后一切都会顺利解决的。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "come round",
+      "meaning_zh": "顺便到访；（不久）恢复；转变看法",
+      "example_en": "Why don't you come round for dinner this weekend?",
+      "example_zh": "这周末为什么不顺便来我家吃饭呢？",
+      "level": "FCE"
+    },
+    {
+      "phrase": "cheer up",
+      "meaning_zh": "振作起来；使高兴起来",
+      "example_en": "Cheer up! The exam is over and you did your best.",
+      "example_zh": "振作点！考试结束了，你已经尽力了。",
+      "level": "初中"
+    },
+    {
+      "phrase": "hand in",
+      "meaning_zh": "上交，提交",
+      "example_en": "Please hand in your homework before Friday.",
+      "example_zh": "请在周五之前上交作业。",
+      "level": "初中"
+    },
+    {
+      "phrase": "go over",
+      "meaning_zh": "仔细检查；复习",
+      "example_en": "The teacher went over the main points again before the exam.",
+      "example_zh": "考试前，老师又把要点复习了一遍。",
+      "level": "中考"
+    },
+    {
+      "phrase": "keep up with",
+      "meaning_zh": "跟上，不落后于",
+      "example_en": "He walks so fast that I can hardly keep up with him.",
+      "example_zh": "他走得太快了，我几乎跟不上他。",
+      "level": "中考"
+    },
+    {
+      "phrase": "run into",
+      "meaning_zh": "偶然遇见",
+      "example_en": "I ran into an old friend at the supermarket yesterday.",
+      "example_zh": "昨天我在超市偶遇了一位老朋友。",
+      "level": "中考"
+    },
+    {
+      "phrase": "point out",
+      "meaning_zh": "指出（错误、问题等）",
+      "example_en": "The teacher pointed out several mistakes in my essay.",
+      "example_zh": "老师指出了我作文中的几处错误。",
+      "level": "中考"
+    },
+    {
+      "phrase": "turn out",
+      "meaning_zh": "结果是；原来是",
+      "example_en": "The party turned out to be a great success.",
+      "example_zh": "这次聚会结果非常成功。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "show off",
+      "meaning_zh": "炫耀，卖弄",
+      "example_en": "He drives his new car around just to show off.",
+      "example_zh": "他开着自己的新车到处转，只是为了炫耀。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "come down with",
+      "meaning_zh": "患上，染上（小病）",
+      "example_en": "I think I'm coming down with a cold.",
+      "example_zh": "我觉得自己好像感冒了。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "sort out",
+      "meaning_zh": "整理好；解决（问题）",
+      "example_en": "We need to sort out this problem as soon as possible.",
+      "example_zh": "我们需要尽快解决这个问题。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "pick up",
+      "meaning_zh": "捡起；接某人；学会（技能、语言）",
+      "example_en": "It's getting late — who is going to pick up the kids from school today?",
+      "example_zh": "天快黑了——今天谁去学校接孩子们？",
+      "level": "初中"
+    },
+    {
+      "phrase": "try on",
+      "meaning_zh": "试穿（衣服、鞋等）",
+      "example_en": "She tried on three dresses before choosing the blue one.",
+      "example_zh": "她试穿了三条裙子，最后选了蓝色的那条。",
+      "level": "初中"
+    },
+    {
+      "phrase": "write down",
+      "meaning_zh": "写下，记下",
+      "example_en": "Please write down your name and phone number on this form.",
+      "example_zh": "请在这张表格上写下你的姓名和电话号码。",
+      "level": "初中"
+    },
+    {
+      "phrase": "throw away",
+      "meaning_zh": "扔掉，丢弃",
+      "example_en": "Don't throw away those old boxes; we can use them again.",
+      "example_zh": "别把那些旧箱子扔掉，我们还能再用。",
+      "level": "初中"
+    },
+    {
+      "phrase": "go off",
+      "meaning_zh": "（闹钟）响；（食物）变质；爆炸",
+      "example_en": "My alarm goes off at six every morning, even on weekends.",
+      "example_zh": "我的闹钟每天早上六点响，周末也不例外。",
+      "level": "中考"
+    },
+    {
+      "phrase": "take up",
+      "meaning_zh": "开始从事（某项爱好）；占用（时间、空间）",
+      "example_en": "He took up painting last year and now spends every weekend at his easel.",
+      "example_zh": "他去年开始学画画，现在每个周末都在画架前度过。",
+      "level": "中考"
+    },
+    {
+      "phrase": "set off",
+      "meaning_zh": "出发，动身；引发",
+      "example_en": "We set off early to avoid the traffic on the motorway.",
+      "example_zh": "我们很早就出发了，以避开高速公路上的车流。",
+      "level": "中考"
+    },
+    {
+      "phrase": "give away",
+      "meaning_zh": "免费赠送；无意中泄露（秘密）",
+      "example_en": "The company gives away free samples outside the supermarket.",
+      "example_zh": "那家公司在超市门口免费发放样品。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "make up",
+      "meaning_zh": "编造（故事、借口）；（吵架后）和好",
+      "example_en": "He made up an excuse for being late, but nobody believed him.",
+      "example_zh": "他为迟到编了个借口，但没有人相信他。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "look into",
+      "meaning_zh": "调查，研究",
+      "example_en": "The police are looking into the cause of the accident.",
+      "example_zh": "警方正在调查事故的原因。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "turn into",
+      "meaning_zh": "变成；转变为",
+      "example_en": "The little seed turned into a tall sunflower over the summer.",
+      "example_zh": "整个夏天，这颗小种子长成了一株高高的向日葵。",
+      "level": "初中"
+    },
+    {
+      "phrase": "come true",
+      "meaning_zh": "（梦想、愿望）实现；成真",
+      "example_en": "Work hard, and your dream of becoming a pilot will come true.",
+      "example_zh": "努力学习，你成为飞行员的梦想就会实现。",
+      "level": "初中"
+    },
+    {
+      "phrase": "by accident",
+      "meaning_zh": "偶然地；无意地",
+      "example_en": "I found the missing key by accident while cleaning the desk.",
+      "example_zh": "我擦桌子时无意中找到了丢失的钥匙。",
+      "level": "初中"
+    },
+    {
+      "phrase": "keep an eye on",
+      "meaning_zh": "照看；留意，密切关注",
+      "example_en": "Please keep an eye on my little brother while I'm out.",
+      "example_zh": "我出去的时候，请帮我照看一下弟弟。",
+      "level": "中考"
+    },
+    {
+      "phrase": "get rid of",
+      "meaning_zh": "摆脱；除去，处理掉",
+      "example_en": "You should get rid of the bad habit of staying up late.",
+      "example_zh": "你应该改掉熬夜的坏习惯。",
+      "level": "中考"
+    },
+    {
+      "phrase": "fill in",
+      "meaning_zh": "填写（表格、空格等）",
+      "example_en": "Fill in your name and address at the top of the form.",
+      "example_zh": "在表格顶端填上你的姓名和地址。",
+      "level": "中考"
+    },
+    {
+      "phrase": "let down",
+      "meaning_zh": "使失望；辜负",
+      "example_en": "He promised to help us, and he didn't let us down.",
+      "example_zh": "他答应帮我们，也确实没有让我们失望。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "put forward",
+      "meaning_zh": "提出（建议、想法等）",
+      "example_en": "She put forward a good idea at the class meeting.",
+      "example_zh": "她在班会上提出了一个好主意。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "go through",
+      "meaning_zh": "经历，经受；仔细检查",
+      "example_en": "The family went through hard times after the father lost his job.",
+      "example_zh": "父亲失业后，一家人经历了艰难的岁月。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "cut down on",
+      "meaning_zh": "减少，削减（吸烟、吃糖等的量）",
+      "example_en": "The doctor advised him to cut down on sugar and salt.",
+      "example_zh": "医生建议他减少糖和盐的摄入。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "grow up",
+      "meaning_zh": "长大，成长",
+      "example_en": "What do you want to be when you grow up?",
+      "example_zh": "你长大后想做什么？",
+      "level": "初中"
+    },
+    {
+      "phrase": "make sure",
+      "meaning_zh": "确保，务必做到",
+      "example_en": "Please make sure the windows are closed before you leave.",
+      "example_zh": "离开前请确保窗户都关好了。",
+      "level": "初中"
+    },
+    {
+      "phrase": "stay up",
+      "meaning_zh": "熬夜，不睡觉",
+      "example_en": "Don't stay up too late playing games before the exam.",
+      "example_zh": "考试前别熬夜打游戏到太晚。",
+      "level": "中考"
+    },
+    {
+      "phrase": "eat out",
+      "meaning_zh": "下馆子，外出吃饭",
+      "example_en": "We don't feel like cooking tonight, so let's eat out.",
+      "example_zh": "今晚我们不想做饭，出去吃吧。",
+      "level": "初中"
+    },
+    {
+      "phrase": "hear from",
+      "meaning_zh": "收到……的来信（或消息）",
+      "example_en": "I heard from my pen friend in Canada last week.",
+      "example_zh": "上周我收到了加拿大笔友的来信。",
+      "level": "中考"
+    },
+    {
+      "phrase": "join in",
+      "meaning_zh": "参加（活动、讨论、游戏等）",
+      "example_en": "Everyone was singing, and soon she joined in.",
+      "example_zh": "大家都在唱歌，她很快就加入了。",
+      "level": "中考"
+    },
+    {
+      "phrase": "give out",
+      "meaning_zh": "分发，发放",
+      "example_en": "The teacher asked me to give out the test papers.",
+      "example_zh": "老师让我分发试卷。",
+      "level": "中考"
+    },
+    {
+      "phrase": "leave out",
+      "meaning_zh": "遗漏，漏掉，不包括",
+      "example_en": "Check your list again — you've left out one important name.",
+      "example_zh": "再检查一下你的清单——你漏掉了一个重要的名字。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "end up",
+      "meaning_zh": "最终成为（或处于某种状态）",
+      "example_en": "He studied law, but he ended up working as a teacher.",
+      "example_zh": "他学的是法律，最后却做了老师。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "break the ice",
+      "meaning_zh": "打破僵局，缓和气氛",
+      "example_en": "He told a funny story to break the ice at the party.",
+      "example_zh": "他在聚会上讲了个有趣的故事来缓和气氛。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "figure out",
+      "meaning_zh": "弄清楚；想出",
+      "example_en": "I can't figure out how to solve this maths problem.",
+      "example_zh": "我搞不懂这道数学题怎么解。",
+      "level": "中考"
+    },
+    {
+      "phrase": "get by",
+      "meaning_zh": "勉强应付过去；过得去",
+      "example_en": "They manage to get by on a very small income.",
+      "example_zh": "他们靠微薄的收入勉强维持生活。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "hold on",
+      "meaning_zh": "稍等一下；（打电话时）别挂断",
+      "example_en": "Hold on a moment, please. I'll get a pen.",
+      "example_zh": "请稍等一下，我去拿支笔。",
+      "level": "初中"
+    },
+    {
+      "phrase": "look down on",
+      "meaning_zh": "看不起，轻视",
+      "example_en": "You shouldn't look down on people who are poorer than you.",
+      "example_zh": "你不应该看不起比你穷的人。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "make up for",
+      "meaning_zh": "弥补",
+      "example_en": "She worked hard at the weekend to make up for the time she had lost.",
+      "example_zh": "她周末努力工作，以弥补之前损失的时间。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "pay off",
+      "meaning_zh": "得到好结果；有回报",
+      "example_en": "All his years of training finally paid off when he won the race.",
+      "example_zh": "多年的训练终于有了回报，他赢得了比赛。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "pick out",
+      "meaning_zh": "挑选出；辨认出",
+      "example_en": "Can you pick out your mother in this old photo?",
+      "example_zh": "你能在这张老照片里认出你妈妈吗？",
+      "level": "中考"
+    },
+    {
+      "phrase": "run away",
+      "meaning_zh": "逃跑，跑开",
+      "example_en": "The thief ran away when he saw the police.",
+      "example_zh": "小偷一看见警察就逃跑了。",
+      "level": "初中"
+    },
+    {
+      "phrase": "take over",
+      "meaning_zh": "接管，接任",
+      "example_en": "Her son will take over the family business when she retires.",
+      "example_zh": "她退休后，儿子将接管家族生意。",
+      "level": "FCE"
+    },
+    {
+      "phrase": "warm up",
+      "meaning_zh": "热身；（天气）变暖",
+      "example_en": "The players warm up for twenty minutes before every match.",
+      "example_zh": "每场比赛前，球员们热身二十分钟。",
+      "level": "初中"
+    }
+  ],
+  "questions": [
+    {
+      "topic": "look forward to",
+      "stem": "I really ____ the summer holiday. I can't wait!",
+      "options": [
+        "A. look forward to",
+        "B. catch up with",
+        "C. run out of",
+        "D. put off"
+      ],
+      "answer": "A",
+      "explain": "look forward to（doing）sth. 意为“期待、盼望（做）某事”，与后句“迫不及待”呼应。"
+    },
+    {
+      "topic": "give up",
+      "stem": "What does the phrase 'give up' mean?",
+      "options": [
+        "A. 用完，耗尽",
+        "B. 推迟，延期",
+        "C. 放弃",
+        "D. 赶上，追上"
+      ],
+      "answer": "C",
+      "explain": "give up 意为“放弃”，后接名词或动名词。"
+    },
+    {
+      "topic": "take part in",
+      "stem": "Many students want to ____ the school sports meeting next month.",
+      "options": [
+        "A. give up",
+        "B. take part in",
+        "C. look up to",
+        "D. come up with"
+      ],
+      "answer": "B",
+      "explain": "take part in 意为“参加（活动、比赛等）”，强调亲身参与。"
+    },
+    {
+      "topic": "catch up with",
+      "stem": "What does the phrase 'catch up with' mean?",
+      "options": [
+        "A. 与……相处融洽",
+        "B. 想出，提出",
+        "C. 期待，盼望",
+        "D. 赶上，追上"
+      ],
+      "answer": "D",
+      "explain": "catch up with 意为“赶上、追上（某人）”，也可指在学习或进度上赶上。"
+    },
+    {
+      "topic": "run out of",
+      "stem": "I can't buy the new book because I have ____ my money.",
+      "options": [
+        "A. run out of",
+        "B. put off",
+        "C. broken down",
+        "D. come up with"
+      ],
+      "answer": "A",
+      "explain": "run out of 意为“用完、耗尽”，主语通常是人；买不起书是因为“钱花光了”。"
+    },
+    {
+      "topic": "come up with",
+      "stem": "What does the phrase 'come up with' mean?",
+      "options": [
+        "A. 推迟，延期",
+        "B. 想出，提出",
+        "C. 放弃",
+        "D. 用完，耗尽"
+      ],
+      "answer": "B",
+      "explain": "come up with 意为“想出、提出（主意、办法等）”，相当于 think of。"
+    },
+    {
+      "topic": "break down",
+      "stem": "Our car ____ on the way to the airport, so we missed the flight.",
+      "options": [
+        "A. gave up",
+        "B. ran out of",
+        "C. broke down",
+        "D. put off"
+      ],
+      "answer": "C",
+      "explain": "break down 指车辆或机器“出故障、抛锚”，误机说明车坏了，此处用过去式 broke down。"
+    },
+    {
+      "topic": "put off",
+      "stem": "What does the phrase 'put off' mean?",
+      "options": [
+        "A. 赶上，追上",
+        "B. 敬仰，钦佩",
+        "C. 用完，耗尽",
+        "D. 推迟，延期"
+      ],
+      "answer": "D",
+      "explain": "put off 意为“推迟、延期”，后接名词或动名词作宾语。"
+    },
+    {
+      "topic": "look up to",
+      "stem": "Young players ____ their coach and hope to be like him one day.",
+      "options": [
+        "A. look up to",
+        "B. look forward to",
+        "C. catch up with",
+        "D. take part in"
+      ],
+      "answer": "A",
+      "explain": "look up to sb. 意为“尊敬、钦佩某人”，想成为教练那样的人说明是钦佩。"
+    },
+    {
+      "topic": "get along with",
+      "stem": "What does the phrase 'get along with' mean?",
+      "options": [
+        "A. 用完，耗尽",
+        "B. 与……相处融洽",
+        "C. 赶上，追上",
+        "D. 敬仰，钦佩"
+      ],
+      "answer": "B",
+      "explain": "get along with sb. 意为“与某人相处（融洽）”，常与 well 或 badly 连用。"
+    },
+    {
+      "topic": "look after",
+      "stem": "Could you ______ my cat this weekend? I'm going to Shanghai.",
+      "options": [
+        "A. give in",
+        "B. turn down",
+        "C. look after",
+        "D. carry on"
+      ],
+      "answer": "C",
+      "explain": "look after 意为\"照顾、照料\"，此处指帮忙照看猫。"
+    },
+    {
+      "topic": "set up",
+      "stem": "Which Chinese meaning matches the phrase \"set up\"?",
+      "options": [
+        "A. 建立；创办",
+        "B. 放弃；屈服",
+        "C. 拒绝；调低",
+        "D. 继续进行"
+      ],
+      "answer": "A",
+      "explain": "set up 意为\"建立、创办\"，如 set up a company（创办公司）。"
+    },
+    {
+      "topic": "turn down",
+      "stem": "She ______ the job offer because the salary was too low.",
+      "options": [
+        "A. came across",
+        "B. turned down",
+        "C. put up with",
+        "D. looked after"
+      ],
+      "answer": "B",
+      "explain": "turn down 意为\"拒绝\"，此处指她拒绝了一份工作邀请。"
+    },
+    {
+      "topic": "give in",
+      "stem": "In the sentence \"The little boy kept crying, and his mother finally gave in\", what does \"give in\" mean?",
+      "options": [
+        "A. 大声喊叫",
+        "B. 坚持立场",
+        "C. 突然离开",
+        "D. 让步；屈服"
+      ],
+      "answer": "D",
+      "explain": "give in 意为\"让步、屈服\"，指妈妈最终妥协了。"
+    },
+    {
+      "topic": "carry on",
+      "stem": "After a short break, the students ______ with their experiment.",
+      "options": [
+        "A. put up with",
+        "B. gave in",
+        "C. turned down",
+        "D. carried on"
+      ],
+      "answer": "D",
+      "explain": "carry on (with) 意为\"继续进行\"，指休息后继续做实验。"
+    },
+    {
+      "topic": "get over",
+      "stem": "Which Chinese meaning matches the phrase \"get over\"?",
+      "options": [
+        "A. 随便逛逛",
+        "B. 克服；恢复",
+        "C. 熄灭；出版",
+        "D. 张贴；搭建"
+      ],
+      "answer": "B",
+      "explain": "get over 意为\"克服（困难）、从（疾病或打击）中恢复\"。"
+    },
+    {
+      "topic": "take after",
+      "stem": "Everyone says Lucy ______ her mother — they both have big bright eyes.",
+      "options": [
+        "A. takes after",
+        "B. carries on",
+        "C. gives in",
+        "D. sets up"
+      ],
+      "answer": "A",
+      "explain": "take after 意为\"（外貌或性格）像（某位家人）\"。"
+    },
+    {
+      "topic": "come across",
+      "stem": "In the sentence \"I came across an old friend at the supermarket\", what does \"come across\" mean?",
+      "options": [
+        "A. 跨过；越过",
+        "B. 照顾；看管",
+        "C. 偶然遇到",
+        "D. 赶上；追上"
+      ],
+      "answer": "C",
+      "explain": "come across 意为\"偶然遇见、偶然发现\"。"
+    },
+    {
+      "topic": "bring up",
+      "stem": "She was ______ by her grandparents in the countryside.",
+      "options": [
+        "A. put up with",
+        "B. brought up",
+        "C. given in",
+        "D. turned down"
+      ],
+      "answer": "B",
+      "explain": "bring up 意为\"抚养、养育\"，被动语态 be brought up 表示\"被抚养长大\"。"
+    },
+    {
+      "topic": "put up with",
+      "stem": "Which is the correct meaning of \"put up with\"?",
+      "options": [
+        "A. 举起；搭建",
+        "B. 放弃；投降",
+        "C. 继续；坚持",
+        "D. 忍受；容忍"
+      ],
+      "answer": "D",
+      "explain": "put up with 意为\"忍受、容忍（不愉快的人或事）\"。"
+    },
+    {
+      "topic": "turn up",
+      "stem": "We waited for an hour, but Sam never ____ at the party.",
+      "options": [
+        "turned up",
+        "called off",
+        "fell behind",
+        "worked out"
+      ],
+      "answer": "A",
+      "explain": "turn up 表示“出现、到场”，句意是 Sam 一直没有出现。"
+    },
+    {
+      "topic": "put on",
+      "stem": "Which Chinese meaning matches the phrase 'put on'?",
+      "options": [
+        "取消",
+        "落后",
+        "查明",
+        "穿上；增加（体重）"
+      ],
+      "answer": "D",
+      "explain": "put on 的核心含义是“穿上、戴上”，也可指“增加体重”。"
+    },
+    {
+      "topic": "take off",
+      "stem": "The plane will ____ in twenty minutes, so let's hurry to the gate.",
+      "options": [
+        "come round",
+        "turn up",
+        "take off",
+        "look out"
+      ],
+      "answer": "C",
+      "explain": "take off 表示“（飞机）起飞”，与赶去登机口的语境相符。"
+    },
+    {
+      "topic": "find out",
+      "stem": "Which Chinese meaning matches the phrase 'find out'?",
+      "options": [
+        "查明；弄清楚",
+        "取消",
+        "出现",
+        "当心"
+      ],
+      "answer": "A",
+      "explain": "find out 指经过询问或调查后“查明、弄清楚”某个信息。"
+    },
+    {
+      "topic": "look out",
+      "stem": "____! There's a car coming!",
+      "options": [
+        "Work out",
+        "Look out",
+        "Put on",
+        "Find out"
+      ],
+      "answer": "B",
+      "explain": "Look out 用于提醒别人“当心、小心”即将发生的危险。"
+    },
+    {
+      "topic": "come up",
+      "stem": "In the sentence 'A problem came up during the meeting', what does 'come up' mean?",
+      "options": [
+        "穿上",
+        "取消",
+        "落后",
+        "出现；被提出"
+      ],
+      "answer": "D",
+      "explain": "come up 在此处表示“（问题等）出现、被提到”。"
+    },
+    {
+      "topic": "fall behind",
+      "stem": "If you don't review your lessons regularly, you will ____ the other students.",
+      "options": [
+        "put on",
+        "fall behind",
+        "come up",
+        "take off"
+      ],
+      "answer": "B",
+      "explain": "fall behind 意为“落后、跟不上”，与不复习功课的语境相符。"
+    },
+    {
+      "topic": "call off",
+      "stem": "In the sentence 'They called off the match because of the rain', what does 'call off' mean?",
+      "options": [
+        "出现",
+        "锻炼",
+        "取消",
+        "当心"
+      ],
+      "answer": "C",
+      "explain": "call off 意为“取消”活动或计划，因下雨取消比赛符合句意。"
+    },
+    {
+      "topic": "work out",
+      "stem": "I'm sure you can ____ this maths problem if you think carefully.",
+      "options": [
+        "turn up",
+        "look out",
+        "call off",
+        "work out"
+      ],
+      "answer": "D",
+      "explain": "work out 在此表示“解出、算出”问题，与数学题的语境相符。"
+    },
+    {
+      "topic": "come round",
+      "stem": "In the sentence 'Why don't you come round to my house tonight?', what does 'come round' mean?",
+      "options": [
+        "起飞",
+        "顺便到访",
+        "查明",
+        "落后"
+      ],
+      "answer": "B",
+      "explain": "come round 在此指“顺便到某人家拜访”，是口语常用义。"
+    },
+    {
+      "topic": "cheer up",
+      "stem": "You look sad. ____! Everything will be fine soon.",
+      "options": [
+        "Show off",
+        "Cheer up",
+        "Point out",
+        "Sort out"
+      ],
+      "answer": "B",
+      "explain": "cheer up 意为“振作起来”，用于安慰难过的人，其余选项不符合语境。"
+    },
+    {
+      "topic": "hand in",
+      "stem": "What does 'hand in' mean in the sentence \"Please hand in your homework before Friday\"?",
+      "options": [
+        "偶然遇见",
+        "上交，提交",
+        "整理好；解决",
+        "指出"
+      ],
+      "answer": "B",
+      "explain": "hand in 意为“上交，提交”，句中指周五前交作业。"
+    },
+    {
+      "topic": "go over",
+      "stem": "Before the exam, we spent a whole lesson ____ the key grammar points so that we could remember them better.",
+      "options": [
+        "running into",
+        "pointing out",
+        "going over",
+        "showing off"
+      ],
+      "answer": "C",
+      "explain": "go over 意为“复习、仔细检查”，考前花一节课复习语法要点符合句意。"
+    },
+    {
+      "topic": "keep up with",
+      "stem": "In \"He walks so fast that I can hardly keep up with him\", what does 'keep up with' mean?",
+      "options": [
+        "跟上，不落后于",
+        "偶然遇见",
+        "使高兴起来",
+        "结果是"
+      ],
+      "answer": "A",
+      "explain": "keep up with 意为“跟上，不落后于”，句中指几乎跟不上他的速度。"
+    },
+    {
+      "topic": "run into",
+      "stem": "I ____ my primary school teacher on the street yesterday; we hadn't met for years.",
+      "options": [
+        "came down with",
+        "ran into",
+        "turned out",
+        "handed in"
+      ],
+      "answer": "B",
+      "explain": "run into 意为“偶然遇见”，多年未见正好对应偶遇的语境。"
+    },
+    {
+      "topic": "point out",
+      "stem": "Which Chinese meaning matches 'point out' in \"The teacher pointed out several mistakes in my essay\"?",
+      "options": [
+        "复习，仔细检查",
+        "患上（小病）",
+        "指出（错误、问题等）",
+        "炫耀"
+      ],
+      "answer": "C",
+      "explain": "point out 意为“指出”，句中指老师指出作文里的错误。"
+    },
+    {
+      "topic": "turn out",
+      "stem": "The concert we worried about ____ to be a huge success in the end.",
+      "options": [
+        "turned out",
+        "cheered up",
+        "went over",
+        "sorted out"
+      ],
+      "answer": "A",
+      "explain": "turn out (to be) 意为“结果是，原来是”，表示演唱会最终大获成功。"
+    },
+    {
+      "topic": "show off",
+      "stem": "'show off' in \"He drives his new car around just to show off\" means ____.",
+      "options": [
+        "上交，提交",
+        "跟上，不落后",
+        "炫耀，卖弄",
+        "偶然遇见"
+      ],
+      "answer": "C",
+      "explain": "show off 意为“炫耀”，开新车到处转正是为了卖弄。"
+    },
+    {
+      "topic": "come down with",
+      "stem": "Tom didn't come to school because he had ____ a bad cold.",
+      "options": [
+        "pointed out",
+        "run into",
+        "turned out",
+        "come down with"
+      ],
+      "answer": "D",
+      "explain": "come down with 意为“患上、染上（小病）”，因感冒没来上学符合句意。"
+    },
+    {
+      "topic": "sort out",
+      "stem": "'sort out' in \"We need to sort out this problem as soon as possible\" means ____.",
+      "options": [
+        "炫耀，卖弄",
+        "结果是；原来是",
+        "振作起来",
+        "整理好；解决（问题）"
+      ],
+      "answer": "D",
+      "explain": "sort out 意为“解决，处理好”，句中指尽快解决问题。"
+    },
+    {
+      "topic": "pick up",
+      "stem": "It's getting late — who is going to ____ the kids from school today?",
+      "options": [
+        "A. pick up",
+        "B. write down",
+        "C. set off",
+        "D. give away"
+      ],
+      "answer": "A",
+      "explain": "pick up 有“接某人”的意思，句意为“谁去学校接孩子”。"
+    },
+    {
+      "topic": "try on",
+      "stem": "What does the phrase 'try on' mean?",
+      "options": [
+        "A. 扔掉，丢弃",
+        "B. 试穿（衣服、鞋等）",
+        "C. 编造（故事、借口）",
+        "D. （闹钟）响"
+      ],
+      "answer": "B",
+      "explain": "try on 指试穿衣服、鞋子等，看是否合适。"
+    },
+    {
+      "topic": "write down",
+      "stem": "The teacher asked us to ____ the main points of the lesson in our notebooks.",
+      "options": [
+        "A. go off",
+        "B. try on",
+        "C. write down",
+        "D. look into"
+      ],
+      "answer": "C",
+      "explain": "write down 意为“写下、记下”，符合“把要点记在笔记本上”的语境。"
+    },
+    {
+      "topic": "throw away",
+      "stem": "What does the phrase 'throw away' mean?",
+      "options": [
+        "A. 调查，研究",
+        "B. 开始从事（某项爱好）",
+        "C. （吵架后）和好",
+        "D. 扔掉，丢弃"
+      ],
+      "answer": "D",
+      "explain": "throw away 指把不要的东西扔掉、丢弃。"
+    },
+    {
+      "topic": "go off",
+      "stem": "I finally got out of bed when my alarm ____ at half past six.",
+      "options": [
+        "A. took up",
+        "B. went off",
+        "C. made up",
+        "D. set off"
+      ],
+      "answer": "B",
+      "explain": "go off 专指闹钟“响起来”，主语是闹钟时要用 went off。"
+    },
+    {
+      "topic": "take up",
+      "stem": "What does the phrase 'take up' mean?",
+      "options": [
+        "A. 试穿（衣服、鞋等）",
+        "B. 接某人",
+        "C. 免费赠送",
+        "D. 开始从事（某项爱好）；占用（时间、空间）"
+      ],
+      "answer": "D",
+      "explain": "take up 可指开始一项新爱好，也可指占用时间或空间。"
+    },
+    {
+      "topic": "set off",
+      "stem": "We should ____ early tomorrow morning to miss the heavy traffic.",
+      "options": [
+        "A. set off",
+        "B. throw away",
+        "C. pick up",
+        "D. make up"
+      ],
+      "answer": "A",
+      "explain": "set off 意为“出发、动身”，句意为“我们该早点出发避开堵车”。"
+    },
+    {
+      "topic": "give away",
+      "stem": "What does the phrase 'give away' mean?",
+      "options": [
+        "A. 写下，记下",
+        "B. 出发，动身",
+        "C. 免费赠送；无意中泄露（秘密）",
+        "D. 调查，研究"
+      ],
+      "answer": "C",
+      "explain": "give away 既可指免费送出东西，也可指不小心泄露秘密。"
+    },
+    {
+      "topic": "make up",
+      "stem": "Tom ____ a long excuse for being late, but the teacher didn't believe a word.",
+      "options": [
+        "A. looked into",
+        "B. made up",
+        "C. went off",
+        "D. took up"
+      ],
+      "answer": "B",
+      "explain": "make up an excuse 表示“编造借口”，老师不信说明是编的。"
+    },
+    {
+      "topic": "look into",
+      "stem": "What does the phrase 'look into' mean?",
+      "options": [
+        "A. 编造（借口）",
+        "B. 接某人",
+        "C. 占用（时间、空间）",
+        "D. 调查，研究"
+      ],
+      "answer": "D",
+      "explain": "look into 意为“调查、研究”某件事，常用于警方或机构调查。"
+    },
+    {
+      "topic": "turn into",
+      "stem": "The caterpillar will ____ a beautiful butterfly in a few weeks.",
+      "options": [
+        "A. turn into",
+        "B. come true",
+        "C. get rid of",
+        "D. cut down on"
+      ],
+      "answer": "A",
+      "explain": "turn into 意为\"变成\"，毛虫会在几周内变成蝴蝶，其余选项含义不符。"
+    },
+    {
+      "topic": "come true",
+      "stem": "What does \"come true\" mean?",
+      "options": [
+        "A. 偶然地，无意地",
+        "B. 填写（表格等）",
+        "C. （梦想、愿望）实现，成真",
+        "D. 使失望"
+      ],
+      "answer": "C",
+      "explain": "come true 指\"（梦想、愿望）实现、成真\"，与 C 项释义一致。"
+    },
+    {
+      "topic": "keep an eye on",
+      "stem": "Could you ____ my bag for a minute while I buy the tickets?",
+      "options": [
+        "A. let down",
+        "B. put forward",
+        "C. go through",
+        "D. keep an eye on"
+      ],
+      "answer": "D",
+      "explain": "keep an eye on 表示\"照看、留意\"，句意是买票时帮忙照看一下包。"
+    },
+    {
+      "topic": "by accident",
+      "stem": "What does \"by accident\" mean?",
+      "options": [
+        "A. 故意地",
+        "B. 偶然地，无意地",
+        "C. 小心地",
+        "D. 准时地"
+      ],
+      "answer": "B",
+      "explain": "by accident 意为\"偶然、无意地\"，正好与 A 项\"故意地\"意思相反。"
+    },
+    {
+      "topic": "get rid of",
+      "stem": "We'd better ____ these old boxes to make room for the new sofa.",
+      "options": [
+        "A. fill in",
+        "B. turn into",
+        "C. get rid of",
+        "D. keep an eye on"
+      ],
+      "answer": "C",
+      "explain": "get rid of 表示\"处理掉、清除\"，与\"给新沙发腾地方\"相呼应。"
+    },
+    {
+      "topic": "fill in",
+      "stem": "What does \"fill in\" mean?",
+      "options": [
+        "A. 填写（表格、空格等）",
+        "B. 经历，仔细检查",
+        "C. 摆脱，除去",
+        "D. 提出（建议、想法）"
+      ],
+      "answer": "A",
+      "explain": "fill in 常用于填写表格或空格处，A 项释义正确。"
+    },
+    {
+      "topic": "let down",
+      "stem": "I promised to help him move house, so I really can't ____ him ____.",
+      "options": [
+        "A. turn ... into",
+        "B. keep ... an eye on",
+        "C. cut ... down on",
+        "D. let ... down"
+      ],
+      "answer": "D",
+      "explain": "let sb down 意为\"让某人失望\"，答应了帮忙就不能失信。"
+    },
+    {
+      "topic": "put forward",
+      "stem": "What does \"put forward\" mean?",
+      "options": [
+        "A. 照看，留意",
+        "B. 提出（建议、想法等）",
+        "C. 变成",
+        "D. 偶然地"
+      ],
+      "answer": "B",
+      "explain": "put forward 表示\"提出（建议、想法等）\"，常与 suggestion、idea 等搭配。"
+    },
+    {
+      "topic": "go through",
+      "stem": "After losing her job, she had to ____ a very difficult time.",
+      "options": [
+        "A. come true",
+        "B. cut down on",
+        "C. go through",
+        "D. by accident"
+      ],
+      "answer": "C",
+      "explain": "go through a difficult time 表示\"经历艰难时期\"，强调经受某种困境。"
+    },
+    {
+      "topic": "cut down on",
+      "stem": "What does \"cut down on\" mean?",
+      "options": [
+        "A. 减少，削减（如吸烟、吃糖的量）",
+        "B. 使失望，辜负",
+        "C. 照看，留意",
+        "D. （梦想）实现"
+      ],
+      "answer": "A",
+      "explain": "cut down on 表示\"减少……的量\"，医生建议少摄入糖和盐，故 A 正确。"
+    },
+    {
+      "topic": "grow up",
+      "stem": "What do you want to be when you ____?",
+      "options": [
+        "A. give out",
+        "B. grow up",
+        "C. stay up",
+        "D. break the ice"
+      ],
+      "answer": "B",
+      "explain": "grow up 意为“长大”，句意为“你长大后想成为什么？”其余选项均不符合句意。"
+    },
+    {
+      "topic": "make sure",
+      "stem": "What does the phrase 'make sure' mean?",
+      "options": [
+        "A. 分发，发放",
+        "B. 熬夜，不睡觉",
+        "C. 确保，务必做到",
+        "D. 最终成为"
+      ],
+      "answer": "C",
+      "explain": "make sure 表示“确保、务必做到”，如 Please make sure the door is locked."
+    },
+    {
+      "topic": "stay up",
+      "stem": "You shouldn't ____ too late before the exam, or you'll feel sleepy tomorrow.",
+      "options": [
+        "A. stay up",
+        "B. eat out",
+        "C. join in",
+        "D. end up"
+      ],
+      "answer": "A",
+      "explain": "stay up 意为“熬夜”，句意为“考试前不该熬夜太晚，否则明天会犯困”。"
+    },
+    {
+      "topic": "eat out",
+      "stem": "What does 'eat out' mean?",
+      "options": [
+        "A. 打破僵局，缓和气氛",
+        "B. 分发，发放",
+        "C. 熬夜，不睡觉",
+        "D. 下馆子，外出吃饭"
+      ],
+      "answer": "D",
+      "explain": "eat out 指去餐馆吃饭而不是在家做饭。"
+    },
+    {
+      "topic": "hear from",
+      "stem": "It's always exciting to ____ old friends after many years.",
+      "options": [
+        "A. make sure",
+        "B. hear from",
+        "C. stay up",
+        "D. leave out"
+      ],
+      "answer": "B",
+      "explain": "hear from sb 意为“收到某人的来信或消息”，句意为“多年后收到老朋友的来信总是令人兴奋”。"
+    },
+    {
+      "topic": "join in",
+      "stem": "What does 'join in' mean?",
+      "options": [
+        "A. 长大，成长",
+        "B. 确保，务必做到",
+        "C. 遗漏，漏掉",
+        "D. 参加（活动、讨论等）"
+      ],
+      "answer": "D",
+      "explain": "join in 指加入正在进行的活动、讨论或游戏。"
+    },
+    {
+      "topic": "give out",
+      "stem": "The teacher asked me to ____ the test papers to the class.",
+      "options": [
+        "A. end up",
+        "B. break the ice",
+        "C. give out",
+        "D. make sure"
+      ],
+      "answer": "C",
+      "explain": "give out 意为“分发”，句意为“老师让我把试卷发下去”。"
+    },
+    {
+      "topic": "leave out",
+      "stem": "What does 'leave out' mean?",
+      "options": [
+        "A. 遗漏，漏掉",
+        "B. 收到……的来信",
+        "C. 下馆子，外出吃饭",
+        "D. 熬夜，不睡觉"
+      ],
+      "answer": "A",
+      "explain": "leave out 表示“遗漏、漏掉（不该省略的内容）”。"
+    },
+    {
+      "topic": "end up",
+      "stem": "If you keep spending money like this, you'll ____ with nothing in the bank.",
+      "options": [
+        "A. join in",
+        "B. hear from",
+        "C. grow up",
+        "D. end up"
+      ],
+      "answer": "D",
+      "explain": "end up (with...) 意为“最终落得……的结果”，句意为“再这样花钱你最终会身无分文”。"
+    },
+    {
+      "topic": "break the ice",
+      "stem": "What does 'break the ice' mean?",
+      "options": [
+        "A. 分发，发放",
+        "B. 打破僵局，缓和气氛",
+        "C. 最终成为",
+        "D. 确保，务必做到"
+      ],
+      "answer": "B",
+      "explain": "break the ice 指在陌生或尴尬的场合开口说话以缓和气氛。"
+    },
+    {
+      "topic": "figure out",
+      "stem": "I can't ____ why she changed her mind so suddenly.",
+      "options": [
+        "A. hold on",
+        "B. figure out",
+        "C. run away",
+        "D. warm up"
+      ],
+      "answer": "B",
+      "explain": "figure out 意为“弄清楚、想出”，句意是“我搞不懂她为何突然改变主意”。"
+    },
+    {
+      "topic": "get by",
+      "stem": "What does \"get by\" mean?",
+      "options": [
+        "A. 稍等一下；别挂断",
+        "B. 接管，接任",
+        "C. 勉强应付过去；过得去",
+        "D. 看不起，轻视"
+      ],
+      "answer": "C",
+      "explain": "get by 指靠有限的钱或能力勉强应付过去。"
+    },
+    {
+      "topic": "hold on",
+      "stem": "What does \"hold on\" mean?",
+      "options": [
+        "A. 逃跑，跑开",
+        "B. 弄清楚；想出",
+        "C. 挑选出；辨认出",
+        "D. 稍等一下；别挂断"
+      ],
+      "answer": "D",
+      "explain": "hold on 常用于口语，表示“稍等”或电话中“别挂断”。"
+    },
+    {
+      "topic": "look down on",
+      "stem": "It's wrong to ____ people just because they have less money than you.",
+      "options": [
+        "A. pay off",
+        "B. make up for",
+        "C. look down on",
+        "D. pick out"
+      ],
+      "answer": "C",
+      "explain": "look down on 意为“看不起”，句意为“因别人钱少就轻视他们是错误的”。"
+    },
+    {
+      "topic": "make up for",
+      "stem": "He bought her some flowers to ____ for their terrible argument.",
+      "options": [
+        "A. warm up",
+        "B. figure out",
+        "C. take over",
+        "D. make up"
+      ],
+      "answer": "D",
+      "explain": "make up for 意为“弥补”，句意是“买花来弥补那场争吵”。"
+    },
+    {
+      "topic": "pay off",
+      "stem": "What does \"pay off\" mean?",
+      "options": [
+        "A. 得到好结果；有回报",
+        "B. 热身；（天气）变暖",
+        "C. 勉强应付过去",
+        "D. 挑选出；辨认出"
+      ],
+      "answer": "A",
+      "explain": "pay off 指努力或投入最终得到好结果、有回报。"
+    },
+    {
+      "topic": "pick out",
+      "stem": "The teacher asked us to ____ the main ideas in the text and underline them.",
+      "options": [
+        "A. pick out",
+        "B. look down on",
+        "C. hold on",
+        "D. pay off"
+      ],
+      "answer": "A",
+      "explain": "pick out 意为“挑选出、辨认出”，句意为“挑出文章主旨并画线”。"
+    },
+    {
+      "topic": "run away",
+      "stem": "What does \"run away\" mean?",
+      "options": [
+        "A. 接管，接任",
+        "B. 逃跑，跑开",
+        "C. 弥补",
+        "D. 得到好结果"
+      ],
+      "answer": "B",
+      "explain": "run away 意为“逃跑、跑开”。"
+    },
+    {
+      "topic": "take over",
+      "stem": "A big company is going to ____ our small factory next year.",
+      "options": [
+        "A. get by",
+        "B. make up for",
+        "C. take over",
+        "D. pick out"
+      ],
+      "answer": "C",
+      "explain": "take over 意为“接管”，句意为“大公司将接管我们的小工厂”。"
+    },
+    {
+      "topic": "warm up",
+      "stem": "What does \"warm up\" mean?",
+      "options": [
+        "A. 热身；（天气）变暖",
+        "B. 稍等一下；别挂断",
+        "C. 弄清楚；想出",
+        "D. 看不起，轻视"
+      ],
+      "answer": "A",
+      "explain": "warm up 指运动前热身，也可指天气变暖。"
+    }
+  ]
+}

@@ -110,6 +110,13 @@ export async function mountTimetable(el) {
         <span class="tt-task-text">${escapeHtml(x.text || '计划外朗读')}</span>
         <span class="tt-task-check">✓</span>
       </div>`).join('')
+    // 微练习完成打勾行（后端 acts.micro_done.done；bonus=false 时不显示加分）
+    const microRow = acts.micro_done?.done ? `
+      <div class="tt-task ok">
+        <span class="tt-task-ic">${TYPE_ICON.micro_drill}</span>
+        <span class="tt-task-text">微练习${acts.micro_done.bonus === false ? '' : ' +10'}</span>
+        <span class="tt-task-check">✓</span>
+      </div>` : ''
     const statRows = []
     for (const r of acts.readings || []) {
       const ch = r.from != null ? ` 第${r.from}${r.to !== r.from ? `–${r.to}` : ''}章` : ''
@@ -123,7 +130,7 @@ export async function mountTimetable(el) {
     const studyMin = acts.study_min || 0
     const minBadge = day.future ? '' :
       `<i class="tt-min ${studyMin >= goalMin ? 'ok' : ''}" title="每日目标 ${goalMin} 分钟（周中45/周末90）">${studyMin ? `${studyMin}′` : '0′'}/${goalMin}′${studyMin >= goalMin ? ' ✓' : ''}</i>`
-    const live = items || planItems || extraRows || statRows.length
+    const live = items || planItems || extraRows || microRow || statRows.length
     return `
       <section class="tt-day ${isToday ? 'today' : ''} ${day.future ? 'future' : ''}">
         <header>
@@ -135,7 +142,7 @@ export async function mountTimetable(el) {
         </header>
         ${day.future
           ? (planItems || `<p class="tt-day-empty">无安排</p>`)
-          : (live ? items + planItems + extraRows + statHtml
+          : (live ? items + planItems + extraRows + microRow + statHtml
             : `<p class="tt-day-empty">当天没有计划项</p>`)}
       </section>`
   }
@@ -145,6 +152,7 @@ export async function mountTimetable(el) {
       <h1>课程表</h1>
       <p>本周（${d.week_start || ''} 起）${studentWeekRate(d.completion)} · 按学习信号自动计算，不用打卡</p>
     </div>
+    <div id="tt-micro"></div>
     <div id="tt-loop"></div>
     ${summary.length ? `<div class="tt-summary">${summary.map((s) => `<span>${s}</span>`).join('')}</div>` : ''}
     ${dims.length ? `
@@ -159,6 +167,45 @@ export async function mountTimetable(el) {
     ${(d.notes || '').trim() ? `<section class="tt-notes card"><h3>📌 老师的话</h3><p>${escapeHtml(d.notes).replace(/\n/g, '<br>')}</p></section>` : ''}
   `
   renderReviewStrip(el.querySelector('#tt-loop'))
+  renderMicroCard(el.querySelector('#tt-micro'))
+}
+
+// 微练习入口卡：未做 → 去做题（+10 分）；已做 → 点开回看。
+// 接口失败或今天没题就静默隐藏，不打扰课程表主体。
+async function renderMicroCard(host) {
+  if (!host) return
+  let d
+  try {
+    d = await api.microToday()
+  } catch {
+    host.innerHTML = ''
+    return
+  }
+  d = d || {}
+  const qs = (d.questions || []).length
+  if (!d.done && !qs) { host.innerHTML = ''; return }
+  let inner
+  if (d.done) {
+    // correct_n 不在 today 返回里：拿 answered 幂等重放一次提交换回对错数
+    let score = ''
+    const known = Object.entries(d.answered || {})
+      .map(([id, choice]) => ({ id: Number(id), choice }))
+    if (known.length) {
+      try {
+        const res = await api.microSubmit(known)
+        if (res && res.correct_n != null) {
+          score = `（答对 ${res.correct_n}/${(res.results || []).length || known.length}）`
+        }
+      } catch { /* 拿不到对错就只报完成 */ }
+    }
+    inner = `<span class="tt-micro-main">✏️ 微练习已完成 ✓${score}${d.bonus === false ? '' : ' +10 分'}</span><small>点开回看</small>`
+  } else {
+    inner = `<span class="tt-micro-main">✏️ 今日微练习 ${qs} 题${d.bonus === false ? '' : ' · 做了 +10 分'}</span><small>现在做 →</small>`
+  }
+  host.innerHTML = `<button type="button" class="tt-micro-card ${d.done ? 'done' : ''}">${inner}</button>`
+  host.querySelector('.tt-micro-card').addEventListener('click', () => {
+    location.hash = '/micro'
+  })
 }
 
 async function renderReviewStrip(host) {

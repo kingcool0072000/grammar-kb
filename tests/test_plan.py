@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import json
 import sqlite3
 import zipfile
 from datetime import date, datetime, timedelta
@@ -752,9 +753,9 @@ def test_rules_registry_and_switch(plan_env):
                   params={"user": "malin"}).json()["data"]["rules"]
     by_id = {r["id"]: r for r in rules}
     assert set(by_id) == {"topic_counts_lecture", "speak_early_credit",
-                          "zombie_filter", "exam_user_scope"}
+                          "zombie_filter", "exam_user_scope", "micro_bonus"}
     assert all(r["value"] == 1 for r in rules)  # 默认开
-    assert len(c.get("/plan/rules", headers=hs).json()["data"]["rules"]) == 4
+    assert len(c.get("/plan/rules", headers=hs).json()["data"]["rules"]) == 5
 
     # 2. 内核：默认（开）专题点亮 29 讲
     from grammar_kb.plan import PlanStore
@@ -1211,3 +1212,101 @@ def test_week_preview_spreads_draft_without_saving(plan_env, weekday_clock):
     missing = c.post("/plan/week-preview", headers=ht,
                      json={"week_start": MON, "user": "malin"})
     assert missing.status_code == 422
+
+
+# ---- 微练习（独立线上功能）：信号点亮 / 完成率加分 / 旧排程行废除 ----
+
+def _seed_micro_daily(env, day, *, done=1, answered=3, user="malin"):
+    """直落 fce.db 的 micro_daily（生产表由微练习模块建，这里建同构表；
+    answered_json 按 {qid: choice} 契约写）。"""
+    con = sqlite3.connect(env / "fce.db")
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS micro_daily ("
+        " user TEXT, date TEXT, qids_json TEXT, answered_json TEXT,"
+        " done INTEGER, created_at TEXT, PRIMARY KEY(user, date))")
+    con.execute(
+        "INSERT OR REPLACE INTO micro_daily (user, date, qids_json,"
+        " answered_json, done, created_at) VALUES (?,?,?,?,?,?)",
+        (user, day, "[]",
+         json.dumps({i: "A" for i in range(answered)}), done,
+         f"{day}T12:00:00Z"))
+    con.commit()
+    con.close()
+
+
+def test_micro_daily_done_lights_signal_and_bonus(plan_env, weekday_clock):
+    """micro_daily done=1：signals 点亮 micro，完成率 +10（封顶 100）。
+
+    微练习不进 done/total 分母（不占计划行）；表不存在 / 当天无任务行
+    （base=None）时既不加分也不把 None 变成数字。
+    """
+    from grammar_kb.plan import PlanStore
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    ht = _login(c, "teacher", "123456")
+    _put_week(c, ht, {"lectures": [29]})
+    day = today_cn().isoformat()
+    ps = PlanStore(str(plan_env / "fce.db"),
+                   exam_db_path=str(plan_env / "exam.db"))
+    # 表不存在：无信号、acts.micro_done 全零、完成率维持基础值
+    comp = ps.day_completion("malin", day)
+    assert "micro" not in comp["signals"]
+    td = ps.today_tasks("malin", day)
+    assert td["acts"]["micro_done"] == {"done": False, "n": 0, "total": 3, "bonus": True}
+    assert td["percent"] == 0
+    # done=1：信号点亮，基础 0% → 10%；分母不含微练习
+    _seed_micro_daily(plan_env, day, done=1, answered=3)
+    comp = ps.day_completion("malin", day)
+    assert comp["signals"]["micro"] is True
+    td = ps.today_tasks("malin", day)
+    assert td["acts"]["micro_done"] == {"done": True, "n": 3, "total": 3, "bonus": True}
+    assert td["total"] == len(td["tasks"])
+    assert td["percent"] == 10
+    # 封顶 100：讲次也完成 → 基础 100%，加分后仍 100 不超
+    c.post("/exams", headers=hs, json={
+        "lecture": 29, "date": day, "score": 90, "wrong": [], "kind": "lecture"})
+    td = ps.today_tasks("malin", day)
+    assert td["done"] == td["total"] == 1
+    assert td["percent"] == 100
+
+
+def test_micro_bonus_rule_off_and_partial_answer(plan_env, weekday_clock):
+    """规则关闭 / 只答一部分：信号与加分口径各自成立。"""
+    from grammar_kb.plan import PlanStore
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    _put_week(c, ht, {"lectures": [29]})
+    day = today_cn().isoformat()
+    ps = PlanStore(str(plan_env / "fce.db"),
+                   exam_db_path=str(plan_env / "exam.db"))
+    # 部分作答（done=0，答了 2/3）不算完成：无信号、无加分、n 记 2
+    _seed_micro_daily(plan_env, day, done=0, answered=2)
+    comp = ps.day_completion("malin", day)
+    assert "micro" not in comp["signals"]
+    td = ps.today_tasks("malin", day)
+    assert td["acts"]["micro_done"] == {"done": False, "n": 2, "total": 3, "bonus": True}
+    assert td["percent"] == 0
+    # 做完但 micro_bonus 关闭：信号仍点亮（仅点亮不计分），完成率不加
+    _seed_micro_daily(plan_env, day, done=1, answered=3)
+    ps.set_rule("malin", "micro_bonus", 0)
+    comp = ps.day_completion("malin", day)
+    assert comp["signals"]["micro"] is True
+    td = ps.today_tasks("malin", day)
+    assert td["percent"] == 0
+    assert td["acts"]["micro_done"]["done"] is True
+
+
+def test_micro_drill_rows_no_longer_scheduled(plan_env, weekday_clock):
+    """旧「第N讲 微练习 5 题」排程行废除：focus_kps 不再生成计划行。"""
+    from grammar_kb.plan import PlanStore
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    _put_week(c, ht, {"lectures": [29], "focus_kps": [29, 30]})
+    ps = PlanStore(str(plan_env / "fce.db"),
+                   exam_db_path=str(plan_env / "exam.db"))
+    for i in range(7):
+        d = (date.fromisoformat(MON) + timedelta(days=i)).isoformat()
+        rows = ps.week_daily_tasks(MON, for_date=d, user="malin")
+        assert not any(t.get("type") == "micro_drill" for t in rows), d
+        assert not any(str(t.get("key") or "").startswith("micro:")
+                       for t in rows), d

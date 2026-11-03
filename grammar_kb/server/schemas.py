@@ -164,6 +164,43 @@ try:
         score: int = Field(ge=0, le=10)
         comment: str = Field(default="", max_length=2000)
 
+    class MicroAnswerIn(BaseModel):
+        """微练习单题作答。"""
+
+        id: int = Field(ge=1)
+        choice: str = Field(min_length=1, max_length=8)
+
+    class MicroSubmitIn(BaseModel):
+        """学生提交当日微练习作答（1~6 题）。"""
+
+        day: Optional[str] = Field(default=None, max_length=10)
+        answers: list[MicroAnswerIn] = Field(min_length=1, max_length=6)
+
+    class MicroQuestionIn(BaseModel):
+        """教师手动添加微练习题（默认 draft，上架走 PUT status）。"""
+
+        category: str = Field(default="grammar", max_length=16)
+        stem: str = Field(min_length=1, max_length=2000)
+        options: list = Field(default_factory=list)
+        answer: str = Field(min_length=1, max_length=8)
+        topic: str = Field(default="", max_length=120)
+        explain: str = Field(default="", max_length=2000)
+        source: str = Field(default="manual", max_length=16)
+        ref_lecture: Optional[int] = None
+        ref_qnum: Optional[int] = None
+        status: str = Field(default="draft", max_length=16)
+
+    class MicroQuestionUpdateIn(BaseModel):
+        """教师编辑微练习题（仅传修改字段）。"""
+
+        category: Optional[str] = Field(default=None, max_length=16)
+        topic: Optional[str] = Field(default=None, max_length=120)
+        stem: Optional[str] = Field(default=None, max_length=2000)
+        options: Optional[list] = None
+        answer: Optional[str] = Field(default=None, max_length=8)
+        explain: Optional[str] = Field(default=None, max_length=2000)
+        status: Optional[str] = Field(default=None, max_length=16)
+
 except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
     ExamRecordIn = None
     FceSubmissionIn = None
@@ -178,4 +215,8 @@ except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
     VideoItemIn = None
     VideoRetellIn = None
     VideoGradeIn = None
+    MicroAnswerIn = None
+    MicroSubmitIn = None
+    MicroQuestionIn = None
+    MicroQuestionUpdateIn = None
 

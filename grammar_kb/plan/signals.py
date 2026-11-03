@@ -83,8 +83,8 @@ class SignalsMixin:
         返回，不引入任何共享可变状态。
 
         连接拓扑（单趟）：
-        - 讲次/micro 成绩：exam.db 一个连接（ctx 路径整周预取，单日直调
-          时 ctx 只捞当天窗口），micro 与 lecture_done 共用同一批行；
+        - 讲次成绩：exam.db 一个连接（ctx 路径整周预取，单日直调
+          时 ctx 只捞当天窗口）；
         - 背词/专注/朗读/FCE/试卷：fce.db（plan 主库）一个连接一趟查完
           ——focus_sessions 原「时长一遍 + 书名一遍」合并为一趟，SELECT
           只取所需列（不碰 polyline/activity_json 等大列）；
@@ -111,16 +111,20 @@ class SignalsMixin:
         for lec_no in ctx.lecture_done(day, nxt, "hw"):
             out[f"hw:{lec_no}"] = True
             out.setdefault("lecture", True)
-        # 微练习：当天有该讲成绩（任意 kind）即点亮（沿用成绩口径）。
-        # 与 lecture_done 同一批 exam_records 行（date 精确相等；规则开关
-        # exam_user_scope 的过滤条件也一致）。
-        if self._exam_db():
-            for lec_no in ctx.exam_lectures_on(day):
-                out[f"micro:{lec_no}"] = True
         try:
             with self._connect() as conn:
                 tabs = {r[0] for r in conn.execute(
                     "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+                if "micro_daily" in tabs:
+                    # 微练习（线上功能）：当天该生整组做完（done=1）才点亮
+                    # 「micro」信号。部分作答不算完成——加分由 today_tasks
+                    # 按 micro_bonus 规则另算。表由微练习模块建，缺表容错。
+                    row = conn.execute(
+                        "SELECT done FROM micro_daily"
+                        " WHERE user = ? AND date = ?", (user, day),
+                    ).fetchone()
+                    if row and row["done"]:
+                        out["micro"] = True
                 if "recite_word_progress" in tabs:
                     # mastered_at 是 UTC ISO。和背词周窗口同一北京日切，
                     # 否则北京时间凌晨新掌握的词不会点亮当天的错词信号。

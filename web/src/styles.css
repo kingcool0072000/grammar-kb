@@ -3689,3 +3689,100 @@ li.open .topic-reveal-btn.reopen { display: inline-block; }
 .vs-bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 12px; border: 1px solid var(--line, #e2e8f0); border-radius: 10px; background: var(--card, #fff); flex-wrap: wrap; }
 .vs-bar input[type="range"] { flex: 1; min-width: 160px; accent-color: #8a6d3b; }
 .vs-time { font-size: 12px; color: var(--ink-soft, #52606d); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---- 微练习（学生每日3题 #/micro + 教师题库 #/microAdmin） ---- */
+.mc-badge {
+  display: inline-flex; align-items: center; flex: none;
+  font-size: 11.5px; font-weight: 800; border-radius: 999px; padding: 2px 10px;
+}
+.mc-badge.wrong { background: #fee2e2; color: #b91c1c; }
+.mc-badge.variant { background: #ede9fe; color: #6d28d9; }
+.mc-badge.tense { background: #dbeafe; color: #1d4ed8; }
+.mc-badge.phrasal { background: #dcfce7; color: #15803d; }
+.mc-badge.idiom { background: #ffedd5; color: #c2410c; }
+.mc-badge.grammar { background: #e2e8f0; color: #475569; }
+.mc-card {
+  border: 1px solid var(--line); background: var(--card); border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 12px;
+}
+.mc-card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mc-topic { font-size: 12.5px; font-weight: 700; color: var(--ink-soft); }
+.mc-qnum { font-size: 12px; font-weight: 600; color: var(--ink-faint); margin-left: auto; }
+.mc-stem { font-size: 14.5px; color: var(--ink); line-height: 1.65; margin: 8px 0 0; }
+.mc-opts { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.mc-opt {
+  display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line);
+  border-radius: 9px; padding: 8px 12px; cursor: pointer; transition: all 0.15s;
+}
+.mc-opt:hover { border-color: var(--brand); background: #f5f7ff; }
+.mc-opt.picked { border-color: var(--brand); background: #eef2ff; }
+.mc-opt.locked { cursor: default; }
+.mc-opt.locked:hover { border-color: var(--line); background: var(--card); }
+.mc-opt.right { border-color: #86efac; background: #f0fdf4; }
+.mc-opt.wrong { border-color: #fca5a5; background: #fef2f2; }
+.mc-opt-key { font-weight: 800; color: var(--brand-ink); flex: none; }
+.mc-opt-text { font-size: 13.5px; color: var(--ink); line-height: 1.55; flex: 1; }
+.mc-opt-tag {
+  flex: none; font-size: 11px; font-weight: 800; color: #15803d;
+  background: #dcfce7; border-radius: 999px; padding: 1px 8px;
+}
+.mc-verdict { font-size: 13px; font-weight: 800; margin-left: auto; }
+.mc-verdict.ok { color: #15803d; }
+.mc-verdict.no { color: #b91c1c; }
+.mc-answer { margin: 10px 0 0; font-size: 13.5px; color: var(--ink-soft); }
+.mc-answer b { color: #15803d; }
+.mc-explain {
+  margin-top: 10px; background: var(--bg-soft); border-radius: 9px;
+  padding: 9px 12px; font-size: 13px; color: var(--ink-soft); line-height: 1.65;
+  white-space: pre-line;
+}
+.mc-explain b { display: block; margin-bottom: 3px; color: var(--ink); }
+.mc-empty { text-align: center; color: var(--ink-soft); font-size: 14px; padding: 28px 16px; }
+.mc-done-card {
+  border-color: #bfe0cc; background: #e9f5ee; margin-bottom: 14px;
+}
+.mc-done-card b { font-size: 15.5px; color: #2e7d4f; }
+.mc-done-sub { margin: 4px 0 0; font-size: 13px; color: #2e7d4f; }
+.mc-actions { display: flex; align-items: center; gap: 12px; margin: 14px 0; }
+.mc-actions-hint { font-size: 12.5px; color: var(--ink-faint); }
+
+/* 课程表微练习入口卡 */
+.tt-micro-card {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  border: 1px solid #fde68a; background: #fffbeb; color: #92400e;
+  border-radius: 12px; padding: 11px 16px; font: inherit; font-size: 14px;
+  font-weight: 700; cursor: pointer; margin-bottom: 14px;
+}
+.tt-micro-card:hover { background: #fef3c7; }
+.tt-micro-card.done { border-color: #bfe0cc; background: #e9f5ee; color: #2e7d4f; }
+.tt-micro-card.done:hover { background: #ddf0e4; }
+.tt-micro-main { flex: 1; }
+.tt-micro-card small { font-weight: 600; opacity: 0.8; }
+
+/* 微练习题库管理（教师） */
+.mcad-stats-card { margin-bottom: 14px; }
+.mcad-stats-card h3 { margin: 0 0 10px; font-size: 15px; }
+.mcad-stats-grid {
+  display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr;
+  gap: 6px 10px; font-size: 13.5px; align-items: center;
+}
+.mcad-stats-head { font-size: 12px; font-weight: 800; color: var(--ink-faint); }
+.mcad-stats-cat { display: flex; align-items: center; gap: 6px; font-weight: 700; }
+.mcad-list { margin-top: 4px; }
+.mc-meta { margin: 10px 0 0; font-size: 12.5px; color: var(--ink-faint); display: flex; gap: 12px; flex-wrap: wrap; }
+.mcad-actions { display: flex; gap: 8px; margin-top: 12px; }
+.mcad-del { color: #b91c1c; }
+.mcad-del:hover { border-color: #fca5a5; color: #b91c1c; }
+.mcad-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.mcad-form label {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 12.5px; font-weight: 700; color: var(--ink-soft);
+}
+.mcad-form input, .mcad-form textarea, .mcad-form select {
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
+  font: inherit; font-size: 13.5px; color: var(--ink); background: var(--card);
+}
+.mcad-form textarea { resize: vertical; }
+.mcad-add-card { max-width: 560px; }
+.mcad-add-card h3 { margin: 0 0 4px; font-size: 15px; }
+@media (max-width: 700px) { .mcad-stats-grid { grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr; font-size: 12.5px; } }

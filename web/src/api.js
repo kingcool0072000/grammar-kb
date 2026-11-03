@@ -359,6 +359,17 @@ export const api = {
   videoRetellGrade: (id, rec) =>
     reqJson(`/video-study/retells/${id}`, 'PUT', rec),
   videoRetellDelete: (id) => reqJson(`/video-study/retells/${id}`, 'DELETE'),
+  // 微练习（学生每日 3 题）：今日题目/提交作答（幂等可重复提交）
+  microToday: (day) => req('/micro/today', { searchParams: day ? { day } : {} }),
+  microSubmit: (answers, day) =>
+    reqJson('/micro/submit', 'POST', day ? { day, answers } : { answers }),
+  // 微练习题库（教师）：列表 / 新增 / 编辑 / 上下架与删除 / 分类统计
+  microAdminList: (params) => req('/micro-admin/questions', { searchParams: params }),
+  microAdminAdd: (q) => reqJson('/micro-admin/questions', 'POST', q),
+  microAdminUpdate: (id, fields) =>
+    reqJson(`/micro-admin/questions/${id}`, 'PUT', fields),
+  microAdminDelete: (id) => reqJson(`/micro-admin/questions/${id}`, 'DELETE'),
+  microAdminStats: () => req('/micro-admin/stats'),
 }
 
 // multipart 上传（epub 等大文件）：带登录态，返回解包后的 data

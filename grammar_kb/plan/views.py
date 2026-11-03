@@ -23,7 +23,8 @@ class ViewsMixin:
         周拆解（用户要的「自动拆解」）从 tasks 推导：
         - 阅读篇数（reading 目标书数）
         - 泛读总词数（各书目标% 对应词数 − 已读词数，按剩余摊到天）
-        - 题型类数（微练习讲数 + FCE 项数 + 讲次测验，去重类目）
+        - 题型类数（讲次测验 + 作业卷 + FCE 项数，去重类目；微练习已是
+          独立线上功能，不进周拆解）
         已到的日子一律 ``today_tasks``（信号；有快照才改走回填）。
         没有计划项时 percent 为 null，不显示成 0%。
 
@@ -70,9 +71,10 @@ class ViewsMixin:
                 "current_chapter": st["current_chapter"] if st else None,
             })
         rem_total = sum(x["remaining_words"] or 0 for x in reading_items)
+        # 微练习已是独立线上功能（每天 3 题，做了加分不进分母）：
+        # 不再算题型、不再按「讲数 × 5 题 × 剩余天」估题数，drill_count 随之删除
+        # （前后端均无消费方，grep 确认）。
         drill_types = set()
-        if t.get("focus_kps"):
-            drill_types.add("微练习")
         if t.get("lectures"):
             drill_types.add("讲次测验")
         if t.get("hw_papers"):
@@ -87,8 +89,6 @@ class ViewsMixin:
             "reading_words_total": rem_total,
             "reading_words_per_day": round(rem_total / days_left) if rem_total else 0,
             "drill_types": sorted(drill_types),
-            "drill_count": len(t.get("focus_kps") or []) * 5 * days_left
-                           if t.get("focus_kps") else 0,
             "lecture_count": len(t.get("lectures") or []),
             "hw_paper_count": len(t.get("hw_papers") or []),
             "fce_count": len(t.get("fce") or []),

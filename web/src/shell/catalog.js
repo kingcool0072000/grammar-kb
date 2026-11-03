@@ -25,6 +25,8 @@ const TEACHER_ALLOWED = new Set([
   'students', 'paperAdmin', 'readingAdmin', 'readingList', 'topicsAdmin',
   'videoAdmin',
   'libraryManage', 'librarySettings',
+  // 微练习题库管理（教师专属，不进顶部 Tab）
+  'microAdmin',
   // 师生都能开的隐藏页（教师从卡片进专题、泛读馆）
   'topics', 'library', 'libraryReader', 'fcePapers', 'config', 'conquered',
   'videoStudy',
@@ -32,7 +34,8 @@ const TEACHER_ALLOWED = new Set([
 
 const STUDENT_ALLOWED = new Set([
   ...STUDENT_TABS.map((t) => t.key),
-  'conquered', 'config', 'libraryReader',
+  // 课程表微练习入口卡进的隐藏页
+  'conquered', 'config', 'libraryReader', 'micro',
 ])
 
 /** 旧 hash 归一。会改 location（与拆壳前 currentRoute 相同）。 */

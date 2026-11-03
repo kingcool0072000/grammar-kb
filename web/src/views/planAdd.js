@@ -257,5 +257,5 @@ export const PLAN_ADD_TYPES = [
   { id: 'article', label: '精读课文', hint: '交了朗读才算完成' },
   { id: 'paper', label: '单词试卷', hint: '周日做卷' },
   { id: 'speak', label: '朗读篇数', hint: '本周安排几篇录音' },
-  { id: 'focus_kp', label: '微练习', hint: '工作日攻坚，每讲 5 题' },
+  { id: 'focus_kp', label: '微练习', hint: '攻坚讲次：周验收对照，微练习优先出这些讲的题' },
 ]

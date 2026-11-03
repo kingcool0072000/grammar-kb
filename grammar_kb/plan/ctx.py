@@ -153,10 +153,6 @@ class WeekCtx:
                     if lo_d <= d < hi_d}
         return out
 
-    def exam_lectures_on(self, day: str) -> set:
-        """当天有任意成绩登记的讲次（_auto_done 的 micro 口径：date 精确相等）。"""
-        return {lec for lec, d, _k in self._exam_done_rows() if d == day}
-
     # ---- FCE 提交覆盖（_fce_actuals 同口径：cn_dt 窗口 + 标签集合） ----
 
     def _fce_all_rows(self) -> list:

@@ -1,6 +1,7 @@
 """周计划逐日均摊、今日任务与周清单。"""
 from __future__ import annotations
 
+import json
 import re
 import sqlite3
 from datetime import date, timedelta
@@ -86,12 +87,11 @@ class ScheduleMixin:
             }
 
         if dow < 5:
-            # ---- 工作日：攻坚微练习 + 讲次/作业卷 + 背词 + 泛读 ----
-            for lec in (t.get("focus_kps") or []):
-                tasks.append({
-                    "type": "micro_drill", "key": f"micro:{lec}",
-                    "lecture": lec, "text": f"第{lec}讲 微练习 5 题",
-                })
+            # ---- 工作日：讲次/作业卷 + 背词 + 泛读 ----
+            # 微练习已改为独立线上功能（每天 3 题）：不占计划行、不进
+            # 完成率分母；完成在实录 acts.micro_done 点亮，按 micro_bonus
+            # 规则给当天完成率加分。focus_kps 仅保留为攻坚讲次标注
+            # （周验收对照 / 微练习出题优先级），不再驱动排程。
             # 讲次（课程测验口径）与作业卷（hw 口径）各自按 kind 判剩余，
             # 剩余量摊给剩余工作日；今天考过的行照常出（自动 ✓）
             lec_rest = [x for x in (t.get("lectures") or []) if x not in done_lecs]
@@ -479,9 +479,18 @@ class ScheduleMixin:
             out.append(t2)
         done_n = sum(1 for x in out if x["done"])
         frozen = historical is not None
+        # 完成率：先按任务行算基础分；微练习当天整组做完（micro_daily
+        # done=1）且 micro_bonus 规则开着 → 基础分 +10 封顶 100。基础分
+        # 为 None（当天没有任务行）不加分，避免空日子显示成 10%。
+        # 微练习不进 done/total 分母；历史快照路径同样拿得到 acts，加分口径一致。
+        base = completion_percent(done_n, len(out))
+        percent = base
+        micro = acts_out.get("micro_done") or {}
+        if base is not None and micro.get("done") and self._flag(user, "micro_bonus"):
+            percent = min(100, base + 10)
         return {"date": d, "week_start": ws, "tasks": out,
                 "done": done_n, "total": len(out),
-                "percent": completion_percent(done_n, len(out)),
+                "percent": percent,
                 "basis": "history" if frozen else "signals",
                 "historical": frozen,
                 "acts": acts_out}
@@ -518,8 +527,40 @@ class ScheduleMixin:
             "vocab_min": acts.get("vocab_min", 0),
             "study_min": acts.get("study_min", 0),
             "focus_min": round(acts.get("focus_sec", 0) / 60),
+            # 微练习独立键（不进 extra_speaks，也不进任务清单分母）：
+            # done=当天 micro_daily 整组完成；n=已答数；total=每日组大小；
+            # bonus=micro_bonus 规则开关（前端据此显示/隐藏「+10」）。
+            "micro_done": {**self._micro_daily_state(user, day),
+                           "bonus": bool(self._flag(user, "micro_bonus"))},
         }
         return auto, read_titles, acts_out
+
+    def _micro_daily_state(self, user: str, day: str) -> dict:
+        """当天 micro_daily 行 → 微练习实录（表不在/未作答全零）。
+
+        micro_daily / micro_log 由微练习模块建（fce.db），这里只读：
+        缺表、缺列、坏 JSON 一律按「未完成 0/3」容错，不让计划页 500。
+        """
+        state = {"done": False, "n": 0, "total": 3}
+        try:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT done, answered_json FROM micro_daily"
+                    " WHERE user = ? AND date = ?", (user, day),
+                ).fetchone()
+        except sqlite3.Error:
+            return state
+        if not row:
+            return state
+        try:
+            # answered_json 契约为 {qid: choice} 对象（微练习模块写入），
+            # n=已答题数；兼容旧 list 形态，坏 JSON 按 0 计
+            answered = json.loads(row["answered_json"] or "{}")
+            state["n"] = len(answered) if isinstance(answered, (dict, list)) else 0
+        except (ValueError, TypeError):
+            pass
+        state["done"] = bool(row["done"])
+        return state
 
 
     def week_todo(self, user: str) -> dict:

@@ -18,6 +18,7 @@ from .http import _ok
 from .routes_analytics import register_analytics
 from .routes_atlas import register_atlas
 from .routes_library import register_library
+from .routes_micro import register_micro
 from .routes_plan import register_plan
 from .routes_practice import register_practice
 from .routes_query import register_query
@@ -70,6 +71,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from ..video_study import VideoStore
     from ..plan import PlanStore
     from ..vocab_exam import VocabExamStore
+    from ..micro import MicroStore
     from ..analytics_ai import AnalyticsAI
 
     # exam 库路径在此先落定：ExamStore 内部会自解析默认路径，但
@@ -99,6 +101,10 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     # 词汇级别考试：成绩登记（fce.db）。单词级别可由教师直接设定；
     # 未设定时 L0 恒开，L{n} 考试 ≥80 解锁 L{n+1}
     vocab_exam = VocabExamStore(fce_db_path)
+    # 微练习（每日 3 题）：题库/当日抽题/作答流水在 fce.db；题源读
+    # grammar.db 作业卷、已学范围读 exam.db——路径口径与 PlanStore 相同
+    micro = MicroStore(fce_db_path, exam_db_path=exam_db_path,
+                       grammar_db_path=db_path)
     # 泛读馆（整本书英文泛读）：路径解析沿 fce_query 模式
     # （GRAMMAR_KB_LIBRARY_DB/GRAMMAR_KB_LIBRARY_DIR → data/）
     library = LibraryStore()
@@ -227,6 +233,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("POST", "/video-study/retells"),
         ("GET", "/video-study/retells"),
         ("GET", "/video-study/retells/"),
+        # 微练习（学生拉当日题 + 判分提交；/micro-admin/* 教师专属不在此列）
+        ("GET", "/micro/today"),
+        ("POST", "/micro/submit"),
     )
 
     @app.middleware("http")
@@ -315,6 +324,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
                     "GET /fce-papers · GET /fce-papers/{test_id}",
                     "GET /homework · GET /homework/{lecture}",
                     "GET/POST /exams · PUT/DELETE /exams/{id}",
+                    "GET /micro/today · POST /micro/submit（微练习，教师另见 /micro-admin）",
                     "GET /docs (Swagger UI)",
                 ],
             }
@@ -326,6 +336,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         analytics_ai=analytics_ai, recite=recite, focus=focus, topics=topics,
         videos=video_study,
         plan=plan, homework_admin=homework_admin, vocab_exam=vocab_exam,
+        micro=micro,
         library=library, prep_queue=prep_queue, audio_dir=audio_dir,
     )
     # 注册顺序与拆分前 create_app 内的定义顺序一致（路径重叠时先注册者优先）
@@ -339,6 +350,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     register_library(app, ctx)
     # 学情月报（教师端聚合，dbreg 四库只读 + 300s TTL 缓存）
     register_analytics(app, ctx)
+    # 微练习（学生每日 3 题 + 教师题库管理）
+    register_micro(app, ctx)
 
     # ---- 静态前端（可选）：web/dist 构建产物由本进程直接服务 ----
     # 前端以 /api 调后端；开发期走 Vite 代理（剥前缀），部署期由下面

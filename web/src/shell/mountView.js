@@ -43,6 +43,15 @@ export function mountView(route, container, { role, state, ctx, pointsById }) {
     return import('../views/topicsAdmin.js').then(({ mountTopicsAdmin }) =>
       mountTopicsAdmin(container))
   }
+  // 微练习：学生答题页（课程表入口卡进）+ 教师题库管理
+  if (route === 'micro') {
+    return import('../views/micro.js').then(({ mountMicro }) =>
+      mountMicro(container, { role }))
+  }
+  if (route === 'microAdmin') {
+    return import('../views/microAdmin.js').then(({ mountMicroAdmin }) =>
+      mountMicroAdmin(container, { role }))
+  }
   if (route === 'config') return mountConfig(container)
   if (route === 'taxonomy') {
     return mountTaxonomy(container, { pointsById, openKp: ctx.openKp })
