@@ -117,8 +117,8 @@ class SignalsMixin:
                     "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
                 if "micro_daily" in tabs:
                     # 微练习（线上功能）：当天该生整组做完（done=1）才点亮
-                    # 「micro」信号。部分作答不算完成——加分由 today_tasks
-                    # 按 micro_bonus 规则另算。表由微练习模块建，缺表容错。
+                    # 「micro」信号。部分作答不算完成。微练习不参与完成率，
+                    # 只做当日点亮展示。表由微练习模块建，缺表容错。
                     row = conn.execute(
                         "SELECT done FROM micro_daily"
                         " WHERE user = ? AND date = ?", (user, day),

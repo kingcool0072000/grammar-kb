@@ -146,6 +146,9 @@ async function mountContent(el) {
             <button class="prep-card" data-go="topics">
               <b>${topicCount}</b><span>已上架专题 · 预览与学生进度</span>
             </button>
+            <button class="prep-card" data-go="microAdmin">
+              <b>微练习题库</b><span>审核 · 正确率 · 手动加题</span>
+            </button>
           </div>
           <p class="reading-hint">专题是结构化内容：子知识点{讲解+错题回顾+泛化题}，题目引用题库或自含；制作后上架、配置给特定学生；学生在学生版「专题学习」自学并标记进度。</p>
         </div>

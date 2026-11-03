@@ -71,7 +71,7 @@ class ViewsMixin:
                 "current_chapter": st["current_chapter"] if st else None,
             })
         rem_total = sum(x["remaining_words"] or 0 for x in reading_items)
-        # 微练习已是独立线上功能（每天 3 题，做了加分不进分母）：
+        # 微练习已是独立线上功能（每天 3 题，不加分不进分母）：
         # 不再算题型、不再按「讲数 × 5 题 × 剩余天」估题数，drill_count 随之删除
         # （前后端均无消费方，grep 确认）。
         drill_types = set()
@@ -81,7 +81,7 @@ class ViewsMixin:
             drill_types.add("作业卷")
         if t.get("fce"):
             drill_types.add("FCE 真题")
-        if t.get("videos"):
+        if self._plan_videos(t):
             drill_types.add("视频复述")
         breakdown = {
             "reading_books": len(reading_items),
@@ -92,7 +92,7 @@ class ViewsMixin:
             "lecture_count": len(t.get("lectures") or []),
             "hw_paper_count": len(t.get("hw_papers") or []),
             "fce_count": len(t.get("fce") or []),
-            "video_count": len(t.get("videos") or []),
+            "video_count": len(self._plan_videos(t)),
         }
 
         # ---- 逐日矩阵 ----
@@ -133,16 +133,20 @@ class ViewsMixin:
             basis = "signals"
         return {
             "week_start": week_start, "tasks": t, "notes": w.get("notes") or "",
+            # 微练习门控（/plan/my-week 与教师周视图共用）：tasks.micro
+            # 开关透出，前端据此显示/隐藏微练习入口
+            "micro_enabled": bool(t.get("micro")),
             "breakdown": breakdown, "days": days, "current_week": in_week,
-            # 精读任务补标题（学生课程表摘要显示文章名，不止「N 篇」）
+            # 精读任务补标题（学生课程表摘要显示文章名，不止「N 篇」；
+            # 与排程同一读法：article_units 优先、旧 articles 回退）
             "article_titles": [
                 {"id": aid, "title": ctx.article_title(aid)}
-                for aid in (t.get("articles") or [])
+                for aid in self._plan_articles(t)
             ],
             # 视频任务补标题（学生课程表/计划卡显示片名；已删除的为 null）
             "video_titles": [
                 {"vid": v, "title": self._video_title_any(v)}
-                for v in (t.get("videos") or [])
+                for v in self._plan_videos(t)
             ],
             "goal_progress": self._week_goal_progress(t, days, user, week_start,
                                                       ctx=ctx),
@@ -168,6 +172,8 @@ class ViewsMixin:
         - 泛读：按各书周目标%（词数口径）vs 周内已读词数（实录汇总）
         - 精读：计划文章数 vs 已提交录音数
         - 试卷：计划卷数 vs 登记考试数
+        - 视频复述：计划 vid 数 vs 周内提交复述数
+        - 微练习：tasks.micro 开着才有；该周 7 天里整组做完的天数 / 7
         """
         dims = []
 
@@ -301,7 +307,7 @@ class ViewsMixin:
                 done100 = done_pct / goal_ch_count * 100
                 dim("📖", "泛读", round(min(done100, 999), 1), 100)
 
-        arts = t.get("articles") or []
+        arts = self._plan_articles(t)
         # 周内全部朗读提交（含计划外）：精读朗读 = 提交过录音才算完成。
         # 完成行的 article_id 可能缺字段（快照/占位行只有 key="article:N"），
         # 从 key 解析兜底。
@@ -335,13 +341,21 @@ class ViewsMixin:
                 if x.get("type") == "paper" and x.get("done"))
             dim("📝", "试卷", done_p, len(papers))
 
-        videos = [str(v).strip() for v in (t.get("videos") or []) if str(v).strip()]
+        videos = self._plan_videos(t)
         if videos:
             done_ids = (ctx.retold_video_ids(week_start, add_days(week_start, 7))
                         if ctx is not None else
                         self._retold_video_ids(week_start, add_days(week_start, 7),
                                                user))
             dim("🎬", "视频复述", len(set(videos) & done_ids), len(videos))
+
+        # 微练习维度：周任务开了 micro（tasks["micro"]）才出现——微练习
+        # 本就不排计划行、不进日清单分母，这里以「周内做完的天数」计量：
+        # done=该周 7 天里 micro_daily 整组做完（done=1）的天数，分母恒 7。
+        if t.get("micro"):
+            done_days = self._micro_done_days(user, week_start,
+                                              add_days(week_start, 7))
+            dim("✏️", "微练习", done_days, 7)
 
         total_items = sum(d["total"] for d in dims)
         # 泛读维度按实际计数（可超 100%）；其余维度封顶（完成即满）
@@ -352,6 +366,23 @@ class ViewsMixin:
         return {"dims": dims, "percent": pct,
                 "done_items": round(done_items), "total_items": total_items,
                 "week_start": week_start}
+
+    def _micro_done_days(self, user: str, lo: str, hi: str) -> int:
+        """[lo, hi) 内 micro_daily 整组做完（done=1）的天数（周目标微练习维度）。
+
+        micro_daily 由微练习模块建（fce.db 同库），这里只读：缺表/缺列
+        一律容错 0，与 schedule._micro_daily_state 同一容错风格。
+        """
+        try:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT COUNT(*) n FROM micro_daily"
+                    " WHERE user = ? AND date >= ? AND date < ? AND done = 1",
+                    (user, lo, hi),
+                ).fetchone()
+                return int(row["n"] or 0) if row else 0
+        except sqlite3.Error:
+            return 0
 
 
     def week_preview(self, week_start: str, tasks: dict, user: str) -> dict:
@@ -469,7 +500,8 @@ class ViewsMixin:
             has_plan = bool(t.get("focus_kps") or t.get("lectures")
                             or t.get("hw_papers") or t.get("vocab_goal")
                             or t.get("fce") or t.get("reading")
-                            or t.get("videos"))
+                            or t.get("videos") or t.get("article_units")
+                            or t.get("video_units") or t.get("micro"))
             done = total = 0
             bases: set[str] = set()
             if ws <= cur:  # 已开始的周才聚合完成度（未来周无信号）
@@ -501,7 +533,8 @@ class ViewsMixin:
                 "vocab_goal": t.get("vocab_goal"),
                 "vocab_new": t.get("vocab_new"),
                 "reading": t.get("reading") or {},
-                "videos": t.get("videos") or [],
+                # 读契约同款：units 优先、旧 videos 平铺回退
+                "videos": self._plan_videos(t),
                 "notes": w.get("notes") or "",
                 "done": done, "total": total,
                 "percent": completion_percent(done, total) if ws <= cur else None,

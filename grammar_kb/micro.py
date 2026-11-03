@@ -235,22 +235,7 @@ class MicroStore:
             "questions": [qmap[q] for q in qids if q in qmap],
             "answered": answered,
             "done": bool(row["done"]) if row else False,
-            # micro_bonus 规则开关（plan_rule_flags 同库；缺行=默认开）。
-            # 前端据此显示/隐藏「+10 分」文案，与计划层加分口径一致。
-            "bonus": self._bonus_flag(conn, user),
         }
-
-    @staticmethod
-    def _bonus_flag(conn, user: str) -> bool:
-        """读 plan_rule_flags 的 micro_bonus；缺表/缺行按默认开。"""
-        try:
-            r = conn.execute(
-                "SELECT value FROM plan_rule_flags"
-                " WHERE user = ? AND rule_id = 'micro_bonus'", (user,),
-            ).fetchone()
-        except sqlite3.Error:
-            return True
-        return True if r is None else bool(r["value"])
 
     def _pick_daily(self, user: str, day: str) -> list[int]:
         """抽题（见模块 docstring 优先级）。返回 qid 有序列表（≤3）。"""

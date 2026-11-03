@@ -748,14 +748,14 @@ def test_rules_registry_and_switch(plan_env):
     con.commit()
     con.close()
 
-    # 1. 规则清单：默认全开（教师与学生各可读）
+    # 1. 规则清单：默认全开（教师与学生各可读）；micro_bonus 已除名
     rules = c.get("/plan/rules", headers=ht,
                   params={"user": "malin"}).json()["data"]["rules"]
     by_id = {r["id"]: r for r in rules}
     assert set(by_id) == {"topic_counts_lecture", "speak_early_credit",
-                          "zombie_filter", "exam_user_scope", "micro_bonus"}
+                          "zombie_filter", "exam_user_scope"}
     assert all(r["value"] == 1 for r in rules)  # 默认开
-    assert len(c.get("/plan/rules", headers=hs).json()["data"]["rules"]) == 5
+    assert len(c.get("/plan/rules", headers=hs).json()["data"]["rules"]) == 4
 
     # 2. 内核：默认（开）专题点亮 29 讲
     from grammar_kb.plan import PlanStore
@@ -1234,11 +1234,11 @@ def _seed_micro_daily(env, day, *, done=1, answered=3, user="malin"):
     con.close()
 
 
-def test_micro_daily_done_lights_signal_and_bonus(plan_env, weekday_clock):
-    """micro_daily done=1：signals 点亮 micro，完成率 +10（封顶 100）。
+def test_micro_daily_done_lights_signal_without_bonus(plan_env, weekday_clock):
+    """micro_daily done=1：signals 点亮 micro；完成率不再加分（+10 规则已废）。
 
-    微练习不进 done/total 分母（不占计划行）；表不存在 / 当天无任务行
-    （base=None）时既不加分也不把 None 变成数字。
+    微练习不进 done/total 分母（不占计划行）；acts.micro_done 只回
+    {done,n,total}——bonus 键删除，删分后信号依旧点亮。
     """
     from grammar_kb.plan import PlanStore
     c = _client(plan_env)
@@ -1252,17 +1252,18 @@ def test_micro_daily_done_lights_signal_and_bonus(plan_env, weekday_clock):
     comp = ps.day_completion("malin", day)
     assert "micro" not in comp["signals"]
     td = ps.today_tasks("malin", day)
-    assert td["acts"]["micro_done"] == {"done": False, "n": 0, "total": 3, "bonus": True}
+    assert td["acts"]["micro_done"] == {"done": False, "n": 0, "total": 3}
+    assert "bonus" not in td["acts"]["micro_done"]
     assert td["percent"] == 0
-    # done=1：信号点亮，基础 0% → 10%；分母不含微练习
+    # done=1：信号点亮；只做微练习完成率仍是基础 0%（不再 +10）
     _seed_micro_daily(plan_env, day, done=1, answered=3)
     comp = ps.day_completion("malin", day)
     assert comp["signals"]["micro"] is True
     td = ps.today_tasks("malin", day)
-    assert td["acts"]["micro_done"] == {"done": True, "n": 3, "total": 3, "bonus": True}
+    assert td["acts"]["micro_done"] == {"done": True, "n": 3, "total": 3}
     assert td["total"] == len(td["tasks"])
-    assert td["percent"] == 10
-    # 封顶 100：讲次也完成 → 基础 100%，加分后仍 100 不超
+    assert td["percent"] == 0
+    # 计划内任务（讲次）完成后完成率照常到 100，微练习不再额外加分
     c.post("/exams", headers=hs, json={
         "lecture": 29, "date": day, "score": 90, "wrong": [], "kind": "lecture"})
     td = ps.today_tasks("malin", day)
@@ -1270,8 +1271,8 @@ def test_micro_daily_done_lights_signal_and_bonus(plan_env, weekday_clock):
     assert td["percent"] == 100
 
 
-def test_micro_bonus_rule_off_and_partial_answer(plan_env, weekday_clock):
-    """规则关闭 / 只答一部分：信号与加分口径各自成立。"""
+def test_micro_partial_answer_and_rule_deregistered(plan_env, weekday_clock):
+    """部分作答不点亮；micro_bonus 规则已从注册表除名（开关接口不认）。"""
     from grammar_kb.plan import PlanStore
     c = _client(plan_env)
     ht = _login(c, "teacher", "123456")
@@ -1279,21 +1280,21 @@ def test_micro_bonus_rule_off_and_partial_answer(plan_env, weekday_clock):
     day = today_cn().isoformat()
     ps = PlanStore(str(plan_env / "fce.db"),
                    exam_db_path=str(plan_env / "exam.db"))
-    # 部分作答（done=0，答了 2/3）不算完成：无信号、无加分、n 记 2
+    # 部分作答（done=0，答了 2/3）不算完成：无信号、n 记 2、完成率基础值
     _seed_micro_daily(plan_env, day, done=0, answered=2)
     comp = ps.day_completion("malin", day)
     assert "micro" not in comp["signals"]
     td = ps.today_tasks("malin", day)
-    assert td["acts"]["micro_done"] == {"done": False, "n": 2, "total": 3, "bonus": True}
+    assert td["acts"]["micro_done"] == {"done": False, "n": 2, "total": 3}
     assert td["percent"] == 0
-    # 做完但 micro_bonus 关闭：信号仍点亮（仅点亮不计分），完成率不加
+    # micro_bonus 已除名：规则开关读写都不再认这个 id
+    assert ps.set_rule("malin", "micro_bonus", 0) is None
+    assert ps._flag("malin", "micro_bonus") == 0
+    # 做完微练习只点亮信号，完成率维持基础值（不再有「关规则才不加分」两态）
     _seed_micro_daily(plan_env, day, done=1, answered=3)
-    ps.set_rule("malin", "micro_bonus", 0)
     comp = ps.day_completion("malin", day)
     assert comp["signals"]["micro"] is True
-    td = ps.today_tasks("malin", day)
-    assert td["percent"] == 0
-    assert td["acts"]["micro_done"]["done"] is True
+    assert ps.today_tasks("malin", day)["percent"] == 0
 
 
 def test_micro_drill_rows_no_longer_scheduled(plan_env, weekday_clock):
@@ -1310,3 +1311,240 @@ def test_micro_drill_rows_no_longer_scheduled(plan_env, weekday_clock):
         assert not any(t.get("type") == "micro_drill" for t in rows), d
         assert not any(str(t.get("key") or "").startswith("micro:")
                        for t in rows), d
+
+
+# ---- 精读/视频分组摊派（article_units / video_units，旧平铺字段回退）----
+
+def _seed_plan_articles(env, *ids):
+    """fce.db 造 reading_article 行 + 朗读录音表（精读摊派测试脚手架）。"""
+    con = sqlite3.connect(env / "fce.db")
+    con.execute("""CREATE TABLE IF NOT EXISTS reading_article (
+        id INTEGER PRIMARY KEY, title TEXT, source TEXT DEFAULT '',
+        text TEXT DEFAULT '', cefr TEXT DEFAULT '', created_at TEXT DEFAULT '')""")
+    for i in ids:
+        con.execute("INSERT OR REPLACE INTO reading_article (id, title, text)"
+                    " VALUES (?, ?, 'x')", (i, f"Article{i}"))
+    con.execute("""CREATE TABLE IF NOT EXISTS reading_recordings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT, article_id INTEGER,
+        file TEXT DEFAULT '', note TEXT DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT '')""")
+    con.commit()
+    con.close()
+
+
+def _seed_plan_videos(env, *vids):
+    """fce.db 造 video_item 行 + 复述表（与 VideoStore 建表同构）。"""
+    con = sqlite3.connect(env / "fce.db")
+    con.execute("""CREATE TABLE IF NOT EXISTS video_item (
+        vid TEXT PRIMARY KEY, title TEXT NOT NULL, category TEXT DEFAULT '',
+        duration_sec INTEGER DEFAULT 0, vocab TEXT DEFAULT '[]',
+        hints TEXT DEFAULT '', enabled INTEGER DEFAULT 1,
+        ord INTEGER DEFAULT 0, created_at TEXT)""")
+    for v in vids:
+        con.execute("INSERT OR REPLACE INTO video_item (vid, title)"
+                    " VALUES (?, ?)", (v, f"Video{v}"))
+    con.execute("""CREATE TABLE IF NOT EXISTS video_retell (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT NOT NULL,
+        vid TEXT NOT NULL, audio_b64 TEXT NOT NULL,
+        mime TEXT DEFAULT 'audio/webm', duration_sec INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'pending', teacher_score INTEGER,
+        teacher_comment TEXT DEFAULT '', created_at TEXT, graded_at TEXT)""")
+    con.commit()
+    con.close()
+
+
+def _scheduled_article_rows(ps, day_iso):
+    """某日派生清单里的精读行（排除「今天已提交 ✓」补行）。"""
+    return [t for t in ps.week_daily_tasks(MON, for_date=day_iso, user="malin")
+            if t.get("type") == "article"
+            and "已提交" not in (t.get("detail") or "")]
+
+
+def _scheduled_video_rows(ps, day_iso):
+    return [t for t in ps.week_daily_tasks(MON, for_date=day_iso, user="malin")
+            if t.get("type") == "video"
+            and "已提交" not in (t.get("detail") or "")]
+
+
+def test_article_daily_units_weekday_rotation(plan_env):
+    """精读 daily 组：跨组按组序、组内按 id 序合并队列，工作日每天出队首
+    未完成 1 篇——当天提交朗读后次日队列前进；没做完则欠账原样重现
+    （同日不堆多条）；队列清空不再出行；周末每天 1 篇清尾。"""
+    from grammar_kb.plan import PlanStore
+    _seed_plan_articles(plan_env, 82, 81, 84, 83)
+    ps = PlanStore(str(plan_env / "fce.db"))
+    days = [(date.fromisoformat(MON) + timedelta(days=i)).isoformat()
+            for i in range(7)]
+
+    def _rec(aid, day_iso):
+        con = sqlite3.connect(plan_env / "fce.db")
+        con.execute(
+            "INSERT INTO reading_recordings (user, article_id, created_at)"
+            " VALUES ('malin', ?, ?)", (aid, f"{day_iso}T12:00:00+00:00"))
+        con.commit()
+        con.close()
+
+    # 两组 daily：一组 ids 乱序写入 [82, 81]（组内按 id 序出 81→82）
+    ps.put_week(MON, {"article_units": [
+        {"ids": [82, 81], "mode": "daily"},
+        {"ids": [84, 83], "mode": "daily"},
+    ]}, "", user="malin")
+    head = [(81, "精读一组 1/2 · 工作日摊开")]
+    # 没做完：队首 81 原样重现（欠账滚动，同日不堆多条）
+    for k in (0, 1, 2):
+        rows = _scheduled_article_rows(ps, days[k])
+        assert [(r["article_id"], r["detail"]) for r in rows] == head, \
+            (days[k], rows)
+        assert "精读+朗读《Article" in rows[0]["text"]
+    # 逐天做完：完成 81 → 周二队首前进 82 → 完成 82 → 周三 83 → …
+    # （完成与派生必须交替，当天的提交会立即从队列里剔除）
+    plan = [(81, days[0], 1, [(82, "精读一组 2/2 · 工作日摊开")]),
+            (82, days[1], 2, [(83, "精读二组 1/2 · 工作日摊开")]),
+            (83, days[2], 3, [(84, "精读二组 2/2 · 工作日摊开")])]
+    for aid, done_day, next_k, want in plan:
+        _rec(aid, done_day)
+        rows = _scheduled_article_rows(ps, days[next_k])
+        assert [(r["article_id"], r["detail"]) for r in rows] == want, \
+            (days[next_k], rows)
+    # 周五队列已清空：不再出行
+    _rec(84, days[3])
+    assert _scheduled_article_rows(ps, days[4]) == []
+    # 周末清尾：另一组 daily 到周六仍有剩余 → 周六/周日继续每天 1 篇
+    _seed_plan_articles(plan_env, 91, 92)
+    ps.put_week(MON, {"article_units": [
+        {"ids": [92, 91], "mode": "daily"}]}, "", user="malin")
+    sat_rows = _scheduled_article_rows(ps, days[5])
+    assert [(r["article_id"], r["detail"]) for r in sat_rows] == \
+        [(91, "精读一组 1/2 · 周末清尾")], sat_rows
+    _rec(91, days[5])
+    sun_rows = _scheduled_article_rows(ps, days[6])
+    assert [(r["article_id"], r["detail"]) for r in sun_rows] == \
+        [(92, "精读一组 2/2 · 周末清尾")], sun_rows
+
+
+def test_article_weekend_group_and_flat_fallback(plan_env):
+    """weekend 组周六集中出未完成前 2 篇（一次两条行）；旧 articles 平铺
+    回退为同一个 weekend 组（现状语义与文案）；周日不重排未完成。"""
+    from grammar_kb.plan import PlanStore
+    _seed_plan_articles(plan_env, 61, 62, 63)
+    ps = PlanStore(str(plan_env / "fce.db"))
+    sat = (date.fromisoformat(MON) + timedelta(days=5)).isoformat()
+    sun = (date.fromisoformat(MON) + timedelta(days=6)).isoformat()
+    # 新 weekend 组：周六只出 61/62 两条行（63 不一次压上）
+    ps.put_week(MON, {"article_units": [
+        {"ids": [61, 62, 63], "mode": "weekend"}]}, "", user="malin")
+    rows = _scheduled_article_rows(ps, sat)
+    assert [(r["article_id"], r["detail"]) for r in rows] == [
+        (61, "精读一组 · 周末集中"), (62, "精读一组 · 周末集中")], rows
+    # 周日：weekend 组不重排未完成（只有当天提交的 ✓ 行）
+    assert _scheduled_article_rows(ps, sun) == []
+    # 旧 articles 平铺 = 一个 weekend 组：周六同样 2 条行、文案维持现状
+    ps.put_week(MON, {"articles": [61, 62, 63]}, "", user="malin")
+    rows_old = _scheduled_article_rows(ps, sat)
+    assert [r["article_id"] for r in rows_old] == [61, 62]
+    assert all(r["detail"] == "阅读训练里读全文 + 提交朗读录音"
+               for r in rows_old), rows_old
+    assert _scheduled_article_rows(ps, sun) == []
+
+
+def test_article_mixed_units_sat_order(plan_env):
+    """daily+weekend 混合：工作日只有 daily 队列；周六先 daily 清尾 1 篇、
+    weekend 组再独立出 2 条行。"""
+    from grammar_kb.plan import PlanStore
+    _seed_plan_articles(plan_env, 71, 72, 61, 62)
+    ps = PlanStore(str(plan_env / "fce.db"))
+    ps.put_week(MON, {"article_units": [
+        {"ids": [71, 72], "mode": "daily"},
+        {"ids": [61, 62], "mode": "weekend"},
+    ]}, "", user="malin")
+    wed = (date.fromisoformat(MON) + timedelta(days=2)).isoformat()
+    sat = (date.fromisoformat(MON) + timedelta(days=5)).isoformat()
+    wed_rows = _scheduled_article_rows(ps, wed)
+    assert [(r["article_id"], r["detail"]) for r in wed_rows] == \
+        [(71, "精读一组 1/2 · 工作日摊开")], wed_rows
+    sat_rows = _scheduled_article_rows(ps, sat)
+    assert [(r["article_id"], r["detail"]) for r in sat_rows] == [
+        (71, "精读一组 1/2 · 周末清尾"),
+        (61, "精读二组 · 周末集中"),
+        (62, "精读二组 · 周末集中"),
+    ], sat_rows
+
+
+def test_video_units_weekend_and_daily(plan_env):
+    """视频 weekend 组周六出未完成前 2 个、周日兜底清剩余、工作日不排；
+    旧 videos 平铺 = 一个 daily 组（工作日每天 1 个，现状）。"""
+    from grammar_kb.plan import PlanStore
+    _seed_plan_videos(plan_env, "va", "vb", "vc")
+    ps = PlanStore(str(plan_env / "fce.db"))
+    mon = date.fromisoformat(MON).isoformat()
+    sat = (date.fromisoformat(MON) + timedelta(days=5)).isoformat()
+    sun = (date.fromisoformat(MON) + timedelta(days=6)).isoformat()
+    # weekend 组：周六 va/vb 两条行（vc 留周日兜底），周一不排
+    ps.put_week(MON, {"video_units": [
+        {"vids": ["va", "vb", "vc"], "mode": "weekend"}]}, "", user="malin")
+    rows = _scheduled_video_rows(ps, sat)
+    assert [r["vid"] for r in rows] == ["va", "vb"], rows
+    assert all("周六集中" in r["detail"] for r in rows)
+    assert _scheduled_video_rows(ps, mon) == []
+    # 周六做完 va → 周日兜底出剩余 vb/vc
+    con = sqlite3.connect(plan_env / "fce.db")
+    con.execute("INSERT INTO video_retell (user, vid, audio_b64, created_at)"
+                " VALUES ('malin', 'va', 'x', ?)", (f"{sat}T01:30:00+00:00",))
+    con.commit()
+    con.close()
+    rows_sun = _scheduled_video_rows(ps, sun)
+    assert [r["vid"] for r in rows_sun] == ["vb", "vc"], rows_sun
+    assert all("周日兜底" in r["detail"] for r in rows_sun)
+    # 旧 videos 平铺 = 一个 daily 组：工作日每天 1 个（现状文案）
+    ps.put_week(MON, {"videos": ["va", "vb"]}, "", user="malin")
+    rows_daily = _scheduled_video_rows(ps, mon)
+    assert [r["vid"] for r in rows_daily] == ["va"], rows_daily
+    assert "工作日每天 1 个" in rows_daily[0]["detail"]
+
+
+def test_week_view_micro_enabled_gate(plan_env):
+    """week_view / my-week 透出 micro_enabled（=bool(tasks.micro)）真假两态。"""
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    ht = _login(c, "teacher", "123456")
+    _put_week(c, ht, {"lectures": [29]})
+    d = c.get(f"/plan/week-view?week_start={MON}&user=malin",
+              headers=ht).json()["data"]
+    assert d["micro_enabled"] is False
+    c.put(f"/plan/weeks/{MON}", headers=ht,
+          json={"tasks": {"lectures": [29], "micro": 1}})
+    d = c.get(f"/plan/week-view?week_start={MON}&user=malin",
+              headers=ht).json()["data"]
+    assert d["micro_enabled"] is True
+    # 学生课程表同源（week_view 同一出口）
+    mw = c.get("/plan/my-week", headers=hs).json()["data"]
+    assert mw["micro_enabled"] is True
+
+
+def test_week_goal_micro_dimension(plan_env):
+    """周目标微练习维度：tasks.micro 开着才出现；done=该周整组做完的天数
+    （分母恒 7）；排在「视频复述」维度之后；无 micro 组不加维度。"""
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    # 无 micro 组：不出微练习维度（视频复述维度正常在）
+    _put_week(c, ht, {"lectures": [29], "videos": ["v1"]})
+    d = c.get(f"/plan/week-view?week_start={MON}&user=malin",
+              headers=ht).json()["data"]
+    names = [x["name"] for x in d["goal_progress"]["dims"]]
+    assert "视频复述" in names and "微练习" not in names
+    # 开 micro + 周一~周三各做完一组 → 微练习 3/7，位于视频复述之后
+    _put_week(c, ht, {"lectures": [29], "videos": ["v1"], "micro": 1})
+    for i in (0, 1, 2):
+        _seed_micro_daily(plan_env,
+                          (date.fromisoformat(MON) + timedelta(days=i)).isoformat(),
+                          done=1, answered=3)
+    d = c.get(f"/plan/week-view?week_start={MON}&user=malin",
+              headers=ht).json()["data"]
+    dims = d["goal_progress"]["dims"]
+    micro = next(x for x in dims if x["name"] == "微练习")
+    assert micro["done"] == 3 and micro["total"] == 7
+    names = [x["name"] for x in dims]
+    assert names.index("微练习") > names.index("视频复述")
+    # 微练习计入周目标聚合分母，不把聚合算炸
+    assert d["goal_progress"]["total_items"] >= 7
+    assert d["goal_progress"]["percent"] is not None

@@ -60,9 +60,6 @@ RULES: list[dict] = [
     {"id": "exam_user_scope", "name": "成绩只认该学生名下", "default": 1,
      "desc": "完成判定只统计归属为该学生的成绩登记（教师替孩子登记时"
              "请选对「学生」）；关闭则不过滤归属（兼容遗留数据）"},
-    {"id": "micro_bonus", "name": "微练习加分", "default": 1,
-     "desc": "学生完成每日微练习（3 题）当天完成率 +10 分（封顶 100）；"
-             "关闭后微练习仅点亮不计分"},
 ]
 
 # tasks JSON 结构（全部字段可缺省）：
@@ -74,5 +71,15 @@ RULES: list[dict] = [
 #   "vocab_pct": 14,             # 兼容旧界面的百分比，编辑器不再让人填
 #   "fce": [["Test1","P1"], ...] # 简化为 ["Test1 P1", "Test2 RUE"] 文本即可
 #   "reading": {"波西杰克逊1": 100} # 书名 → 周末目标进度 %
-#   "videos": ["xxxxxxxxxxx", ...]  # 视频学习 vid（工作日每天 1 个看+复述）
+#   "videos": ["xxxxxxxxxxx", ...]  # 旧字段：平铺 vid=一个 daily 组（工作日
+#                                   # 每天 1 个看+复述，欠账滚动）
+#   "article_units": [{"ids": [58, 82], "mode": "daily" | "weekend"}],
+#                                   # 精读分组：daily 组工作日每天 1 篇轮转、
+#                                   # 周末每天 1 篇清尾；weekend 组周六集中 2 篇。
+#                                   # 排程优先于旧 articles（旧字段=一个 weekend 组）
+#   "video_units":   [{"vids": ["abc", "def"], "mode": "daily" | "weekend"}],
+#                                   # 视频分组：daily 组=现状每天 1 个；weekend 组
+#                                   # 周六集中 2 个、周日兜底清剩余（优先于 videos）
+#   "micro": 1                      # 微练习开关：不排计划行、不进完成率分母；
+#                                   # 周视图据此带 micro_enabled、周目标出微练习维度
 # }

@@ -110,11 +110,11 @@ export async function mountTimetable(el) {
         <span class="tt-task-text">${escapeHtml(x.text || '计划外朗读')}</span>
         <span class="tt-task-check">✓</span>
       </div>`).join('')
-    // 微练习完成打勾行（后端 acts.micro_done.done；bonus=false 时不显示加分）
+    // 微练习完成打勾行（后端 acts.micro_done.done）
     const microRow = acts.micro_done?.done ? `
       <div class="tt-task ok">
         <span class="tt-task-ic">${TYPE_ICON.micro_drill}</span>
-        <span class="tt-task-text">微练习${acts.micro_done.bonus === false ? '' : ' +10'}</span>
+        <span class="tt-task-text">微练习</span>
         <span class="tt-task-check">✓</span>
       </div>` : ''
     const statRows = []
@@ -167,13 +167,15 @@ export async function mountTimetable(el) {
     ${(d.notes || '').trim() ? `<section class="tt-notes card"><h3>📌 老师的话</h3><p>${escapeHtml(d.notes).replace(/\n/g, '<br>')}</p></section>` : ''}
   `
   renderReviewStrip(el.querySelector('#tt-loop'))
-  renderMicroCard(el.querySelector('#tt-micro'))
+  renderMicroCard(el.querySelector('#tt-micro'), d.micro_enabled)
 }
 
-// 微练习入口卡：未做 → 去做题（+10 分）；已做 → 点开回看。
-// 接口失败或今天没题就静默隐藏，不打扰课程表主体。
-async function renderMicroCard(host) {
+// 微练习入口卡：未做 → 去做题；已做 → 点开回看。
+// 本周计划未启用微练习（my-week 的 micro_enabled === false）时不渲染卡；
+// undefined（旧后端）/true 照常显示。接口失败或今天没题也静默隐藏。
+async function renderMicroCard(host, microEnabled) {
   if (!host) return
+  if (microEnabled === false) { host.innerHTML = ''; return }
   let d
   try {
     d = await api.microToday()
@@ -198,9 +200,9 @@ async function renderMicroCard(host) {
         }
       } catch { /* 拿不到对错就只报完成 */ }
     }
-    inner = `<span class="tt-micro-main">✏️ 微练习已完成 ✓${score}${d.bonus === false ? '' : ' +10 分'}</span><small>点开回看</small>`
+    inner = `<span class="tt-micro-main">✏️ 微练习已完成 ✓${score}</span><small>点开回看</small>`
   } else {
-    inner = `<span class="tt-micro-main">✏️ 今日微练习 ${qs} 题${d.bonus === false ? '' : ' · 做了 +10 分'}</span><small>现在做 →</small>`
+    inner = `<span class="tt-micro-main">✏️ 今日微练习 ${qs} 题</span><small>现在做 →</small>`
   }
   host.innerHTML = `<button type="button" class="tt-micro-card ${d.done ? 'done' : ''}">${inner}</button>`
   host.querySelector('.tt-micro-card').addEventListener('click', () => {

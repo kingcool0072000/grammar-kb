@@ -1,5 +1,5 @@
 // 微练习（学生端 #/micro）：每天 3 道小题（错题重练/变形/时态/短语动词/习语/语法），
-// 做完给当天 +10 分。数据全走后端（/micro/today、/micro/submit，提交幂等可重复调）。
+// 完成当天点亮。数据全走后端（/micro/today、/micro/submit，提交幂等可重复调）。
 // 已答过的题刷新后直接恢复结果态：拿 answered 重放一次提交取回对错与解析
 // （后端幂等，不会重复计分）；没答完的继续作答，只提交新答的题。
 import { api } from '../api.js'
@@ -22,7 +22,7 @@ export async function mountMicro(el, { role } = {}) {
     <button class="fce-back-btn" id="mc-back">← 返回课程表</button>
     <div class="view-head">
       <h1>✏️ 微练习</h1>
-      <p id="mc-date">加载中… · 每天 3 题，做了给今天 +10 分</p>
+      <p id="mc-date">加载中… · 每天 3 题，完成当天点亮</p>
     </div>
     <div id="mc-body"><p class="muted">加载中…</p></div>`
   el.querySelector('#mc-back').addEventListener('click', () => {
@@ -48,7 +48,7 @@ export async function mountMicro(el, { role } = {}) {
   const questions = Array.isArray(data.questions) ? data.questions : []
   done = !!data.done
   const dateEl = el.querySelector('#mc-date')
-  if (dateEl && data.date) dateEl.innerHTML = `${escapeHtml(data.date)} · 每天 3 题，做了给今天 +10 分`
+  if (dateEl && data.date) dateEl.innerHTML = `${escapeHtml(data.date)} · 每天 3 题，完成当天点亮`
 
   // 中断续答：answered 里已有记录 → 重放一次提交取回对错/解析（幂等，不重复计分）
   const known = Object.entries(data.answered || {})
@@ -154,7 +154,7 @@ export async function mountMicro(el, { role } = {}) {
       : '<p class="mc-done-sub">明天还有 3 题等你</p>'
     return `
       <div class="mc-card mc-done-card">
-        <b>今日微练习已完成 ✓ +10 分</b>
+        <b>今日微练习已完成 ✓</b>
         ${scoreLine}
       </div>`
   }

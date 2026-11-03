@@ -1,19 +1,77 @@
-/** 周计划清单的增删。tasks 仍是 plan_weeks 那份 JSON，不改键名。 */
+/**
+ * 周计划清单的增删。tasks 仍是 plan_weeks 那份 JSON。
+ * 精读/视频按组存：article_units / video_units（每组 2 篇/个，带摊法 mode），
+ * 微练习用 tasks.micro = 1 表示本周启用；旧扁平键 articles/videos 不再写。
+ */
 
 function copyTasks(tasks) {
   const t = { ...(tasks || {}) }
   if (Array.isArray(t.lectures)) t.lectures = [...t.lectures]
   if (Array.isArray(t.hw_papers)) t.hw_papers = [...t.hw_papers]
   if (Array.isArray(t.focus_kps)) t.focus_kps = [...t.focus_kps]
-  if (Array.isArray(t.articles)) t.articles = [...t.articles]
   if (Array.isArray(t.fce)) t.fce = [...t.fce]
   if (Array.isArray(t.vocab_papers)) t.vocab_papers = [...t.vocab_papers]
-  if (Array.isArray(t.videos)) t.videos = [...t.videos]
+  if (Array.isArray(t.article_units)) {
+    t.article_units = t.article_units.map((u) => {
+      const row = { ids: (u?.ids || []).map(Number), mode: u?.mode === 'weekend' ? 'weekend' : 'daily' }
+      if (u?.legacy) row.legacy = true
+      return row
+    })
+  }
+  if (Array.isArray(t.video_units)) {
+    t.video_units = t.video_units.map((u) => {
+      const row = { vids: (u?.vids || []).map(String), mode: u?.mode === 'weekend' ? 'weekend' : 'daily' }
+      if (u?.legacy) row.legacy = true
+      return row
+    })
+  }
+  if (t.micro != null) t.micro = 1
   if (t.reading && typeof t.reading === 'object') t.reading = { ...t.reading }
+  // 旧扁平键不进编辑流程：装载前先过 migrateLegacyUnits，这里兜底删掉，保存就不会带回旧键。
+  delete t.articles
+  delete t.videos
   return t
 }
 
 export { copyTasks }
+
+/**
+ * 旧周数据兼容：只有扁平 articles/videos 的老周，先转成 *_units
+ * （精读一组 mode=weekend 周末集中、视频一组 mode=daily 工作日摊开，带 legacy 小标），
+ * 旧键就地删掉，之后编辑与保存都只见新结构。不改入参。
+ */
+export function migrateLegacyUnits(tasks) {
+  const t = { ...(tasks || {}) }
+  const arts = [...new Set((Array.isArray(t.articles) ? t.articles : []).map(Number).filter((n) => Number.isFinite(n)))]
+  const vids = [...new Set((Array.isArray(t.videos) ? t.videos : []).map(String).filter(Boolean))]
+  if (arts.length) {
+    t.article_units = [
+      ...(Array.isArray(t.article_units) ? t.article_units : []),
+      { ids: arts.sort((a, b) => a - b), mode: 'weekend', legacy: true },
+    ]
+  }
+  if (vids.length) {
+    t.video_units = [
+      ...(Array.isArray(t.video_units) ? t.video_units : []),
+      { vids, mode: 'daily', legacy: true },
+    ]
+  }
+  delete t.articles
+  delete t.videos
+  return t
+}
+
+/** 保存/预览用的形状：只留契约字段，编辑期的 legacy 小标不落库。 */
+export function tasksForSave(tasks) {
+  const t = copyTasks(tasks)
+  if (Array.isArray(t.article_units)) {
+    t.article_units = t.article_units.map((u) => ({ ids: u.ids, mode: u.mode }))
+  }
+  if (Array.isArray(t.video_units)) {
+    t.video_units = t.video_units.map((u) => ({ vids: u.vids, mode: u.mode }))
+  }
+  return t
+}
 
 function pushUnique(arr, value, sortNum) {
   const next = [...(arr || [])]
@@ -31,6 +89,119 @@ function dropNum(t, key, value) {
 function dropStr(t, key, value) {
   t[key] = (t[key] || []).filter((x) => x !== value)
   if (!t[key].length) delete t[key]
+}
+
+// ---- 精读/视频组（*_units）与微练习（micro）----
+
+function normMode(mode) {
+  return mode === 'weekend' ? 'weekend' : 'daily'
+}
+
+/** 本周所有组里的精读篇目 id（扫全部组，供「已在本周」判断）。 */
+export function articleUnitIds(tasks) {
+  const out = []
+  for (const u of (tasks || {}).article_units || []) {
+    for (const id of u?.ids || []) {
+      const n = Number(id)
+      if (!out.includes(n)) out.push(n)
+    }
+  }
+  return out
+}
+
+/** 本周所有组里的视频 vid（扫全部组）。 */
+export function videoUnitVids(tasks) {
+  const out = []
+  for (const u of (tasks || {}).video_units || []) {
+    for (const v of u?.vids || []) {
+      const s = String(v)
+      if (!out.includes(s)) out.push(s)
+    }
+  }
+  return out
+}
+
+/** 精读加一组：ids 必须正好 2 篇；与本周任一组重复的篇目会拒掉（整组不加）。 */
+export function appendArticleUnit(tasks, ids, mode) {
+  const t = copyTasks(tasks)
+  const list = [...new Set((ids || []).map(Number))]
+  if (list.length !== 2) return t
+  const taken = articleUnitIds(t)
+  if (list.some((id) => taken.includes(id))) return t
+  t.article_units = [
+    ...(t.article_units || []),
+    { ids: [...list].sort((a, b) => a - b), mode: normMode(mode) },
+  ]
+  return t
+}
+
+/** 视频加一组：vids 必须正好 2 个；防重同精读组。 */
+export function appendVideoUnit(tasks, vids, mode) {
+  const t = copyTasks(tasks)
+  const list = [...new Set((vids || []).map(String))]
+  if (list.length !== 2) return t
+  const taken = videoUnitVids(t)
+  if (list.some((v) => taken.includes(v))) return t
+  t.video_units = [...(t.video_units || []), { vids: list, mode: normMode(mode) }]
+  return t
+}
+
+/** 按下标删整组精读。 */
+export function removeArticleUnit(tasks, idx) {
+  const t = copyTasks(tasks)
+  const arr = [...(t.article_units || [])]
+  arr.splice(Number(idx), 1)
+  if (arr.length) t.article_units = arr
+  else delete t.article_units
+  return t
+}
+
+/** 按下标删整组视频。 */
+export function removeVideoUnit(tasks, idx) {
+  const t = copyTasks(tasks)
+  const arr = [...(t.video_units || [])]
+  arr.splice(Number(idx), 1)
+  if (arr.length) t.video_units = arr
+  else delete t.video_units
+  return t
+}
+
+/** 微练习：有则删无则加（tasks.micro = 1 即本周启用，天然去重）。 */
+export function toggleMicroGroup(tasks) {
+  const t = copyTasks(tasks)
+  if (t.micro != null) delete t.micro
+  else t.micro = 1
+  return t
+}
+
+const MODE_TEXT = { daily: '工作日摊开', weekend: '周末集中' }
+
+function unitTitle(titles, key) {
+  if (!titles) return ''
+  const v = typeof titles.get === 'function' ? titles.get(String(key)) : titles[String(key)]
+  return v == null ? '' : String(v)
+}
+
+/** 清单行文案：主行「📄 精读一组 · 2 篇 · 工作日摊开」，小字行是组内文章名（legacy 组加「旧格式」）。 */
+export function articleUnitLine(unit, titles) {
+  const u = unit || {}
+  const ids = (u.ids || []).map(Number)
+  const names = ids.map((id) => (unitTitle(titles, id) || `#${id}`).slice(0, 20))
+  const head = ['📄 精读一组', `${ids.length} 篇`, MODE_TEXT[normMode(u.mode)]].join(' · ')
+  return { head, sub: capSub((u.legacy ? '旧格式 · ' : '') + names.join('、')) }
+}
+
+/** 同上，视频版：「🎬 视频一组 · 2 个 · 摊法」。 */
+export function videoUnitLine(unit, titles) {
+  const u = unit || {}
+  const vids = (u.vids || []).map(String)
+  const names = vids.map((v) => (unitTitle(titles, v) || v).slice(0, 20))
+  const head = ['🎬 视频一组', `${vids.length} 个`, MODE_TEXT[normMode(u.mode)]].join(' · ')
+  return { head, sub: capSub((u.legacy ? '旧格式 · ' : '') + names.join('、')) }
+}
+
+function capSub(s) {
+  return s.length > 56 ? s.slice(0, 56) + '…' : s
 }
 
 /**
@@ -88,7 +259,7 @@ export function vocabRowTitle(tasks, vocabWeek) {
   return lv == null ? `本周新掌握 ${n} 个词` : `本周新掌握 L${lv} 词 ${n} 个`
 }
 
-export function completionLine(type, { topicCounts = true } = {}) {
+export function completionLine(type, { topicCounts = true, mode = '' } = {}) {
   if (type === 'lecture') {
     return topicCounts
       ? '怎么算完成：这讲有「课程测验」成绩，或这讲专题的知识点都学完。'
@@ -97,16 +268,25 @@ export function completionLine(type, { topicCounts = true } = {}) {
   if (type === 'hw_paper') {
     return '怎么算完成：这讲单独有一条「作业卷」成绩。上了课、做了课程测验，都不算作业做完。'
   }
-  if (type === 'focus_kp') return '怎么算完成：当天这讲有练习成绩。'
+  if (type === 'focus_kp') return '攻坚标注：不参与完成判定，供周验收对照，微练习优先出这些讲的题。'
   if (type === 'vocab') {
     return '怎么算完成：本周在这一级新掌握的词达到这个个数。周初已经会的不算进这周。'
   }
   if (type === 'fce') return '怎么算完成：本周交了这一道 FCE。'
-  if (type === 'article') return '怎么算完成：这篇文章交了朗读录音。'
-  if (type === 'video') return '怎么算完成：看完并交了复述录音。工作日每天摊 1 个。'
+  if (type === 'article') {
+    return mode === 'weekend'
+      ? '怎么算完成：这两篇各交了朗读录音。周六一次精读 2 篇。'
+      : '怎么算完成：这篇文章交了朗读录音。工作日每天精读 1 篇。'
+  }
+  if (type === 'video') {
+    return mode === 'weekend'
+      ? '怎么算完成：看完并交了复述录音。周六一次看 2 个。'
+      : '怎么算完成：看完并交了复述录音。工作日每天摊 1 个。'
+  }
   if (type === 'reading') return '怎么算完成：泛读进度读完选中的章节。'
   if (type === 'paper') return '怎么算完成：词汇考试里登记了这一卷的成绩。'
   if (type === 'speak') return '怎么算完成：本周交够这么多篇朗读。课表上主要跟着精读课文走。'
+  if (type === 'micro') return '怎么算完成：本周每个工作日做 3 题，不做不扣分。'
   return ''
 }
 
@@ -160,9 +340,6 @@ export function appendPlanItem(tasks, item) {
     case 'focus_kp':
       t.focus_kps = pushUnique(t.focus_kps, item.lecture, true)
       break
-    case 'article':
-      t.articles = pushUnique(t.articles, item.article_id, true)
-      break
     case 'fce':
       t.fce = pushUnique(t.fce, item.label, false)
       break
@@ -192,10 +369,8 @@ export function appendPlanItem(tasks, item) {
       t.reading = reading
       break
     }
-    case 'video':
-      t.videos = pushUnique(t.videos, item.vid, false)
-      break
     default:
+      // 精读/视频走 appendArticleUnit / appendVideoUnit（2 篇/个一组），不再走单项。
       throw new Error(`未知计划项：${item.type}`)
   }
   return t
@@ -213,17 +388,11 @@ export function removePlanItem(tasks, item) {
     case 'focus_kp':
       dropNum(t, 'focus_kps', item.lecture)
       break
-    case 'article':
-      dropNum(t, 'articles', item.article_id)
-      break
     case 'fce':
       dropStr(t, 'fce', item.label)
       break
     case 'paper':
       dropStr(t, 'vocab_papers', item.paper_id)
-      break
-    case 'video':
-      dropStr(t, 'videos', item.vid)
       break
     case 'reading': {
       const reading = { ...(t.reading || {}) }
@@ -242,6 +411,7 @@ export function removePlanItem(tasks, item) {
       delete t.speak
       break
     default:
+      // 精读/视频组走 removeArticleUnit / removeVideoUnit（整组删）。
       throw new Error(`未知计划项：${item.type}`)
   }
   return t
@@ -251,11 +421,12 @@ export const PLAN_ADD_TYPES = [
   { id: 'lecture', label: '语法课程', hint: '本周要上的讲，工作日摊开' },
   { id: 'hw_paper', label: '作业卷', hint: '按讲次，登记作业卷成绩才算完成' },
   { id: 'vocab', label: '词汇目标', hint: '本周在某一级新掌握多少个词' },
-  { id: 'video', label: '视频学习', hint: '看视频加复述，工作日每天 1 个' },
+  { id: 'video', label: '视频学习', hint: '2 个一组，选摊法' },
   { id: 'reading', label: '泛读书目', hint: '按章加入' },
   { id: 'fce', label: 'FCE 大题', hint: '周六做' },
-  { id: 'article', label: '精读课文', hint: '交了朗读才算完成' },
+  { id: 'article', label: '精读课文', hint: '2 篇一组，选摊法：工作日摊开或周末集中' },
   { id: 'paper', label: '单词试卷', hint: '周日做卷' },
   { id: 'speak', label: '朗读篇数', hint: '本周安排几篇录音' },
-  { id: 'focus_kp', label: '微练习', hint: '攻坚讲次：周验收对照，微练习优先出这些讲的题' },
+  { id: 'micro', label: '微练习', hint: '一组=本周每日 3 题，不做不扣分' },
+  { id: 'focus_kp', label: '攻坚讲次', hint: '标注本周攻坚讲次：周验收对照，微练习优先出这些讲的题' },
 ]

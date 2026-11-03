@@ -398,9 +398,9 @@ export async function mountPlan(el) {
           <em>✓</em>
         </div>`).join('')
         // 微练习是独立线上功能：不占计划行、不进 done/total 分母，
-        // 当天 3 题做完在这里点亮并给完成率 +10（规则可关，bonus=false 不显示加分）
+        // 当天 3 题做完在这里点亮
         + (acts.micro_done && acts.micro_done.done
-          ? `<div class="pw-task done"><i>✏️</i><span>微练习 3 题</span>${acts.micro_done.bonus === false ? '' : '<small class="pw-why">+10</small>'}<em>✓</em></div>`
+          ? `<div class="pw-task done"><i>✏️</i><span>微练习 3 题</span><em>✓</em></div>`
           : '')
       const statRows = []
       for (const r of acts.readings || []) {
@@ -475,10 +475,17 @@ export async function mountPlan(el) {
           chips.push(`📖 泛读 ${(b ? b.title : k).slice(0, 14)} → ${v}%`)
         }
       }
-      if (t.articles?.length) chips.push(`📄 精读 ${t.articles.length} 篇`)
-      if (t.videos?.length) {
+      // 精读/视频按组统计（units 优先，旧扁平字段兜底）
+      const unitCount = (units, legacy) =>
+        units?.length ? units.reduce((n, u) => n + (u.ids?.length || u.vids?.length || 0), 0)
+          : legacy?.length || 0
+      const artN = unitCount(t.article_units, t.articles)
+      if (artN) chips.push(`📄 精读 ${artN} 篇`)
+      const vidN = unitCount(t.video_units, t.videos)
+      if (vidN) {
         const pool = ed?.videos || []
-        const names = t.videos.map((vid) => {
+        const vids = t.video_units?.flatMap((u) => u.vids || []) || t.videos || []
+        const names = vids.map((vid) => {
           const v = pool.find((x) => x.vid === vid)
           return (v?.title || vid).slice(0, 12)
         })
