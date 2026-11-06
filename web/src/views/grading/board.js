@@ -1,5 +1,5 @@
 import { api } from '../../api.js'
-import { escapeHtml, todayIso } from '../../render.js'
+import { escapeHtml, escAttr, todayIso } from '../../render.js'
 import { fmtDur } from '../../fmt.js'
 import { renderReadingReview } from '../readingReview.js'
 import { renderVideoReview, videoRetellRow } from '../videoReview.js'
@@ -276,6 +276,29 @@ function wrongCountOf(e) {
   return Number.isFinite(n) && n > 0 ? Math.round(n) : 0
 }
 
+// 明细里的错词词表。exam.wrong_words 是服务端从 answers 投影的词表
+// （编辑预选的来源）；没有投影时从 answers 的答错行取。
+function wordsFromExamDetail(d) {
+  const exam = (d && d.exam) || {}
+  if (Array.isArray(exam.wrong_words)) return exam.wrong_words.slice()
+  const answers = Array.isArray(d && d.answers) ? d.answers : []
+  const out = []
+  for (const a of answers) {
+    if (!a || !a.word) continue
+    if ((a.correct === false || a.correct === 0) && !out.includes(a.word)) out.push(a.word)
+  }
+  return out
+}
+
+function sameWordSet(a, b) {
+  const norm = (xs) => xs.map((w) => String(w || '').trim().toLowerCase()).filter(Boolean)
+  const x = norm(a)
+  const y = norm(b)
+  if (x.length !== y.length) return false
+  const s = new Set(x)
+  return y.every((w) => s.has(w))
+}
+
 // 修改按钮回填用：已登记错词序列化进 data 属性（词不含 |，安全）
 function wrongWordsKey(e) {
   return Array.isArray(e && e.wrong_words) ? e.wrong_words.join('|') : ''
@@ -289,8 +312,11 @@ function updateWrongSummary(row) {
   hint.textContent = n ? `已选 ${n}` : '未选'
 }
 
-// 卷面题型 → 中文（与生成卷三段一致；未知值原样展示）
-const GEG_QTYPES = { zh2en: '中译英', en2zh: '英译中', spell: '拼写' }
+// 卷面题型 → 中文（与生成卷五段一致）。空 qtype 留空，不编造标签；未知值原样展示。
+const GEG_QTYPES = {
+  form: '词形变化', spell: '拼写', ctx: '例句填空',
+  zh2en: '中译英', en2zh: '英译中',
+}
 const gegQtypeLabel = (q) => (q ? (GEG_QTYPES[q] || String(q)) : '')
 
 function closeVocabWrongOverlay() {
@@ -312,18 +338,11 @@ async function openVocabWrongOverlay(examId) {
   }
   const exam = (d && d.exam) || {}
   const answers = Array.isArray(d && d.answers) ? d.answers : []
-  // 兼容：优先 exam.wrong_words 数组；字段缺失时从 answers 里取 correct=false 的词
-  const hasWw = Array.isArray(exam.wrong_words)
-  const wrong = hasWw ? exam.wrong_words.slice() : []
+  const wrong = wordsFromExamDetail(d)
   const qByWord = new Map()
   for (const a of answers) {
-    if (!a || !a.word) continue
-    if (a.correct === false || a.correct === 0) {
-      if (!hasWw && !wrong.includes(a.word)) wrong.push(a.word)
-      qByWord.set(a.word, a.qtype)
-    } else if (!qByWord.has(a.word)) {
-      qByWord.set(a.word, a.qtype)
-    }
+    if (!a || !a.word || qByWord.has(a.word)) continue
+    if (a.correct === false || a.correct === 0) qByWord.set(a.word, a.qtype || '')
   }
   closeVocabWrongOverlay() // 防重复叠加
   const overlay = document.createElement('div')
@@ -362,6 +381,8 @@ async function mountExamGrading(host, students) {
   const list = host.querySelector('.gcard-list')
   const countEl = host.querySelector('#geg-count')
   let papers = []
+  // 及格线：与词汇考试页同一条路径——响应里的 pass_score，取不到回退 80
+  let passScore = 80
   // 混合卷登记级别默认 = 所选学生当前解锁级别（vocab_exam.record 拒绝 level=-1）
   const unlockByUser = new Map()
   try {
@@ -378,6 +399,8 @@ async function mountExamGrading(host, students) {
       })),
     ])
     papers = grading.papers || []
+    const ps = Number(grading && grading.pass_score)
+    if (Number.isFinite(ps) && ps > 0) passScore = Math.round(ps)
     for (const [s, n] of pairs) unlockByUser.set(s, n)
   } catch {
     list.innerHTML = '<p class="reading-hint">试卷列表加载失败（可刷新重试）。</p>'
@@ -414,9 +437,9 @@ async function mountExamGrading(host, students) {
         ${graded.length
           ? graded.map((e) => {
               const wn = wrongCountOf(e)
-              return `<span class="geg-chip ${e.score >= 80 ? 'ok' : ''}">${escapeHtml(e.user)} L${e.level} ${e.score} 分
+              return `<span class="geg-chip ${e.score >= passScore ? 'ok' : ''}">${escapeHtml(e.user)} L${e.level} ${e.score} 分
               ${wn ? `<button type="button" class="geg-wbadge" data-gwrong-view="${e.id}" title="查看错词明细">错 ${wn}</button>` : ''}
-              <button type="button" class="geg-op" data-gedit="${e.id}" data-user="${escapeHtml(e.user)}" data-level="${e.level}" data-score="${e.score}" data-date="${escapeHtml(e.exam_date || '')}" data-gwords="${escapeHtml(wrongWordsKey(e))}" data-gwn="${wn}">修改</button>
+              <button type="button" class="geg-op" data-gedit="${e.id}" data-user="${escapeHtml(e.user)}" data-level="${e.level}" data-score="${e.score}" data-date="${escapeHtml(e.exam_date || '')}" data-gwords="${escAttr(wrongWordsKey(e))}" data-gwn="${wn}">修改</button>
               <button type="button" class="geg-op" data-gdel="${e.id}">删除</button>
             </span>`
             }).join('')
@@ -495,20 +518,26 @@ async function mountExamGrading(host, students) {
       const lvSel = row.querySelector('.geg-lv')
       if (lvSel) lvSel.value = editBtn.dataset.level
       // 回填该成绩已登记的错词：对应 chips 预选中（有错词时顺带展开折叠区）。
-      // 列表接口只给 wrong_count 没给 wrong_words 时，先懒加载明细补齐。
+      // 列表缺词表时懒加载明细：exam.wrong_words（从 answers 投影）为准。
       let wrongSel = String(editBtn.dataset.gwords || '').split('|').filter(Boolean)
       if (!wrongSel.length && Number(editBtn.dataset.gwn) > 0 && typeof api.vocabExamGet === 'function') {
         try {
           const wd = await api.vocabExamGet(Number(editBtn.dataset.gedit))
-          if (Array.isArray(wd && wd.exam && wd.exam.wrong_words)) wrongSel = wd.exam.wrong_words
+          wrongSel = wordsFromExamDetail(wd)
         } catch { /* 取不到就按无预选处理 */ }
       }
       if (row.querySelector('.geg-words')) {
+        const sel = new Set(wrongSel.map((w) => String(w).trim().toLowerCase()))
         row.querySelectorAll('.geg-word').forEach((c) =>
-          c.classList.toggle('sel', wrongSel.includes(c.dataset.w)))
+          c.classList.toggle('sel', sel.has(String(c.dataset.w || '').trim().toLowerCase())))
         const det = row.querySelector('.geg-wrong')
         if (det && wrongSel.length) det.open = true
         updateWrongSummary(row)
+        // 基线按「卷面上实际点亮的 chips」记，保存时没改勾选就不重传错词
+        row.dataset.editWords = [...row.querySelectorAll('.geg-word.sel')]
+          .map((c) => String(c.dataset.w || '')).join('|')
+      } else {
+        row.dataset.editWords = wrongSel.join('|')
       }
       row.dataset.editId = editBtn.dataset.gedit
       row.dataset.editLevel = editBtn.dataset.level
@@ -555,12 +584,20 @@ async function mountExamGrading(host, students) {
       if (!(lv >= 0 && lv <= 7)) return alert('混合卷须选择登记级别（L0–L7）')
     }
     const before = Number(unlockByUser.get(user))
-    // 勾选的错词随 payload 原样入库；空数组也传（明确的「全对」语义）
+    // 新登记：空数组也传（[]=这份成绩没有错词）。
+    // 修改：勾选与回填一致时不传 wrong_words（null=不动明细、不回流）；
+    // 勾选变了才传新数组。服务端仍只把相对旧明细新增的词送进复习队列。
     const wrongWords = [...row.querySelectorAll('.geg-word.sel')].map((c) => String(c.dataset.w || ''))
+    const payload = { user, level: lv, score, exam_date: date }
+    if (editId) {
+      const prev = String(row.dataset.editWords || '').split('|').filter(Boolean)
+      if (!sameWordSet(prev, wrongWords)) payload.wrong_words = wrongWords
+    } else {
+      payload.wrong_words = wrongWords
+    }
     btn.disabled = true
     btn.textContent = editId ? '保存中…' : '登记中…'
     try {
-      const payload = { user, level: lv, score, exam_date: date, wrong_words: wrongWords }
       const r = editId
         ? await api.vocabExamUpdate(editId, payload)
         : await api.vocabExamAdd({ ...payload, paper_id: pid })
@@ -568,7 +605,15 @@ async function mountExamGrading(host, students) {
       if (r.previous_user) rememberUnlock(r.previous_user, r.previous_unlocked_level)
       const after = Number(r.unlocked_level)
       let msg = `${editId ? '已修改' : '已登记'} ${user} ${score} 分`
-      if (wrongWords.length) msg += `，已记 ${wrongWords.length} 个错词并加入复习队列`
+      if (Array.isArray(payload.wrong_words)) {
+        if (payload.wrong_words.length) {
+          msg += editId
+            ? `，错词已更新为 ${payload.wrong_words.length} 个`
+            : `，已记 ${payload.wrong_words.length} 个错词并加入复习队列`
+        } else if (editId) {
+          msg += '，错词已清空'
+        }
+      }
       if (Number.isFinite(before) && Number.isFinite(after) && after !== before) {
         msg += `，单词级别现为 L${after}`
       }

@@ -23,6 +23,20 @@ def _clean_wrong_words(raw) -> list[str]:
     return out
 
 
+def _wrong_words_from_answers(answers) -> list[str]:
+    """错词明细行 → 词表。只计答错行，保序去重，与入库口径一致（小写、截 60）。"""
+    out: list[str] = []
+    for a in answers or []:
+        if not isinstance(a, dict):
+            continue
+        if a.get("correct") not in (0, False):
+            continue
+        s = str(a.get("word") or "").strip().lower()[:60]
+        if s and s not in out:
+            out.append(s)
+    return out
+
+
 def register_vocab(app, ctx):
     vocab_exam = ctx.vocab_exam
     vocab_paper = ctx.vocab_paper
@@ -185,16 +199,18 @@ def register_vocab(app, ctx):
 
     @app.get("/vocab-exams/{exam_id}")
     def vocab_exam_detail(exam_id: int, request: "fastapi.Request"):
-        """单条成绩 + 按题错词明细（教师专属，批改卡回看用）。
+        """单条成绩 + 按题错词明细（教师专属，批改卡回看 / 编辑回填用）。
 
-        answers 只含错词行；对的题 = 该卷词表减错词。
+        answers 是行级来源（只存错行；对的题 = 该卷词表减错词）。
+        exam.wrong_words 从这些行投影（保序），编辑预选读这一份。
         """
         _require_teacher(request)
         exam = vocab_exam.get(exam_id)
         if exam is None:
             raise HTTPException(status_code=404, detail=f"记录 id={exam_id} 不存在")
-        return _ok({"exam": exam,
-                    "answers": vocab_exam.answers_for_exam(exam_id)})
+        answers = vocab_exam.answers_for_exam(exam_id)
+        exam = {**exam, "wrong_words": _wrong_words_from_answers(answers)}
+        return _ok({"exam": exam, "answers": answers})
 
     @app.post("/vocab-exams")
     def vocab_exam_add(payload: dict, request: "fastapi.Request"):
@@ -245,8 +261,10 @@ def register_vocab(app, ctx):
     def vocab_exam_update(exam_id: int, payload: dict, request: "fastapi.Request"):
         """修改一条词汇考试记录（教师专属）。未提交的字段保持原值。
 
-        wrong_words：传数组=重写错词明细（空数组清空），并按新明细回流；
-        不传/传 null=保持原明细不动。
+        wrong_words：传数组=重写错词明细（空数组清空）；不传/传 null=明细与
+        复习队列都不动。回流只喂相对旧明细新增的词——重叠词不再
+        wrong_count+1，也不重置 stage / 攻克 / 掌握。换归属学生时，
+        当前错词对该生是新登记，整表回流一次。移出名单的词留在原队列。
         """
         _require_teacher(request)
         if not isinstance(payload, dict):
@@ -283,6 +301,12 @@ def register_vocab(app, ctx):
         if raw_wrong is not None and not isinstance(raw_wrong, list):
             raise HTTPException(status_code=422, detail="wrong_words 须为字符串数组")
         wrong_words = None if raw_wrong is None else _clean_wrong_words(raw_wrong)
+        # 先读旧行再重写。enter_review 每次调用都 +1 并清 stage，
+        # 所以只能把「这次才变成错」的词送进去。
+        prev_wrong = (
+            _wrong_words_from_answers(vocab_exam.answers_for_exam(exam_id))
+            if wrong_words is not None else []
+        )
         try:
             rec = vocab_exam.update(
                 exam_id, user, level, score, exam_date, note, paper_id,
@@ -291,11 +315,17 @@ def register_vocab(app, ctx):
             raise HTTPException(status_code=422, detail=str(e))
         if rec is None:
             raise HTTPException(status_code=404, detail=f"记录 id={exam_id} 不存在")
-        if wrong_words:
-            # 回流按明细现归属的学生（PUT 换人时用新 user）
-            recite.enter_review(rec["user"], wrong_words,
-                                levels={w: int(rec["level"]) for w in wrong_words}
-                                if int(rec["level"]) >= 0 else None)
+        if wrong_words is not None:
+            if rec["user"] != current["user"]:
+                fresh = list(wrong_words)
+            else:
+                prev_set = set(prev_wrong)
+                fresh = [w for w in wrong_words if w[:60] not in prev_set]
+            if fresh:
+                # 回流按明细现归属的学生（PUT 换人时用新 user）
+                recite.enter_review(rec["user"], fresh,
+                                    levels={w: int(rec["level"]) for w in fresh}
+                                    if int(rec["level"]) >= 0 else None)
         out = {
             "exam": rec,
             "unlocked_level": vocab_exam.unlocked_level(rec["user"]),
@@ -326,7 +356,7 @@ def register_vocab(app, ctx):
             exams = [{**e, "wrong_words": wrong_map.get(e["id"], [])}
                      for e in by_paper.get(p.get("paper_id") or "", [])]
             out.append({**p, "exams": exams})
-        return _ok({"papers": out})
+        return _ok({"papers": out, "pass_score": PASS_SCORE})
 
     @app.delete("/vocab-exams/{exam_id}")
     def vocab_exam_del(exam_id: int, request: "fastapi.Request"):

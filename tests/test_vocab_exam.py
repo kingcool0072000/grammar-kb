@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from grammar_kb.clock import today_cn  # noqa: E402
 from grammar_kb.server import create_app  # noqa: E402
-from grammar_kb.vocab_exam import MAX_UNLOCK_LEVEL  # noqa: E402
+from grammar_kb.vocab_exam import MAX_UNLOCK_LEVEL, PASS_SCORE  # noqa: E402
 
 
 @pytest.fixture()
@@ -292,9 +292,24 @@ def test_paper_simple_words_layer_into_form(tmp_path, monkeypatch):
     assert set(ctx_words) <= {w["word"] for w in hard}
 
 
+def _review_row(con, user, word):
+    return con.execute(
+        "SELECT stage, next_review, conquered_at, wrong_count"
+        " FROM recite_review WHERE user = ? AND word = ?",
+        (user, word)).fetchone()
+
+
+def _progress_row(con, user, word):
+    return con.execute(
+        "SELECT wrong, mastered_at FROM recite_word_progress"
+        " WHERE user = ? AND word = ?",
+        (user, word)).fetchone()
+
+
 def test_wrong_words_flow_into_review_queue(vex_env):
-    """登记成绩带错词：明细只存错行（清洗去重）→ 回流艾宾浩斯队列
-    （stage=0、明天到期、未攻克）；PUT 改明细先删旧再插新，不翻倍。"""
+    """POST 错词进复习队列一次。PUT 重写明细，但只把相对旧明细新增的词回流：
+    重叠词不再 wrong_count+1，也不重置 stage / 攻克 / 掌握。
+    不传 wrong_words 不动明细和队列；移出名单的词留在队列里。"""
     c = _client(vex_env)
     ht = _login(c, "teacher", "123456")
     tomorrow = (today_cn() + timedelta(days=1)).isoformat()
@@ -312,17 +327,25 @@ def test_wrong_words_flow_into_review_queue(vex_env):
         (eid,)).fetchall()
     assert [x[0] for x in rows] == ["w1", "w2"]
     for w in ("w1", "w2"):
-        stage, nxt, conquered, wrong_n = con.execute(
-            "SELECT stage, next_review, conquered_at, wrong_count"
-            " FROM recite_review WHERE user = 'malin' AND word = ?",
-            (w,)).fetchone()
+        stage, nxt, conquered, wrong_n = _review_row(con, "malin", w)
         assert (stage, nxt, conquered, wrong_n) == (0, tomorrow, None, 1)
+    # 把 w2 推进到已攻克，证明随后的重叠 PUT 不会把它打回 stage 0
+    con.execute(
+        "UPDATE recite_review SET stage = 3, conquered_at = '2026-09-01'"
+        " WHERE user = 'malin' AND word = 'w2'")
+    con.execute(
+        "UPDATE recite_word_progress SET mastered_at = '2026-09-01'"
+        " WHERE user = 'malin' AND word = 'w2'")
+    con.commit()
     con.close()
-    # 单份成绩明细端点（教师）：answers 只含错词行
+    # 单份成绩明细：answers 是行，exam.wrong_words 是从行投影的词表
     detail = c.get(f"/vocab-exams/{eid}", headers=ht)
     assert detail.status_code == 200
-    assert [a["word"] for a in detail.json()["data"]["answers"]] == ["w1", "w2"]
-    # PUT 改成绩并传新错词：明细重写（w1 出局、w3 进来），不翻倍
+    body = detail.json()["data"]
+    assert [a["word"] for a in body["answers"]] == ["w1", "w2"]
+    assert body["exam"]["wrong_words"] == ["w1", "w2"]
+    # PUT 改成绩并传新错词：明细重写（w1 出局、w3 进来）。
+    # w2 仍在名单里，wrong_count / stage / 攻克保持；只有 w3 +1。
     r2 = c.put(f"/vocab-exams/{eid}", headers=ht, json={
         "score": 77, "wrong_words": ["w2", "w3"]})
     assert r2.status_code == 200, r2.text
@@ -332,11 +355,62 @@ def test_wrong_words_flow_into_review_queue(vex_env):
         "SELECT word FROM vocab_exam_answers WHERE exam_id = ? ORDER BY id",
         (eid,)).fetchall()
     assert [x[0] for x in rows] == ["w2", "w3"]
-    marks = dict(con.execute(
-        "SELECT word, wrong_count FROM recite_review WHERE user = 'malin'"
-    ).fetchall())
+    assert _review_row(con, "malin", "w1")[3] == 1  # 移出名单，队列不抽走
+    assert _review_row(con, "malin", "w2") == (3, tomorrow, "2026-09-01", 1)
+    assert _progress_row(con, "malin", "w2") == (1, "2026-09-01")
+    w3_stage, w3_next, w3_conquered, w3_n = _review_row(con, "malin", "w3")
+    assert (w3_stage, w3_next, w3_conquered, w3_n) == (0, tomorrow, None, 1)
+    assert _progress_row(con, "malin", "w3")[0] == 1
     con.close()
-    assert marks == {"w1": 1, "w2": 2, "w3": 1}  # w2 回炉 wrong+1
+    again = c.get(f"/vocab-exams/{eid}", headers=ht).json()["data"]
+    assert again["exam"]["wrong_words"] == ["w2", "w3"]
+    # 只改分数、不传 wrong_words：明细和队列都不动
+    r3 = c.put(f"/vocab-exams/{eid}", headers=ht, json={"score": 70})
+    assert r3.status_code == 200, r3.text
+    assert r3.json()["data"]["exam"]["score"] == 70
+    assert r3.json()["data"]["wrong_count"] == 2
+    con = sqlite3.connect(vex_env / "fce.db")
+    rows = con.execute(
+        "SELECT word FROM vocab_exam_answers WHERE exam_id = ? ORDER BY id",
+        (eid,)).fetchall()
+    assert [x[0] for x in rows] == ["w2", "w3"]
+    assert _review_row(con, "malin", "w2") == (3, tomorrow, "2026-09-01", 1)
+    assert _review_row(con, "malin", "w3")[3] == 1
+    con.close()
+    # 再存一次同一批错词（大小写/空白不同）：仍然不加
+    r4 = c.put(f"/vocab-exams/{eid}", headers=ht, json={
+        "wrong_words": ["W2", " w3"]})
+    assert r4.status_code == 200, r4.text
+    con = sqlite3.connect(vex_env / "fce.db")
+    assert _review_row(con, "malin", "w2") == (3, tomorrow, "2026-09-01", 1)
+    assert _review_row(con, "malin", "w3")[3] == 1
+    assert _progress_row(con, "malin", "w2") == (1, "2026-09-01")
+    con.close()
+    # 换学生：当前错词对该生是新登记，整表回流一次；原学生队列不动
+    r5 = c.put(f"/vocab-exams/{eid}", headers=ht, json={
+        "user": "mxy", "wrong_words": ["w2", "w3"]})
+    assert r5.status_code == 200, r5.text
+    assert r5.json()["data"]["exam"]["user"] == "mxy"
+    con = sqlite3.connect(vex_env / "fce.db")
+    assert _review_row(con, "malin", "w2") == (3, tomorrow, "2026-09-01", 1)
+    assert _review_row(con, "mxy", "w2")[3] == 1
+    assert _review_row(con, "mxy", "w3")[3] == 1
+    # [] 清空明细，不从队列抽走
+    con.close()
+    r6 = c.put(f"/vocab-exams/{eid}", headers=ht, json={"wrong_words": []})
+    assert r6.status_code == 200, r6.text
+    assert r6.json()["data"]["wrong_count"] == 0
+    con = sqlite3.connect(vex_env / "fce.db")
+    n_ans = con.execute(
+        "SELECT COUNT(*) FROM vocab_exam_answers WHERE exam_id = ?",
+        (eid,)).fetchone()[0]
+    assert n_ans == 0
+    assert _review_row(con, "mxy", "w2")[3] == 1
+    assert _review_row(con, "malin", "w2")[3] == 1
+    con.close()
+    cleared = c.get(f"/vocab-exams/{eid}", headers=ht).json()["data"]
+    assert cleared["exam"]["wrong_words"] == []
+    assert cleared["answers"] == []
     # wrong_words 非 list → 422
     assert c.post("/vocab-exams", headers=ht, json={
         "user": "malin", "level": 0, "score": 66,
@@ -519,7 +593,9 @@ def test_paper_generate_learned_scope(vex_env, monkeypatch):
         "exam_date": "2026-10-11", "paper_id": p["paper_id"],
     })
     assert ok.status_code == 200, ok.text
-    grading = c.get("/vocab-papers/grading", headers=ht).json()["data"]["papers"]
+    grading_body = c.get("/vocab-papers/grading", headers=ht).json()["data"]
+    assert grading_body["pass_score"] == PASS_SCORE
+    grading = grading_body["papers"]
     row = next(x for x in grading if x["paper_id"] == p["paper_id"])
     assert row["level"] == -1
     assert any(e["user"] == "malin" and e["level"] == 2 and e["score"] == 88

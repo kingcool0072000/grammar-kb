@@ -162,16 +162,8 @@ export async function mountVocabExam(el) {
     btn.disabled = true
     try {
       if (editing) {
-        // 本页表单不标错词：修改时把已登记的错词原样带回——
-        // 后端按「不传 wrong_words=全对」处理，不带会被清空
-        let keep = Array.isArray(editing.wrong_words) ? editing.wrong_words : null
-        if (!keep && typeof api.vocabExamGet === 'function') {
-          try {
-            const d = await api.vocabExamGet(editing.id)
-            if (Array.isArray(d && d.exam && d.exam.wrong_words)) keep = d.exam.wrong_words
-          } catch { /* 取不到就按后端缺省行为 */ }
-        }
-        if (keep) rec.wrong_words = keep
+        // 本页表单不改错词，所以不传 wrong_words。
+        // 后端：字段缺省 / null = 明细和复习队列都不动；[] = 清空明细。
         await api.vocabExamUpdate(editing.id, rec)
         toast('已保存修改')
       } else {
@@ -254,9 +246,26 @@ function wrongCountOf(e) {
   return Number.isFinite(n) && n > 0 ? Math.round(n) : 0
 }
 
-// 卷面题型 → 中文（与生成卷三段一致；未知值原样展示）
-const VE_QTYPES = { zh2en: '中译英', en2zh: '英译中', spell: '拼写' }
+// 卷面题型 → 中文（与生成卷五段一致）。空 qtype 留空，不编造标签；未知值原样展示。
+const VE_QTYPES = {
+  form: '词形变化', spell: '拼写', ctx: '例句填空',
+  zh2en: '中译英', en2zh: '英译中',
+}
 const veQtypeLabel = (q) => (q ? (VE_QTYPES[q] || String(q)) : '')
+
+// 明细里的错词词表。exam.wrong_words 是服务端从 answers 投影的词表；
+// 没有投影时从 answers 的答错行取。
+function wordsFromExamDetail(d) {
+  const exam = (d && d.exam) || {}
+  if (Array.isArray(exam.wrong_words)) return exam.wrong_words.slice()
+  const answers = Array.isArray(d && d.answers) ? d.answers : []
+  const out = []
+  for (const a of answers) {
+    if (!a || !a.word) continue
+    if ((a.correct === false || a.correct === 0) && !out.includes(a.word)) out.push(a.word)
+  }
+  return out
+}
 
 function closeExamWrongOverlay() {
   const overlay = document.querySelector('.gd-focus-detail.ve-wwin')
@@ -277,18 +286,11 @@ async function openExamWrong(examId) {
   }
   const exam = (d && d.exam) || {}
   const answers = Array.isArray(d && d.answers) ? d.answers : []
-  // 兼容：优先 exam.wrong_words 数组；字段缺失时从 answers 里取 correct=false 的词
-  const hasWw = Array.isArray(exam.wrong_words)
-  const wrong = hasWw ? exam.wrong_words.slice() : []
+  const wrong = wordsFromExamDetail(d)
   const qByWord = new Map()
   for (const a of answers) {
-    if (!a || !a.word) continue
-    if (a.correct === false || a.correct === 0) {
-      if (!hasWw && !wrong.includes(a.word)) wrong.push(a.word)
-      qByWord.set(a.word, a.qtype)
-    } else if (!qByWord.has(a.word)) {
-      qByWord.set(a.word, a.qtype)
-    }
+    if (!a || !a.word || qByWord.has(a.word)) continue
+    if (a.correct === false || a.correct === 0) qByWord.set(a.word, a.qtype || '')
   }
   closeExamWrongOverlay() // 防重复叠加
   const overlay = document.createElement('div')
