@@ -220,25 +220,29 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
       return Object.keys(ratios).length ? ratios : null
     }
 
-    // 预览行：按 section.type 简单渲染（词形问句/挖空句/中英互译）
+    // 预览行：和打印卷同一套问法（词面 + 要求 + 横线）。答案淡显示，方便教师核对。
+    const PV_CN = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
     function pvLine(type, it) {
       const pos = it.pos_cn || (Array.isArray(it.pos) ? it.pos.join(' ') : '') || ''
       const gloss = it.gloss || ''
       const word = it.word || ''
+      const blank = '<span class="vl-pv-blank"></span>'
+      const ans = it.answer ? `<i class="vl-pv-ans">${escapeHtml(it.answer)}</i>` : ''
       if (type === 'form') {
         const key = it.form_key || it.form || ''
-        return `${escapeHtml(`${word} 的${FORM_CN[key] || key || '词形'}`)} → ${escapeHtml(it.answer || '______')}`
+        const label = FORM_CN[key] || key || '词形'
+        return `<span class="vl-pv-en">${escapeHtml(word)}</span><span class="vl-pv-ask">的${escapeHtml(label)}</span>${blank}${ans}`
       }
       if (type === 'spell')
-        return `${escapeHtml(pos)} ${escapeHtml(String(gloss).slice(0, 16))}：<code>${escapeHtml(it.blanked || it.answer || '')}</code>`
+        return `<span class="vl-pv-pos">${escapeHtml(pos)}</span><span class="vl-pv-zh">${escapeHtml(String(gloss).slice(0, 18))}</span><code>${escapeHtml(it.blanked || it.answer || '')}</code>`
       if (type === 'ctx') {
         const sent = it.sentence || it.ctx || it.prompt || ''
-        return `${escapeHtml(String(sent))} <i class="muted">（答案：${escapeHtml(it.answer || word)}）</i>`
+        return `<span class="vl-pv-en">${escapeHtml(String(sent))}</span>${ans}`
       }
       if (type === 'zh2en')
-        return `${escapeHtml(pos)} ${escapeHtml(gloss)} → ______`
+        return `<span class="vl-pv-pos">${escapeHtml(pos)}</span><span class="vl-pv-zh">${escapeHtml(gloss)}</span>${blank}`
       if (type === 'en2zh')
-        return `${escapeHtml(word)}（${escapeHtml(pos)}）→ ______`
+        return `<span class="vl-pv-en">${escapeHtml(word)}</span><span class="vl-pv-pos">${escapeHtml(pos)}</span>${blank}`
       return escapeHtml(it.prompt || it.question || word || gloss || '（未知题型）')
     }
 
@@ -274,7 +278,7 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
             <details class="vl-paper-preview">
               <summary>预览试卷内容</summary>
               ${sections.map((s, si) => `
-                <div class="vl-pv-sec"><b>${si + 1}、${escapeHtml(s.title)}</b>${(s.items || []).slice(0, 5).map((it, i) => `<p>${i + 1}. ${pvLine(s.type, it)}</p>`).join('')}<p class="muted">…共 ${(s.items || []).length} 题</p></div>`).join('') || '<p class="muted">（本卷没有返回任何 section）</p>'}
+                <div class="vl-pv-sec"><b>${PV_CN[si] || (si + 1)}、${escapeHtml(s.title)}<span>${(s.items || []).length} 题</span></b>${(s.items || []).slice(0, 5).map((it, i) => `<p><em>${i + 1}.</em> ${pvLine(s.type, it)}</p>`).join('')}${(s.items || []).length > 5 ? `<p class="muted">…共 ${(s.items || []).length} 题</p>` : ''}</div>`).join('') || '<p class="muted">（本卷没有返回任何 section）</p>'}
             </details>
             <div class="vl-paper-ops">
               <button class="chip" id="vl-preview">👁 预览试卷</button>
