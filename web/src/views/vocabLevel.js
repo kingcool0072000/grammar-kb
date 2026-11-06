@@ -1,14 +1,15 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
+import { FORM_CN } from '../fmt.js'
 import { fillAtlasHost } from '../atlas.js'
 import { getWordCard } from '../wordcard.js'
 
 // 教师版 · 背单词级别详情（备课中心子页）：
 //   2.1 本级单词内容（词表+搜索，L0=哈一课本高频词=原词汇表）
-//   2.2 单词考试设计（试卷生成/打印）
-//   2.3 单词级别（教师直接设定，不要求考试 80 分）
+//   2.2 单词考试设计（卷型预设/配比/生成/打印，sections 动态渲染）
+//   2.3 单词级别（教师直接设定，不要求考试 80 分，解锁上限 L7）
 export async function mountVocabLevel(el, { level = 0 } = {}) {
-  const lv = Math.max(0, Math.min(5, Number(level) || 0))
+  const lv = Math.max(0, Math.min(7, Number(level) || 0))
   el.innerHTML = `
     <div class="view-head">
       <h1>背单词 · L${lv}${lv === 0 ? '（课本高频词）' : ''}</h1>
@@ -23,7 +24,7 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
   let data, students
   try {
     ;[data, students] = await Promise.all([
-      api.vocabLevels({ maxLevel: 5, level: lv }),
+      api.vocabLevels({ maxLevel: 7, level: lv }),
       api.users().catch(() => ({ users: [] })),
     ])
   } catch (e) {
@@ -65,21 +66,38 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
         <div class="vl-pager" id="vl-pager"></div>
       </section>
 
-      <!-- 2.2 单词考试 · 试卷生成（本级与学生无关；已学混合卷按学生进度） -->
+      <!-- 2.2 单词考试 · 试卷生成（卷型预设：标准/复习强化/错词回收；已学混合卷按学生进度） -->
       <section class="vl-sec card">
         <header class="vl-head">
           <h3>📝 单词考试 · 试卷生成</h3>
           <div class="vl-tools">
             <label class="vl-scope"><input type="radio" name="vl-scope" value="level" checked>本级（L${lv}）</label>
             <label class="vl-scope"><input type="radio" name="vl-scope" value="learned">全部已学词</label>
-            <select id="vl-scope-user" style="display:none" title="混合卷按学生的学习轨迹出题">
+            <select id="vl-preset" title="卷型预设：标准卷按默认配比；强化卷/回收卷按所选学生的作答记录出题">
+              <option value="standard">标准卷</option>
+              <option value="reinforce">复习强化卷</option>
+              <option value="recycle">错词回收卷</option>
+            </select>
+            <select id="vl-scope-user" style="display:none" title="按该学生的学习轨迹/错词出题">
               ${studs.map((u) => `<option value="${escapeHtml(u.user)}">${escapeHtml(u.user)}</option>`).join('') || '<option value="">（无学生账号）</option>'}
             </select>
             <button class="btn-primary" id="vl-gen">🎲 生成试卷</button>
             <button class="chip" id="vl-records" type="button">📋 考试成绩</button>
           </div>
         </header>
-        <p class="muted">随机选词（不同首字母/词性，自动规避人名/地名）· 中译英 20 + 英译中 20 + 拼写挖空 10 · 每题带词性提示 · 与历史试卷重复 ≤10 词。<b>本级</b>=L${lv} 词库；<b>全部已学词</b>=所选学生背过的词（出现在进度里即可，含尚未掌握）跨级别混合，卷号 MIX-。流程：生成 → 预览 → 满意后保存存档。</p>
+        <p class="muted">随机选词（不同首字母/词性，自动规避人名/地名）· 每题带词性提示 · 标准卷默认 50 题（词形 12 · 拼写 8 · 例句 10 · 中译英 10 · 英译中 10）。<b>复习强化卷 / 错词回收卷</b>按所选学生的作答记录出题（须选学生，本级范围也要选）。<b>本级</b>=L${lv} 词库；<b>全部已学词</b>=所选学生背过的词（出现在进度里即可，含尚未掌握）跨级别混合，卷号 MIX-。题量与五题型配比可在下方「进阶」里自定义。流程：生成 → 预览 → 满意后保存存档。</p>
+        <details class="vl-paper-adv" style="margin:6px 0 10px">
+          <summary style="cursor:pointer;user-select:none;font-size:13px;color:var(--ink)">进阶：题量与配比</summary>
+          <div class="vl-adv-row" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px;color:var(--ink)">
+            <label>题量 <input id="vl-total" type="number" min="10" max="200" value="50" style="width:64px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
+            <label>词形 <input id="vl-r-form" type="number" min="0" value="12" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
+            <label>拼写 <input id="vl-r-spell" type="number" min="0" value="8" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
+            <label>例句 <input id="vl-r-ctx" type="number" min="0" value="10" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
+            <label>中译英 <input id="vl-r-zh2en" type="number" min="0" value="10" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
+            <label>英译中 <input id="vl-r-en2zh" type="number" min="0" value="10" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
+            <span class="muted">全部留空则不传配比，按卷型预设默认出题。</span>
+          </div>
+        </details>
         <div id="vl-paper-out"></div>
         <div id="vl-paper-history"></div>
       </section>
@@ -100,7 +118,7 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
             <div class="vl-unlock-row" data-stu="${escapeHtml(u.user)}">
               <b>🎒 ${escapeHtml(u.user)}</b>
               <div class="vl-lv-btns">
-                ${[0, 1, 2, 3, 4, 5].map((n) => `
+                ${[0, 1, 2, 3, 4, 5, 6, 7].map((n) => `
                   <button class="chip ${effective >= n ? 'primary' : ''}" data-stu-lv="${n}" title="设为 L${n}">L${n}</button>`).join('')}
               </div>
               <span class="vl-unlock-state">单词级别 <b>L${effective}</b> · ${how}</span>
@@ -180,37 +198,83 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
     }
     // 试卷生成：三步流程 生成（未存档）→ 预览 → 保存
     // 范围：本级（L{n} 词库） / 全部已学词（进度里出现过的词，含未掌握）
+    // 卷型：standard 标准卷 / reinforce 复习强化卷 / recycle 错词回收卷——
+    //       后两种按所选学生的作答记录出题，本级范围也要求选人
     const scopeRadios = body.querySelectorAll('input[name="vl-scope"]')
     const scopeUser = body.querySelector('#vl-scope-user')
-    scopeRadios.forEach((r) => r.addEventListener('change', () => {
-      scopeUser.style.display =
-        body.querySelector('input[name="vl-scope"]:checked').value === 'learned' ? '' : 'none'
-    }))
+    const presetSel = body.querySelector('#vl-preset')
+    const userNeeded = () =>
+      body.querySelector('input[name="vl-scope"]:checked').value === 'learned' ||
+      presetSel.value !== 'standard'
+    const syncUserVis = () => { scopeUser.style.display = userNeeded() ? '' : 'none' }
+    scopeRadios.forEach((r) => r.addEventListener('change', syncUserVis))
+    presetSel.addEventListener('change', syncUserVis)
+
+    // 五题型配比：全空 → 不传 ratios（按后端预设默认）；有填 → 只传填了的键
+    function readRatios() {
+      const ratios = {}
+      ;['form', 'spell', 'ctx', 'zh2en', 'en2zh'].forEach((k) => {
+        const v = body.querySelector(`#vl-r-${k}`).value.trim()
+        if (v !== '') ratios[k] = Number(v)
+      })
+      return Object.keys(ratios).length ? ratios : null
+    }
+
+    // 预览行：按 section.type 简单渲染（词形问句/挖空句/中英互译）
+    function pvLine(type, it) {
+      const pos = it.pos_cn || (Array.isArray(it.pos) ? it.pos.join(' ') : '') || ''
+      const gloss = it.gloss || ''
+      const word = it.word || ''
+      if (type === 'form') {
+        const key = it.form_key || it.form || ''
+        return `${escapeHtml(`${word} 的${FORM_CN[key] || key || '词形'}`)} → ${escapeHtml(it.answer || '______')}`
+      }
+      if (type === 'spell')
+        return `${escapeHtml(pos)} ${escapeHtml(String(gloss).slice(0, 16))}：<code>${escapeHtml(it.blanked || it.answer || '')}</code>`
+      if (type === 'ctx') {
+        const sent = it.sentence || it.ctx || it.prompt || ''
+        return `${escapeHtml(String(sent))} <i class="muted">（答案：${escapeHtml(it.answer || word)}）</i>`
+      }
+      if (type === 'zh2en')
+        return `${escapeHtml(pos)} ${escapeHtml(gloss)} → ______`
+      if (type === 'en2zh')
+        return `${escapeHtml(word)}（${escapeHtml(pos)}）→ ______`
+      return escapeHtml(it.prompt || it.question || word || gloss || '（未知题型）')
+    }
+
     async function genPaper() {
       const out = body.querySelector('#vl-paper-out')
       const scope = body.querySelector('input[name="vl-scope"]:checked').value
-      const user = scope === 'learned' ? scopeUser.value : ''
-      if (scope === 'learned' && !user) {
-        out.innerHTML = '<p style="color:#b42318">请先选择学生（混合卷按学生的学习轨迹出题）。</p>'
+      const preset = presetSel.value
+      const user = userNeeded() ? scopeUser.value : ''
+      if (userNeeded() && !user) {
+        out.innerHTML = '<p style="color:#b42318">请先选择学生（强化卷/回收卷/混合卷都按该学生的记录出题）。</p>'
         return
       }
+      const totalRaw = body.querySelector('#vl-total').value.trim()
+      const ratios = readRatios()
       out.innerHTML = '<p class="muted">生成中…</p>'
       try {
-        const r = await api.vocabPaperGenerate(lv, false, { scope, user }) // 先不存档
+        // 先不存档；题量/配比留默认（空）时不传，按后端预设走
+        const r = await api.vocabPaperGenerate(lv, false, {
+          scope, user, preset,
+          ...(totalRaw !== '' ? { total: Number(totalRaw) } : {}),
+          ...(ratios ? { ratios } : {}),
+        })
         const p = r.paper
+        const sections = p.sections || []
         let saved = false
         out.innerHTML = `
           <div class="vl-paper-card">
             <div class="vl-paper-meta">
               <b>卷号 ${escapeHtml(p.paper_id)}</b>
-              <span>${p.scope === 'learned' ? `已学全部混合卷 · ${escapeHtml(p.user || '')} · ` : ''}中译英 ${p.zh2en.length} · 英译中 ${p.en2zh.length} · 拼写 ${p.spell.length} · 与历史重复 ${p.overlap_with_history} 词</span>
+              <span>${p.scope === 'learned' ? `已学全部混合卷 · ${escapeHtml(p.user || '')} · ` : ''}${sections.map((s) => `${escapeHtml(s.title)} ${(s.items || []).length}`).join(' · ')} · 与历史重复 ${p.overlap_with_history} 词${p.seed != null && p.seed !== '' ? ` · seed ${escapeHtml(String(p.seed))}` : ''}</span>
               <i class="vl-paper-state">${saved ? '已存档' : '未存档（预览态）'}</i>
             </div>
             <details class="vl-paper-preview">
               <summary>预览试卷内容</summary>
-              <div class="vl-pv-sec"><b>一、中译英</b>${p.zh2en.slice(0, 5).map((w, i) => `<p>${i + 1}. ${escapeHtml(w.pos_cn || '')} ${escapeHtml(w.gloss)} → ______</p>`).join('')}<p class="muted">…共 ${p.zh2en.length} 题</p></div>
-              <div class="vl-pv-sec"><b>二、英译中</b>${p.en2zh.slice(0, 5).map((w, i) => `<p>${i + 1}. ${escapeHtml(w.word)}（${escapeHtml(w.pos_cn || '')}）→ ______</p>`).join('')}<p class="muted">…共 ${p.en2zh.length} 题</p></div>
-              <div class="vl-pv-sec"><b>三、拼写</b>${p.spell.map((w, i) => `<p>${i + 1}. ${escapeHtml(w.pos_cn || '')} ${escapeHtml(w.gloss.slice(0, 16))}： <code>${escapeHtml(w.blanked)}</code></p>`).join('')}</div>
+              ${sections.map((s, si) => `
+                <div class="vl-pv-sec"><b>${si + 1}、${escapeHtml(s.title)}</b>${(s.items || []).slice(0, 5).map((it, i) => `<p>${i + 1}. ${pvLine(s.type, it)}</p>`).join('')}<p class="muted">…共 ${(s.items || []).length} 题</p></div>`).join('') || '<p class="muted">（本卷没有返回任何 section）</p>'}
             </details>
             <div class="vl-paper-ops">
               <button class="chip" id="vl-preview">👁 预览试卷</button>

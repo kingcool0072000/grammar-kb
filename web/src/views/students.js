@@ -1,9 +1,6 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
-
-function vocabPaperHead(level) {
-  return Number(level) < 0 ? '已学混合卷' : `L${level}`
-}
+import { vocabPaperHead } from '../fmt.js'
 
 // 教师版 · 学生管理：增删学生账号 + 给每个学生配置学习总目标。
 // 目标结构复用 /plan/goals（词汇/讲次/FCE/截止日），讲次下拉来自备课内容。

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -11,8 +12,9 @@ pytest.importorskip("fastapi")
 pytest.importorskip("httpx")
 from fastapi.testclient import TestClient  # noqa: E402
 
+from grammar_kb.clock import today_cn  # noqa: E402
 from grammar_kb.server import create_app  # noqa: E402
-from grammar_kb.vocab_exam import build_paper, render_paper_html  # noqa: E402
+from grammar_kb.vocab_exam import MAX_UNLOCK_LEVEL, PASS_SCORE  # noqa: E402
 
 
 @pytest.fixture()
@@ -94,11 +96,11 @@ def test_exam_validation_and_perm(vex_env):
     c = _client(vex_env)
     hs = _login(c, "malin", "123456")
     ht = _login(c, "teacher", "123456")
-    # 学生不能登记/打卷
+    # 学生不能登记、不能看按题错词明细（教师专属端点）
     assert c.post("/vocab-exams", headers=hs, json={
         "user": "malin", "level": 0, "score": 99,
         "exam_date": "2026-10-11"}).status_code == 403
-    assert c.get("/vocab-exams/paper?level=0", headers=hs).status_code == 403
+    assert c.get("/vocab-exams/1", headers=hs).status_code == 403
     # 参数校验
     assert c.post("/vocab-exams", headers=ht, json={
         "user": "malin", "level": 9, "score": 80,
@@ -147,22 +149,287 @@ def test_level_query_cannot_bypass_unlock(vex_env):
     assert teacher["unlocked"] == 7
 
 
-def test_paper_generation(vex_env, monkeypatch):
-    """考卷：50 词四部分 + HTML 结构 + seed 复现。"""
-    _require_level_words(monkeypatch)
+def _rich_rows(names, level=0):
+    """带变形与例句的富词条（不读 grammar.db）：form/ctx 两段都可出题。"""
+    return [{
+        "word": w, "level": level, "pos": '["v","n"]', "pos_list": ["v", "n"],
+        "pos_cn": "v. 动词 / n. 名词",
+        "gloss": f"{w}的释义", "gloss_clean": f"{w}的释义",
+        "forms": {"past": f"{w}ed", "plural": f"{w}s"},
+        "example": {"en": f"We {w} it together.", "zh": f"{w}的例句"},
+    } for w in names]
+
+
+def test_paper_structure_roundtrip(tmp_path, monkeypatch):
+    """存什么渲染什么：generate(save=True) 落库的 sections 与 get_paper
+    取回的逐项一致（题型/顺序/题面/答案）。
+
+    真 Bug 回归：旧版落库已 shuffle 的词序、取回按位置还原分段，导致
+    分段错乱；新版 structure 列存整卷，取回即所见。
+    """
+    import grammar_kb.vocab_paper as vp
+    names = [f"rw{i:03d}" for i in range(60)]
+    rich = _rich_rows(names)
+    monkeypatch.setattr(vp, "_load_words_rich", lambda level: rich)
+    db = str(tmp_path / "fce.db")
+    paper = vp.generate_paper(0, save=True, seed=11, fce_db_path=db)
+    got = vp.get_paper(paper["paper_id"], fce_db_path=db)
+    assert got is not None
+    assert got["sections"] == paper["sections"]
+    assert got["words"] == paper["words"]
+    assert got["config"] == paper["config"]
+    assert got["level"] == 0 and got["scope"] == "level"
+    # 落库行本身就是整卷：structure 列含 sections，words 列是词序
+    with sqlite3.connect(db) as con:
+        structure, words_raw = con.execute(
+            "SELECT structure, words FROM vocab_paper_history"
+            " WHERE paper_id = ?", (paper["paper_id"],)).fetchone()
+    assert json.loads(structure)["sections"] == paper["sections"]
+    assert json.loads(words_raw) == paper["words"]
+
+
+def test_paper_legacy_wordlist_fallback(tmp_path, monkeypatch):
+    """旧版卷（只存 50 词词序）取回：按 20/20/10 位置还原成 sections，
+    挖空位置以 paper_id 为种子（多次取回一致）。"""
+    import grammar_kb.vocab_paper as vp
+    names = [f"old{i:02d}" for i in range(50)]
+    monkeypatch.setattr(vp, "_load_words_rich", lambda level: _rich_rows(names))
+    db = str(tmp_path / "fce.db")
+    vp.VocabPaperStore(db)  # 建表 + 幂等补列（模拟生产库迁移后的形态）
+    with sqlite3.connect(db) as con:
+        con.execute(
+            "INSERT INTO vocab_paper_history (level, paper_id, words, created_at)"
+            " VALUES (?,?,?,?)",
+            (0, "L0-20251101010101-0001", json.dumps(names),
+             "2025-11-01T00:00:00"))
+    paper = vp.get_paper("L0-20251101010101-0001", fce_db_path=db)
+    assert paper["words"] == names
+    assert [s["type"] for s in paper["sections"]] == ["zh2en", "en2zh", "spell"]
+    assert [it["word"] for it in paper["sections"][0]["items"]] == names[:20]
+    assert [it["word"] for it in paper["sections"][1]["items"]] == names[20:40]
+    spell = paper["sections"][2]["items"]
+    assert [it["word"] for it in spell] == names[40:]
+    for it, w in zip(spell, names[40:]):
+        assert it["blanked"].startswith(w[0]) and "_" in it["blanked"]
+        assert it["answer"] and it["answer"] not in it["blanked"]
+    # 挖空可复现：同一卷再取回，位置一致
+    again = vp.get_paper("L0-20251101010101-0001", fce_db_path=db)
+    assert [it["blanked"] for it in again["sections"][2]["items"]] == \
+        [it["blanked"] for it in spell]
+    # 旧卷配置按位置口径回填
+    assert paper["config"]["total"] == 50
+    assert paper["config"]["ratios"] == {"form": 0, "spell": 10, "ctx": 0,
+                                         "zh2en": 20, "en2zh": 20}
+
+
+def test_paper_seed_reproducible(tmp_path, monkeypatch):
+    """同 seed 两次 generate：词序与 sections（含挖空位置、变形键）一致。"""
+    import grammar_kb.vocab_paper as vp
+    names = [f"sd{i:03d}" for i in range(60)]
+    rich = _rich_rows(names)
+    monkeypatch.setattr(vp, "_load_words_rich", lambda level: rich)
+    db = str(tmp_path / "fce.db")
+    p1 = vp.generate_paper(0, save=False, seed=42, fce_db_path=db)
+    p2 = vp.generate_paper(0, save=False, seed=42, fce_db_path=db)
+    assert p1["seed"] == 42
+    assert p1["words"] == p2["words"]
+    assert p1["sections"] == p2["sections"]
+
+
+def test_paper_sections_complete_and_total_scale(tmp_path, monkeypatch):
+    """造词库数据出卷：五段齐全且顺序固定；total=40 按最大余数法缩放
+    各段配比（12/8/10/10/10 → 10/6/8/8/8）。"""
+    import grammar_kb.vocab_paper as vp
+    db = str(tmp_path / "grammar.db")
+    con = sqlite3.connect(db)
+    con.execute(
+        "CREATE TABLE vocab_word (word TEXT, level INTEGER, pos TEXT,"
+        " gloss TEXT, extra TEXT, example TEXT)")
+    rows = []
+    for i in range(60):
+        w = f"sc{i:03d}"
+        rows.append((
+            w, 3, '["v","n"]', f"{w}的释义",
+            json.dumps({"forms": {"past": f"{w}ed", "plural": f"{w}s"}}),
+            json.dumps({"en": f"We {w} it together.", "zh": "例句"},
+                       ensure_ascii=False),
+        ))
+    con.executemany("INSERT INTO vocab_word VALUES (?,?,?,?,?,?)", rows)
+    con.commit()
+    con.close()
+    monkeypatch.setattr(vp, "_grammar_db_path", lambda: db)
+
+    paper = vp.generate_paper(3, save=False, fce_db_path=db)
+    assert [s["type"] for s in paper["sections"]] == \
+        ["form", "spell", "ctx", "zh2en", "en2zh"]
+    assert sum(len(s["items"]) for s in paper["sections"]) == 50
+    assert paper["config"]["total"] == 50
+
+    scaled = vp.generate_paper(3, save=False, total=40, fce_db_path=db)
+    assert scaled["config"]["total"] == 40
+    counts = {s["type"]: len(s["items"]) for s in scaled["sections"]}
+    assert counts == {"form": 10, "spell": 6, "ctx": 8, "zh2en": 8, "en2zh": 8}
+
+
+def test_paper_simple_words_layer_into_form(tmp_path, monkeypatch):
+    """排序优先分层：简单词（level≤1）排前出词形变化题，复杂词排前出
+    例句填空题（learned 混合词池跨级别）。"""
+    import grammar_kb.vocab_paper as vp
+    simple = _rich_rows([f"easy{i:03d}" for i in range(15)], level=0)
+    hard = _rich_rows([f"hard{i:03d}" for i in range(45)], level=5)
+    monkeypatch.setattr(vp, "_load_learned_words",
+                        lambda user, fce_db_path=None: simple + hard)
+    db = str(tmp_path / "fce.db")
+    paper = vp.generate_paper(0, save=False, scope="learned", user="malin",
+                              fce_db_path=db)
+    assert paper["level"] == -1 and paper["paper_id"].startswith("MIX-")
+    by_type = {s["type"]: s["items"] for s in paper["sections"]}
+    form_words = [it["word"] for it in by_type["form"]]
+    assert len(form_words) == 12
+    assert set(form_words) <= {w["word"] for w in simple}
+    ctx_words = [it["word"] for it in by_type["ctx"]]
+    assert len(ctx_words) == 10
+    assert set(ctx_words) <= {w["word"] for w in hard}
+
+
+def _review_row(con, user, word):
+    return con.execute(
+        "SELECT stage, next_review, conquered_at, wrong_count"
+        " FROM recite_review WHERE user = ? AND word = ?",
+        (user, word)).fetchone()
+
+
+def _progress_row(con, user, word):
+    return con.execute(
+        "SELECT wrong, mastered_at FROM recite_word_progress"
+        " WHERE user = ? AND word = ?",
+        (user, word)).fetchone()
+
+
+def test_wrong_words_flow_into_review_queue(vex_env):
+    """POST 错词进复习队列一次。PUT 重写明细，但只把相对旧明细新增的词回流：
+    重叠词不再 wrong_count+1，也不重置 stage / 攻克 / 掌握。
+    不传 wrong_words 不动明细和队列；移出名单的词留在队列里。"""
     c = _client(vex_env)
     ht = _login(c, "teacher", "123456")
-    r = c.get("/vocab-exams/paper?level=0&seed=42", headers=ht)
-    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
-    body = r.text
-    for marker in ("听写", "中译英", "英译中", "拼写补全", "答案页"):
-        assert marker in body
-    # seed 固定 → 两卷一致；无 seed → 随机
-    p1 = build_paper(0, seed=42)
-    p2 = build_paper(0, seed=42)
-    assert [w["word"] for w in p1["words"]] == [w["word"] for w in p2["words"]]
-    assert len(p1["words"]) == 50
-    assert render_paper_html(p1).startswith("<!DOCTYPE html>")
+    tomorrow = (today_cn() + timedelta(days=1)).isoformat()
+    r = c.post("/vocab-exams", headers=ht, json={
+        "user": "malin", "level": 0, "score": 66, "exam_date": "2026-10-11",
+        "wrong_words": ["W1", "w2 ", "w1"],
+    })
+    assert r.status_code == 200, r.text
+    data = r.json()["data"]
+    assert data["wrong_count"] == 2
+    eid = data["exam"]["id"]
+    con = sqlite3.connect(vex_env / "fce.db")
+    rows = con.execute(
+        "SELECT word FROM vocab_exam_answers WHERE exam_id = ? ORDER BY id",
+        (eid,)).fetchall()
+    assert [x[0] for x in rows] == ["w1", "w2"]
+    for w in ("w1", "w2"):
+        stage, nxt, conquered, wrong_n = _review_row(con, "malin", w)
+        assert (stage, nxt, conquered, wrong_n) == (0, tomorrow, None, 1)
+    # 把 w2 推进到已攻克，证明随后的重叠 PUT 不会把它打回 stage 0
+    con.execute(
+        "UPDATE recite_review SET stage = 3, conquered_at = '2026-09-01'"
+        " WHERE user = 'malin' AND word = 'w2'")
+    con.execute(
+        "UPDATE recite_word_progress SET mastered_at = '2026-09-01'"
+        " WHERE user = 'malin' AND word = 'w2'")
+    con.commit()
+    con.close()
+    # 单份成绩明细：answers 是行，exam.wrong_words 是从行投影的词表
+    detail = c.get(f"/vocab-exams/{eid}", headers=ht)
+    assert detail.status_code == 200
+    body = detail.json()["data"]
+    assert [a["word"] for a in body["answers"]] == ["w1", "w2"]
+    assert body["exam"]["wrong_words"] == ["w1", "w2"]
+    # PUT 改成绩并传新错词：明细重写（w1 出局、w3 进来）。
+    # w2 仍在名单里，wrong_count / stage / 攻克保持；只有 w3 +1。
+    r2 = c.put(f"/vocab-exams/{eid}", headers=ht, json={
+        "score": 77, "wrong_words": ["w2", "w3"]})
+    assert r2.status_code == 200, r2.text
+    assert r2.json()["data"]["wrong_count"] == 2
+    con = sqlite3.connect(vex_env / "fce.db")
+    rows = con.execute(
+        "SELECT word FROM vocab_exam_answers WHERE exam_id = ? ORDER BY id",
+        (eid,)).fetchall()
+    assert [x[0] for x in rows] == ["w2", "w3"]
+    assert _review_row(con, "malin", "w1")[3] == 1  # 移出名单，队列不抽走
+    assert _review_row(con, "malin", "w2") == (3, tomorrow, "2026-09-01", 1)
+    assert _progress_row(con, "malin", "w2") == (1, "2026-09-01")
+    w3_stage, w3_next, w3_conquered, w3_n = _review_row(con, "malin", "w3")
+    assert (w3_stage, w3_next, w3_conquered, w3_n) == (0, tomorrow, None, 1)
+    assert _progress_row(con, "malin", "w3")[0] == 1
+    con.close()
+    again = c.get(f"/vocab-exams/{eid}", headers=ht).json()["data"]
+    assert again["exam"]["wrong_words"] == ["w2", "w3"]
+    # 只改分数、不传 wrong_words：明细和队列都不动
+    r3 = c.put(f"/vocab-exams/{eid}", headers=ht, json={"score": 70})
+    assert r3.status_code == 200, r3.text
+    assert r3.json()["data"]["exam"]["score"] == 70
+    assert r3.json()["data"]["wrong_count"] == 2
+    con = sqlite3.connect(vex_env / "fce.db")
+    rows = con.execute(
+        "SELECT word FROM vocab_exam_answers WHERE exam_id = ? ORDER BY id",
+        (eid,)).fetchall()
+    assert [x[0] for x in rows] == ["w2", "w3"]
+    assert _review_row(con, "malin", "w2") == (3, tomorrow, "2026-09-01", 1)
+    assert _review_row(con, "malin", "w3")[3] == 1
+    con.close()
+    # 再存一次同一批错词（大小写/空白不同）：仍然不加
+    r4 = c.put(f"/vocab-exams/{eid}", headers=ht, json={
+        "wrong_words": ["W2", " w3"]})
+    assert r4.status_code == 200, r4.text
+    con = sqlite3.connect(vex_env / "fce.db")
+    assert _review_row(con, "malin", "w2") == (3, tomorrow, "2026-09-01", 1)
+    assert _review_row(con, "malin", "w3")[3] == 1
+    assert _progress_row(con, "malin", "w2") == (1, "2026-09-01")
+    con.close()
+    # 换学生：当前错词对该生是新登记，整表回流一次；原学生队列不动
+    r5 = c.put(f"/vocab-exams/{eid}", headers=ht, json={
+        "user": "mxy", "wrong_words": ["w2", "w3"]})
+    assert r5.status_code == 200, r5.text
+    assert r5.json()["data"]["exam"]["user"] == "mxy"
+    con = sqlite3.connect(vex_env / "fce.db")
+    assert _review_row(con, "malin", "w2") == (3, tomorrow, "2026-09-01", 1)
+    assert _review_row(con, "mxy", "w2")[3] == 1
+    assert _review_row(con, "mxy", "w3")[3] == 1
+    # [] 清空明细，不从队列抽走
+    con.close()
+    r6 = c.put(f"/vocab-exams/{eid}", headers=ht, json={"wrong_words": []})
+    assert r6.status_code == 200, r6.text
+    assert r6.json()["data"]["wrong_count"] == 0
+    con = sqlite3.connect(vex_env / "fce.db")
+    n_ans = con.execute(
+        "SELECT COUNT(*) FROM vocab_exam_answers WHERE exam_id = ?",
+        (eid,)).fetchone()[0]
+    assert n_ans == 0
+    assert _review_row(con, "mxy", "w2")[3] == 1
+    assert _review_row(con, "malin", "w2")[3] == 1
+    con.close()
+    cleared = c.get(f"/vocab-exams/{eid}", headers=ht).json()["data"]
+    assert cleared["exam"]["wrong_words"] == []
+    assert cleared["answers"] == []
+    # wrong_words 非 list → 422
+    assert c.post("/vocab-exams", headers=ht, json={
+        "user": "malin", "level": 0, "score": 66,
+        "exam_date": "2026-10-12", "wrong_words": "w1"}).status_code == 422
+
+
+def test_unlock_manual_set_open_ends(vex_env):
+    """解锁上限放开到 MAX_UNLOCK_LEVEL=7：可设 7，越界 422。"""
+    c = _client(vex_env)
+    ht = _login(c, "teacher", "123456")
+    r = c.put("/vocab-exams/unlock", headers=ht,
+              json={"user": "malin", "level": MAX_UNLOCK_LEVEL})
+    assert r.status_code == 200, r.text
+    assert r.json()["data"]["level"] == MAX_UNLOCK_LEVEL == 7
+    assert r.json()["data"]["unlocked"] == 7
+    hs = _login(c, "malin", "123456")
+    assert c.get("/vocab-exams", headers=hs).json()["data"]["unlocked_level"] == 7
+    assert c.put("/vocab-exams/unlock", headers=ht,
+                 json={"user": "malin", "level": 8}).status_code == 422
 
 
 def _fake_rich(names):
@@ -212,6 +479,16 @@ def test_mix_history_buckets_and_save(tmp_path):
         save_paper({"paper_id": "MIX-short", "words": ["a"]}, fce_db_path=db)
     with pytest.raises(ValueError):
         save_paper({"paper_id": "NOPE-1", "words": words}, fce_db_path=db)
+    # 新口径：词数须等于 config.total（缺 config 按 50）
+    saved = save_paper({"paper_id": "L0-20260101010101-1002",
+                        "words": ["a", "b"], "config": {"total": 2},
+                        "created_at": "2026-01-03T00:00:00"}, fce_db_path=db)
+    assert saved == {"paper_id": "L0-20260101010101-1002", "level": 0,
+                     "count": 2}
+    with pytest.raises(ValueError, match="50 词"):
+        save_paper({"paper_id": "L0-20260101010101-1003",
+                    "words": ["a", "b", "c"], "config": {"total": 50}},
+                   fce_db_path=db)
 
 
 def test_learned_dedup_ignores_level_papers(tmp_path, monkeypatch):
@@ -316,7 +593,9 @@ def test_paper_generate_learned_scope(vex_env, monkeypatch):
         "exam_date": "2026-10-11", "paper_id": p["paper_id"],
     })
     assert ok.status_code == 200, ok.text
-    grading = c.get("/vocab-papers/grading", headers=ht).json()["data"]["papers"]
+    grading_body = c.get("/vocab-papers/grading", headers=ht).json()["data"]
+    assert grading_body["pass_score"] == PASS_SCORE
+    grading = grading_body["papers"]
     row = next(x for x in grading if x["paper_id"] == p["paper_id"])
     assert row["level"] == -1
     assert any(e["user"] == "malin" and e["level"] == 2 and e["score"] == 88

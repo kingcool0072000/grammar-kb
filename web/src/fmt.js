@@ -67,3 +67,10 @@ export const FORM_CN = {
 
 /** 词形变化键 → 中文（third_singular 缩写「三单」，词条详情抽屉口径）。 */
 export const FORM_CN_SHORT = { ...FORM_CN, third_singular: '三单' }
+
+// ---- 单词试卷 -------------------------------------------------------------- //
+
+/** 试卷级别 → 表头文案（负数=已学混合卷）。计划表/学生管理两视图共用。 */
+export function vocabPaperHead(level) {
+  return Number(level) < 0 ? '已学混合卷' : `L${level}`
+}

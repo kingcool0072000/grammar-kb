@@ -1,4 +1,4 @@
-"""复习闭环：摘要计数、攻克池、新词额度、教师告警阈值。"""
+"""复习闭环：摘要计数、攻克池、新词额度、教师告警阈值、试卷错词回流。"""
 from __future__ import annotations
 
 import json
@@ -563,3 +563,91 @@ def test_vocab_level_totals_cached(recite_env, monkeypatch):
     with ThreadPoolExecutor(max_workers=8) as pool:
         results = list(pool.map(lambda _: store._vocab_level_totals(), range(16)))
     assert all(r == {1: 3, 2: 1} for r in results)
+
+
+# ---- 试卷错词回流（ReciteStore.enter_review，routes_vocab 登记成绩时调） ----
+
+def test_enter_review_enqueues_new_word(recite_env):
+    """新词入队：周期行 stage=0、明天到期、未攻克、记错一次；进度行
+    first_seen=今天（占当日新词额度）。词面小写归一、去重去空。"""
+    c = _client(recite_env)
+    h = _login(c, "malin", "123456")
+    tomorrow = (today_cn() + timedelta(days=1)).isoformat()
+    store = ReciteStore(str(recite_env / "fce.db"))
+    n = store.enter_review(
+        "malin", ["BrandNew", " brandnew", "", "brandnew"],
+        levels={"brandnew": 2},
+    )
+    assert n == 1  # 归一去重后只处理一个词
+    con = sqlite3.connect(recite_env / "fce.db")
+    stage, nxt, conquered, wrong_n, level = con.execute(
+        "SELECT stage, next_review, conquered_at, wrong_count, level"
+        " FROM recite_review WHERE user = 'malin' AND word = 'brandnew'"
+    ).fetchone()
+    assert (stage, nxt, conquered, wrong_n, level) == (0, tomorrow, None, 1, 2)
+    right, wrong, mastered, first_seen = con.execute(
+        "SELECT right, wrong, mastered_at, first_seen"
+        " FROM recite_word_progress WHERE user = 'malin' AND word = 'brandnew'"
+    ).fetchone()
+    con.close()
+    assert (right, wrong, mastered) == (0, 1, None)
+    assert first_seen  # 今天首见 → 占新词额度
+    s = _summary(c, h)
+    assert s["new_used"] == 1
+
+
+def test_enter_review_recycles_cycle_and_conquered_words(recite_env):
+    """已在周期的词回炉（含已攻克）：stage 归零、明天重新到期、
+    conquered_at 清空、wrong_count+1；进度行 mastered_at 清空、
+    first_seen 不动（不占新词额度）、已有 level 不被调用方值覆盖。"""
+    store = ReciteStore(str(recite_env / "fce.db"))
+    today = today_cn().isoformat()
+    tomorrow = (today_cn() + timedelta(days=1)).isoformat()
+    now = datetime.now(_tz.utc).isoformat(timespec="seconds")
+    past_seen = (datetime.now(_tz.utc) - timedelta(days=3)).isoformat(
+        timespec="seconds")
+    with store._connect() as conn:
+        # 在周期词：stage=2、后天到期、错过 3 次
+        conn.execute(
+            "INSERT INTO recite_review (user, word, level, wrong_count, stage,"
+            " first_wrong_at, next_review, last_review_at)"
+            " VALUES ('malin','incycle',3,3,2,?,?,?)",
+            (today, (today_cn() + timedelta(days=2)).isoformat(), today),
+        )
+        # 已攻克词：stage=6、今天攻克，进度已掌握、三天前首见
+        conn.execute(
+            "INSERT INTO recite_review (user, word, level, wrong_count, stage,"
+            " first_wrong_at, next_review, last_review_at, conquered_at)"
+            " VALUES ('malin','wonyet',1,2,6,?,NULL,?,?)",
+            (today, today, today),
+        )
+        conn.execute(
+            "INSERT INTO recite_word_progress (user, word, level, right, wrong,"
+            " mastered_at, last_seen, first_seen)"
+            " VALUES ('malin','wonyet',1,5,2,?,?,?)",
+            (now, now, past_seen),
+        )
+    assert store.enter_review(
+        "malin", ["incycle", "wonyet"],
+        levels={"incycle": 2, "wonyet": 9},
+    ) == 2
+    con = sqlite3.connect(recite_env / "fce.db")
+    stage, nxt, conquered, wrong_n, level = con.execute(
+        "SELECT stage, next_review, conquered_at, wrong_count, level"
+        " FROM recite_review WHERE user = 'malin' AND word = 'incycle'"
+    ).fetchone()
+    assert (stage, nxt, conquered, wrong_n) == (0, tomorrow, None, 4)
+    assert level == 3  # 周期行已有 level 保留（COALESCE 口径）
+    stage2, nxt2, conquered2, wrong_n2 = con.execute(
+        "SELECT stage, next_review, conquered_at, wrong_count"
+        " FROM recite_review WHERE user = 'malin' AND word = 'wonyet'"
+    ).fetchone()
+    assert (stage2, nxt2, conquered2, wrong_n2) == (0, tomorrow, None, 3)
+    right, wrong, mastered, first_seen, level_p = con.execute(
+        "SELECT right, wrong, mastered_at, first_seen, level"
+        " FROM recite_word_progress WHERE user = 'malin' AND word = 'wonyet'"
+    ).fetchone()
+    con.close()
+    assert (right, wrong, mastered) == (5, 3, None)  # 掌握标记清空、wrong+1
+    assert first_seen == past_seen  # 首见不动 → 回炉词不占新词额度
+    assert level_p == 1

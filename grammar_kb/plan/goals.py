@@ -7,6 +7,7 @@ import sqlite3
 from datetime import datetime, timezone as _tz
 from typing import Optional
 
+from ..vocab_exam import PASS_SCORE
 from .util import _paper_short
 
 
@@ -152,7 +153,7 @@ class GoalsMixin:
                 if "vocab_exams" in tabs:
                     for r in conn.execute(
                         "SELECT DISTINCT level FROM vocab_exams"
-                        " WHERE user = ? AND score >= 80", (user,)):
+                        " WHERE user = ? AND score >= ?", (user, PASS_SCORE)):
                         done["vocab_levels"].append(r[0])
         except sqlite3.Error:
             pass

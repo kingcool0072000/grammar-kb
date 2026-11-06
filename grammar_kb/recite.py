@@ -403,6 +403,81 @@ class ReciteStore:
         out["new_cap"] = cap
         return out
 
+    def enter_review(self, user: str, words: list[str],
+                     levels: Optional[dict[str, int]] = None) -> int:
+        """把一批错词塞进艾宾浩斯复习队列（单词试卷错词回流用）。
+
+        语义与 submit 答错路径（_update_reviews 的 ``not correct`` 分支）
+        一致，不改 submit 状态机：进周期（或在周期/已攻克则回炉重计）——
+        stage=0、next_review=今天+1、first_wrong_at=今天、conquered_at
+        清空、wrong_count+1、last_review_at=今天；同时 upsert
+        recite_word_progress：wrong+1、mastered_at 清空、last_seen=今天
+        （新词补 level，levels 由调用方给——本方法不查 grammar.db，
+        不加跨库依赖；已有行的 level 仅在为空时补）。
+
+        不是幂等去重口径：每调用一次各词 wrong_count+1（与每次答错记
+        一次一致），调用方须保证每次登记动作只触发一次回流。
+        返回去重后实际处理的词数。
+        """
+        user = (user or "").strip()[:60]
+        clean: list[str] = []
+        seen: set[str] = set()
+        for w in words or []:
+            w = _headword(str(w or "").strip().lower())
+            if w and w not in seen:
+                seen.add(w)
+                clean.append(w)
+        if not user or not clean:
+            return 0
+        today = _calendar_today()
+        lv_map = {str(k).strip().lower(): v for k, v in (levels or {}).items()}
+        now = datetime.now(_tz.utc).isoformat(timespec="seconds")
+        n = 0
+        with self._connect() as conn:
+            for w in clean:
+                lv = lv_map.get(w)
+                # 先看周期表：拿旧 wrong_count，也决定进度行 first_seen
+                #（已在周期的词不是「今天首见的新词」，不占新词额度）
+                row = conn.execute(
+                    "SELECT wrong_count FROM recite_review"
+                    " WHERE user = ? AND word = ?", (user, w),
+                ).fetchone()
+                wc = (row["wrong_count"] + 1) if row else 1
+                conn.execute(
+                    "INSERT INTO recite_review (user, word, level, wrong_count, stage,"
+                    " first_wrong_at, next_review, last_review_at)"
+                    " VALUES (?,?,?,?,?,?,?,?)"
+                    " ON CONFLICT(user, word) DO UPDATE SET"
+                    " wrong_count=excluded.wrong_count,"
+                    " level=COALESCE(recite_review.level, excluded.level), stage=0,"
+                    " first_wrong_at=excluded.first_wrong_at,"
+                    " next_review=excluded.next_review, conquered_at=NULL",
+                    (user, w, lv, wc, 0, today,
+                     _add_days(today, EB_STAGES[0]), today),
+                )
+                prow = conn.execute(
+                    "SELECT right, wrong, level FROM recite_word_progress"
+                    " WHERE user = ? AND word = ?", (user, w),
+                ).fetchone()
+                if prow:
+                    conn.execute(
+                        "UPDATE recite_word_progress SET wrong=?, level=?,"
+                        " mastered_at=NULL, last_seen=? WHERE user=? AND word=?",
+                        (prow["wrong"] + 1,
+                         prow["level"] if prow["level"] is not None else lv,
+                         now, user, w),
+                    )
+                else:
+                    conn.execute(
+                        "INSERT INTO recite_word_progress (user, word, level, right,"
+                        " wrong, mastered_at, last_seen, first_seen)"
+                        " VALUES (?,?,?,?,?,?,?,?)",
+                        (user, w, lv, 0, 1, None, now,
+                         None if row else now),
+                    )
+                n += 1
+        return n
+
     def _upsert_details(self, conn: sqlite3.Connection, user: str, details: list) -> None:
         """逐词对错明细落 recite_word_progress（累加计数 + 补 level）。
 

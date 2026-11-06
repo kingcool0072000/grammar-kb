@@ -3,10 +3,6 @@ import { escapeHtml, escAttr, todayIso, studyGoalMin, taskWhy, taskWhyShort } fr
 import { subTabBar, bindSubTabs } from '../tabs.js'
 import { openWeekEditor } from './planEditor.js'
 
-function vocabPaperHead(level) {
-  return Number(level) < 0 ? '已学混合卷' : `L${level}`
-}
-
 // 教师版 · 计划表：周历视图。本周大卡（今日任务）+ 月历式周网格往下排，
 // 学情分析并入为子 Tab（#/plan?tab=analytics / #/plan 切换）。
 // 计划数据由 scripts/seed_plan_weeks.py 自动排程预填，教师可编辑微调。

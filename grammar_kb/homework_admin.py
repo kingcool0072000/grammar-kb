@@ -64,10 +64,11 @@ class HomeworkAdmin:
         self.db_path = db_path or _db_path()
         with self._connect() as conn:
             conn.executescript(_SCHEMA)
-            # answer 列迁移（存量库补列）
+            # answer 列迁移（存量库补列）。homework_question 本体由 ingest
+            # 管线建，运行时不要求已存在（空库新部署不能崩）
             cols = {r[1] for r in conn.execute(
                 "PRAGMA table_info(homework_question)")}
-            if "answer" not in cols:
+            if cols and "answer" not in cols:
                 conn.execute(
                     "ALTER TABLE homework_question ADD COLUMN answer TEXT")
 

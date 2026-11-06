@@ -5,7 +5,9 @@
 
 - **路径**：环境变量优先（历史变量名一个不变）；默认值一律仓库根
   ``data/``（经 :func:`grammar_kb.paths.data_path`，与进程 cwd 无关）。
-  唯一例外 ``readingmore``：历史上跟随 ``GRAMMAR_KB_DATA_DIR``，保持不变。
+  ``GRAMMAR_KB_DATA_DIR`` 统一改写所有库与文件的默认目录（整目录隔离
+  用，2026-11 起——此前只作用于 readingmore，半套语义曾把整目录隔离
+  误导成「已隔离」）；单库专用变量仍最高优先。
 - **连接**：:func:`connect` 即用即关——成功提交、异常回滚、退出必关。
   sqlite3 连接自身的 ``with conn`` 只管事务、不关连接，本仓 9 个 Store
   曾因此句柄全靠 GC 回收；新代码禁止再裸开 ``sqlite3.connect``。
@@ -18,6 +20,7 @@ from __future__ import annotations
 import os
 import sqlite3
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Iterator
 
 from .paths import data_path
@@ -45,11 +48,16 @@ def data_dir() -> str:
 
 
 def _db(env_name: str, filename: str) -> str:
-    """库路径：环境变量 → 仓库根 data/<filename>（与 cwd 无关）。"""
+    """库路径：专用环境变量 → $GRAMMAR_KB_DATA_DIR → 仓库根 data/<filename>。
+
+    专用变量（GRAMMAR_KB_DB/GRAMMAR_KB_FCE_DB/…）优先级最高；其次统一
+    数据目录（与 :func:`data_dir` 同口径，整目录隔离时不必逐库设变量）。
+    与 cwd 无关。
+    """
     env = os.environ.get(env_name)
     if env:
         return env
-    return str(data_path(filename))
+    return str(Path(data_dir()) / filename)
 
 
 def grammar_db_path() -> str:
