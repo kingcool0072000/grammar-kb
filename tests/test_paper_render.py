@@ -79,6 +79,12 @@ def test_new_paper_level_branch_renders_all_sections():
     assert "共 10 题 · 每题 10 分" in html
     # 题面要素：变形题给词面与要求、拼写题给挖空串、例句题给挖空句
     assert "的过去式" in html and "a____" in html and "We ____ it together." in html
+    # 书写卷：分区、题号、答题横线；答案页另起一页可撕
+    assert 'class="sec"><h2>一、词形变化' in html
+    assert 'class="sec"><h2>三、例句填空' in html
+    assert 'class="sec compact"><h2>四、中译英' in html
+    assert '<span class="n">1.</span>' in html and 'class="write"' in html
+    assert 'class="answers"' in html and "沿虚线撕下" in html
     # 答案页：独立成页，每段标题 + 答案串
     assert "答案页" in html
     for head in ("一、词形变化", "二、拼写挖空", "三、例句填空",

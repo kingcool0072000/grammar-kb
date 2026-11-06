@@ -10,6 +10,10 @@ v2 重构口径（与前端 vocabLevel 出题配置、routes_vocab 同契）：
 - **分层出题**：简单词（vocab_word.level ≤ SIMPLE_MAX_LEVEL）优先词形变化
   题（extra.forms，ECDICT 实测优先）；复杂词优先例句填空题（example.en 里
   定位该词或其变形挖空）；各自不可行时按序退化，保证每词恰进一个题型段。
+- **词形变化只考能变形的词**：感叹词和话语标记（ok / okay）、过短的功能词、
+  没有实质屈折的形容词副词，以及规则硬造、和原形一样的变形（ok→oked）
+  不进词形段。候选不合格就换池子里的下一个词；实在不够就缩小该段，不凑垃圾题。
+  动词、名词优先于仅有比较级的形容词。
 - **选词来源可配**（preset / source_mix）：本级或已学词池之外，还能按比例
   混入学生的「积压错词」——艾宾浩斯队列未攻克且已到期（recite_review）
   ∪ 错过且未掌握（recite_word_progress）。
@@ -36,7 +40,25 @@ from .dbreg import connect as dbreg_connect
 from .dbreg import fce_db_path as _default_fce_db
 from .dbreg import grammar_db_path as _default_grammar_db
 from .paper_html import render_template
-from .vocabulary import word_forms
+from .vocabulary import (
+    ADJ_WORDS,
+    IRREGULAR_ADJ,
+    IRREGULAR_PLURAL,
+    IRREGULAR_VERBS,
+    NO_COMPARATIVE,
+    NO_INFLECT,
+    NOUN_WORDS,
+    STOP_WORDS,
+    UNCOUNTABLE_NOUNS,
+    VERB_WORDS,
+    _can_take_er_est,
+    regular_er,
+    regular_est,
+    regular_ing,
+    regular_past,
+    regular_third,
+    word_forms,
+)
 
 # 简单词阈值：vocab_word.level ≤ 该值的词优先出词形变化题
 SIMPLE_MAX_LEVEL = 1
@@ -47,6 +69,46 @@ FORM_CN = {
     "third_singular": "第三人称单数", "plural": "复数",
     "comparative": "比较级", "superlative": "最高级",
 }
+
+# 词形题优先级：动词屈折 > 名词复数 > 形容词比较级（副词不进这一段）
+_VERB_FORM_KEYS = ("past", "past_participle", "present_participle", "third_singular")
+_NOUN_FORM_KEYS = ("plural",)
+_ADJ_FORM_KEYS = ("comparative", "superlative")
+_FORM_RANK = {k: 0 for k in _VERB_FORM_KEYS}
+_FORM_RANK.update({k: 1 for k in _NOUN_FORM_KEYS})
+_FORM_RANK.update({k: 2 for k in _ADJ_FORM_KEYS})
+
+# 感叹词 / 话语标记。词典常把它们标成动词或名词（ok 的过去式 oked、
+# hey 的复数 heys），词形题没有考察意义。
+_DISCOURSE = frozenset("""
+    ok okay okey okie hey hi hello hiya bye goodbye byebye
+    oh ah aha ha haha wow yeah yep yup ya yes no nope nah
+    um uh er erm hmm hm oops ouch ow alas amen hooray hurrah
+    yo eh huh whoa gee gosh phew whew ahem psst shh shhh
+    yay whoops alright
+""".split())
+
+# 词表里的词性缩写（含 wordlist 的 vt/int/convention）→ 考试用标签
+_POS_ALIAS = {
+    "vt": "v", "vi": "v", "verb": "v",
+    "noun": "n", "a": "adj", "adjective": "adj",
+    "ad": "adv", "adverb": "adv",
+    "int": "interj", "interjection": "interj", "excl": "interj",
+    "convention": "interj",
+    "art": "det", "determiner": "det",
+    "p": "prep", "preposition": "prep",
+    "conjunction": "conj", "pronoun": "pron",
+    "number": "num", "modal": "aux",
+}
+
+# 单个书面形式。带空格的 more beautiful 不算词形。数字只为测试造词（sc000ed）放行。
+_FORM_TOKEN = re.compile(r"^[A-Za-z][A-Za-z0-9]*(?:['-][A-Za-z0-9]+)*$")
+
+# 不规则复数里试卷值得考、内置表未全收的几对（表内 feet→foot 等会并进来）
+_PLURAL_OF = {singular: plural for plural, singular in IRREGULAR_PLURAL.items()}
+_PLURAL_OF.update({
+    "mouse": "mice", "goose": "geese", "person": "people", "ox": "oxen",
+})
 
 # 题型段顺序与中文标题（sections 的固定排列顺序）
 SECTION_ORDER = ("form", "spell", "ctx", "zh2en", "en2zh")
@@ -394,15 +456,163 @@ def _normalize_ratios(ratios: dict | None) -> dict[str, int]:
     return base
 
 
+# ---- 词形变化：哪些词值得考 ----------------------------------------------- #
+
+def _norm_tags(w: dict) -> set[str]:
+    out: set[str] = set()
+    for raw in w.get("pos_list") or []:
+        tag = str(raw or "").strip().lower().rstrip(".")
+        if tag:
+            out.add(_POS_ALIAS.get(tag, tag))
+    return out
+
+
+def _closed_class(word: str) -> bool:
+    """功能词和话语标记不做词形题。
+
+    不规则动词/形容词，以及人工词表里的实义词除外：do、have、good 仍可考，
+    ok、very、the 不考。
+    """
+    if word in _DISCOURSE:
+        return True
+    if word in IRREGULAR_VERBS or word in IRREGULAR_ADJ:
+        return False
+    if word in VERB_WORDS or word in NOUN_WORDS or word in ADJ_WORDS:
+        return False
+    return word in STOP_WORDS or word in NO_INFLECT
+
+
+def _has_vowel(word: str) -> bool:
+    return any(ch in "aeiouy" for ch in word)
+
+
+def _has_verb(word: str, tags: set[str]) -> bool:
+    if "v" in tags or word in IRREGULAR_VERBS:
+        return True
+    # 词性空时 word_forms 会给每个词硬造一套动词变形；只信人工动词表
+    return not tags and word in VERB_WORDS
+
+
+def _has_noun(word: str, tags: set[str]) -> bool:
+    if word in UNCOUNTABLE_NOUNS:
+        return False
+    if "n" in tags or word in _PLURAL_OF:
+        return True
+    return not tags and word in NOUN_WORDS
+
+
+def _has_adj(word: str, tags: set[str]) -> bool:
+    if "adj" in tags or word in IRREGULAR_ADJ:
+        return True
+    return not tags and word in ADJ_WORDS
+
+
+def _too_short_or_acronym(word: str) -> bool:
+    """两字母规则变形（ok→oked）和 tv/dna 这类无元音缩写不考。"""
+    if len(word) <= 2:
+        return True
+    return len(word) <= 4 and not _has_vowel(word)
+
+
+def _verb_form_ok(word: str, key: str, form: str) -> bool:
+    """动词变形要像真正的屈折，而不是 ok→oked 这种规则硬套。"""
+    if word in IRREGULAR_VERBS:
+        past, pp = IRREGULAR_VERBS[word]
+        known = {past, regular_ing(word), regular_third(word)}
+        if pp not in ("", "-"):
+            known.add(pp)
+        known = {x.lower() for x in known if x and x.lower() != word}
+        if form in known:
+            return True
+        # 表内不规则动词不再接受规则 -ed（buyed / goed）
+        if key in ("past", "past_participle") and form == regular_past(word):
+            return False
+        # dream→dreamt 这类词典异体：原形至少 3 个字母，且不是缩写
+        return len(word) >= 3 and not _too_short_or_acronym(word)
+    if _too_short_or_acronym(word):
+        return False
+    return True
+
+
+def _plural_ok(word: str, form: str) -> bool:
+    if word in UNCOUNTABLE_NOUNS:
+        return False
+    if _PLURAL_OF.get(word) == form:
+        return True
+    if _too_short_or_acronym(word):
+        return False
+    if form in {word + "s", word + "es"}:
+        return True
+    if (len(word) > 1 and word.endswith("y") and word[-2] not in "aeiou"
+            and form == word[:-1] + "ies"):
+        return True
+    if word.endswith("fe") and form == word[:-2] + "ves":
+        return True
+    if word.endswith("f") and not word.endswith("ff") and form == word[:-1] + "ves":
+        return True
+    return form.endswith("s") and len(form) <= len(word) + 3
+
+
+def _degree_form_ok(word: str, key: str, form: str) -> bool:
+    """只保留真正写成一个词的比较级/最高级。副词 -ly、多音节 more 结构不考。"""
+    if word in IRREGULAR_ADJ:
+        er, est = IRREGULAR_ADJ[word]
+        expect = er if key == "comparative" else est
+        return form == expect.lower()
+    if word in NO_COMPARATIVE or len(word) <= 2:
+        return False
+    if word.endswith("ly") and word != "early":
+        return False
+    if not _can_take_er_est(word):
+        return False
+    expect = regular_er(word) if key == "comparative" else regular_est(word)
+    return form == expect
+
+
+def _usable_forms(w: dict) -> list[tuple[str, str]]:
+    """这个词能进词形段的 (键, 答案)。空列表 = 换下一个词。"""
+    word = (w.get("word") or "").strip().lower()
+    # 短语、带撇号的缩写不做词形题。数字只出现在测试造词（easy000）里，真词不会靠它过关：
+    # 无元音的短缩写仍由 _too_short_or_acronym 挡住。
+    if not re.fullmatch(r"[a-z][a-z0-9]*", word or ""):
+        return []
+    if _closed_class(word):
+        return []
+    tags = _norm_tags(w)
+    if not (_has_verb(word, tags) or _has_noun(word, tags) or _has_adj(word, tags)):
+        return []
+    forms = w.get("forms") or {}
+    out: list[tuple[str, str]] = []
+    for key in FORM_CN:
+        raw = forms.get(key)
+        if not isinstance(raw, str):
+            continue
+        shown = raw.strip()
+        form = shown.lower()
+        if not shown or form == word or not _FORM_TOKEN.fullmatch(shown):
+            continue
+        if key in _VERB_FORM_KEYS and _has_verb(word, tags) and _verb_form_ok(word, key, form):
+            out.append((key, shown))
+        elif key in _NOUN_FORM_KEYS and _has_noun(word, tags) and _plural_ok(word, form):
+            out.append((key, shown))
+        elif key in _ADJ_FORM_KEYS and _has_adj(word, tags) and _degree_form_ok(word, key, form):
+            out.append((key, shown))
+    return out
+
+
 # ---- 题型 item 构建 -------------------------------------------------------- #
 
 def _pick_form(w: dict, rng: random.Random) -> tuple[str | None, str | None]:
-    """从词条 forms 里随机选一个可用变形键。无可用返回 (None, None)。"""
-    usable = [(k, v) for k, v in (w.get("forms") or {}).items() if k in FORM_CN]
+    """从合格变形里挑一个。动词优先于名词、名词优先于形容词。
+
+    没有合格变形返回 (None, None)——调用方换下一个词，不硬凑。
+    """
+    usable = _usable_forms(w)
     if not usable:
         return None, None
-    k, v = rng.choice(sorted(usable))
-    return k, v
+    best = min(_FORM_RANK[k] for k, _ in usable)
+    top = [kv for kv in usable if _FORM_RANK[kv[0]] == best]
+    return rng.choice(top)
 
 
 def _locate_ctx(word: str, forms: dict, en: str) -> tuple[str, str] | None:
@@ -464,10 +674,11 @@ def _build_sections(words: list[dict], quota: dict[str, int],
                     rng: random.Random) -> list[dict]:
     """分层题型分配：每词恰进一个题型段，段内题数按 quota 凑。
 
-    - 简单词（level ≤ SIMPLE_MAX_LEVEL）优先 form，复杂词优先 ctx；
-      分层是「排序优先」而非「资格限制」——form/ctx 的可出词集合放开到
-      全部词（form 需有可用 forms，ctx 需例句定位成功），同级内按
-      picked 的多样顺序稳定排序。否则纯简单词卷（如 L0）ctx 配额永远
+    - 简单词（level ≤ SIMPLE_MAX_LEVEL）在同一类变形里优先 form，复杂词优先
+      ctx。form 只收 _usable_forms 认可的词（动词/可数名词/能加 -er 的形容词）；
+      ok、副词、硬造的过去式不占名额。合格词不够就缩小词形段，余词落到后面的段。
+      分层是「排序优先」而非把简单词独占：form/ctx 的可出词集合放开到全部合格词，
+      同级内按 picked 的多样顺序稳定排序。否则纯简单词卷（如 L0）ctx 配额永远
       落空，例句资源全废。
     - 拼写段长词优先（≥2 字母可挖空，沿用旧「挑最长词」口径）。
     - 某段可出词不足时，富余词自然落到后面的段（zh2en/en2zh 兜底交替承接），
@@ -498,9 +709,12 @@ def _build_sections(words: list[dict], quota: dict[str, int],
             used.add(w["word"])
         return got
 
-    # 1) 词形变化：有可用 forms 的词，简单词排前
+    # 1) 词形变化：合格变形才入段。动词 > 名词 > 形容词；同一类里简单词排前。
+    #    不合格的词不占名额，后面的词补上；池子干了这一段就变短。
     for w in grab(quota["form"], lambda w: w["word"] in form_ready,
-                  order_key=lambda w: 0 if _is_simple_word(w) else 1):
+                  order_key=lambda w: (
+                      _FORM_RANK.get(form_ready[w["word"]][0], 9),
+                      0 if _is_simple_word(w) else 1)):
         fk, fa = form_ready[w["word"]]
         buckets["form"].append(_form_item(w, fk, fa))
     # 2) 拼写挖空：剩余词里挑最长的（好挖空）
@@ -937,30 +1151,36 @@ def _paper_sections(paper: dict) -> list[dict]:
 
 
 def _render_item(qtype: str, i: int, it: dict, e) -> str:
-    """单个题行：沿用 .q/.n/.pos/.zh/.en/.line/.blanked 版式类。"""
-    n = f'<span class="n">{i}</span>'
+    """单个题行：题号、题干、书写横线（拼写题的横线就是挖空单词）。"""
+    n = f'<span class="n">{i}.</span>'
     if qtype == "form":
         label = it.get("form_label") or FORM_CN.get(it.get("form_key") or "", "")
-        return (f'<div class="q">{n}<span class="en">{e(it.get("word") or "")}</span>'
-                f'<span class="pos">{e(it.get("pos_cn") or "")}</span>'
-                f'<span class="zh">的{e(label)}</span>'
-                f'<span class="line short"></span></div>')
+        pos = it.get("pos_cn") or ""
+        pos_html = f'<span class="pos">{e(pos)}</span>' if pos else ""
+        return (f'<div class="q">{n}<span class="prompt">'
+                f'<span class="en">{e(it.get("word") or "")}</span>'
+                f'{pos_html}<span class="ask">的{e(label)}</span></span>'
+                f'<span class="write"></span></div>')
     if qtype == "spell":
-        return (f'<div class="q">{n}<span class="pos">{e(it.get("pos_cn") or "")}</span>'
-                f'<span class="zh">{e(it.get("gloss") or "")}</span>'
+        return (f'<div class="q">{n}<span class="prompt">'
+                f'<span class="pos">{e(it.get("pos_cn") or "")}</span>'
+                f'<span class="zh">{e(it.get("gloss") or "")}</span></span>'
                 f'<span class="blanked">{e(it.get("blanked") or "")}</span></div>')
     if qtype == "ctx":
-        return (f'<div class="q">{n}<span class="en">{e(it.get("sentence") or "")}</span>'
-                f'<span class="zh">{e(it.get("zh") or it.get("gloss") or "")}</span>'
-                f'<span class="line short"></span></div>')
+        # 空已在句中（____），不再另加一条横线，避免看起来像两道空
+        return (f'<div class="q q-ctx">{n}<span class="prompt">'
+                f'<span class="en">{e(it.get("sentence") or "")}</span>'
+                f'<span class="zh">{e(it.get("zh") or it.get("gloss") or "")}</span></span></div>')
     if qtype == "zh2en":
-        return (f'<div class="q">{n}<span class="pos">{e(it.get("pos_cn") or "")}</span>'
-                f'<span class="zh">{e(it.get("gloss") or "")}</span>'
-                f'<span class="line"></span></div>')
+        return (f'<div class="q">{n}<span class="prompt">'
+                f'<span class="pos">{e(it.get("pos_cn") or "")}</span>'
+                f'<span class="zh">{e(it.get("gloss") or "")}</span></span>'
+                f'<span class="write"></span></div>')
     # en2zh 及未知类型兜底
-    return (f'<div class="q">{n}<span class="en">{e(it.get("word") or "")}</span>'
-            f'<span class="pos">{e(it.get("pos_cn") or "")}</span>'
-            f'<span class="line short"></span></div>')
+    return (f'<div class="q">{n}<span class="prompt">'
+            f'<span class="en">{e(it.get("word") or "")}</span>'
+            f'<span class="pos">{e(it.get("pos_cn") or "")}</span></span>'
+            f'<span class="write"></span></div>')
 
 
 def _answer_text(qtype: str, it: dict) -> str:
@@ -1005,14 +1225,18 @@ def render_new_paper_html(paper: dict, title: str = "") -> str:
         head = f"{_section_label(idx)}、{tt}"
         hint = _TYPE_HINTS.get(qtype, "")
         sub = f"（{len(items)} 题 · {hint}）" if hint else f"（{len(items)} 题）"
+        # 词形/拼写/例句题干较长，单列才写得下；中英互译题干短，两列省纸
+        sec_cls = "sec compact" if qtype in {"zh2en", "en2zh"} else "sec"
         q_blocks.append(
-            f"<h2>{e(head)}{e(sub)}</h2>"
+            f'<section class="{sec_cls}"><h2>{e(head)}{e(sub)}</h2><div class="qs">'
             + "".join(_render_item(qtype, i, it, e)
-                      for i, it in enumerate(items, 1)))
-        answers = "　".join(f"{i}.{e(_answer_text(qtype, it))}"
-                            for i, it in enumerate(items, 1))
+                      for i, it in enumerate(items, 1))
+            + "</div></section>")
+        answers = "".join(
+            f'<span class="ak">{i}.{e(_answer_text(qtype, it))}</span>'
+            for i, it in enumerate(items, 1))
         a_blocks.append(
-            f'<div class="ans-sec"><b>{e(head)}</b><p>{answers}</p></div>')
+            f'<div class="ans-sec"><b>{e(head)}</b><p class="aks">{answers}</p></div>')
 
     return render_template(
         "new_paper.html",

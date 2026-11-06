@@ -1,28 +1,156 @@
-<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
 <title>${title_esc}</title>
 <style>
-  body { font-family: "Songti SC","SimSun",serif; margin: 32px; color: #111; }
-  h1 { font-size: 20px; text-align: center; margin: 0 0 4px; }
-  .meta { text-align: center; font-size: 12px; color: #555; margin-bottom: 16px; }
-  h2 { font-size: 15px; margin: 14px 0 8px; }
-  .q { display: flex; align-items: baseline; gap: 8px; margin-bottom: 9px; }
-  .n { width: 22px; font-weight: 700; }
-  .pos { font-size: 11px; color: #666; white-space: nowrap; min-width: 72px; }
-  .zh { font-size: 14px; }
-  .en { font-size: 14px; font-family: Georgia,serif; }
-  .line { flex: 1; border-bottom: 1px solid #999; height: 14px; }
-  .line.short { max-width: 220px; }
-  .blanked { font-family: "Courier New",monospace; font-size: 15px; letter-spacing: 2px; }
-  .pagebreak { page-break-before: always; }
-  .ans-sec { margin-bottom: 12px; font-size: 13px; line-height: 1.8; }
-  .ans-sec b { display: block; margin-bottom: 4px; }
-  @media print { body { margin: 14px; } }
+  @page { size: A4; margin: 14mm 13mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Songti SC", "SimSun", serif;
+    color: #1c1c1c;
+    margin: 0 auto;
+    padding: 28px 34px 48px;
+    max-width: 840px;
+    line-height: 1.45;
+    background: #fff;
+  }
+  .sheet-head {
+    text-align: center;
+    border-bottom: 2.5px solid #1c1c1c;
+    padding: 2px 0 12px;
+    margin-bottom: 4px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    margin: 0 0 8px;
+  }
+  .meta {
+    font-size: 13.5px;
+    color: #333;
+    margin: 0;
+  }
+  .howto {
+    margin: 8px 0 0;
+    font-size: 12.5px;
+    color: #555;
+  }
+  section.sec { margin: 20px 0 8px; }
+  h2 {
+    font-size: 15.5px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    padding: 2px 0 4px 10px;
+    border-left: 4px solid #1c1c1c;
+    line-height: 1.4;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  section.compact .qs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 40px;
+  }
+  .q {
+    display: grid;
+    grid-template-columns: 2.5em minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 12px;
+    min-height: 2.7em;
+    padding: 6px 0;
+    border-bottom: 1px dotted #d0d0d0;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .q-ctx { grid-template-columns: 2.5em minmax(0, 1fr); align-items: start; }
+  section.compact .q { grid-template-columns: 2.5em minmax(0, 1fr) 8.2em; }
+  .n {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    font-size: 14px;
+    color: #222;
+  }
+  .q-ctx .n { padding-top: 3px; }
+  .prompt { min-width: 0; font-size: 15.5px; line-height: 1.45; }
+  .en {
+    font-family: "Times New Roman", Georgia, "Songti SC", serif;
+    font-size: 17px;
+    font-weight: 650;
+  }
+  .pos {
+    font-size: 12px;
+    color: #666;
+    margin-left: 8px;
+    white-space: nowrap;
+  }
+  .zh { font-size: 15.5px; }
+  .ask { margin-left: 4px; white-space: nowrap; }
+  .q-ctx .zh {
+    display: block;
+    margin: 2px 0 0;
+    color: #555;
+    font-size: 13.5px;
+  }
+  .write {
+    width: 12em;
+    height: 1.45em;
+    border-bottom: 1.6px solid #222;
+  }
+  section.compact .write { width: 100%; }
+  .blanked {
+    font-family: "Courier New", "Sarasa Mono SC", ui-monospace, monospace;
+    font-size: 17px;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    white-space: nowrap;
+    justify-self: end;
+    padding: 0 2px 2px;
+    border-bottom: 1.6px solid #222;
+  }
+  .answers {
+    page-break-before: always;
+    break-before: page;
+  }
+  .tear {
+    border-top: 1px dashed #8a8a8a;
+    margin: 0 0 16px;
+    padding-top: 7px;
+    text-align: center;
+    color: #777;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+  }
+  .answers h1 { font-size: 18px; letter-spacing: 0.12em; }
+  .answers .meta { margin-bottom: 14px; }
+  .ans-sec { margin: 0 0 14px; font-size: 13.5px; line-height: 1.65; }
+  .ans-sec b {
+    display: block;
+    margin: 0 0 4px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #e4e4e4;
+  }
+  .aks { margin: 0; display: flex; flex-wrap: wrap; gap: 3px 18px; }
+  .ak { min-width: 9em; font-variant-numeric: tabular-nums; }
+  @media print {
+    body { padding: 0; max-width: none; }
+    .q { border-bottom-color: #ccc; }
+  }
+  @media (max-width: 680px) {
+    body { padding: 16px; }
+    section.compact .qs { grid-template-columns: 1fr; }
+  }
 </style></head><body>
-<h1>${title_esc}</h1>
-<div class="meta">${meta_line}</div>
+<header class="sheet-head">
+  <h1>${title_esc}</h1>
+  <p class="meta">${meta_line}</p>
+  <p class="howto">请用笔写在横线上。词形变化写出指定形式，拼写题补全空缺的字母。</p>
+</header>
 ${sections_html}
-<div class="pagebreak"></div>
-<h1>${title_esc} · 答案页</h1>
-<div class="meta">卷号 ${pid_esc}（本页可撕开）</div>
-${answers_html}
+<section class="answers">
+  <p class="tear">沿虚线撕下 · 答案页单独存放</p>
+  <h1>${title_esc} · 答案页</h1>
+  <p class="meta">卷号 ${pid_esc}（本页可撕开）</p>
+  ${answers_html}
+</section>
 </body></html>
