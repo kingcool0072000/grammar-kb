@@ -19,6 +19,7 @@ from typing import Optional
 from . import dbreg, glm
 from .dict_db import DictDB
 from .epub_parse import EpubParseError, parse_epub
+from .vocab_exam import MAX_UNLOCK_LEVEL
 
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024  # 100MB
 
@@ -749,8 +750,8 @@ class LibraryStore:
             "fontFamily": s["student"].get("fontFamily") or "serif",
             # 专注力采集开关（泛读馆阅读器）：默认开，教师可在设置里关
             "focus": bool(s["student"].get("focus", True)),
-            # 分层词库解锁（背单词）：0=仅 L0；N=已解锁到 L N（0-5）
-            "vocabUnlock": max(0, min(5, int(s["student"].get("vocabUnlock") or 0))),
+            # 分层词库解锁（背单词）：0=仅 L0；N=已解锁到 L N
+            "vocabUnlock": max(0, min(MAX_UNLOCK_LEVEL, int(s["student"].get("vocabUnlock") or 0))),
             "wordCards": word_cards_view(s["student"].get("wordCards")),
         }
         has_key = bool(s["ai"].get("apiKey"))
@@ -805,8 +806,11 @@ class LibraryStore:
                 student["focus"] = student_patch["focus"]
             if "vocabUnlock" in student_patch:
                 vu = student_patch["vocabUnlock"]
-                if not isinstance(vu, int) or isinstance(vu, bool) or not 0 <= vu <= 5:
-                    raise LibraryError("student.vocabUnlock 须为 0-5 整数", status=422)
+                if not isinstance(vu, int) or isinstance(vu, bool) \
+                        or not 0 <= vu <= MAX_UNLOCK_LEVEL:
+                    raise LibraryError(
+                        f"student.vocabUnlock 须为 0-{MAX_UNLOCK_LEVEL} 整数",
+                        status=422)
                 student["vocabUnlock"] = vu
             if "wordCards" in student_patch:
                 incoming = student_patch["wordCards"]

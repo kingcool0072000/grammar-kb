@@ -5,8 +5,8 @@
 同一张库可能被解析到不同文件；9 个 Store 的 ``with conn`` 只管事务
 不关连接。这组测试锁住统一后的语义：
 
-- 路径：环境变量优先（历史变量名不变）；默认仓库根 data/，与 cwd 无关；
-  GRAMMAR_KB_DATA_DIR 只影响 readingmore（历史口径）。
+- 路径：专用环境变量优先（历史变量名不变）；默认仓库根 data/，与 cwd 无关；
+  GRAMMAR_KB_DATA_DIR 统一改写全部默认目录（2026-11 起，整目录隔离）。
 - connect：成功提交、异常回滚、退出必关；readonly 拒写。
 - Store 构造即建表（原为首连才建，test_plan 等 fixture 依赖此契约）。
 """
@@ -25,6 +25,7 @@ from grammar_kb.reading import ReadingStore
 from grammar_kb.recite import ReciteStore
 from grammar_kb.topics import TopicStore
 from grammar_kb.vocab_exam import VocabExamStore
+from grammar_kb.vocab_paper import VocabPaperStore
 from grammar_kb.video_study import VideoStore
 
 
@@ -53,14 +54,23 @@ def test_default_is_repo_data_not_cwd(monkeypatch):
     assert Path(dbreg.ecdict_db_path()) == data_path("ecdict.db")
 
 
-def test_data_dir_only_affects_readingmore(monkeypatch, tmp_path):
-    """GRAMMAR_KB_DATA_DIR 保持 readingmore 专属语义（不外溢到其他库）。"""
+def test_data_dir_applies_to_all_dbs(monkeypatch, tmp_path):
+    """GRAMMAR_KB_DATA_DIR 统一改写全部默认目录（整目录隔离）。
+
+    历史：只作用于 readingmore，半套语义曾把「设了 DATA_DIR」误当成
+    已隔离，实际主库仍写仓库 data/（2026-11-06 单词试卷验证时踩坑）。
+    """
     monkeypatch.setenv("GRAMMAR_KB_DATA_DIR", str(tmp_path))
-    for var in ("GRAMMAR_KB_DB", "GRAMMAR_KB_FCE_DB"):
+    for var in ("GRAMMAR_KB_DB", "GRAMMAR_KB_FCE_DB", "GRAMMAR_KB_EXAM_DB",
+                "GRAMMAR_KB_LIBRARY_DB"):
         monkeypatch.delenv(var, raising=False)
+    assert dbreg.grammar_db_path() == str(tmp_path / "grammar.db")
+    assert dbreg.fce_db_path() == str(tmp_path / "fce.db")
+    assert dbreg.exam_db_path() == str(tmp_path / "exam.db")
     assert dbreg.readingmore_db_path() == str(tmp_path / "readingmore.db")
-    assert Path(dbreg.grammar_db_path()) == data_path("grammar.db")
-    assert Path(dbreg.fce_db_path()) == data_path("fce.db")
+    # 专用变量仍最高优先
+    monkeypatch.setenv("GRAMMAR_KB_FCE_DB", str(tmp_path / "explicit.db"))
+    assert dbreg.fce_db_path() == str(tmp_path / "explicit.db")
 
 
 # ---- connect：提交 / 回滚 / 必关 / 只读 ----
@@ -107,6 +117,7 @@ def test_connect_readonly_rejects_write(tmp_path):
     (FocusStore, "focus_sessions"),
     (TopicStore, "topic_progress"),
     (VocabExamStore, "vocab_exams"),
+    (VocabPaperStore, "vocab_paper_history"),
     (ReadingStore, "reading_article"),
     (VideoStore, "video_item"),
     (PlanStore, "plan_weeks"),

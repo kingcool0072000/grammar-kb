@@ -10,6 +10,7 @@ from typing import Optional
 
 from .. import dbreg
 from ..paths import data_path
+from ..vocab_exam import MAX_UNLOCK_LEVEL
 from .util import _paper_short
 
 
@@ -200,7 +201,7 @@ class GoalsEditorMixin:
             week_start = monday_of(today_cn()).isoformat()
         hi = add_days(week_start, 7)
         levels = []
-        for lv in range(6):
+        for lv in range(MAX_UNLOCK_LEVEL + 1):
             words = self._vocab_level_words(lv)
             if not words:
                 levels.append({"level": lv, "words": 0, "base": 0, "gained": 0})
@@ -239,7 +240,7 @@ class GoalsEditorMixin:
             if not m:
                 continue
             lv = int(m.group(1))
-            if 0 <= lv <= 5:
+            if 0 <= lv <= MAX_UNLOCK_LEVEL:
                 return lv
         return None
 
@@ -280,8 +281,8 @@ class GoalsEditorMixin:
             try:
                 with dbreg.connect(gp, readonly=True) as conn:
                     for r in conn.execute(
-                        "SELECT level, COUNT(*) FROM vocab_word WHERE level <= 5"
-                        " GROUP BY level"):
+                        "SELECT level, COUNT(*) FROM vocab_word WHERE level <= ?"
+                        " GROUP BY level", (MAX_UNLOCK_LEVEL,)):
                         vocab_counts[r[0]] = r[1]
             except sqlite3.Error:
                 pass
@@ -295,7 +296,7 @@ class GoalsEditorMixin:
                     lv_mastered[r["level"]] = r["n"]
         except sqlite3.Error:
             pass
-        for lv in range(6):
+        for lv in range(MAX_UNLOCK_LEVEL + 1):
             vocab_levels.append({"level": lv,
                                  "words": vocab_counts.get(lv, 0),
                                  "mastered": lv_mastered.get(lv, 0)})

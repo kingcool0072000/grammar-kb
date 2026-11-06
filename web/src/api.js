@@ -299,8 +299,18 @@ export const api = {
   planRuleSet: (ruleId, { value, user } = {}) =>
     reqJson(`/plan/rules/${encodeURIComponent(ruleId)}`, 'PUT', { value, user }),
   // scope: 'level' 本级 | 'learned' 已学词混合卷（进度里出现过即可，含未掌握；须带 user）
-  vocabPaperGenerate: (level, save = true, { scope = 'level', user = '' } = {}) =>
-    reqJson('/vocab-papers/generate', 'POST', { level, save, scope, user }),
+  // opts（全部可选）：preset 'standard'|'reinforce'|'recycle'（非 standard 须带 user）；
+  //   ratios {form,spell,ctx,zh2en,en2zh} 五题型配比；total 题量；seed 复现同一卷
+  vocabPaperGenerate: (level, save = true, opts = {}) => {
+    const { scope = 'level', user = '', seed, preset, ratios, total } = opts
+    return reqJson('/vocab-papers/generate', 'POST', {
+      level, save, scope, user,
+      ...(seed !== undefined ? { seed } : {}),
+      ...(preset ? { preset } : {}),
+      ...(ratios ? { ratios } : {}),
+      ...(total != null ? { total } : {}),
+    })
+  },
   vocabPaperSave: (paper) =>
     reqJson('/vocab-papers/save', 'POST', paper),
   vocabPaperGrading: () => req('/vocab-papers/grading'),
@@ -328,6 +338,7 @@ export const api = {
         ...(includeAll ? { include_all: 1 } : {}),
       },
     }),
+  vocabExamGet: (examId) => req(`/vocab-exams/${encodeURIComponent(examId)}`),
   vocabExamAdd: (rec) => reqJson('/vocab-exams', 'POST', rec),
   vocabExamUpdate: (id, rec) => reqJson(`/vocab-exams/${id}`, 'PUT', rec),
   vocabExamDel: (id) => reqJson(`/vocab-exams/${id}`, 'DELETE'),

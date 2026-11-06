@@ -19,17 +19,10 @@
   @media print { body { margin: 14px; } }
 </style></head><body>
 <h1>${title_esc}</h1>
-<div class="meta">卷号 ${pid_esc} · 姓名__________ · 得分______</div>
-<h2>一、中译英（20 题 · 每题 2.5 分）</h2>
-${zh2en}
-<h2>二、英译中（20 题 · 每题 2.5 分）</h2>
-${en2zh}
-<h2>三、拼写（10 题 · 每题 5 分 · 在空格处填写字母）</h2>
-${spell}
+<div class="meta">${meta_line}</div>
+${sections_html}
 <div class="pagebreak"></div>
 <h1>${title_esc} · 答案页</h1>
 <div class="meta">卷号 ${pid_esc}（本页可撕开）</div>
-<div class="ans-sec"><b>一、中译英</b><p>${a1}</p></div>
-<div class="ans-sec"><b>二、英译中</b><p>${a2}</p></div>
-<div class="ans-sec"><b>三、拼写挖空</b><p>${a3}</p></div>
+${answers_html}
 </body></html>

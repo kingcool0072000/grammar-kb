@@ -66,7 +66,11 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setenv("GRAMMAR_KB_AUTH_SECRET", str(tmp_path / "secret.key"))
     monkeypatch.setenv("GRAMMAR_KB_LIBRARY_DB", str(tmp_path / "library.db"))
     monkeypatch.setenv("GRAMMAR_KB_LIBRARY_DIR", str(tmp_path / "files"))
+    # GRAMMAR_KB_DATA_DIR 现统一作用于全部默认路径（dbreg 整目录隔离）：
+    # 目录须存在，且 GRAMMAR_KB_DB 显式指向测试库，别蹭仓库真库
+    (tmp_path / "data").mkdir()
     monkeypatch.setenv("GRAMMAR_KB_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("GRAMMAR_KB_DB", str(tmp_path / "data" / "grammar.db"))
     return {"fce": str(fce), "grammar": str(gram), "exam": str(exam)}
 
 

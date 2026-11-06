@@ -10,7 +10,7 @@ export async function mountVocabExam(el) {
   el.innerHTML = `
     <div class="view-head">
       <h1>词汇考试</h1>
-      <p>登记、修改、删除线下考试记录（仅教师）。及格线 80 分。学生的单词级别在背单词级别页单独设置；还没单独设置过的学生，及格仍会解锁下一级。</p>
+      <p>登记、修改、删除线下考试记录（仅教师）。及格线 <b id="ve-pass">80</b> 分。学生的单词级别在背单词级别页单独设置；还没单独设置过的学生，及格仍会解锁下一级。</p>
     </div>
     <div id="ve-body"><p class="muted">加载中…</p></div>
   `
@@ -28,6 +28,8 @@ export async function mountVocabExam(el) {
   let filter = ''
   let editing = null
   let vex = { exams: [] }
+  // 及格线：优先读 GET /vocab-exams 响应里的 pass_score，取不到回退 80
+  let passScore = 80
 
   const levelOpts = LEVELS.map((l) => `<option value="${l}">L${l}</option>`).join('')
   const studentOpts = students.map((u) =>
@@ -91,8 +93,10 @@ export async function mountVocabExam(el) {
       listEl.innerHTML = '<p class="muted" style="margin:8px 0 0">还没有考试记录。</p>'
       return
     }
-    listEl.innerHTML = `<div class="ve-list">${items.map((x) => `
-      <div class="ve-row ${x.score >= 80 ? 'ok' : 'fail'}">
+    listEl.innerHTML = `<div class="ve-list">${items.map((x) => {
+      const wn = wrongCountOf(x)
+      return `
+      <div class="ve-row ${x.score >= passScore ? 'ok' : 'fail'}" data-exam="${x.id}">
         <b>${escapeHtml(x.user)}</b>
         <span>L${x.level}</span>
         <span>${x.score} 分</span>
@@ -100,10 +104,12 @@ export async function mountVocabExam(el) {
         ${x.note ? `<span class="ve-note">${escapeHtml(x.note)}</span>` : ''}
         ${x.paper_id ? `<span class="ve-note">卷 ${escapeHtml(x.paper_id)}</span>` : ''}
         <span class="ve-ops">
+          <button type="button" class="chip" data-ww="${x.id}" title="查看这场考试的错词明细">${wn ? `错 ${wn} · 明细` : '明细'}</button>
           <button type="button" class="chip" data-edit="${x.id}">修改</button>
           <button type="button" class="chip" data-del="${x.id}">删除</button>
         </span>
-      </div>`).join('')}</div>`
+      </div>`
+    }).join('')}</div>`
   }
 
   async function reload() {
@@ -115,6 +121,11 @@ export async function mountVocabExam(el) {
       listEl.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
       return
     }
+    const ps = Number(vex && vex.pass_score)
+    if (Number.isFinite(ps) && ps > 0) passScore = Math.round(ps)
+    // 及格线展示在 view-head（el）里，不在 #ve-body 内
+    const passEl = el.querySelector('#ve-pass')
+    if (passEl) passEl.textContent = String(passScore)
     paintList()
   }
 
@@ -151,6 +162,16 @@ export async function mountVocabExam(el) {
     btn.disabled = true
     try {
       if (editing) {
+        // 本页表单不标错词：修改时把已登记的错词原样带回——
+        // 后端按「不传 wrong_words=全对」处理，不带会被清空
+        let keep = Array.isArray(editing.wrong_words) ? editing.wrong_words : null
+        if (!keep && typeof api.vocabExamGet === 'function') {
+          try {
+            const d = await api.vocabExamGet(editing.id)
+            if (Array.isArray(d && d.exam && d.exam.wrong_words)) keep = d.exam.wrong_words
+          } catch { /* 取不到就按后端缺省行为 */ }
+        }
+        if (keep) rec.wrong_words = keep
         await api.vocabExamUpdate(editing.id, rec)
         toast('已保存修改')
       } else {
@@ -166,6 +187,11 @@ export async function mountVocabExam(el) {
     }
   })
   listEl.addEventListener('click', async (e) => {
+    const wwBtn = e.target.closest('[data-ww]')
+    if (wwBtn) {
+      openExamWrong(wwBtn.dataset.ww)
+      return
+    }
     const editBtn = e.target.closest('[data-edit]')
     if (editBtn) {
       const exam = (vex.exams || []).find((x) => String(x.id) === editBtn.dataset.edit)
@@ -189,16 +215,22 @@ export async function mountVocabExam(el) {
       return
     }
     const delBtn = e.target.closest('[data-del]')
-    if (!delBtn) return
-    if (!confirm('删除这条考试记录？')) return
-    try {
-      await api.vocabExamDel(delBtn.dataset.del)
-      if (editing && String(editing.id) === delBtn.dataset.del) resetForm()
-      toast('已删除')
-      await reload()
-    } catch (err) {
-      alert(err.message)
+    if (delBtn) {
+      if (!confirm('删除这条考试记录？')) return
+      try {
+        await api.vocabExamDel(delBtn.dataset.del)
+        if (editing && String(editing.id) === delBtn.dataset.del) resetForm()
+        toast('已删除')
+        await reload()
+      } catch (err) {
+        alert(err.message)
+      }
+      return
     }
+    // 点在行内非按钮区域 → 打开错词明细（等于整行可点）
+    if (e.target.closest('button')) return
+    const row = e.target.closest('.ve-row')
+    if (row && row.dataset.exam) openExamWrong(row.dataset.exam)
   })
 
   await reload()
@@ -210,4 +242,81 @@ export async function mountVocabExam(el) {
     document.body.appendChild(t)
     setTimeout(() => t.remove(), 3200)
   }
+}
+
+// ---- 错词明细（本页只读查看；标记在批改中心打分卡做） ----
+
+// 错词数：优先 wrong_words 数组，退回 wrong_count（后端两版字段兼容）
+function wrongCountOf(e) {
+  if (!e) return 0
+  if (Array.isArray(e.wrong_words)) return e.wrong_words.length
+  const n = Number(e.wrong_count)
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : 0
+}
+
+// 卷面题型 → 中文（与生成卷三段一致；未知值原样展示）
+const VE_QTYPES = { zh2en: '中译英', en2zh: '英译中', spell: '拼写' }
+const veQtypeLabel = (q) => (q ? (VE_QTYPES[q] || String(q)) : '')
+
+function closeExamWrongOverlay() {
+  const overlay = document.querySelector('.gd-focus-detail.ve-wwin')
+  if (!overlay) return
+  if (overlay._onKey) document.removeEventListener('keydown', overlay._onKey)
+  overlay.remove()
+}
+
+// 某场考试的错词列表（GET /vocab-exams/{id} → {exam, answers}）。
+// 复用 gd-focus-detail 弹窗骨架与 gd-focus-chip 胶囊，不另起样式。
+async function openExamWrong(examId) {
+  let d
+  try {
+    d = await api.vocabExamGet(Number(examId))
+  } catch (err) {
+    alert('加载错词明细失败：' + err.message)
+    return
+  }
+  const exam = (d && d.exam) || {}
+  const answers = Array.isArray(d && d.answers) ? d.answers : []
+  // 兼容：优先 exam.wrong_words 数组；字段缺失时从 answers 里取 correct=false 的词
+  const hasWw = Array.isArray(exam.wrong_words)
+  const wrong = hasWw ? exam.wrong_words.slice() : []
+  const qByWord = new Map()
+  for (const a of answers) {
+    if (!a || !a.word) continue
+    if (a.correct === false || a.correct === 0) {
+      if (!hasWw && !wrong.includes(a.word)) wrong.push(a.word)
+      qByWord.set(a.word, a.qtype)
+    } else if (!qByWord.has(a.word)) {
+      qByWord.set(a.word, a.qtype)
+    }
+  }
+  closeExamWrongOverlay() // 防重复叠加
+  const overlay = document.createElement('div')
+  overlay.className = 'gd-focus-detail ve-wwin'
+  overlay.innerHTML = `
+    <div class="gd-focus-detail-mask" data-close></div>
+    <div class="gd-focus-detail-card">
+      <div class="gd-focus-detail-head">
+        <div class="gd-focus-detail-title">
+          <b>错词明细</b>
+          <span>${escapeHtml(exam.user || '')} · L${escapeHtml(exam.level ?? '-')} · ${escapeHtml(exam.score ?? '-')} 分 · ${escapeHtml(exam.exam_date || '')}${exam.paper_id ? ` · 卷 ${escapeHtml(exam.paper_id)}` : ''}</span>
+        </div>
+        <button class="reading-btn small" data-close>关闭</button>
+      </div>
+      <div class="gd-focus-detail-body">
+        ${wrong.length
+          ? `<p class="reading-hint" style="margin:0 0 8px">共 ${wrong.length} 个错词，已自动加入背词复习队列。</p>
+             <div class="gd-focus-chips">${wrong.map((w) => {
+               const q = qByWord.get(w)
+               return `<i class="gd-focus-chip warn">${escapeHtml(w)}${q ? ` · ${escapeHtml(veQtypeLabel(q))}` : ''}</i>`
+             }).join('')}</div>`
+          : '<p class="reading-hint">这场考试登记为全对，没有错词。</p>'}
+      </div>
+    </div>`
+  document.body.append(overlay)
+  const onKey = (e) => { if (e.key === 'Escape') closeExamWrongOverlay() }
+  document.addEventListener('keydown', onKey)
+  overlay._onKey = onKey
+  overlay.querySelectorAll('[data-close]').forEach((x) =>
+    x.addEventListener('click', closeExamWrongOverlay))
 }

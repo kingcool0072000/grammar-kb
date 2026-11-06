@@ -71,6 +71,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from ..video_study import VideoStore
     from ..plan import PlanStore
     from ..vocab_exam import VocabExamStore
+    from ..vocab_paper import VocabPaperStore
     from ..micro import MicroStore
     from ..analytics_ai import AnalyticsAI
 
@@ -101,6 +102,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     # 词汇级别考试：成绩登记（fce.db）。单词级别可由教师直接设定；
     # 未设定时 L0 恒开，L{n} 考试 ≥80 解锁 L{n+1}
     vocab_exam = VocabExamStore(fce_db_path)
+    # 单词试卷资产（生成/存档/历史/批改列表）：fce.db 同库
+    vocab_paper = VocabPaperStore(fce_db_path)
     # 微练习（每日 3 题）：题库/当日抽题/作答流水在 fce.db；题源读
     # grammar.db 作业卷、已学范围读 exam.db——路径口径与 PlanStore 相同
     micro = MicroStore(fce_db_path, exam_db_path=exam_db_path,
@@ -336,7 +339,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         analytics_ai=analytics_ai, recite=recite, focus=focus, topics=topics,
         videos=video_study,
         plan=plan, homework_admin=homework_admin, vocab_exam=vocab_exam,
-        micro=micro,
+        vocab_paper=vocab_paper, micro=micro,
         library=library, prep_queue=prep_queue, audio_dir=audio_dir,
     )
     # 注册顺序与拆分前 create_app 内的定义顺序一致（路径重叠时先注册者优先）

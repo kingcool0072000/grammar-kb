@@ -15,7 +15,7 @@ import { migrateLegacyProgress, shuffle, startSession } from './recite/engine.js
 // 看板/出题「未掌握词池」/历史记录全部走云端 API。首次进入时若检测到
 // 旧版本遗留的本地进度（gkb-recite-progress-v1），一次性合并上云后清除。
 //
-// 词库来自 /vocab-levels（L0 哈一课本语料词，L1-L5 分层词表，教师解锁）。
+// 词库来自 /vocab-levels（L0 哈一课本语料词，L1-L7 分层词表，教师解锁）。
 //
 // 结构：本文件是页面壳——页面骨架、词库 scope 选择、复习环摘要、
 // 看板/历史/错题本渲染、进度拉取与页面级事件编排。会话状态机
@@ -28,7 +28,8 @@ import { migrateLegacyProgress, shuffle, startSession } from './recite/engine.js
 // 只在选词池路径上等待。「开始背单词」解禁只等选词池就绪，不等摘要。
 
 const GROUP_SIZES = [20, 30]
-const LEVEL_MAX = 5
+// 与后端 MAX_UNLOCK_LEVEL 对齐：解锁上限已放开到 L7
+const LEVEL_MAX = 7
 
 // ---- 分层词条：懒加载 + 模块级缓存 ---------------------------------------
 // 全量 items 只服务于「开始背单词 / 复习开练」的选词池与词条兜底，不再
@@ -155,7 +156,9 @@ export async function mountRecite(el, { vocabPromise, role }) {
       state.scope = unlocked > 0 ? String(unlocked) : 'all'
     }
     const cur = state.scope === 'all' ? 0 : Number(state.scope)
-    row.innerHTML = [0, 1, 2, 3, 4, 5]
+    // 层级列表至少 0-7（对齐后端解锁上限）；counts 出现更高层级时跟随扩展
+    const maxLv = Math.max(7, ...Object.keys(levelCounts).map(Number))
+    row.innerHTML = Array.from({ length: maxLv + 1 }, (_, lv) => lv)
       .map((lv) => {
         const n = levelCounts[String(lv)] || 0
         const locked = lv > unlocked

@@ -236,8 +236,129 @@ function toast(msg) {
   setTimeout(() => t.remove(), 3200)
 }
 
+// 错词标记（登记表单折叠 chips）+ 错词徽标。样式随视图注入一次
+// （对齐 analytics.js 的 ensureStyles 惯例），配色沿用本页暖色系。
+const GEG_CSS = `
+.geg-wrong { grid-column: 1 / -1; min-width: 0; }
+.geg-wrong summary { cursor: pointer; font-size: 12px; color: var(--ink-soft, #64748b); user-select: none; }
+.geg-wrong summary i { font-style: normal; }
+.geg-wrong summary .geg-wn { color: #b42318; font-weight: 600; margin-left: 4px; }
+.geg-wrong summary .geg-whint { color: var(--ink-faint, #94a3b8); margin-left: 8px; font-weight: 400; }
+.geg-words { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.geg-word {
+  font: inherit; font-size: 11.5px; line-height: 1.4; padding: 2px 9px;
+  border-radius: 999px; border: 1px solid var(--line, #e2e8f0);
+  background: var(--bg-soft, #f8fafc); color: var(--ink-soft, #64748b); cursor: pointer;
+}
+.geg-word.sel { background: #fdeeea; border-color: #f5c6c0; color: #b42318; font-weight: 600; }
+.geg-wbadge {
+  font: inherit; font-size: 11px; line-height: 1.4; padding: 1px 8px;
+  border-radius: 999px; border: 1px solid #f5c6c0; background: #fdeeea;
+  color: #b42318; font-weight: 600; cursor: pointer;
+}
+.geg-word:focus-visible, .geg-wbadge:focus-visible { outline: 2px solid #c8a06a; outline-offset: 1px; }
+`
+
+function ensureGegStyles() {
+  if (!document.getElementById('geg-wrong-style')) {
+    const tag = document.createElement('style')
+    tag.id = 'geg-wrong-style'
+    tag.textContent = GEG_CSS
+    document.head.appendChild(tag)
+  }
+}
+
+// 错词数：优先 wrong_words 数组，退回 wrong_count（后端两版字段兼容）
+function wrongCountOf(e) {
+  if (!e) return 0
+  if (Array.isArray(e.wrong_words)) return e.wrong_words.length
+  const n = Number(e.wrong_count)
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : 0
+}
+
+// 修改按钮回填用：已登记错词序列化进 data 属性（词不含 |，安全）
+function wrongWordsKey(e) {
+  return Array.isArray(e && e.wrong_words) ? e.wrong_words.join('|') : ''
+}
+
+function updateWrongSummary(row) {
+  if (!row) return
+  const hint = row.querySelector('.geg-wn')
+  if (!hint) return
+  const n = row.querySelectorAll('.geg-word.sel').length
+  hint.textContent = n ? `已选 ${n}` : '未选'
+}
+
+// 卷面题型 → 中文（与生成卷三段一致；未知值原样展示）
+const GEG_QTYPES = { zh2en: '中译英', en2zh: '英译中', spell: '拼写' }
+const gegQtypeLabel = (q) => (q ? (GEG_QTYPES[q] || String(q)) : '')
+
+function closeVocabWrongOverlay() {
+  const overlay = document.querySelector('.gd-focus-detail.geg-wwin')
+  if (!overlay) return
+  if (overlay._onKey) document.removeEventListener('keydown', overlay._onKey)
+  overlay.remove()
+}
+
+// 已登记成绩 → 错词明细浮层（GET /vocab-exams/{id} → {exam, answers}）。
+// 复用 gd-focus-detail 弹窗骨架与 gd-focus-chip 胶囊，不另起样式。
+async function openVocabWrongOverlay(examId) {
+  let d
+  try {
+    d = await api.vocabExamGet(Number(examId))
+  } catch (err) {
+    alert('加载错词明细失败：' + err.message)
+    return
+  }
+  const exam = (d && d.exam) || {}
+  const answers = Array.isArray(d && d.answers) ? d.answers : []
+  // 兼容：优先 exam.wrong_words 数组；字段缺失时从 answers 里取 correct=false 的词
+  const hasWw = Array.isArray(exam.wrong_words)
+  const wrong = hasWw ? exam.wrong_words.slice() : []
+  const qByWord = new Map()
+  for (const a of answers) {
+    if (!a || !a.word) continue
+    if (a.correct === false || a.correct === 0) {
+      if (!hasWw && !wrong.includes(a.word)) wrong.push(a.word)
+      qByWord.set(a.word, a.qtype)
+    } else if (!qByWord.has(a.word)) {
+      qByWord.set(a.word, a.qtype)
+    }
+  }
+  closeVocabWrongOverlay() // 防重复叠加
+  const overlay = document.createElement('div')
+  overlay.className = 'gd-focus-detail geg-wwin'
+  overlay.innerHTML = `
+    <div class="gd-focus-detail-mask" data-close></div>
+    <div class="gd-focus-detail-card">
+      <div class="gd-focus-detail-head">
+        <div class="gd-focus-detail-title">
+          <b>错词明细</b>
+          <span>${escapeHtml(exam.user || '')} · L${escapeHtml(exam.level ?? '-')} · ${escapeHtml(exam.score ?? '-')} 分 · ${escapeHtml(exam.exam_date || '')}${exam.paper_id ? ` · 卷 ${escapeHtml(exam.paper_id)}` : ''}</span>
+        </div>
+        <button class="reading-btn small" data-close>关闭</button>
+      </div>
+      <div class="gd-focus-detail-body">
+        ${wrong.length
+          ? `<p class="reading-hint" style="margin:0 0 8px">共 ${wrong.length} 个错词，已自动加入背词复习队列。</p>
+             <div class="gd-focus-chips">${wrong.map((w) => {
+               const q = qByWord.get(w)
+               return `<i class="gd-focus-chip warn">${escapeHtml(w)}${q ? ` · ${escapeHtml(gegQtypeLabel(q))}` : ''}</i>`
+             }).join('')}</div>`
+          : '<p class="reading-hint">这场考试登记为全对，没有错词。</p>'}
+      </div>
+    </div>`
+  document.body.append(overlay)
+  const onKey = (e) => { if (e.key === 'Escape') closeVocabWrongOverlay() }
+  document.addEventListener('keydown', onKey)
+  overlay._onKey = onKey
+  overlay.querySelectorAll('[data-close]').forEach((x) =>
+    x.addEventListener('click', closeVocabWrongOverlay))
+}
+
 async function mountExamGrading(host, students) {
   if (!host) return
+  ensureGegStyles()
   const list = host.querySelector('.gcard-list')
   const countEl = host.querySelector('#geg-count')
   let papers = []
@@ -291,10 +412,14 @@ async function mountExamGrading(host, students) {
       </div>
       <div class="geg-grades">
         ${graded.length
-          ? graded.map((e) => `<span class="geg-chip ${e.score >= 80 ? 'ok' : ''}">${escapeHtml(e.user)} L${e.level} ${e.score} 分
-              <button type="button" class="geg-op" data-gedit="${e.id}" data-user="${escapeHtml(e.user)}" data-level="${e.level}" data-score="${e.score}" data-date="${escapeHtml(e.exam_date || '')}">修改</button>
+          ? graded.map((e) => {
+              const wn = wrongCountOf(e)
+              return `<span class="geg-chip ${e.score >= 80 ? 'ok' : ''}">${escapeHtml(e.user)} L${e.level} ${e.score} 分
+              ${wn ? `<button type="button" class="geg-wbadge" data-gwrong-view="${e.id}" title="查看错词明细">错 ${wn}</button>` : ''}
+              <button type="button" class="geg-op" data-gedit="${e.id}" data-user="${escapeHtml(e.user)}" data-level="${e.level}" data-score="${e.score}" data-date="${escapeHtml(e.exam_date || '')}" data-gwords="${escapeHtml(wrongWordsKey(e))}" data-gwn="${wn}">修改</button>
               <button type="button" class="geg-op" data-gdel="${e.id}">删除</button>
-            </span>`).join('')
+            </span>`
+            }).join('')
           : '<span class="geg-chip none">未登记</span>'}
       </div>
       <div class="geg-form">
@@ -311,6 +436,12 @@ async function mountExamGrading(host, students) {
         <input class="geg-date" type="date" value="${today}" data-pid="${escapeHtml(p.paper_id)}">
         <button class="reading-btn small primary" data-geg="${escapeHtml(p.paper_id)}" data-lv="${p.level}">登记</button>
       </div>
+      <details class="geg-wrong">
+        <summary>标记错词 <i class="geg-wn">未选</i><i class="geg-whint">点选=错词，全对不用标</i></summary>
+        <div class="geg-words">
+          ${(p.words || []).map((w) => `<button type="button" class="geg-word" data-w="${escapeHtml(w)}">${escapeHtml(w)}</button>`).join('')}
+        </div>
+      </details>
     </div>`
   }
   list.innerHTML = papers.map(rowHtml).join('')
@@ -338,8 +469,19 @@ async function mountExamGrading(host, students) {
     if (user && Number.isFinite(n)) unlockByUser.set(user, n)
   }
 
-  // 登记 / 修改 / 删除：list 级事件委托（行替换后监听不丢）
+  // 登记 / 修改 / 删除 / 错词：list 级事件委托（行替换后监听不丢）
   list.addEventListener('click', async (e) => {
+    const wvBtn = e.target.closest('[data-gwrong-view]')
+    if (wvBtn) {
+      openVocabWrongOverlay(wvBtn.dataset.gwrongView)
+      return
+    }
+    const wordBtn = e.target.closest('.geg-word')
+    if (wordBtn) {
+      wordBtn.classList.toggle('sel')
+      updateWrongSummary(wordBtn.closest('.geg-row'))
+      return
+    }
     const editBtn = e.target.closest('[data-gedit]')
     if (editBtn) {
       const row = editBtn.closest('.geg-row')
@@ -352,6 +494,22 @@ async function mountExamGrading(host, students) {
       row.querySelector('.geg-date').value = editBtn.dataset.date
       const lvSel = row.querySelector('.geg-lv')
       if (lvSel) lvSel.value = editBtn.dataset.level
+      // 回填该成绩已登记的错词：对应 chips 预选中（有错词时顺带展开折叠区）。
+      // 列表接口只给 wrong_count 没给 wrong_words 时，先懒加载明细补齐。
+      let wrongSel = String(editBtn.dataset.gwords || '').split('|').filter(Boolean)
+      if (!wrongSel.length && Number(editBtn.dataset.gwn) > 0 && typeof api.vocabExamGet === 'function') {
+        try {
+          const wd = await api.vocabExamGet(Number(editBtn.dataset.gedit))
+          if (Array.isArray(wd && wd.exam && wd.exam.wrong_words)) wrongSel = wd.exam.wrong_words
+        } catch { /* 取不到就按无预选处理 */ }
+      }
+      if (row.querySelector('.geg-words')) {
+        row.querySelectorAll('.geg-word').forEach((c) =>
+          c.classList.toggle('sel', wrongSel.includes(c.dataset.w)))
+        const det = row.querySelector('.geg-wrong')
+        if (det && wrongSel.length) det.open = true
+        updateWrongSummary(row)
+      }
       row.dataset.editId = editBtn.dataset.gedit
       row.dataset.editLevel = editBtn.dataset.level
       const reg = row.querySelector('[data-geg]')
@@ -397,10 +555,12 @@ async function mountExamGrading(host, students) {
       if (!(lv >= 0 && lv <= 7)) return alert('混合卷须选择登记级别（L0–L7）')
     }
     const before = Number(unlockByUser.get(user))
+    // 勾选的错词随 payload 原样入库；空数组也传（明确的「全对」语义）
+    const wrongWords = [...row.querySelectorAll('.geg-word.sel')].map((c) => String(c.dataset.w || ''))
     btn.disabled = true
     btn.textContent = editId ? '保存中…' : '登记中…'
     try {
-      const payload = { user, level: lv, score, exam_date: date }
+      const payload = { user, level: lv, score, exam_date: date, wrong_words: wrongWords }
       const r = editId
         ? await api.vocabExamUpdate(editId, payload)
         : await api.vocabExamAdd({ ...payload, paper_id: pid })
@@ -408,6 +568,7 @@ async function mountExamGrading(host, students) {
       if (r.previous_user) rememberUnlock(r.previous_user, r.previous_unlocked_level)
       const after = Number(r.unlocked_level)
       let msg = `${editId ? '已修改' : '已登记'} ${user} ${score} 分`
+      if (wrongWords.length) msg += `，已记 ${wrongWords.length} 个错词并加入复习队列`
       if (Number.isFinite(before) && Number.isFinite(after) && after !== before) {
         msg += `，单词级别现为 L${after}`
       }

@@ -23,7 +23,7 @@ async function mountContent(el) {
       api.readingArticles({ kind: 'base' }).catch(() => null),
       api.readingArticles().catch(() => null),
       api.libraryBooks().catch(() => null),
-      api.vocabLevels({ maxLevel: 5, countsOnly: true }).catch(() => null),
+      api.vocabLevels({ maxLevel: 7, countsOnly: true }).catch(() => null),
       api.topicsProgress().catch(() => null),
     ])
   } catch { /* FCE 数据不可用时仍展示哈1板块 */ }
@@ -68,9 +68,9 @@ async function mountContent(el) {
           <h2>🔤 背单词</h2>
         </header>
         <div class="gd-subgroup">
-          <h3>📚 分级词库 L0-L5</h3>
+          <h3>📚 分级词库 L0-L7</h3>
           <div class="prep-cards">
-            ${[0, 1, 2, 3, 4, 5].map((lv) => {
+            ${[0, 1, 2, 3, 4, 5, 6, 7].map((lv) => {
               const n = vocabCounts[String(lv)] ?? 0
               return `<button class="prep-card vocab-lv" data-vlv="${lv}">
                 <b>${n}</b><span>L${lv} · ${lv === 0 ? '课本高频词' : '级别词库'}</span>

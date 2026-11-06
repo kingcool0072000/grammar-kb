@@ -1,33 +1,26 @@
-"""词汇级别考试：线下考卷生成 + 成绩登记（fce.db 同库）。
+"""词汇级别考试：成绩登记 + 按题错词明细 + 解锁级别（fce.db 同库）。
 
 单词级别（学生能背到哪一级）以教师设定为准：
 - 在备课中心「背单词 · 级别」里为该生点过级别后，这个值直接生效，
-  不要求词汇考试达到 80 分，也不会被之后的考试分数改写
+  不要求词汇考试达到及格分（PASS_SCORE），也不会被之后的考试分数改写
   （可设得比考试推算更高或更低）。vocab_unlock.updated_at 记下最近一次设定。
-- 从未单独设定过的学生仍走旧规则：L0 默认开放；L{n} 考试 ≥80 解锁 L{n+1}。
+- 从未单独设定过的学生仍走旧规则：L0 默认开放；L{n} 考试 ≥PASS_SCORE
+  解锁 L{n+1}（上限 MAX_UNLOCK_LEVEL）。
 
-考卷线下进行：家长持「答案页」读题（听写部分读音），孩子在纸质卷作答。
-
-考卷结构（50 词 × 2 分 = 100 分，及格 80）：
-- A 听写 15 题：家长读英文单词，孩子拼写
-- B 中译英 15 题：中文释义 → 写英文单词
-- C 英译中 15 题：英文单词 → 写中文释义
-- D 拼写补全 5 题：挖空字母补全（如 r_c_ive）
-词从 vocab_word 指定级别均匀随机抽取（seed 可复现同一份卷）。
+考卷的生成/存档/渲染在 :mod:`grammar_kb.vocab_paper`（考试资产，
+与学生无关）；本模块只管成绩与错词明细。批改登记成绩时勾选的错词
+落 vocab_exam_answers（只存错行，对的题=卷面词减错词，不落行），
+路由层再把错词回流进背词艾宾浩斯复习队列（ReciteStore.enter_review）。
 """
 from __future__ import annotations
 
-import html
 import json
-import random
 import sqlite3
 from datetime import datetime, timezone as _tz
 from pathlib import Path
 from typing import Optional
 
 from .atlas_vocab import exam_allowed
-from .paper_html import render_template
-from .clock import today_cn
 from . import dbreg
 
 SCHEMA = """
@@ -48,20 +41,22 @@ CREATE TABLE IF NOT EXISTS vocab_exams (
 );
 CREATE INDEX IF NOT EXISTS idx_vex_user ON vocab_exams(user, level, score);
 CREATE INDEX IF NOT EXISTS idx_vex_paper ON vocab_exams(paper_id);
+CREATE TABLE IF NOT EXISTS vocab_exam_answers (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    exam_id    INTEGER NOT NULL,
+    user       TEXT NOT NULL,
+    word       TEXT NOT NULL,
+    qtype      TEXT DEFAULT '',
+    correct    INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_vea_exam ON vocab_exam_answers(exam_id);
 """
 
-
-def _ensure_paper_col(conn: sqlite3.Connection) -> None:
-    """老库补列（paper_id 关联具体试卷，批改打分用；ALTER 幂等）。
-
-    首次建库（表还不存在）跳过——由 SCHEMA 的 CREATE TABLE 带出该列。
-    """
-    cols = {r[1] for r in conn.execute("PRAGMA table_info(vocab_exams)")}
-    if cols and "paper_id" not in cols:
-        conn.execute("ALTER TABLE vocab_exams ADD COLUMN paper_id TEXT DEFAULT ''")
-        conn.commit()
-
+# 及格线（100 分卷）：解锁下一级、目标「词汇级别」完成判定共用此口径
 PASS_SCORE = 80
+# 单词级别上限（L0..L7）：解锁推算、教师手动设定、level 字段校验统一收口
+MAX_UNLOCK_LEVEL = 7
 
 
 class VocabExamStore:
@@ -69,42 +64,98 @@ class VocabExamStore:
 
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or dbreg.fce_db_path()
+        # SCHEMA 全部 CREATE IF NOT EXISTS，幂等（生产库已含 paper_id 列）
         with self._connect() as conn:
-            # 老库先补列再跑 SCHEMA——executescript 里的 CREATE INDEX 引用
-            # paper_id，列不存在时（executescript 自动提交绕过 ALTER 顺序）
-            # 会直接 OperationalError
-            _ensure_paper_col(conn)
             conn.executescript(SCHEMA)
 
     def _connect(self):
         return dbreg.connect(self.db_path)
 
     def record(self, user: str, level: int, score: int, exam_date: str,
-               note: str = "", paper_id: str = "") -> dict:
-        if not (0 <= int(level) <= 7):
-            raise ValueError("level 须为 0-7")
+               note: str = "", paper_id: str = "",
+               wrong_words: Optional[list] = None) -> dict:
+        """登记一次成绩。wrong_words 非 None 时重写该卷错词明细
+       （只存错行；传 [] 表示清空明细，None 表示不动明细）。"""
+        if not (0 <= int(level) <= MAX_UNLOCK_LEVEL):
+            raise ValueError(f"level 须为 0-{MAX_UNLOCK_LEVEL}")
         if not (0 <= int(score) <= 100):
             raise ValueError("score 须为 0-100")
         datetime.strptime(exam_date, "%Y-%m-%d")  # 非法日期抛 ValueError
+        who = (user or "").strip()[:60]
         with self._connect() as conn:
             cur = conn.execute(
                 "INSERT INTO vocab_exams (user, level, score, exam_date, note, created_at, paper_id)"
                 " VALUES (?,?,?,?,?,?,?)",
-                ((user or "").strip()[:60], int(level), int(score), exam_date,
+                (who, int(level), int(score), exam_date,
                  (note or "")[:500],
                  datetime.now(_tz.utc).isoformat(timespec="seconds"),
                  (paper_id or "")[:64]),
             )
+            if wrong_words is not None:
+                self._replace_answers(conn, cur.lastrowid, who, wrong_words)
             row = conn.execute(
                 "SELECT * FROM vocab_exams WHERE id = ?", (cur.lastrowid,)
             ).fetchone()
         return dict(row)
 
     def delete_exam(self, exam_id: int) -> int:
-        """删一条考试记录，返回删除行数（0=不存在）。"""
+        """删一条考试记录（错词明细一并删），返回删除行数（0=不存在）。"""
         with self._connect() as conn:
+            conn.execute("DELETE FROM vocab_exam_answers WHERE exam_id = ?",
+                         (int(exam_id),))
             cur = conn.execute("DELETE FROM vocab_exams WHERE id = ?", (exam_id,))
         return cur.rowcount
+
+    @staticmethod
+    def _replace_answers(conn: sqlite3.Connection, exam_id: int, user: str,
+                         wrong_words: Optional[list]) -> None:
+        """重写一份成绩的错词明细：先删旧行再插入本次错词（qtype 留空）。
+
+        词归一：去空白、小写、截 60 字符、去重（同名错一次只记一行）。
+        """
+        conn.execute("DELETE FROM vocab_exam_answers WHERE exam_id = ?",
+                     (int(exam_id),))
+        seen: set[str] = set()
+        rows = []
+        for w in wrong_words or []:
+            word = str(w or "").strip().lower()[:60]
+            if not word or word in seen:
+                continue
+            seen.add(word)
+            rows.append((int(exam_id), user, word, "", 0,
+                         datetime.now(_tz.utc).isoformat(timespec="seconds")))
+        if rows:
+            conn.executemany(
+                "INSERT INTO vocab_exam_answers"
+                " (exam_id, user, word, qtype, correct, created_at)"
+                " VALUES (?,?,?,?,?,?)", rows)
+
+    def answers_for_exams(self, exam_ids: list) -> dict[int, list[str]]:
+        """批量取多份成绩的错词（批改卡汇总用；一次查询防 N+1）。
+
+        返回 {exam_id: [word, ...]}，未登记明细的 exam_id 不出现在结果里。
+        """
+        ids = [int(x) for x in (exam_ids or []) if x]
+        if not ids:
+            return {}
+        ph = ",".join("?" * len(ids))
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"SELECT exam_id, word FROM vocab_exam_answers"
+                f" WHERE exam_id IN ({ph}) ORDER BY id", ids).fetchall()
+        out: dict[int, list[str]] = {}
+        for r in rows:
+            out.setdefault(r["exam_id"], []).append(r["word"])
+        return out
+
+    def answers_for_exam(self, exam_id: int) -> list[dict]:
+        """单份成绩的错词明细（明细查看用，含登记时间）。"""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT id, exam_id, user, word, qtype, correct, created_at"
+                " FROM vocab_exam_answers WHERE exam_id = ? ORDER BY id",
+                (int(exam_id),)).fetchall()
+        return [dict(r) for r in rows]
 
     def exams_for_papers(self, paper_ids: list[str]) -> dict[str, list[dict]]:
         """按试卷 id 反查已登记成绩（批改中心打分卡：标记哪卷已登分）。"""
@@ -139,10 +190,15 @@ class VocabExamStore:
         return dict(row) if row else None
 
     def update(self, exam_id: int, user: str, level: int, score: int,
-               exam_date: str, note: str = "", paper_id: str = "") -> Optional[dict]:
-        """改一条考试记录。不存在返回 None。字段校验与 record 相同。"""
-        if not (0 <= int(level) <= 7):
-            raise ValueError("level 须为 0-7")
+               exam_date: str, note: str = "", paper_id: str = "",
+               wrong_words: Optional[list] = None) -> Optional[dict]:
+        """改一条考试记录。不存在返回 None。字段校验与 record 相同。
+
+        wrong_words：None=不改明细；传 list=重写明细（[] 清空）。
+        换归属学生时，明细行的 user 一并改到新学生。
+        """
+        if not (0 <= int(level) <= MAX_UNLOCK_LEVEL):
+            raise ValueError(f"level 须为 0-{MAX_UNLOCK_LEVEL}")
         if not (0 <= int(score) <= 100):
             raise ValueError("score 须为 0-100")
         datetime.strptime(exam_date, "%Y-%m-%d")
@@ -156,6 +212,8 @@ class VocabExamStore:
                 (who, int(level), int(score), exam_date, (note or "")[:500],
                  (paper_id or "")[:64], int(exam_id)),
             )
+            if wrong_words is not None:
+                self._replace_answers(conn, int(exam_id), who, wrong_words)
             row = conn.execute(
                 "SELECT * FROM vocab_exams WHERE id = ?", (int(exam_id),)
             ).fetchone()
@@ -164,14 +222,15 @@ class VocabExamStore:
     def unlocked_level(self, user: str) -> int:
         """学生当前单词级别（背单词能看到的最高级）。
 
-        教师在 vocab_unlock 里显式设定过 → 以该值为准，与考试是否 ≥80 无关。
-        从未设定过 → L0 恒开；L{n} 考试 ≥80 解锁 L{n+1}（上限 L5）。
+        教师在 vocab_unlock 里显式设定过 → 以该值为准，与考试是否
+        ≥PASS_SCORE 无关。从未设定过 → L0 恒开；L{n} 考试 ≥PASS_SCORE
+        解锁 L{n+1}（上限 MAX_UNLOCK_LEVEL）。
         """
         configured = self._configured_level(user)
         if configured is not None:
             return configured
         passed = self.passed_levels(user)
-        return min(5, max(passed) + 1) if passed else 0
+        return min(MAX_UNLOCK_LEVEL, max(passed) + 1) if passed else 0
 
     # ---- 手动解锁配置（教师，备课中心-背单词） ----
 
@@ -184,7 +243,7 @@ class VocabExamStore:
             ).fetchone()
         if row is None:
             return None
-        return min(5, max(0, int(row["level"])))
+        return min(MAX_UNLOCK_LEVEL, max(0, int(row["level"])))
 
     def level_configured(self, user: str) -> bool:
         return self._configured_level(user) is not None
@@ -201,7 +260,7 @@ class VocabExamStore:
         return {r["user"]: r["level"] for r in rows}
 
     def put_unlock(self, user: str, level: int) -> None:
-        lv = min(5, max(0, int(level)))
+        lv = min(MAX_UNLOCK_LEVEL, max(0, int(level)))
         with self._connect() as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO vocab_unlock (user, level, updated_at)"
@@ -262,72 +321,3 @@ def load_level_words(level: int, limit: int = 0) -> list[dict]:
     if limit:
         out = out[:limit]
     return out
-
-
-def _blank_word(word: str, rng: random.Random) -> str:
-    """挖空 1-3 个字母（避开首字母；只挖字母字符；短词少挖）。"""
-    idxs = [i for i, ch in enumerate(word[1:], start=1) if ch.isalpha()]
-    n = min(3, max(1, len(idxs) - 1)) if idxs else 0
-    holes = set(rng.sample(idxs, n)) if n else set()
-    return "".join("_" if i in holes else ch for i, ch in enumerate(word))
-
-
-def build_paper(level: int, seed: Optional[int] = None) -> dict:
-    """抽 50 词组卷。返回 {sections, words}；词量不足时按比例缩减各部分。"""
-    rng = random.Random(seed)
-    words = load_level_words(level)
-    if len(words) < 50:
-        raise ValueError(f"L{level} 词量不足 50（现有 {len(words)}）")
-    # 覆盖优先：词频前 120 抽 25（核心必考）+ 其余随机 25（覆盖面）
-    core = rng.sample(words[:120], 25)
-    core_words = {x["word"] for x in core}
-    rest_pool = [w for w in words if w["word"] not in core_words]
-    rest = rng.sample(rest_pool, 25)
-    picked = core + rest
-    rng.shuffle(picked)
-    a, b, c, d = picked[:15], picked[15:30], picked[30:45], picked[45:50]
-    return {
-        "level": level,
-        "seed": seed,
-        "sections": {
-            "dictation": a,     # 听写（家长读音）
-            "zh2en": b,         # 中译英
-            "en2zh": c,         # 英译中
-            "spell": d,         # 拼写补全（挑 ≥5 字母词）
-        },
-        "words": picked,
-    }
-
-
-def render_paper_html(paper: dict, student: str = "") -> str:
-    """渲染可打印 A4 考卷（试卷页 + 答案页，答案页独立成页便于线下撕开）。"""
-    lvl = paper["level"]
-    rng = random.Random((paper.get("seed") or 0) + 7)
-    s = paper["sections"]
-    today = today_cn().isoformat()
-    esc = html.escape
-
-    def rows(items, inner):
-        return "".join(
-            f'<div class="q"><span class="no">{i+1}.</span>{inner(w, i)}</div>'
-            for i, w in enumerate(items)
-        )
-
-    sec_a = rows(s["dictation"], lambda w, i: '<span class="dict-hint">🎧 听录音写单词</span><span class="blank-line"></span>')
-    sec_b = rows(s["zh2en"], lambda w, i: f'<b class="zh">{esc(w["meaning"] or w["gloss"] or "—")}</b><span class="blank-line"></span>')
-    sec_c = rows(s["en2zh"], lambda w, i: f'<b class="en">{esc(w["word"])}</b><span class="blank-line short"></span>')
-    spell_items = [w for w in s["spell"]]
-    sec_d = rows(spell_items, lambda w, i: f'<b class="en mono">{esc(_blank_word(w["word"], rng))}</b><span class="blank-line short"></span>')
-
-    ans_a = rows(s["dictation"], lambda w, i: f'<b class="en">{esc(w["word"])}</b><span class="zh muted">{esc(w["meaning"] or "")}</span>')
-    ans_b = rows(s["zh2en"], lambda w, i: f'<b class="en">{esc(w["word"])}</b>')
-    ans_c = rows(s["en2zh"], lambda w, i: f'<span class="zh">{esc(w["meaning"] or w["gloss"] or "")}</span>')
-    ans_d = rows(spell_items, lambda w, i: f'<b class="en">{esc(w["word"])}</b>')
-
-    name_line = esc(student) or "＿＿＿＿＿"
-    return render_template(
-        "exam_paper.html",
-        lvl=lvl, next_lvl=lvl + 1, today=today, name_line=name_line,
-        sec_a=sec_a, sec_b=sec_b, sec_c=sec_c, sec_d=sec_d,
-        ans_a=ans_a, ans_b=ans_b, ans_c=ans_c, ans_d=ans_d,
-    )
