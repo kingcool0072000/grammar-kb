@@ -6,14 +6,17 @@ v2 重构口径（与前端 vocabLevel 出题配置、routes_vocab 同契）：
   渲染什么——修复旧版「落库已 shuffle 的词序、取回按位置还原分段」导致
   的分段错乱。
 - **五题型**：词形变化(form) / 拼写挖空(spell) / 例句填空(ctx) /
-  中译英(zh2en) / 英译中(en2zh)，按 ``ratios`` 配比出题（默认 12/8/10/10/10）。
+  中译英(zh2en) / 英译中(en2zh)，按 ``ratios`` 配比出题（默认 6/8/12/12/12，
+  词形段少一些，例句和中英互译多一些）。
 - **分层出题**：简单词（vocab_word.level ≤ SIMPLE_MAX_LEVEL）优先词形变化
   题（extra.forms，ECDICT 实测优先）；复杂词优先例句填空题（example.en 里
   定位该词或其变形挖空）；各自不可行时按序退化，保证每词恰进一个题型段。
-- **词形变化只考能变形的词**：感叹词和话语标记（ok / okay）、过短的功能词、
-  没有实质屈折的形容词副词，以及规则硬造、和原形一样的变形（ok→oked）
-  不进词形段。候选不合格就换池子里的下一个词；实在不够就缩小该段，不凑垃圾题。
-  动词、名词优先于仅有比较级的形容词。
+- **词形变化只考课堂里真正常见的屈折**：感叹词和话语标记（ok / okay）、过短的
+  功能词、没有实质屈折的形容词副词，以及规则硬造、和原形一样的变形（ok→oked）
+  不进词形段。名词当头、只是词典顺手标成动词的（crayon 的三单、crowd 的三单）
+  也不考，改考复数；play、need 这类课堂动词仍考时态。候选不合格就换下一个词；
+  实在不够就缩小该段，不凑垃圾题。动词、名词优先于仅有比较级的形容词。
+- **中译英把长释义拆成几条短义**（分号隔开）；**英译中只给英文单词，不标词性**。
 - **选词来源可配**（preset / source_mix）：本级或已学词池之外，还能按比例
   混入学生的「积压错词」——艾宾浩斯队列未攻克且已到期（recite_review）
   ∪ 错过且未掌握（recite_word_progress）。
@@ -115,8 +118,9 @@ SECTION_ORDER = ("form", "spell", "ctx", "zh2en", "en2zh")
 SECTION_TITLES = {"form": "词形变化", "spell": "拼写挖空", "ctx": "例句填空",
                   "zh2en": "中译英", "en2zh": "英译中"}
 
-# 默认题型配比（合计 50 题）；custom ratios 只允许覆盖这些键
-DEFAULT_RATIOS = {"form": 12, "spell": 8, "ctx": 10, "zh2en": 10, "en2zh": 10}
+# 默认题型配比（合计 50 题）；custom ratios 只允许覆盖这些键。
+# 词形段原先 12 题，又容易被生僻活用占满，默认改成最少的一档。
+DEFAULT_RATIOS = {"form": 6, "spell": 8, "ctx": 12, "zh2en": 12, "en2zh": 12}
 
 # 预设选词来源：standard=纯词池；reinforce=六成积压错词 + 四成词池；
 # recycle=全量积压错词回炉。显式 source_mix 覆盖 preset。
@@ -165,6 +169,78 @@ def _strip_gloss_pos(gloss: str) -> str:
             r"^(?:n|v|adj|adv|prep|conj|pron|num|interj|aux)\.\s*/?\s*"
             r"(?:(?:n|v|adj|adv|prep|conj|pron|num|interj)\.\s*/?\s*)*")
     return _GLOSS_POS_PREFIX.sub("", gloss or "", count=1)
+
+
+# 中译英：长释义拆成几条短义。分号、斜杠是义项；逗号是同一义里的近义词。
+_SENSE_SPLIT = re.compile(r"[；;/\n|]+")
+_SENSE_COMMA = re.compile(r"[,，、]+")
+_SENSE_POS = re.compile(
+    r"^(?:abbr|aux|adj|adv|prep|conj|pron|num|interj|int|art|vt|vi|ad|n|v|a|p|u|c|m)\.\s*",
+    re.IGNORECASE,
+)
+_SENSE_BRACKET = re.compile(r"\[[^\[\]]*\]|（[^）]*）|\([^)]*\)")
+_SENSE_SLANG = re.compile(r"\[(?:美俚|英俚|俚|口|医|化|计|法|经|建|语)")
+_SENSE_MAX = 3
+_SENSE_LEN = 12
+
+
+def _short_senses(gloss: str, max_phrases: int = _SENSE_MAX) -> str:
+    """长释义 → 最多三条短义，用中文分号隔开。
+
+    「群众,一伙;一堆,许多,大众；v. 拥挤,挤满,挤进」变成「群众；一堆；拥挤」。
+    每条义项只留开头的短说法，[美俚] 整段丢掉，避免一整墙中文。
+    """
+    groups: list[list[str]] = []
+    for chunk in _SENSE_SPLIT.split(gloss or ""):
+        chunk = chunk.strip()
+        if not chunk or _SENSE_SLANG.search(chunk):
+            continue
+        chunk = _SENSE_BRACKET.sub("", chunk).strip()
+        while True:
+            nxt = _SENSE_POS.sub("", chunk, count=1)
+            if nxt == chunk:
+                break
+            chunk = nxt.strip()
+        bits: list[str] = []
+        seen_bit: set[str] = set()
+        for bit in _SENSE_COMMA.split(chunk):
+            bit = bit.strip(" \t.。·")
+            while True:
+                nxt = _SENSE_POS.sub("", bit, count=1)
+                if nxt == bit:
+                    break
+                bit = nxt.strip(" \t.。·")
+            if not bit or len(bit) > _SENSE_LEN or bit in seen_bit:
+                continue
+            seen_bit.add(bit)
+            bits.append(bit)
+        if bits:
+            groups.append(bits)
+    phrases: list[str] = []
+    seen: set[str] = set()
+    depth = 0
+    while len(phrases) < max_phrases:
+        added = False
+        for bits in groups:
+            if depth >= len(bits) or bits[depth] in seen:
+                continue
+            seen.add(bits[depth])
+            phrases.append(bits[depth])
+            added = True
+            if len(phrases) >= max_phrases:
+                break
+        if not added:
+            break
+        depth += 1
+    if phrases:
+        return "；".join(phrases)
+    flat = _SENSE_BRACKET.sub("", gloss or "").strip()
+    while True:
+        nxt = _SENSE_POS.sub(flat, count=1)
+        if nxt == flat:
+            break
+        flat = nxt.strip()
+    return flat.strip(" \t.。；;/")[:_SENSE_LEN]
 
 
 _NAME_GLOSS_RE = None  # 延迟编译
@@ -441,7 +517,7 @@ _MIGRATE_COLUMNS = (
 
 
 def _normalize_ratios(ratios: dict | None) -> dict[str, int]:
-    """题型配比：默认 12/8/10/10/10；custom 只允许覆盖已知题型键。"""
+    """题型配比：默认 6/8/12/12/12；custom 只允许覆盖已知题型键。"""
     base = {k: int(v) for k, v in DEFAULT_RATIOS.items()}
     if ratios:
         for k, v in ratios.items():
@@ -458,12 +534,16 @@ def _normalize_ratios(ratios: dict | None) -> dict[str, int]:
 
 # ---- 词形变化：哪些词值得考 ----------------------------------------------- #
 
-def _norm_tags(w: dict) -> set[str]:
-    out: set[str] = set()
+def _tag_order(w: dict) -> list[str]:
+    """词性按词条里的先后保留（名词在前还是动词在前，选题时要看）。"""
+    out: list[str] = []
     for raw in w.get("pos_list") or []:
         tag = str(raw or "").strip().lower().rstrip(".")
-        if tag:
-            out.add(_POS_ALIAS.get(tag, tag))
+        if not tag:
+            continue
+        tag = _POS_ALIAS.get(tag, tag)
+        if tag not in out:
+            out.append(tag)
     return out
 
 
@@ -505,6 +585,36 @@ def _has_adj(word: str, tags: set[str]) -> bool:
     if "adj" in tags or word in IRREGULAR_ADJ:
         return True
     return not tags and word in ADJ_WORDS
+
+
+# 名词临时活用成动词：以蜡笔作画、用颜料涂、把东西装进盒子。
+_DENOMINAL_VERB = re.compile(
+    r"(?:用|以|把|给|将).{0,8}(?:画|写|涂|装|包|盖|戴|糊|裹|系|绑|钉|刻|印|染|浇)"
+)
+
+
+def _classroom_verb(word: str) -> bool:
+    return word in IRREGULAR_VERBS or word in VERB_WORDS
+
+
+def _noun_before_verb(order: list[str]) -> bool:
+    return "n" in order and "v" in order and order.index("n") < order.index("v")
+
+
+def _skip_verb_forms(word: str, order: list[str], gloss: str) -> bool:
+    """不考「把名词活用成动词」的屈折。
+
+    crayon 的三单、crowd 的三单不是课堂题。两类丢掉动词屈折、只留复数：
+    课堂名词表里、又不在课堂动词表的词（crowd、book）；名词义排在前面，
+    动词义又是「用/以…画、装、涂」的临时活用（crayon）。
+    play、need 在课堂动词表里，promise、refuse 名词在前但不是这种活用，
+    仍然考时态。
+    """
+    if _classroom_verb(word) or "v" not in order:
+        return False
+    if word in NOUN_WORDS:
+        return True
+    return _noun_before_verb(order) and bool(_DENOMINAL_VERB.search(gloss or ""))
 
 
 def _too_short_or_acronym(word: str) -> bool:
@@ -578,9 +688,12 @@ def _usable_forms(w: dict) -> list[tuple[str, str]]:
         return []
     if _closed_class(word):
         return []
-    tags = _norm_tags(w)
+    order = _tag_order(w)
+    tags = set(order)
     if not (_has_verb(word, tags) or _has_noun(word, tags) or _has_adj(word, tags)):
         return []
+    verb_ok = _has_verb(word, tags) and not _skip_verb_forms(
+        word, order, w.get("gloss") or "")
     forms = w.get("forms") or {}
     out: list[tuple[str, str]] = []
     for key in FORM_CN:
@@ -591,7 +704,7 @@ def _usable_forms(w: dict) -> list[tuple[str, str]]:
         form = shown.lower()
         if not shown or form == word or not _FORM_TOKEN.fullmatch(shown):
             continue
-        if key in _VERB_FORM_KEYS and _has_verb(word, tags) and _verb_form_ok(word, key, form):
+        if key in _VERB_FORM_KEYS and verb_ok and _verb_form_ok(word, key, form):
             out.append((key, shown))
         elif key in _NOUN_FORM_KEYS and _has_noun(word, tags) and _plural_ok(word, form):
             out.append((key, shown))
@@ -639,8 +752,20 @@ def _locate_ctx(word: str, forms: dict, en: str) -> tuple[str, str] | None:
     return None
 
 
+# 词形题上的词性跟所考的屈折走：复数标名词，时态标动词。
+# 避免 crayon 考复数时题干仍写着「动词」。
+_FORM_POS_CN = {
+    "past": "v. 动词", "past_participle": "v. 动词",
+    "present_participle": "v. 动词", "third_singular": "v. 动词",
+    "plural": "n. 名词",
+    "comparative": "adj. 形容词", "superlative": "adj. 形容词",
+}
+
+
 def _form_item(w: dict, form_key: str, answer: str) -> dict:
-    return {"word": w["word"], "pos_cn": w["pos_cn"], "gloss": w["gloss_clean"],
+    return {"word": w["word"],
+            "pos_cn": _FORM_POS_CN.get(form_key) or w.get("pos_cn") or "",
+            "gloss": w["gloss_clean"],
             "form_key": form_key, "form_label": FORM_CN[form_key], "answer": answer}
 
 
@@ -657,7 +782,8 @@ def _ctx_item(w: dict, located: tuple[str, str]) -> dict:
 
 
 def _zh2en_item(w: dict) -> dict:
-    return {"word": w["word"], "pos_cn": w["pos_cn"], "gloss": w["gloss_clean"]}
+    gloss = _short_senses(w.get("gloss") or w.get("gloss_clean") or "")
+    return {"word": w["word"], "pos_cn": w["pos_cn"], "gloss": gloss}
 
 
 def _en2zh_item(w: dict) -> dict:
@@ -675,8 +801,9 @@ def _build_sections(words: list[dict], quota: dict[str, int],
     """分层题型分配：每词恰进一个题型段，段内题数按 quota 凑。
 
     - 简单词（level ≤ SIMPLE_MAX_LEVEL）在同一类变形里优先 form，复杂词优先
-      ctx。form 只收 _usable_forms 认可的词（动词/可数名词/能加 -er 的形容词）；
-      ok、副词、硬造的过去式不占名额。合格词不够就缩小词形段，余词落到后面的段。
+      ctx。form 只收 _usable_forms 认可的词（课堂动词的时态、可数名词复数、
+      能加 -er 的形容词）；ok、副词、硬造的过去式，以及 crayon/crowd 这类
+      名词活用都不占名额。合格词不够就缩小词形段，余词落到后面的段。
       分层是「排序优先」而非把简单词独占：form/ctx 的可出词集合放开到全部合格词，
       同级内按 picked 的多样顺序稳定排序。否则纯简单词卷（如 L0）ctx 配额永远
       落空，例句资源全废。
@@ -978,7 +1105,11 @@ def _sections_from_wordlist(ws: list, level, paper_id: str) -> list[dict]:
             or r.get("gloss", "")
         return {"word": w, "pos_cn": r.get("pos_cn", ""), "gloss": gloss}
 
-    zh2en = [_entry(w, True) for w in ws[:20]]
+    zh2en = []
+    for w in ws[:20]:
+        item = _entry(w, True)
+        item["gloss"] = _short_senses(item.get("gloss") or "")
+        zh2en.append(item)
     en2zh = [_entry(w, False) for w in ws[20:40]]
     rng = random.Random(paper_id)
     spell = []
@@ -1150,6 +1281,19 @@ def _paper_sections(paper: dict) -> list[dict]:
     return out
 
 
+def _zh_senses_html(gloss: str, e) -> str:
+    """中译英题干：短义各自包一层，中间用分号，不再倒一整段词典。"""
+    text = _short_senses(gloss)
+    parts = [p for p in text.split("；") if p]
+    if not parts:
+        return ""
+    if len(parts) == 1:
+        return f'<span class="zh">{e(parts[0])}</span>'
+    body = '<span class="sense-gap">；</span>'.join(
+        f'<span class="sense">{e(p)}</span>' for p in parts)
+    return f'<span class="zh">{body}</span>'
+
+
 def _render_item(qtype: str, i: int, it: dict, e) -> str:
     """单个题行：题号、题干、书写横线（拼写题的横线就是挖空单词）。"""
     n = f'<span class="n">{i}.</span>'
@@ -1174,12 +1318,11 @@ def _render_item(qtype: str, i: int, it: dict, e) -> str:
     if qtype == "zh2en":
         return (f'<div class="q">{n}<span class="prompt">'
                 f'<span class="pos">{e(it.get("pos_cn") or "")}</span>'
-                f'<span class="zh">{e(it.get("gloss") or "")}</span></span>'
+                f'{_zh_senses_html(it.get("gloss") or "", e)}</span>'
                 f'<span class="write"></span></div>')
-    # en2zh 及未知类型兜底
+    # 英译中只给英文单词。词性留在中译英、拼写和词形题上。
     return (f'<div class="q">{n}<span class="prompt">'
-            f'<span class="en">{e(it.get("word") or "")}</span>'
-            f'<span class="pos">{e(it.get("pos_cn") or "")}</span></span>'
+            f'<span class="en">{e(it.get("word") or "")}</span></span>'
             f'<span class="write"></span></div>')
 
 

@@ -238,7 +238,7 @@ def test_paper_seed_reproducible(tmp_path, monkeypatch):
 
 def test_paper_sections_complete_and_total_scale(tmp_path, monkeypatch):
     """造词库数据出卷：五段齐全且顺序固定；total=40 按最大余数法缩放
-    各段配比（12/8/10/10/10 → 10/6/8/8/8）。"""
+    各段配比（6/8/12/12/12 → 5/6/10/9/10）。"""
     import grammar_kb.vocab_paper as vp
     db = str(tmp_path / "grammar.db")
     con = sqlite3.connect(db)
@@ -264,11 +264,13 @@ def test_paper_sections_complete_and_total_scale(tmp_path, monkeypatch):
         ["form", "spell", "ctx", "zh2en", "en2zh"]
     assert sum(len(s["items"]) for s in paper["sections"]) == 50
     assert paper["config"]["total"] == 50
+    counts50 = {s["type"]: len(s["items"]) for s in paper["sections"]}
+    assert counts50 == {"form": 6, "spell": 8, "ctx": 12, "zh2en": 12, "en2zh": 12}
 
     scaled = vp.generate_paper(3, save=False, total=40, fce_db_path=db)
     assert scaled["config"]["total"] == 40
     counts = {s["type"]: len(s["items"]) for s in scaled["sections"]}
-    assert counts == {"form": 10, "spell": 6, "ctx": 8, "zh2en": 8, "en2zh": 8}
+    assert counts == {"form": 5, "spell": 6, "ctx": 10, "zh2en": 9, "en2zh": 10}
 
 
 def test_paper_simple_words_layer_into_form(tmp_path, monkeypatch):
@@ -285,10 +287,10 @@ def test_paper_simple_words_layer_into_form(tmp_path, monkeypatch):
     assert paper["level"] == -1 and paper["paper_id"].startswith("MIX-")
     by_type = {s["type"]: s["items"] for s in paper["sections"]}
     form_words = [it["word"] for it in by_type["form"]]
-    assert len(form_words) == 12
+    assert len(form_words) == 6
     assert set(form_words) <= {w["word"] for w in simple}
     ctx_words = [it["word"] for it in by_type["ctx"]]
-    assert len(ctx_words) == 10
+    assert len(ctx_words) == 12
     assert set(ctx_words) <= {w["word"] for w in hard}
 
 

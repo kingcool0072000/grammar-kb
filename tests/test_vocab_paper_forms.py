@@ -1,10 +1,21 @@
-"""词形变化选题：ok→oked 这类不能变形的词不占词形段。"""
+"""词形变化选题：ok→oked 这类不能变形的词不占词形段。
+
+crayon / crowd 这类名词活用也不占动词屈折：考复数，不考三单。
+"""
 from __future__ import annotations
 
 import json
 import random
 
-from grammar_kb.vocab_paper import _build_sections, _pick_form, _rich_rows
+from grammar_kb.vocab_paper import (
+    DEFAULT_RATIOS,
+    _VERB_FORM_KEYS,
+    _build_sections,
+    _pick_form,
+    _rich_rows,
+    _short_senses,
+    render_new_paper_html,
+)
 
 _QUOTA = {"form": 4, "spell": 0, "ctx": 0, "zh2en": 0, "en2zh": 0}
 
@@ -146,3 +157,103 @@ def test_noun_plural_fills_when_no_verb_and_prefers_verb_over_noun():
                                              "zh2en": 0, "en2zh": 0})
     assert [it["word"] for it in nouns] == ["apple", "box"]
     assert [it["answer"] for it in nouns] == ["apples", "boxes"]
+
+
+def _noun_verb(word, forms, gloss):
+    return _word(word, ["n", "v"], forms, level=2, gloss=gloss)
+
+
+def test_crayon_and_crowd_are_not_verbed():
+    """名词当头的活用不考三单：crayon / crowd 只出复数。"""
+    crayon = _noun_verb("crayon", {
+        "plural": "crayons", "past": "crayoned", "past_participle": "crayoned",
+        "present_participle": "crayoning", "third_singular": "crayons",
+    }, "n. 蜡笔，有色粉笔；v. 以蜡笔作画，用颜色粉笔画")
+    crowd = _noun_verb("crowd", {
+        "plural": "crowds", "past": "crowded", "past_participle": "crowded",
+        "present_participle": "crowding", "third_singular": "crowds",
+    }, "n. 群众,一伙;一堆,许多,大众；v. 拥挤,挤满,挤进")
+    for seed in range(6):
+        assert _pick_form(crayon, random.Random(seed)) == ("plural", "crayons")
+        assert _pick_form(crowd, random.Random(seed)) == ("plural", "crowds")
+    items = _form_items(
+        [crayon, crowd],
+        quota={"form": 2, "spell": 0, "ctx": 0, "zh2en": 0, "en2zh": 0},
+    )
+    assert {it["word"]: it["form_key"] for it in items} == {
+        "crayon": "plural", "crowd": "plural",
+    }
+    assert {it["answer"] for it in items} == {"crayons", "crowds"}
+    assert all(it["form_key"] not in _VERB_FORM_KEYS for it in items)
+    assert all(it["pos_cn"] == "n. 名词" for it in items)
+
+
+def test_real_verbs_still_inflect_when_noun_is_also_listed():
+    """课堂动词、以及名词在前但不是临时活用的词，仍考时态。"""
+    play = _word("play", ["n", "v"], {
+        "past": "played", "third_singular": "plays", "plural": "plays",
+    }, gloss="n. 游戏；v. 玩，演奏")
+    promise = _word("promise", ["n", "v"], {
+        "past": "promised", "third_singular": "promises", "plural": "promises",
+    }, gloss="n. 许诺，允诺；v. 允诺，许诺")
+    join = _word("join", ["v", "n"], {
+        "past": "joined", "third_singular": "joins", "plural": "joins",
+    }, gloss="v. 参加；n. 连接")
+    for w in (play, promise, join):
+        keys = set()
+        for seed in range(6):
+            key, _ans = _pick_form(w, random.Random(seed))
+            keys.add(key)
+        assert keys <= set(_VERB_FORM_KEYS)
+        assert keys
+
+
+def test_default_form_quota_is_the_light_section():
+    assert sum(DEFAULT_RATIOS.values()) == 50
+    assert DEFAULT_RATIOS["form"] == 6
+    assert DEFAULT_RATIOS["form"] < DEFAULT_RATIOS["zh2en"]
+    assert DEFAULT_RATIOS["form"] < DEFAULT_RATIOS["en2zh"]
+    assert DEFAULT_RATIOS["form"] < DEFAULT_RATIOS["ctx"]
+
+
+def test_zh2en_gloss_splits_into_short_senses():
+    crayon = _short_senses("n. 蜡笔，有色粉笔；v. 以蜡笔作画，用颜色粉笔画")
+    assert crayon == "蜡笔；以蜡笔作画；有色粉笔"
+    assert "v." not in crayon and "用颜色粉笔画" not in crayon
+    crowd = _short_senses("n. 群众,一伙;一堆,许多,大众；v. 拥挤,挤满,挤进")
+    assert crowd == "群众；一堆；拥挤"
+    assert "挤满" not in crowd and "v." not in crowd
+    apple = _short_senses(
+        "n. 苹果，苹果树，苹果似的东西；[美俚]炸弹，手榴弹，（棒球的）球")
+    assert apple == "苹果；苹果树；苹果似的东西"
+    assert "炸弹" not in apple
+    assert _short_senses("美丽的") == "美丽的"
+    assert _short_senses(crayon) == crayon
+
+
+def test_zh2en_html_uses_short_senses_and_en2zh_hides_pos():
+    paper = {
+        "level": 1, "paper_id": "P-SENSE-1", "user": "malin",
+        "sections": [
+            {"type": "zh2en", "title": "中译英", "items": [{
+                "word": "crayon",
+                "pos_cn": "n. 名词 / v. 动词",
+                "gloss": "n. 蜡笔，有色粉笔；v. 以蜡笔作画，用颜色粉笔画",
+            }]},
+            {"type": "en2zh", "title": "英译中", "items": [{
+                "word": "crowd",
+                "pos_cn": "n. 名词 / v. 动词",
+                "gloss": "n. 群众；v. 拥挤",
+            }]},
+        ],
+    }
+    html = render_new_paper_html(paper)
+    zh, en = html.split("英译中", 1)
+    assert "蜡笔" in zh and "以蜡笔作画" in zh and "有色粉笔" in zh
+    assert 'class="sense"' in zh and "；" in zh
+    assert "用颜色粉笔画" not in html
+    assert "v. 以蜡笔作画" not in html
+    question, _, _answers = en.partition('class="answers"')
+    assert "crowd" in question
+    assert "名词" not in question and "动词" not in question
+    assert 'class="pos"' not in question

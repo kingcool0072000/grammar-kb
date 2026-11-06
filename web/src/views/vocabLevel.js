@@ -85,16 +85,16 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
             <button class="chip" id="vl-records" type="button">📋 考试成绩</button>
           </div>
         </header>
-        <p class="muted">随机选词（不同首字母/词性，自动规避人名/地名）· 每题带词性提示 · 标准卷默认 50 题（词形 12 · 拼写 8 · 例句 10 · 中译英 10 · 英译中 10）。<b>复习强化卷 / 错词回收卷</b>按所选学生的作答记录出题（须选学生，本级范围也要选）。<b>本级</b>=L${lv} 词库；<b>全部已学词</b>=所选学生背过的词（出现在进度里即可，含尚未掌握）跨级别混合，卷号 MIX-。题量与五题型配比可在下方「进阶」里自定义。流程：生成 → 预览 → 满意后保存存档。</p>
+        <p class="muted">随机选词（不同首字母/词性，自动规避人名/地名）· 词形、拼写、中译英给出词性，英译中只给英文 · 标准卷默认 50 题（词形 6 · 拼写 8 · 例句 12 · 中译英 12 · 英译中 12）。<b>复习强化卷 / 错词回收卷</b>按所选学生的作答记录出题（须选学生，本级范围也要选）。<b>本级</b>=L${lv} 词库；<b>全部已学词</b>=所选学生背过的词（出现在进度里即可，含尚未掌握）跨级别混合，卷号 MIX-。题量与五题型配比可在下方「进阶」里自定义。流程：生成 → 预览 → 满意后保存存档。</p>
         <details class="vl-paper-adv" style="margin:6px 0 10px">
           <summary style="cursor:pointer;user-select:none;font-size:13px;color:var(--ink)">进阶：题量与配比</summary>
           <div class="vl-adv-row" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px;color:var(--ink)">
             <label>题量 <input id="vl-total" type="number" min="10" max="200" value="50" style="width:64px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
-            <label>词形 <input id="vl-r-form" type="number" min="0" value="12" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
+            <label>词形 <input id="vl-r-form" type="number" min="0" value="6" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
             <label>拼写 <input id="vl-r-spell" type="number" min="0" value="8" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
-            <label>例句 <input id="vl-r-ctx" type="number" min="0" value="10" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
-            <label>中译英 <input id="vl-r-zh2en" type="number" min="0" value="10" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
-            <label>英译中 <input id="vl-r-en2zh" type="number" min="0" value="10" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
+            <label>例句 <input id="vl-r-ctx" type="number" min="0" value="12" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
+            <label>中译英 <input id="vl-r-zh2en" type="number" min="0" value="12" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
+            <label>英译中 <input id="vl-r-en2zh" type="number" min="0" value="12" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
             <span class="muted">全部留空则不传配比，按卷型预设默认出题。</span>
           </div>
         </details>
@@ -242,7 +242,7 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
       if (type === 'zh2en')
         return `<span class="vl-pv-pos">${escapeHtml(pos)}</span><span class="vl-pv-zh">${escapeHtml(gloss)}</span>${blank}`
       if (type === 'en2zh')
-        return `<span class="vl-pv-en">${escapeHtml(word)}</span><span class="vl-pv-pos">${escapeHtml(pos)}</span>${blank}`
+        return `<span class="vl-pv-en">${escapeHtml(word)}</span>${blank}`
       return escapeHtml(it.prompt || it.question || word || gloss || '（未知题型）')
     }
 
