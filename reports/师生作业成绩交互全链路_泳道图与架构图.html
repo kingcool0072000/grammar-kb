@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教师 ↔ 学生：作业与成绩交互全链路 · 泳道图 + 架构图</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --fg:#1f2328; --mut:#57606a; --faint:#8b949e;
+    --wire:#64748b; --wiredash:#94a3b8;
+    --tea:#d97706; --tea-line:#ea580c; --tea-bg:#fff7ed; --tea-strip:#fffbf4;
+    --stu:#059669; --stu-line:#059669; --stu-bg:#ecfdf5; --stu-strip:#f6fdf9;
+    --srv:#2563eb; --srv-line:#2563eb; --srv-bg:#eff6ff; --srv-strip:#f7faff;
+    --dat:#9333ea; --dat-line:#9333ea; --dat-bg:#faf5ff; --dat-strip:#fcf9ff;
+    --loop:#7c3aed;
+    --code-bg:rgba(110,118,129,.13);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;}
+  .wrap{max-width:1520px;margin:0 auto;padding:28px 22px 56px;}
+  h1{font-size:22px;margin:0 0 4px;}
+  h2{font-size:19px;margin:34px 0 10px;display:flex;align-items:center;gap:9px;}
+  h2 .no{width:26px;height:26px;border-radius:50%;background:#e3e6ea;display:inline-flex;
+         align-items:center;justify-content:center;font-size:14px;font-weight:600;flex:none;}
+  .sub{margin:0 0 12px;color:var(--mut);font-size:13px;}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;color:var(--mut);margin:0 0 6px;}
+  .legend-item{display:inline-flex;align-items:center;gap:6px;}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none;}
+  .dot.tea{background:var(--tea)} .dot.stu{background:var(--stu)}
+  .dot.srv{background:var(--srv)} .dot.dat{background:var(--dat)}
+  .lseg{display:inline-block;width:26px;height:0;border-top:2px solid var(--wire);}
+  .lseg.dash{border-top-style:dashed;border-top-color:var(--wiredash)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;
+       background:var(--code-bg);border-radius:4px;padding:1px 5px;color:var(--fg);word-break:break-word;}
+
+  /* ---------- 泳道矩阵 ---------- */
+  .sl-scroll{overflow-x:auto;padding:2px 0 6px;}
+  .sl-grid{position:relative;display:grid;min-width:1400px;
+           grid-template-columns:112px repeat(6,minmax(190px,1fr));
+           border:1px solid #d7dce3;border-radius:12px;overflow:hidden;background:#fff;}
+  .cell{border-right:1px solid #e9edf2;border-bottom:1px solid #e9edf2;min-height:64px;}
+  .cell.lastcol{border-right:none}
+  .cell.lastrow{border-bottom:none}
+  .hcell{background:#f1f3f6;font-weight:600;font-size:13.5px;padding:9px 10px;display:flex;
+         align-items:center;gap:7px;border-bottom:1px solid #d7dce3;}
+  .hcell .hno{width:22px;height:22px;border-radius:50%;background:#fff;border:1px solid #cdd3db;
+              display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none;}
+  .hcell small{display:block;font-weight:400;color:var(--mut);font-size:11px;line-height:1.3;}
+  .corner{background:#eef0f4;font-size:12px;color:var(--mut);line-height:1.35;}
+  .lcell{display:flex;align-items:center;justify-content:center;text-align:center;
+         font-weight:700;font-size:13.5px;line-height:1.4;padding:8px 6px;}
+  .lcell small{display:block;font-weight:400;font-size:10.5px;color:var(--mut);}
+  .lcell.tea{background:var(--tea-strip);color:#9a3412;border-left:4px solid var(--tea-line);}
+  .lcell.stu{background:var(--stu-strip);color:#065f46;border-left:4px solid var(--stu-line);}
+  .lcell.srv{background:var(--srv-strip);color:#1e40af;border-left:4px solid var(--srv-line);}
+  .lcell.dat{background:var(--dat-strip);color:#6b21a8;border-left:4px solid var(--dat-line);}
+  .row-tea .cell{background:var(--tea-strip)}
+  .row-stu .cell{background:var(--stu-strip)}
+  .row-srv .cell{background:var(--srv-strip)}
+  .row-dat .cell{background:var(--dat-strip)}
+  .wires,.wires-top{position:absolute;left:0;top:0;pointer-events:none;}
+  .wires{z-index:1;} .wires-top{z-index:3;}
+  .wirelbl{font:600 10.5px -apple-system,"PingFang SC",sans-serif;fill:#475569;
+           paint-order:stroke;stroke:#ffffff;stroke-width:3px;stroke-linejoin:round;}
+  .card{position:relative;z-index:2;margin:9px;border-radius:9px;padding:8px 10px;
+        border:1.2px solid;display:flex;flex-direction:column;gap:2px;}
+  .card b{font-size:13px;line-height:1.35;}
+  .card .d{font-size:11.8px;color:#414852;line-height:1.45;}
+  .card .ref{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;
+             color:var(--faint);word-break:normal;overflow-wrap:anywhere;margin-top:2px;}
+  .card .ref .rp{display:inline-block;}
+  .card.tea{background:var(--tea-bg);border-color:#f2c69f;} .card.tea b{color:#9a3412}
+  .card.stu{background:var(--stu-bg);border-color:#a7e8cd;} .card.stu b{color:#065f46}
+  .card.srv{background:var(--srv-bg);border-color:#bcd3f7;} .card.srv b{color:#1e40af}
+  .card.dat{background:var(--dat-bg);border-color:#ddc7f5;} .card.dat b{color:#6b21a8}
+  .loopband{margin-top:14px;display:flex;align-items:center;gap:12px;padding:12px 16px;
+            border-radius:12px;background:#f5f0ff;border:1px dashed #c9b3f0;}
+  .loopband .ic{font-size:20px;flex:none;}
+  .loopband b{color:var(--loop)}
+
+  /* ---------- 架构图 ---------- */
+  .band{border-radius:12px;border:1px solid #d7dce3;background:#fff;padding:12px 14px;}
+  .band-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:9px;}
+  .band-title{font-weight:700;font-size:15px;}
+  .band-note{color:var(--mut);font-size:12.5px;}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:10px;}
+  .cards.wide{grid-template-columns:repeat(auto-fit,minmax(330px,1fr));}
+  .acard{border-radius:9px;padding:9px 12px;border:1.2px solid;display:flex;flex-direction:column;gap:2px;}
+  .acard b{font-size:13.5px;} .acard .d{font-size:12.3px;color:#414852;line-height:1.5;}
+  .acard.c-cy{background:#ecfeff;border-color:#a5e6ee;} .acard.c-cy b{color:#155e63}
+  .acard.c-red{background:#fef2f2;border-color:#f3c1c1;} .acard.c-red b{color:#7f1d1d}
+  .acard.c-blu{background:#eff6ff;border-color:#bcd3f7;} .acard.c-blu b{color:#1e3a8a}
+  .acard.c-amb{background:#fffbeb;border-color:#f2dc9e;} .acard.c-amb b{color:#78350f}
+  .acard.c-pur{background:#faf5ff;border-color:#ddc7f5;} .acard.c-pur b{color:#581c87}
+  .acard.c-grn{background:#f0fdf4;border-color:#b4e5c3;} .acard.c-grn b{color:#14532d}
+  .conn{display:flex;flex-direction:column;align-items:center;padding:7px 0;color:var(--mut);}
+  .conn .arr{font-size:16px;line-height:1;color:var(--faint);}
+  .conn .lbl{font-size:12px;}
+  .conn.dash .arr{color:#b3bac4}
+
+  /* ---------- 杂项 ---------- */
+  details{margin-top:14px;border:1px solid #d7dce3;border-radius:10px;background:#fff;}
+  summary{cursor:pointer;padding:10px 14px;font-size:13.5px;color:var(--mut);user-select:none;}
+  details .srcbar{display:flex;align-items:center;gap:10px;padding:0 14px 8px;}
+  .copybtn{border:1px solid #d0d5dd;background:#fff;border-radius:7px;padding:3px 10px;
+           font-size:12px;color:var(--mut);cursor:pointer;}
+  .copybtn:hover{background:#f3f4f6}
+  pre{margin:0;padding:0 14px 14px;font:11.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      color:#333;overflow-x:auto;white-space:pre;}
+  .notes li{margin:6px 0;font-size:14px;}
+  .foot{margin-top:30px;font-size:12px;color:var(--faint);line-height:1.8;}
+  @media print{
+    body{background:#fff}
+    .wrap{max-width:none;padding:0 6mm}
+    .sl-scroll{overflow:visible}
+    .sl-grid{min-width:0;zoom:.55}
+    @page{size:A3 landscape;margin:8mm}
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <header>
+    <h1>教师 ↔ 学生：作业与成绩交互全链路 · 泳道图 + 架构图</h1>
+    <p class="sub">基于 master <code>368eeae</code>（2026-11-06 +0800）绘制，2026-11-07（Asia/Shanghai）。六段闭环仍成立：布置 → 学生视图 → 学习落库 → 完成判定 → 批改看板 → 诊断回流。对照 2026-11-01 图（<code>2d70c17</code>）补上微练习、精读/视频分组、单词卷结构化存档与错词回流。</p>
+    <div class="legend">
+      <span class="legend-item"><span class="dot tea"></span>教师端</span>
+      <span class="legend-item"><span class="dot stu"></span>学生端</span>
+      <span class="legend-item"><span class="dot srv"></span>服务端</span>
+      <span class="legend-item"><span class="dot dat"></span>数据层</span>
+      <span class="legend-item"><span class="lseg"></span>数据流</span>
+      <span class="legend-item"><span class="lseg dash"></span>教师配置 / 代记</span>
+    </div>
+  </header>
+
+  <!-- ================= 泳道图 ================= -->
+  <h2><span class="no">Ⅰ</span>泳道图：六段闭环矩阵（行 = 泳道，列 = 阶段）</h2>
+  <p class="sub">连线自动布线：同行同列走直线，跨行列走弧线；连线行经卡片后方，标签浮于上层。底部紫色环带 = ⑥→① 闭环回流。微练习不进日清单分母，只点亮并计入周目标「做完天数 / 7」。</p>
+  <div class="sl-scroll">
+    <div class="sl-grid" id="slGrid">
+      <div class="cell corner hcell">车道 ╲ 阶段</div>
+      <div class="cell hcell"><span class="hno">①</span><span>布置<small>周计划 JSON · 试卷存档</small></span></div>
+      <div class="cell hcell"><span class="hno">②</span><span>学生视图<small>my-week · 微练习卡</small></span></div>
+      <div class="cell hcell"><span class="hno">③</span><span>学习落库<small>行为 / 成绩 / 每日 3 题</small></span></div>
+      <div class="cell hcell"><span class="hno">④</span><span>完成判定<small>lecture_done · 微练习只点亮</small></span></div>
+      <div class="cell hcell"><span class="hno">⑤</span><span>批改看板<small>录音复述作文 · 单词卷打分</small></span></div>
+      <div class="cell lastcol hcell"><span class="hno">⑥</span><span>诊断回流<small>学情 · 专题 · 错题再练</small></span></div>
+
+      <!-- 教师端 -->
+      <div class="cell lcell tea" style="grid-row:2">🧑‍🏫 教师端<small>教师版 SPA<br>备课 / 计划 / 批改</small></div>
+      <div class="cell row-tea">
+        <div class="card tea" data-card="T1">
+          <b>📋 计划表 · 布置</b>
+          <span class="d">看板 + 学生管理 + 编辑本周。向导 11 类：语法课、作业卷、词汇、视频组、泛读、FCE、精读组、单词卷、朗读、微练习、攻坚讲次。精读 <code>article_units</code> / 视频 <code>video_units</code> 每组 2 个，<code>daily|weekend</code>。<code>tasks.micro=1</code> 不排日行。</span>
+          <span class="ref">plan.js · planAdd.js:421 · plan/schema.py:65-85</span>
+        </div>
+        <div class="card tea" data-card="T7">
+          <b>📝 单词试卷资产</b>
+          <span class="d"><code>POST /vocab-papers/generate</code> · <code>/save</code>。整卷进 <code>structure</code>/<code>config</code>。再把 <code>paper_id</code> 写入本周 <code>vocab_papers</code>，周日派给学生。备课中心可 <code>PUT /vocab-exams/unlock</code> 直接定级别。</span>
+          <span class="ref">routes_vocab.py:50 · vocab_paper.py:501 · prep.js:65-81</span>
+        </div>
+      </div>
+      <div class="cell row-tea"></div>
+      <div class="cell row-tea"></div>
+      <div class="cell row-tea">
+        <div class="card tea" data-card="T2">
+          <b>📐 完成判定规则卡</b>
+          <span class="d">开关 4 条 RULES：专题算讲次、朗读提前、僵尸过滤、成绩归属。朗读提前的开关仍不参与排程（周中交录音无条件补 ✓）。</span>
+          <span class="ref">plan.js:247 · plan/schema.py:50-63 · schedule.py:156-164</span>
+        </div>
+      </div>
+      <div class="cell row-tea">
+        <div class="card tea" data-card="T3">
+          <b>🧾 批改看板</b>
+          <span class="d">六接口并行：录音、FCE 提交、背词、哈一成绩、专注、视频复述。队列顺序：待批录音 → 待批复述 → 待批作文 → 异常专注。</span>
+          <span class="ref">grading/board.js:61-67 · grading.js:7-11</span>
+        </div>
+        <div class="card tea" data-card="T4">
+          <b>📝 哈一成绩登记</b>
+          <span class="d"><code>kind=hw</code> 作业卷 / <code>lecture</code> 课程测验。学生登录只能记自己；教师用 <code>student</code> 定归属。作业卷与课程测验分开点亮。</span>
+          <span class="ref">routes_plan.py:397-406 · exam_store.py:99-100</span>
+        </div>
+        <div class="card tea" data-card="T8">
+          <b>📝 单词卷打分</b>
+          <span class="d"><code>GET /vocab-papers/grading</code> 拉已存档卷。登记 / 修改 / 删除走 <code>/vocab-exams</code>。勾选错词写入明细并回流背词队列。</span>
+          <span class="ref">grading/board.js:389 · routes_vocab.py:215,341</span>
+        </div>
+      </div>
+      <div class="cell lastcol row-tea">
+        <div class="card tea" data-card="T5">
+          <b>📊 学情分析</b>
+          <span class="d">批改中心第三子 Tab。10 张卡 + <code>flags</code> 红灯（积压 / 断档 / FCE / 精读下滑 / 作业均分）。不含计划完成率。</span>
+          <span class="ref">analytics.js:190 · routes_analytics.py:54 · analytics.py:568</span>
+        </div>
+        <div class="card tea" data-card="T6">
+          <b>🩹 补课专题制作</b>
+          <span class="d">JSON 导入 → 上架 <code>published</code> → <code>assigned_to</code>（空 = 全员）。<code>focus_kps</code> 连续两周未收敛时建议转专题。</span>
+          <span class="ref">routes_study.py:208-235 · plan/review.py:156</span>
+        </div>
+        <div class="card tea" data-card="T9">
+          <b>✏️ 微练习题库</b>
+          <span class="d">备课中心入口。六类题：错题优先抽 1，记忆类保底 1，其余按最久未考。题库离线用 GLM 变形（<code>scripts/gen_micro_bank.py</code>），线上只抽已上架题。</span>
+          <span class="ref">prep.js:149 · micro.py:16-21 · routes_micro.py:46</span>
+        </div>
+      </div>
+
+      <!-- 学生端 -->
+      <div class="cell lcell stu" style="grid-row:3">🧒 学生端<small>学生版 SPA<br>课程表为第一 Tab</small></div>
+      <div class="cell row-stu"></div>
+      <div class="cell row-stu">
+        <div class="card stu" data-card="S1">
+          <b>📅 课程表周视图</b>
+          <span class="d"><code>GET /plan/my-week</code>。工作日：讲次 + 背词 + 泛读；周六：FCE + 精读；周日：错词再练 + 单词卷。本周开了微练习才出入口卡，进 <code>#/micro</code>。</span>
+          <span class="ref">timetable.js:14 · routes_plan.py:105 · timetable.js:176</span>
+        </div>
+      </div>
+      <div class="cell row-stu">
+        <div class="card stu" data-card="S2">
+          <b>📚 学习执行</b>
+          <span class="d">课程表之外六个学习 Tab：背单词、阅读、专题、泛读馆、视频、FCE。微练习是课程表进的隐藏页，每天 3 道选择题，交卷走 <code>POST /micro/submit</code>。</span>
+          <span class="ref">catalog.js:11-19 · micro.js · routes_micro.py:33</span>
+        </div>
+      </div>
+      <div class="cell row-stu"></div>
+      <div class="cell row-stu"></div>
+      <div class="cell lastcol row-stu">
+        <div class="card stu" data-card="S3">
+          <b>🩹 专题与错词再练</b>
+          <span class="d">专题只显示 <code>published</code> 且 <code>assigned</code> 含自己（空名单=全员）。周日错词任务读背词错题本，单词卷勾错的词已经在队列里。</span>
+          <span class="ref">topics.js:2 · routes_study.py:251-269 · schedule.py:205-213</span>
+        </div>
+      </div>
+
+      <!-- 服务端 -->
+      <div class="cell lcell srv" style="grid-row:4">⚙️ 服务端<small>FastAPI<br>grammar_kb/plan + server/</small></div>
+      <div class="cell row-srv">
+        <div class="card srv" data-card="V1">
+          <b>周计划写入</b>
+          <span class="d"><code>PUT /plan/weeks/:week_start</code><br>周一校验后幂等覆盖 <code>tasks</code> → <code>PlanStore.put_week</code></span>
+          <span class="ref">routes_plan.py:50 · plan/store.py:112</span>
+        </div>
+      </div>
+      <div class="cell row-srv">
+        <div class="card srv" data-card="V3">
+          <b>派生调度</b>
+          <span class="d"><code>week_daily_tasks</code> 按剩余量重摊，纯派生不落库。精读/视频走分组；微练习不占计划行、不加分。</span>
+          <span class="ref">plan/schedule.py:44-53,97-103</span>
+        </div>
+        <div class="card srv" data-card="V2">
+          <b>周视图读取</b>
+          <span class="d"><code>GET /plan/my-week</code>（学生）· <code>week-view</code>（教师）。<code>WeekCtx</code> 一次预取。<code>micro_enabled</code> 与周目标「微练习 做完天数/7」从 <code>tasks.micro</code> 来。</span>
+          <span class="ref">routes_plan.py:92-115 · plan/views.py:138,352</span>
+        </div>
+      </div>
+      <div class="cell row-srv">
+        <div class="card srv" data-card="V4">
+          <b>学习上报端点群</b>
+          <span class="d"><code>/recite/sessions</code> · <code>/focus/sessions</code> · <code>/reading/recordings</code> · <code>/topics/:id/progress</code> · <code>/video-study/retells</code> · <code>/readingmore/api/session</code> · <code>POST /exams</code><br><code>GET /micro/today</code> · <code>POST /micro/submit</code>（同日同题，整组 <code>done=1</code>）</span>
+          <span class="ref">routes_study.py:25 · routes_micro.py:24 · routes_practice.py:230</span>
+        </div>
+      </div>
+      <div class="cell row-srv">
+        <div class="card srv" data-card="V5">
+          <b>🎯 lecture_done 内核</b>
+          <span class="d">成绩 ∪ 自学专题（<code>topic_counts_lecture</code> 开着才并）。<code>kind=hw</code> 只认作业卷成绩，专题不能代替作业卷。</span>
+          <span class="ref">plan/rules.py:95-103 · plan/signals.py:107-113</span>
+        </div>
+        <div class="card srv" data-card="V6">
+          <b>单日完成判定</b>
+          <span class="d"><code>day_completion</code> 产出 done / why。<code>vocab_n≥quota</code> 自动 ✓；<code>paper:{id}</code> 认当天 <code>vocab_exams</code>。微练习信号点亮，不进日完成率分母（+10 已废）。</span>
+          <span class="ref">plan/completion.py:21 · plan/signals.py:118,184 · schedule.py:638-639</span>
+        </div>
+      </div>
+      <div class="cell row-srv">
+        <div class="card srv" data-card="V10">
+          <b>批改回写</b>
+          <span class="d">录音 / 复述 / 作文打分 PUT。单词卷 <code>POST /vocab-exams</code> 写成绩；<code>wrong_words</code> 进 <code>vocab_exam_answers</code>，再 <code>recite.enter_review</code>。</span>
+          <span class="ref">routes_vocab.py:247 · recite.py:406 · routes_practice.py:282</span>
+        </div>
+      </div>
+      <div class="cell lastcol row-srv">
+        <div class="card srv" data-card="V7">
+          <b>学情聚合</b>
+          <span class="d"><code>GET /analytics/summary</code>（user, month）<br>四库只读，TTL 300s · <code>build_flags</code></span>
+          <span class="ref">routes_analytics.py:54-74 · analytics.py:496</span>
+        </div>
+        <div class="card srv" data-card="V8">
+          <b>错题诊断</b>
+          <span class="d"><code>GET /plan/diagnosis</code> 近 8 周 <code>exam_records</code> 按讲次聚类。<code>GET /plan/review</code>：<code>focus_kps</code> 连续 ≥2 周未收敛 → escalate。</span>
+          <span class="ref">plan/review.py:48-89,111-169</span>
+        </div>
+        <div class="card srv" data-card="V9">
+          <b>补课内容端点</b>
+          <span class="d"><code>POST /topics-admin/import</code> · <code>PUT …/published</code> · <code>PUT …/assigned</code>。<code>/micro-admin/questions</code> 上架后才进每日抽题。</span>
+          <span class="ref">routes_study.py:208-235 · routes_micro.py:46-64</span>
+        </div>
+      </div>
+
+      <!-- 数据层 -->
+      <div class="cell lcell dat lastrow" style="grid-row:5">🗄️ 数据层<small>fce.db 为主<br>+ exam / grammar</small></div>
+      <div class="cell lastrow row-dat">
+        <div class="card dat" data-card="D1">
+          <b>plan_weeks</b>
+          <span class="d">(user, week_start, tasks JSON, notes)。任务键含 <code>hw_papers</code> · <code>vocab_papers</code> · <code>article_units</code> · <code>video_units</code> · <code>micro</code> · <code>focus_kps</code>。旧 <code>articles</code>/<code>videos</code> 只读兼容。</span>
+          <span class="ref">fce.db · plan/schema.py:9-16 · planAdd.js:43</span>
+        </div>
+        <div class="card dat" data-card="D5">
+          <b>vocab_paper_history</b>
+          <span class="d">paper_id · level · words · <code>structure</code>（整卷）· <code>config</code> · scope · seed。混合卷 level&lt;0，不进 <code>exam_records.kind</code>。</span>
+          <span class="ref">fce.db · vocab_paper.py:501-516</span>
+        </div>
+      </div>
+      <div class="cell lastrow row-dat"></div>
+      <div class="cell lastrow row-dat">
+        <div class="card dat" data-card="D2">
+          <b>学生行为表群</b>
+          <span class="d">recite 三表（艾宾浩斯）· exam_records · focus_sessions · reading_recordings · topic_progress · video_retell · rm_sessions<br>新增 <code>micro_daily</code> / <code>micro_log</code>（整组完成看 daily.done）</span>
+          <span class="ref">fce.db / exam.db / readingmore.db · micro.py:63-74</span>
+        </div>
+      </div>
+      <div class="cell lastrow row-dat">
+        <div class="card dat" data-card="D3">
+          <b>plan_rule_flags</b>
+          <span class="d">(user, rule_id, value)。缺行用 RULES 默认。不参与打卡表 <code>plan_day_checks</code>（该表不进完成率）。</span>
+          <span class="ref">fce.db · plan/schema.py:17-44</span>
+        </div>
+      </div>
+      <div class="cell lastrow row-dat">
+        <div class="card dat" data-card="D6">
+          <b>vocab_exams · vocab_exam_answers</b>
+          <span class="d">成绩：(user, level, score, exam_date, paper_id)。错词只存错行。未手设级别时 ≥80 解锁下一级；手设后成绩不改级别。</span>
+          <span class="ref">fce.db · vocab_exam.py:27-54</span>
+        </div>
+      </div>
+      <div class="cell lastcol lastrow row-dat">
+        <div class="card dat" data-card="D4">
+          <b>topic_content + micro_question</b>
+          <span class="d">专题：published · assigned_to，节点树在 content / <code>data/topics/*.json</code>。微练习题库六类，seed 题用 ref_lecture/ref_qnum 溯作业卷。</span>
+          <span class="ref">fce.db · topics.py:34 · micro.py:49-62</span>
+        </div>
+      </div>
+
+      <svg class="wires" id="slWires"></svg>
+      <svg class="wires-top" id="slLbls"></svg>
+    </div>
+  </div>
+
+  <div class="loopband">
+    <span class="ic">🔁</span>
+    <span><b>⑥ → ① 闭环回流：</b>学情 flags 与 <code>focus_kps</code> escalate 回到 <code>PUT /plan/weeks/:week_start</code>；薄弱点做成专题并 assigned；单词卷错词经 <code>recite.enter_review</code> 进入周日错词再练；作业错题进微练习 <code>wrong</code> 池，本周 <code>tasks.micro=1</code> 后学生每日 3 题。微练习完成只点亮，不抬日完成率。</span>
+  </div>
+
+  <details>
+    <summary>📜 泳道图 mermaid 源码（与上图同内容，可粘贴到任何 mermaid 渲染器）</summary>
+    <div class="srcbar"><button class="copybtn" data-src="src1">复制源码</button></div>
+    <pre id="src1"></pre>
+  </details>
+
+  <!-- ================= 架构图 ================= -->
+  <h2><span class="no">Ⅱ</span>系统架构图：六层自上而下</h2>
+  <p class="sub">请求路径：客户端 → 接入层 → 应用层 → 数据访问层 → 数据库。外部依赖由应用层旁路调用。只标与作业/成绩闭环有关的增量，其余沿用现网结构。</p>
+
+  <div class="band">
+    <div class="band-head"><span class="band-title">🖥️ 客户端层</span><span class="band-note">Vite 5 构建单页应用 · dist：html no-cache + hash 资源 immutable 一年（app.py:375-406）</span></div>
+    <div class="cards">
+      <div class="acard c-cy"><b>教师版 SPA · 三个 Tab</b><span class="d">备课中心 prep（含单词卷生成、微练习题库 microAdmin、专题 topicsAdmin）· 计划表 plan / planEditor / planAdd（11 类，精读与视频按 2 个一组）· 批改中心 grading：看板 board + 学习日志 + 学情 analytics。单词卷打分卡在看板内，哈一成绩走 exams。</span></div>
+      <div class="acard c-cy"><b>学生版 SPA</b><span class="d">课程表 timetable（只读 my-week，微练习卡）· 背单词 recite · 阅读 · 专题 topics · 泛读馆 library · 视频 videoStudy · FCE。微练习 <code>#/micro</code> 不占顶部 Tab（catalog.js:38）。</span></div>
+      <div class="acard c-cy"><b>#/readingmore/ 独立静态泛读</b><span class="d">静态页免登录 · <code>/readingmore/api</code> 走 Bearer。会话进 rm_sessions，专注僵尸过滤仍由计划规则 zombie_filter 决定是否计入时长。</span></div>
+      <div class="acard c-cy"><b>公共层（web/src 共用）</b><span class="d">api.js · render.js · tabs.js · shell/catalog.js（师生路由白名单）· fmt.js · tts.js</span></div>
+    </div>
+  </div>
+  <div class="conn"><span class="arr">▼</span><span class="lbl">HTTPS · Bearer token（30 天，auth.py TOKEN_TTL）</span></div>
+
+  <div class="band">
+    <div class="band-head"><span class="band-title">🚪 接入层</span><span class="band-note">uvicorn grammar_kb.server:app · 学生白名单外的路径教师专属</span></div>
+    <div class="cards">
+      <div class="acard c-red"><b>中间件链（server/app.py）</b><span class="d">Bearer HMAC（verify → teacher/student）· <code>_STUDENT_ALLOW</code> 含 <code>/plan/my-week</code>、<code>/micro/today</code>、<code>/micro/submit</code>、<code>/topics-v2</code>、<code>POST /exams</code>；<code>/micro-admin</code> 与 <code>/vocab-papers</code> 不放行学生 · GZip · ORJSON · <code>/api</code> 前缀剥离 · 静态 dist · <code>GET /version</code></span></div>
+    </div>
+  </div>
+  <div class="conn"><span class="arr">▼</span><span class="lbl">create_app 组装 17 个 Store + readingmore 自持库；注册 10 组路由（app.py:346-357）</span></div>
+
+  <div class="band">
+    <div class="band-head"><span class="band-title">⚙️ 应用层</span><span class="band-note">server/ 路由 + plan/ 周计划内核 + 领域模块</span></div>
+    <div class="cards">
+      <div class="acard c-blu"><b>server/ · 10 组路由 + readingmore</b><span class="d">query 内容库 · atlas 词光 · vocab 试卷/考级 · practice 精读与 FCE · study 背词/专注/专题 · plan 周计划与哈一成绩 · video · library · analytics/summary · micro 每日 3 题与题库。相对 2d70c17 新增 <code>register_micro</code>。</span></div>
+      <div class="acard c-blu"><b>plan/ 周计划内核</b><span class="d">PlanStore · schema（表 + 4 条 RULES）· schedule 均摊（含 article_units / video_units，微练习不进分母）· completion · rules / lecture_done · signals（micro、paper:{id}）· views + WeekCtx · review 诊断</span></div>
+      <div class="acard c-blu"><b>领域模块</b><span class="d">recite（含 enter_review 错词回流）· focus · topics · reading · video_study · library · vocab_paper（结构化存档）· vocab_exam（成绩 + 错词明细 + unlock）· micro（抽题/判分）· homework_admin · analytics 四库聚合</span></div>
+    </div>
+  </div>
+  <div class="conn"><span class="arr">▼</span><span class="lbl">SQL 经 dbreg 收口 · connect 即用即关</span></div>
+
+  <div class="band">
+    <div class="band-head"><span class="band-title">🗃️ 数据访问层</span></div>
+    <div class="cards">
+      <div class="acard c-amb"><b>dbreg.py</b><span class="d">库路径唯一收口（环境变量优先 → 仓库 data/）· connect 即用即关 · WAL（fce.db / library.db）</span></div>
+      <div class="acard c-amb"><b>17 个 Store（app.py:84-118）+ readingmore</b><span class="d">Plan · Recite · Focus · Topic · Video · Reading · FcePaper · FceSubmission · Exam · VocabExam · VocabPaper · Micro · HomeworkAdmin · Library · AnalyticsAI · PrepQueue · UserStore。相对 2d70c17 新增 VocabPaperStore、MicroStore。readingmore 自建库，不进 AppCtx。</span></div>
+    </div>
+  </div>
+  <div class="conn"><span class="arr">▼</span><span class="lbl">6 库 + 文件资产</span></div>
+
+  <div class="band">
+    <div class="band-head"><span class="band-title">🗄️ 数据层</span></div>
+    <div class="cards wide">
+      <div class="acard c-pur"><b>grammar.db 讲义库</b><span class="d">lecture / knowledge_point / marker / relation · homework_question · homework_q_result（爱问云逐题对错，供题库与微练习溯源，不直接点亮周计划）</span></div>
+      <div class="acard c-pur"><b>fce.db 学生行为主库（WAL）</b><span class="d">plan_weeks · plan_rule_flags · recite 三表 · focus / topic / video / reading · vocab_paper_history（structure/config）· vocab_exams · vocab_exam_answers · vocab_unlock · micro_question / micro_daily / micro_log</span></div>
+      <div class="acard c-pur"><b>exam.db</b><span class="d">exam_records（kind 只有 hw / lecture）· ai_weekly_reports</span></div>
+      <div class="acard c-pur"><b>library.db · readingmore.db · ecdict.db</b><span class="d">书架 / 进度 / 预习 · 泛读会话 · 词典</span></div>
+      <div class="acard c-pur"><b>users.json + auth_secret.key</b><span class="d">PBKDF2 账号 · HMAC 密钥。学生角色走白名单，教师角色无此限制。</span></div>
+      <div class="acard c-pur"><b>data/ 外置数据</b><span class="d">wrongbank.json（教师专属）· topics/*.json · audio/reading · audio/fce · library/books。微练习题面在 fce.db，不在这份 JSON。</span></div>
+    </div>
+  </div>
+  <div class="conn dash"><span class="arr">⤶</span><span class="lbl">应用层旁路：GLM（学情周报、查词、离线微练习出题）· ffmpeg 录音转码 · 运维备份</span></div>
+
+  <div class="band">
+    <div class="band-head"><span class="band-title">🔌 外部依赖</span></div>
+    <div class="cards">
+      <div class="acard c-grn"><b>智谱 GLM（glm.py）</b><span class="d">在线：AI 预习 / 查词 / <code>POST /analytics/ai/weekly</code>。离线：<code>scripts/gen_micro_bank.py</code> 生成变形题与记忆题，写入 micro_question 后才对学生可见。</span></div>
+      <div class="acard c-grn"><b>ffmpeg（audioutil.py）</b><span class="d">学生 webm/opus 录音转 m4a/aac 再入库。缺 ffmpeg 时原样存 webm。批改中心试听走录音音频端点。</span></div>
+      <div class="acard c-grn"><b>运维脚本</b><span class="d">备份与回 Mac 校验不参与成绩判定。单词卷历史去重、错词回流都在请求路径内完成，不依赖定时任务。</span></div>
+    </div>
+  </div>
+
+  <details>
+    <summary>📜 架构图 mermaid 源码（与上图同内容，可粘贴到任何 mermaid 渲染器）</summary>
+    <div class="srcbar"><button class="copybtn" data-src="src2">复制源码</button></div>
+    <pre id="src2"></pre>
+  </details>
+
+  <!-- ================= 边界 ================= -->
+  <h2><span class="no">Ⅲ</span>口径与相对 2026-11-01 图的变化</h2>
+  <ul class="notes">
+    <li><b>阶段数没变。</b>仍是六段闭环。新增内容落在原列里：① 试卷存档与分组任务，② 微练习卡，③ <code>/micro/*</code>，④ 微练习只点亮，⑤ 单词卷打分，⑥ 题库与错词回流。</li>
+    <li><b>新增、参与本闭环：</b>微练习（<code>micro_question</code> / <code>micro_daily</code> / <code>micro_log</code>，<code>GET /micro/today</code> · <code>POST /micro/submit</code> · <code>/micro-admin/*</code>）；单词卷结构化存档（<code>vocab_paper_history.structure/config</code>）与错词回流（<code>vocab_exam_answers</code> → <code>recite.enter_review</code>）；精读/视频最小单元改为 2 个一组（<code>article_units</code> / <code>video_units</code>）。</li>
+    <li><b>改口径：</b>向导由 10 类改为 11 类。原 <code>focus_kp</code> 文案是「微练习 · 工作日每讲 5 题」，现改名为攻坚讲次，只标注、不再排程；新增的才是线上微练习（<code>tasks.micro=1</code>，每日 3 题）。日完成率分母不含它，周目标用「做完天数 / 7」。中间版本曾有「整组做完 +10」，现行 <code>schedule.py:638-639</code> 已删除，RULES 里没有这条开关。精读、视频从单篇改为 2 个一组。Store 16 → 17（VocabPaper、Micro），路由注册 9 → 10（<code>register_micro</code>）。</li>
+    <li><b>仍成立、图上保留：</b>计划完成率不进 <code>build_summary</code>；<code>plan_day_checks</code> 不进 done；<code>speak_early_credit</code> 只注册，排程在 <code>schedule.py:156-164</code> 无条件补朗读 ✓；不存在 <code>wrong_only</code> 参数，近似物是背词错题本、周日 <code>wrong_words</code>、微练习 <code>category=wrong</code>、单词卷错词回流；<code>exam_records.kind</code> 只有 hw / lecture，混合卷是 <code>vocab_exams.level&lt;0</code>；构建链是 Vite 5。</li>
+    <li><b>未画进泳道：</b>爱问云同步与 <code>wrongbank.json</code> 只给教师看题面/解析，不点亮周计划。词光 atlas、泛读馆上传、FCE 听力播放台不改成绩闭环，只留在架构层。</li>
+  </ul>
+
+  <footer class="foot">
+    生成：2026-11-07（Asia/Shanghai）· 基于 master 368eeae<br>
+    对照：2026-11-01 图（master 2d70c17）。本文件即 reports/师生作业成绩交互全链路_泳道图与架构图.html<br>
+    本页自包含、零外部依赖、可离线打开与打印（A3 横向）
+  </footer>
+</main>
+
+<script>
+var SRC1 = [
+'flowchart LR',
+'  subgraph LT["教师端"]',
+'    direction TB',
+'    T1["计划表 planAdd 11 类<br/>article_units/video_units 每组 2 个<br/>tasks.micro=1 不排日行"]',
+'    T7["单词卷 POST /vocab-papers/generate|/save<br/>structure 存档后写入 vocab_papers"]',
+'    T2["完成判定 4 条 RULES<br/>speak_early_credit 不参与执行"]',
+'    T3["批改看板六接口：录音/复述/作文/专注"]',
+'    T4["哈一成绩 kind=hw|lecture"]',
+'    T8["单词卷打分 /vocab-papers/grading<br/>错词回流 enter_review"]',
+'    T5["学情 10 卡 + flags，不含计划完成率"]',
+'    T6["专题 JSON 导入 → published → assigned"]',
+'    T9["微练习题库 micro-admin，wrong 优先"]',
+'  end',
+'  subgraph LS["学生端"]',
+'    direction TB',
+'    S1["课程表 GET /plan/my-week<br/>周日单词卷 + 微练习卡 #/micro"]',
+'    S2["七 Tab + 微练习每日 3 题"]',
+'    S3["专题 assigned；周日错词再练"]',
+'  end',
+'  subgraph LV["服务端"]',
+'    direction TB',
+'    V1["PUT /plan/weeks/:week_start"]',
+'    V3["week_daily_tasks 分组均摊<br/>微练习不进日清单"]',
+'    V2["my-week / week-view · WeekCtx"]',
+'    V4["上报：recite/focus/reading/topics/video/exams<br/>GET /micro/today POST /micro/submit"]',
+'    V5["lecture_done：成绩 ∪ 专题；hw 只认作业卷"]',
+'    V6["day_completion；paper 信号；micro 只点亮"]',
+'    V10["批改回写 + POST /vocab-exams<br/>recite.enter_review"]',
+'    V7["GET /analytics/summary TTL 300s"]',
+'    V8["/plan/diagnosis · /plan/review escalate"]',
+'    V9["topics-admin + micro-admin"]',
+'  end',
+'  subgraph LD["数据层"]',
+'    direction TB',
+'    D1["plan_weeks.tasks JSON"]',
+'    D5["vocab_paper_history.structure/config"]',
+'    D2["行为表 + micro_daily/micro_log"]',
+'    D3["plan_rule_flags"]',
+'    D6["vocab_exams + vocab_exam_answers"]',
+'    D4["topic_content + micro_question"]',
+'  end',
+'  T1 -->|"① 布置"| V1',
+'  V1 --> D1',
+'  T7 -->|"生成存档"| D5',
+'  D1 -->|"② 派生"| V3',
+'  D5 -->|"周日试卷"| V3',
+'  V3 --> V2',
+'  V2 -->|"my-week"| S1',
+'  S1 --> S2',
+'  S2 -->|"③ 上报"| V4',
+'  V4 --> D2',
+'  D2 -->|"④ 信号"| V5',
+'  V5 --> V6',
+'  T2 -.->|"PUT /plan/rules"| D3',
+'  D3 -.-> V6',
+'  V6 -->|"回显"| V2',
+'  V2 -->|"完成度"| T1',
+'  D2 -->|"⑤ 待批"| T3',
+'  T3 -->|"打分"| V10',
+'  S2 -.->|"登记/代记"| T4',
+'  T4 -->|"POST /exams"| V10',
+'  T8 -->|"试卷打分"| V10',
+'  V10 --> D6',
+'  V10 -->|"错词回流"| D2',
+'  D2 --> V7',
+'  D2 --> V8',
+'  V7 --> T5',
+'  V8 -->|"escalate"| T5',
+'  T5 --> T6',
+'  T5 --> T9',
+'  T6 --> V9',
+'  T9 --> V9',
+'  V9 --> D4',
+'  D4 -->|"assigned"| S3',
+'  T5 -->|"⑥→①"| T1',
+].join('\n');
+
+var SRC2 = [
+'flowchart TB',
+'  subgraph CL["客户端 · Vite 5"]',
+'    CT["教师：备课 / 计划 11 类 / 批改看板+单词卷打分 / 学情"]',
+'    CS["学生：课程表 my-week + 微练习卡 / 七 Tab / #/micro"]',
+'    CR["#/readingmore 静态泛读"]',
+'  end',
+'  subgraph GW["接入层"]',
+'    MW["Bearer 30 天 · 学生白名单含 /micro/today|/micro/submit<br/>/micro-admin 与 /vocab-papers 仅教师"]',
+'  end',
+'  subgraph APP["应用层"]',
+'    RT["10 组路由 + readingmore<br/>新增 register_micro"]',
+'    PLAN["plan/：分组均摊 · lecture_done · micro 只点亮 · paper 信号"]',
+'    DOM["vocab_paper 存档 · vocab_exam 错词 · micro 抽题 · enter_review"]',
+'  end',
+'  subgraph DAL["数据访问"]',
+'    STORES["17 Store：新增 VocabPaper、Micro · readingmore 自持库"]',
+'  end',
+'  subgraph DATA["数据层"]',
+'    DB2["fce.db：plan_* · micro_* · vocab_paper_history · vocab_exams · answers"]',
+'    DB3["exam.db：exam_records kind=hw|lecture"]',
+'  end',
+'  subgraph EXT["旁路"]',
+'    GLM["GLM：在线学情/查词；离线 gen_micro_bank"]',
+'  end',
+'  CT --> MW',
+'  CS --> MW',
+'  CR --> MW',
+'  MW --> RT',
+'  RT --> PLAN',
+'  RT --> DOM',
+'  PLAN --> STORES',
+'  DOM --> STORES',
+'  STORES --> DB2',
+'  STORES --> DB3',
+'  DOM -->|"离线出题"| GLM',
+].join('\n');
+
+document.getElementById('src1').textContent = SRC1;
+document.getElementById('src2').textContent = SRC2;
+
+document.querySelectorAll('.copybtn').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var txt = document.getElementById(btn.dataset.src).textContent;
+    function done() { btn.textContent = '已复制 ✓'; setTimeout(function(){ btn.textContent = '复制源码'; }, 1600); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(done, function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = txt; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+  });
+});
+
+document.querySelectorAll('.card .ref').forEach(function (elm) {
+  var parts = elm.textContent.split('·');
+  elm.textContent = '';
+  parts.forEach(function (p, i) {
+    if (i) elm.appendChild(document.createTextNode('·'));
+    var s = document.createElement('span');
+    s.className = 'rp';
+    s.textContent = p.trim();
+    elm.appendChild(s);
+    if (i < parts.length - 1) elm.appendChild(document.createTextNode(' '));
+  });
+});
+
+(function () {
+  var NS = 'http://www.w3.org/2000/svg';
+  var grid = document.getElementById('slGrid');
+  var wires = document.getElementById('slWires');
+  var lbls  = document.getElementById('slLbls');
+  var WIRE = '#64748b', WIRED = '#94a3b8';
+  var AH = '#475569', AHD = '#8494a8';
+
+  var EDGES = [
+    {f:'T1', t:'V1', l:'① PUT /plan/weeks'},
+    {f:'V1', t:'D1', l:'tasks JSON'},
+    {f:'T7', t:'D5', l:'structure 存档', fs:.7, ts:.7},
+    {f:'D1', t:'V3', l:'② 周任务派生'},
+    {f:'D5', t:'V3', l:'周日试卷 id', fs:.35, ts:.35, lp:.62},
+    {f:'V3', t:'V2', l:'WeekCtx', offs:[[46,10],[46,-5],[-46,10]]},
+    {f:'V2', t:'S1', l:'② GET /plan/my-week'},
+    {f:'S1', t:'S2', l:'任务\n直达'},
+    {f:'S2', t:'V4', l:'③ 学习上报'},
+    {f:'V4', t:'D2', l:'落库'},
+    {f:'D2', t:'V5', l:'④ 考试∪专题'},
+    {f:'V5', t:'V6', l:'单日判定', offs:[[40,10],[40,-5],[-40,10]]},
+    {f:'T2', t:'D3', l:'PUT /plan/rules', dash:1, lp:.24},
+    {f:'D3', t:'V6', l:'规则参与判定', dash:1, lp:.72},
+    {f:'V6', t:'V2', l:'回显'},
+    {f:'V2', t:'T1', l:'④ 完成度', force:'h'},
+    {f:'D2', t:'T3', l:'⑤ 待批队列', lp:.32},
+    {f:'T3', t:'V10', l:'打分回写', fs:.22, ts:.22},
+    {f:'S2', t:'T4', l:'登记/代记', dash:1, lp:.42},
+    {f:'T4', t:'V10', l:'POST /exams', fs:.5, ts:.5},
+    {f:'T8', t:'V10', l:'试卷打分', fs:.78, ts:.78},
+    {f:'V10', t:'D6', l:'成绩+错词'},
+    {f:'V10', t:'D2', l:'错词回流', lp:.55},
+    {f:'D2', t:'V7', l:'⑥ 行为聚合', lp:.4},
+    {f:'D2', t:'V8', l:'⑥ 错题聚类', lp:.62},
+    {f:'V7', t:'T5', l:'summary+flags', fs:.3, ts:.15},
+    {f:'V8', t:'T5', l:'escalate', fs:.7, ts:.85},
+    {f:'T5', t:'T6', l:'薄弱→专题', offs:[[-44,10],[-44,-5],[44,10]]},
+    {f:'T5', t:'T9', l:'错题→题库', fs:.8, ts:.2},
+    {f:'T6', t:'V9', l:'上架', fs:.25, ts:.22},
+    {f:'T9', t:'V9', l:'题库', fs:.75, ts:.78},
+    {f:'V9', t:'D4', l:''},
+    {f:'D4', t:'S3', l:'assigned / 错词'}
+  ];
+
+  var cardRects = [];
+  var placed = [];
+  function rectOf(el) {
+    var r = el.getBoundingClientRect(), g = grid.getBoundingClientRect();
+    return {l:r.left-g.left, r:r.right-g.left, t:r.top-g.top, b:r.bottom-g.top,
+            cx:r.left-g.left+r.width/2, cy:r.top-g.top+r.height/2, w:r.width, h:r.height};
+  }
+  function collectRects() {
+    cardRects = [];
+    grid.querySelectorAll('[data-card]').forEach(function (c) { cardRects.push(rectOf(c)); });
+  }
+  function sidePt(p, side, frac) {
+    if (side==='left')  return [p.l, p.t + p.h*frac];
+    if (side==='right') return [p.r, p.t + p.h*frac];
+    if (side==='top')   return [p.l + p.w*frac, p.t];
+    return [p.l + p.w*frac, p.b];
+  }
+  function mkPath(attrs) {
+    var n = document.createElementNS(NS, 'path');
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  function labelW(l){ var w=0; for (var i=0;i<l.length;i++) w += l.charCodeAt(i)>127 ? 11 : 6.4; return w; }
+  function labelClear(gw, x, y, w, h) {
+    if (x - w/2 < 8 || x + w/2 > gw - 8) return false;
+    for (var i = 0; i < cardRects.length; i++) {
+      var r = cardRects[i];
+      if (x - w/2 < r.r - 9 && x + w/2 > r.l + 9 && y - h/2 < r.b - 9 && y + h/2 > r.t + 9) return false;
+    }
+    for (var j = 0; j < placed.length; j++) {
+      var p = placed[j];
+      if (x - w/2 < p.r + 2 && x + w/2 > p.l - 2 && y - h/2 < p.b + 2 && y + h/2 > p.t - 2) return false;
+    }
+    return true;
+  }
+  function rectDist(x, y, w, h) {
+    var dmin = 1e9;
+    for (var i = 0; i < cardRects.length; i++) {
+      var r = cardRects[i];
+      var il = r.l + 9, ir = r.r - 9, it = r.t + 9, ib = r.b - 9;
+      var dx = Math.max(il - (x + w/2), 0, (x - w/2) - ir);
+      var dy = Math.max(it - (y + h/2), 0, (y - h/2) - ib);
+      dmin = Math.min(dmin, Math.hypot(dx, dy));
+    }
+    return dmin;
+  }
+  function labelPoint(pe, gw, e) {
+    var L = pe.getTotalLength();
+    var lines = e.l.split('\n');
+    var w = 0; lines.forEach(function (s) { w = Math.max(w, labelW(s)); });
+    var h = 14 * lines.length;
+    var ts = (e.lp != null ? [e.lp] : []).concat([.5,.44,.56,.38,.62,.32,.68,.26,.74,.2,.8,.14,.86]);
+    var offs = e.offs || [[0,-5],[0,-18],[0,10],[0,-30],[0,24],[-46,0],[46,0],[-80,0],[80,0],[0,-44],[0,40]];
+    for (var i = 0; i < ts.length; i++) {
+      var p = pe.getPointAtLength(L * ts[i]);
+      for (var j = 0; j < offs.length; j++) {
+        var ox = (e.loff && j===0 ? e.loff[0] : 0), oy = (e.loff && j===0 ? e.loff[1] : 0);
+        var x = p.x + offs[j][0] + ox, y = p.y + offs[j][1] + oy;
+        if (labelClear(gw, x, y, w, h)) return {x:x, y:y};
+      }
+    }
+    var best = null, bestD = -1;
+    for (var t = .06; t <= .94; t += .03) {
+      var q = pe.getPointAtLength(L * t);
+      for (var j2 = 0; j2 < offs.length; j2++) {
+        var ox2 = (e.loff && j2===0 ? e.loff[0] : 0), oy2 = (e.loff && j2===0 ? e.loff[1] : 0);
+        var x2 = q.x + offs[j2][0] + ox2, y2 = q.y + offs[j2][1] + oy2;
+        var d = rectDist(x2, y2, w, h);
+        if (d > bestD) { bestD = d; best = {x:x2, y:y2}; }
+      }
+    }
+    return best;
+  }
+  function draw() {
+    var gw = grid.scrollWidth, gh = grid.scrollHeight;
+    wires.setAttribute('width', gw); wires.setAttribute('height', gh);
+    lbls.setAttribute('width', gw);  lbls.setAttribute('height', gh);
+    wires.innerHTML = '<defs>' +
+      '<marker id="ah"  viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="'+AH+'"/></marker>' +
+      '<marker id="ahd" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="'+AHD+'"/></marker>' +
+      '</defs>';
+    lbls.innerHTML = '';
+    placed = [];
+    collectRects();
+    for (var i = 0; i < EDGES.length; i++) {
+      var e = EDGES[i];
+      var aEl = grid.querySelector('[data-card="'+e.f+'"]');
+      var bEl = grid.querySelector('[data-card="'+e.t+'"]');
+      if (!aEl || !bEl) continue;
+      var a = rectOf(aEl);
+      var b = rectOf(bEl);
+      var dx = b.cx - a.cx, dy = b.cy - a.cy;
+      var fs, ts;
+      if (e.force === 'h') { fs = dx>0 ? 'right' : 'left'; ts = dx>0 ? 'left' : 'right'; }
+      else if (e.force === 'v') { fs = dy>=0 ? 'bottom' : 'top'; ts = dy>=0 ? 'top' : 'bottom'; }
+      else if (Math.abs(dx) < 40) { fs = dy>=0 ? 'bottom' : 'top'; ts = dy>=0 ? 'top' : 'bottom'; }
+      else if (Math.abs(dy) < 30) { fs = dx>0 ? 'right' : 'left'; ts = dx>0 ? 'left' : 'right'; }
+      else if (Math.abs(dy) > Math.abs(dx)*2.4) { fs = dy>0 ? 'bottom' : 'top'; ts = dy>0 ? 'top' : 'bottom'; }
+      else { fs = dx>0 ? 'right' : 'left'; ts = dx>0 ? 'left' : 'right'; }
+      var p1 = sidePt(a, fs, e.fs!=null ? e.fs : .5);
+      var p2 = sidePt(b, ts, e.ts!=null ? e.ts : .5);
+      var d = Math.hypot(p2[0]-p1[0], p2[1]-p1[1]);
+      var k = Math.min(64, d*.38);
+      var ex, ey, path;
+      if (fs==='right' || fs==='left') {
+        var sx = fs==='right' ? 1 : -1;
+        var to = ts==='left' ? -1 : 1;
+        ex = p2[0] + to*2; ey = p2[1];
+        path = 'M'+p1[0]+','+p1[1]+' C'+(p1[0]+sx*k)+','+p1[1]+' '+(p2[0]+to*k)+','+p2[1]+' '+ex+','+ey;
+      } else {
+        var sy = fs==='bottom' ? 1 : -1;
+        var to2 = ts==='top' ? -1 : 1;
+        ex = p2[0]; ey = p2[1] + to2*2;
+        path = 'M'+p1[0]+','+p1[1]+' C'+p1[0]+','+(p1[1]+sy*k)+' '+p2[0]+','+(p2[1]+to2*k)+' '+ex+','+ey;
+      }
+      var attrs = {d:path, fill:'none', stroke: e.dash ? WIRED : WIRE, 'stroke-width':1.6,
+                   'marker-end': e.dash ? 'url(#ahd)' : 'url(#ah)'};
+      if (e.dash) attrs['stroke-dasharray'] = '5 4';
+      var pe = mkPath(attrs);
+      wires.appendChild(pe);
+      if (e.l) {
+        var pt = labelPoint(pe, gw, e);
+        if (pt) {
+          var lines = e.l.split('\n');
+          var t = document.createElementNS(NS, 'text');
+          t.setAttribute('text-anchor', 'middle');
+          t.setAttribute('class', 'wirelbl');
+          var y0 = pt.y - (14*lines.length)/2 + 10;
+          lines.forEach(function (ln, li) {
+            var sp = document.createElementNS(NS, 'tspan');
+            sp.setAttribute('x', Math.min(Math.max(pt.x, 46), gw-46));
+            sp.setAttribute('y', y0 + li*14);
+            sp.textContent = ln;
+            t.appendChild(sp);
+          });
+          lbls.appendChild(t);
+          try {
+            var bb = t.getBBox();
+            placed.push({l: bb.x - 5, r: bb.x + bb.width + 5, t: bb.y - 2.5, b: bb.y + bb.height + 2.5});
+            var bg = document.createElementNS(NS, 'rect');
+            bg.setAttribute('x', bb.x-5); bg.setAttribute('y', bb.y-2.5);
+            bg.setAttribute('width', bb.width+10); bg.setAttribute('height', bb.height+5);
+            bg.setAttribute('rx', 3); bg.setAttribute('fill', '#ffffff'); bg.setAttribute('opacity', '.85');
+            lbls.insertBefore(bg, t);
+          } catch (err) {}
+        }
+      }
+    }
+  }
+  function safeDraw(){ try { draw(); } catch (err) {} }
+  window.addEventListener('resize', safeDraw);
+  window.addEventListener('load', safeDraw);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(safeDraw);
+  safeDraw();
+  setTimeout(safeDraw, 60);
+})();
+</script>
+</body>
+</html>
