@@ -1,6 +1,9 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
 import { fmtDur as fmtSec } from '../fmt.js'
+import { retellLoadState } from './boostNav.js'
+
+export { parseBoostRef } from './boostNav.js'
 
 // 提升档 · 句型复述面板 + 通用复述录音机核心。
 // 录音核心从 videoStudy.js 的 setupRetellRecorder 抽出（MediaRecorder →
@@ -155,54 +158,32 @@ function blobToB64(blob) {
 // ref_kind:'pattern'、vid=patternId）。重录 = 再提交一次（后端刷新）。
 const MAX_RETELL_SEC = 180
 
-export async function openBoostRetell({ patternId, label, onSubmitted }) {
-  let p = null
-  let loadErr = ''
-  try {
-    const list = await api.patternsList()
-    p = (Array.isArray(list) ? list : []).find((x) => Number(x.id) === Number(patternId)) || null
-    if (!p) loadErr = '没有找到这条句型（可能已被删除），请找老师确认。'
-  } catch (e) {
-    loadErr = `句型内容加载失败：${e.message}`
+export async function openBoostRetell({ patternId, label, onSubmitted } = {}) {
+  if (typeof document === 'undefined' || !document.body) {
+    throw new Error('页面还没准备好，请刷新后再试。')
   }
-
   const root = document.createElement('div')
   root.className = 'boost-retell'
   let recorder = { destroy() {} }  // 句型加载失败时也允许安全 close
-  const hints = Array.isArray(p?.hints) ? p.hints.filter(Boolean) : []
+  let closed = false
+  // 先把面板挂上，再等接口。慢请求或失败时点击也有可见反馈，不再像没点到。
   root.innerHTML = `
     <div class="boost-retell-mask" data-close></div>
     <div class="boost-retell-card">
       <div class="boost-retell-head">
         <b>⭐ 句型复述</b>
-        <button class="reading-btn small" data-close>关闭</button>
+        <button class="reading-btn small" type="button" data-close>关闭</button>
       </div>
       ${label ? `<p class="boost-retell-label">${escapeHtml(label)}</p>` : ''}
-      ${p ? `
-        <div class="boost-retell-sentence">${escapeHtml(p.sentence || '')}</div>
-        ${p.translation ? `<p class="boost-retell-trans">${escapeHtml(p.translation)}</p>` : ''}
-        ${hints.length ? `
-          <div class="boost-retell-hints">
-            <b>💡 提示</b>
-            ${hints.map((h) => `<span>${escapeHtml(h)}</span>`).join('')}
-          </div>` : ''}
-        <div class="boost-retell-rec">
-          <button class="reading-btn primary" data-rec>🎙 开始录音</button>
-          <span class="boost-retell-time" data-time></span>
-          <span class="reading-level-wrap" title="录音音量：说话时绿色条应跳动；不动=麦克风没声音">
-            <span class="reading-level-bar"><i data-level></i></span>
-          </span>
-          <span class="boost-retell-msg" data-msg></span>
-        </div>
-        <p class="reading-hint">看清句型，用自己的话大声读出来（≤3 分钟）。提交后等老师批改，7 分以上算过关；不满意可重录刷新。</p>
-      ` : `
-        <p class="boost-retell-miss">${escapeHtml(loadErr || '句型内容不可用。')}</p>
-      `}
+      <div data-body>
+        <p class="boost-retell-loading">正在加载句型…</p>
+      </div>
     </div>`
   document.body.appendChild(root)
   document.body.style.overflow = 'hidden'
 
   const close = () => {
+    closed = true
     recorder.destroy()
     document.removeEventListener('keydown', onKey)
     root.remove()
@@ -212,14 +193,52 @@ export async function openBoostRetell({ patternId, label, onSubmitted }) {
   document.addEventListener('keydown', onKey)
   root.querySelectorAll('[data-close]').forEach((x) => x.addEventListener('click', close))
 
-  if (!p) return { close }
+  const body = root.querySelector('[data-body]')
+  const showMiss = (text) => {
+    body.innerHTML = `<p class="boost-retell-miss">${escapeHtml(text || '句型内容不可用。')}</p>`
+  }
+  let list = null
+  let error = ''
+  const idBad = patternId == null || patternId === '' || !Number.isFinite(Number(patternId))
+  if (!idBad) {
+    try {
+      list = await api.patternsList()
+    } catch (e) {
+      error = e && e.message ? e.message : String(e)
+    }
+  }
+  if (closed) return { close }
+  const state = retellLoadState({ patternId, list, error })
+  const p = state.pattern
+  if (!p) {
+    showMiss(state.error)
+    return { close }
+  }
+  const hints = Array.isArray(p.hints) ? p.hints.filter(Boolean) : []
+  body.innerHTML = `
+    <div class="boost-retell-sentence">${escapeHtml(p.sentence || '')}</div>
+    ${p.translation ? `<p class="boost-retell-trans">${escapeHtml(p.translation)}</p>` : ''}
+    ${hints.length ? `
+      <div class="boost-retell-hints">
+        <b>💡 提示</b>
+        ${hints.map((h) => `<span>${escapeHtml(h)}</span>`).join('')}
+      </div>` : ''}
+    <div class="boost-retell-rec">
+      <button class="reading-btn primary" type="button" data-rec>🎙 开始录音</button>
+      <span class="boost-retell-time" data-time></span>
+      <span class="reading-level-wrap" title="录音音量：说话时绿色条应跳动；不动=麦克风没声音">
+        <span class="reading-level-bar"><i data-level></i></span>
+      </span>
+      <span class="boost-retell-msg" data-msg></span>
+    </div>
+    <p class="reading-hint">看清句型，用自己的话大声读出来（≤3 分钟）。提交后等老师批改，7 分以上算过关；不满意可重录刷新。</p>`
 
-  const msgEl = root.querySelector('[data-msg]')
+  const msgEl = body.querySelector('[data-msg]')
   recorder = createRetellRecorder({
-    btn: root.querySelector('[data-rec]'),
-    timeEl: root.querySelector('[data-time]'),
+    btn: body.querySelector('[data-rec]'),
+    timeEl: body.querySelector('[data-time]'),
     msgEl,
-    levelEl: root.querySelector('[data-level]'),
+    levelEl: body.querySelector('[data-level]'),
     maxSec: MAX_RETELL_SEC,
     startLabel: '🎙 开始录音',
     stopLabel: '⏹ 停止录音',
@@ -237,20 +256,4 @@ export async function openBoostRetell({ patternId, label, onSubmitted }) {
     },
   })
   return { close }
-}
-
-// ---------- item_ref 解析（提升档任务行 → 直达动作） ----------
-// memory: `memory:{topic_id}/{node_key}`（分隔符兼容 : / /）→ {topicId, nodeKey}
-// retell: `retell:{id}` → {patternId}
-export function parseBoostRef(itemRef, kind) {
-  const s = String(itemRef || '').trim()
-  if (!s) return null
-  if (kind === 'retell') {
-    const m = /retell[:/]?(\d+)/.exec(s) || /(\d+)/.exec(s)
-    return m ? { patternId: Number(m[1]) } : null
-  }
-  const body = s.replace(/^memory[:/]?/, '')
-  const parts = body.split(/[:/]/).map((x) => x.trim()).filter(Boolean)
-  if (!parts.length) return null
-  return { topicId: parts[0], nodeKey: parts.slice(1).join('/') || '' }
 }

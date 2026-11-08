@@ -3,8 +3,9 @@
 // 「我学完了」按节点 key 写后端（PUT /topics/{id}/progress——谁登录记谁的行）。
 // v1 静态手册（topicsV1.js）已退役：接口失败明确报错，不再静态兜底。
 import { api, getAuth } from '../api.js'
-import { escapeHtml } from '../render.js'
+import { escapeHtml, escAttr } from '../render.js'
 import { createFocusTracker } from './library/focus.js'
+import { focusMemoryCard, topicRouteFromHash } from './boostNav.js'
 
 export async function mountTopics(el, { role } = {}) {
   // 结构化专题（topic_content 表）：列表从接口拿（含开放过滤）。
@@ -77,7 +78,7 @@ export async function mountTopics(el, { role } = {}) {
   renderList(progressMap)
 
   // ---- v2 结构化详情：节点{讲解+错题回顾+泛化题}，先想再看，节点级进度 ----
-  async function renderDetailV2(topicId) {
+  async function renderDetailV2(topicId, nodeKey = '') {
     let t
     try { t = await api.topicsV2Get(topicId) }
     catch (e) {
@@ -115,7 +116,7 @@ export async function mountTopics(el, { role } = {}) {
     // ⭐ 背诵卡（提升档素材）：节点带 memory 字段才有。先看提示面，
     // 翻开对答案，自评「记住了」= 向后端打卡（提升档过关依据）。
     const memoryBlockHtml = (n) => `
-      <div class="topic-memory" data-mem="${escapeHtml(n.key)}">
+      <div class="topic-memory" data-mem="${escAttr(n.key)}">
         <div class="topic-memory-head"><b>⭐ 背诵卡</b><span>先看提示想一想，能背出来再翻开</span></div>
         <div class="topic-memory-front">
           <p>${escapeHtml(n.memory.front || '（提示缺失）')}</p>
@@ -132,7 +133,7 @@ export async function mountTopics(el, { role } = {}) {
       </div>`
 
     const nodeHtml = (n, depth) => `
-      <section class="topic-theme" id="th-${n.key}" style="--tc:#3a7ca5;--tcs:#e9f1f7" data-key="${n.key}">
+      <section class="topic-theme" id="th-${escAttr(n.key)}" style="--tc:#3a7ca5;--tcs:#e9f1f7" data-key="${escAttr(n.key)}">
         <div class="topic-theme-head">
           <h2>${depth > 0 ? '↳ ' : ''}${escapeHtml(n.title)}</h2>
         </div>
@@ -145,7 +146,7 @@ export async function mountTopics(el, { role } = {}) {
           <h3 class="topic-sub">${escapeHtml(n.qs_label || '泛化题学习（换马甲的同款题）')}</h3>
           <ul class="topic-drill">${n.general_qs.map((q, i) => qBlock(q, i, 'general')).join('')}</ul>` : ''}
         <div class="topic-done-row">
-          <button class="topic-done-btn ${doneSet.has(n.key) ? 'done' : ''}" data-key="${n.key}">
+          <button class="topic-done-btn ${doneSet.has(n.key) ? 'done' : ''}" data-key="${escAttr(n.key)}">
             ${doneSet.has(n.key) ? '✅ 这个知识点我学完了' : '🌱 这个知识点我学完了'}
           </button>
           <span class="topic-done-hint">${doneSet.has(n.key) ? '已记录 · 点一下可取消' : '学完点这里，爸爸能看到'}</span>
@@ -235,7 +236,25 @@ export async function mountTopics(el, { role } = {}) {
         }
       })
     })
+    // 课程表口诀卡深链：#/topics/{id}?node={key} 刷新后仍定位这张背诵卡
+    if (nodeKey) {
+      const hit = focusMemoryCard(el, nodeKey)
+      if (hit && hit.message) placeBoostNote(el, hit)
+    }
     setupTopicFocus(el, t)
+  }
+
+  function placeBoostNote(root, hit) {
+    const note = document.createElement('p')
+    note.className = 'topic-boost-note'
+    note.setAttribute('role', 'status')
+    note.textContent = hit.message
+    const anchor = hit.anchor && typeof hit.anchor.insertAdjacentElement === 'function'
+      ? hit.anchor
+      : (root.querySelector('.topic-hero') || root.querySelector('.topic-page'))
+    if (!anchor) return
+    if (anchor === hit.anchor) anchor.insertAdjacentElement('afterbegin', note)
+    else anchor.appendChild(note)
   }
 
   // ---- 专题学习专注力采集（module=topics：所有学习内容统一进批改中心轨迹）----
@@ -261,9 +280,7 @@ export async function mountTopics(el, { role } = {}) {
     cleanups.push(() => tracker.destroy())
   }
 
-  // 路由：#/topics 列表；#/topics/{id} 详情（全 v2 结构化专题）
-  const segs = (location.hash.replace(/^#\/?/, '') || '').split('?')[0].split('/')
-  if (segs[0] === 'topics' && segs[1]) {
-    await renderDetailV2(segs[1])
-  }
+  // 路由：#/topics 列表；#/topics/{id} 详情；#/topics/{id}?node={key} 定位背诵卡
+  const route = topicRouteFromHash(location.hash)
+  if (route.topicId) await renderDetailV2(route.topicId, route.nodeKey)
 }
