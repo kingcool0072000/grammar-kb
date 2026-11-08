@@ -3862,6 +3862,30 @@ button.tt-task {
 .topic-memory-btn:disabled { opacity: .55; cursor: default; }
 .topic-memory-msg { display: block; margin-top: 8px; font-size: 12.5px; color: #b42318; }
 .topic-memory-done { margin: 2px 0 0; font-size: 13.5px; font-weight: 700; color: #2e7d4f; }
+.topic-memory.focus {
+  border-color: #c48a2a;
+  box-shadow: 0 0 0 3px rgba(196, 138, 42, .38);
+  scroll-margin-top: 108px;
+  animation: topic-memory-pulse 1.1s ease;
+}
+.topic-theme.focus-node {
+  outline: 2px solid #e3d3a8;
+  border-radius: 12px;
+  scroll-margin-top: 108px;
+}
+.topic-boost-note {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+@keyframes topic-memory-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(196, 138, 42, .55); }
+  100% { box-shadow: 0 0 0 3px rgba(196, 138, 42, .38); }
+}
 
 /* ===== v3.0.0 闭环版：提升档句型复述面板（模态） ===== */
 .boost-retell { position: fixed; inset: 0; z-index: 90; }
@@ -3896,6 +3920,7 @@ button.tt-task {
 .boost-retell-time { font-size: 12.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .boost-retell-msg { font-size: 12.5px; color: var(--ink-soft); flex: 1; min-width: 140px; }
 .boost-retell-miss { margin: 10px 0 0; font-size: 13.5px; color: #b42318; }
+.boost-retell-loading { margin: 10px 0 0; font-size: 13.5px; color: var(--ink-soft); }
 
 /* ===== v3.0.0 闭环版：周编辑器 ⭐ 提升档分组 ===== */
 .pe-boost {

@@ -1,6 +1,9 @@
 import { api } from '../api.js'
 import { escapeHtml, escAttr, todayIso, studyGoalMin, taskWhy, taskWhyShort } from '../render.js'
-import { openBoostRetell, parseBoostRef } from './boostRetell.js'
+import { openBoostRetell } from './boostRetell.js'
+import {
+  boostClickFromRows, boostTasksForDate, openBoostFromClick,
+} from './boostNav.js'
 
 // 学生版 · 课程表：教师计划看板-周计划的只读镜像（/plan/my-week，
 // week_view 同源数据）。只看自己 + 本周；展示周拆解汇总 + 周一至周日
@@ -31,8 +34,10 @@ export async function mountTimetable(el) {
   // 契约挂在 today 下；顶层 loop 也兜一手（并行后端落点漂移时不白屏）。
   // 旧后端两个字段都没有时整卡不渲染，不影响页面其它部分。
   const loop = (d.today && d.today.loop) || d.loop || null
-  const boostRows = ((d.days || []).find((day) => day && day.date === today)?.tasks || [])
-    .filter((t) => t && t.boost)
+  // 「去完成」跟闭环同一天（服务端北京日期）。只用浏览器本地今天时，
+  // 时区对不上会找不到行，点击像没反应。
+  const loopDate = (d.today && d.today.date) || today
+  const boostRows = boostTasksForDate(days, loopDate)
 
   // 周拆解摘要（与教师看板同口径）。泛读按书显示章区间
   // （reading_items 由后端带 title/chapter_range——「读完第6–7章」
@@ -103,7 +108,7 @@ export async function mountTimetable(el) {
           return `<div class="tt-task boost unconfig" title="本周未配置提升任务">${inner}</div>`
         return `<button type="button" class="tt-task link boost ${ok ? 'ok' : 'plan'}"
           data-boost-ref="${escAttr(b.item_ref || '')}" data-boost-kind="${escAttr(b.kind || '')}"
-          data-boost-done="${ok ? '1' : '0'}" title="${escAttr(b.kind === 'retell' ? '打开句型复述' : '去专题页背口诀卡')}">${inner}</button>`
+          data-boost-done="${ok ? '1' : '0'}" title="${escAttr(b.kind === 'retell' ? '打开句型复述' : '打开这张口诀卡')}">${inner}</button>`
       }
       const inner = `
         <span class="tt-task-ic">${TYPE_ICON[t.type] || '•'}</span>
@@ -285,36 +290,44 @@ function bindLoopCard(el, loop, boostRows) {
   const boostGo = el.querySelector('[data-boost-go]')
   if (boostGo) {
     boostGo.addEventListener('click', () => {
-      const actionable = boostRows.filter((t) => t.boost && t.boost.configured !== false)
-      const row = actionable.find((t) => !t.done) || actionable[0]
-      if (row) openBoostItem(el, boostRows, row.boost.item_ref, row.boost.kind)
+      const picked = boostClickFromRows(boostRows)
+      if (picked.missing) {
+        toastBoost(picked.message)
+        return
+      }
+      launchBoost(el, boostRows, picked.itemRef, picked.kind)
     })
   }
 }
 
-// 今日任务里的提升档行（task_key 前缀 boost:）：口诀卡→专题页；句型复述→复述面板
+function toastBoost(msg) {
+  const t = document.createElement('div')
+  t.className = 'plan-toast'
+  t.textContent = msg
+  document.body.appendChild(t)
+  setTimeout(() => t.remove(), 4200)
+}
+
+// 今日任务里的提升档行（task_key 前缀 boost:）：口诀卡→专题页指定背诵卡；句型复述→复述面板
 function bindBoostRows(el, boostRows) {
   el.querySelectorAll('[data-boost-ref]').forEach((btn) => {
     btn.addEventListener('click', () =>
-      openBoostItem(el, boostRows, btn.dataset.boostRef, btn.dataset.boostKind))
+      launchBoost(el, boostRows, btn.dataset.boostRef, btn.dataset.boostKind))
   })
 }
 
-function openBoostItem(el, boostRows, itemRef, kind) {
-  const ref = parseBoostRef(itemRef, kind)
-  if (!ref) return
-  if (kind === 'retell') {
-    if (ref.patternId == null) return
-    const row = boostRows.find((t) => t.boost && t.boost.item_ref === itemRef)
-    openBoostRetell({
-      patternId: ref.patternId,
-      label: (row && (row.text || row.label)) || '',
+function launchBoost(el, boostRows, itemRef, kind) {
+  openBoostFromClick({
+    itemRef,
+    kind,
+    rows: boostRows,
+    notify: toastBoost,
+    navigate: (hash) => { location.hash = hash },
+    openRetell: (opts) => openBoostRetell({
+      ...opts,
       onSubmitted: () => markBoostDone(el),
-    })
-    return
-  }
-  // memory：翻面自评在专题页完成，这里负责送到
-  if (ref.topicId) location.hash = `/topics/${ref.topicId}`
+    }),
+  })
 }
 
 // 句型复述提交成功后，把本页提升档的格子和今天的任务行就地翻成完成态
