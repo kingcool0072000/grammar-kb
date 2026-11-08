@@ -110,7 +110,7 @@ def test_week_advanced_retell_via_patterns(env):
     assert patterns.import_items(
         [{"lecture": 22, "sentence": "There is no point (in) doing…"}]) == 1
     pid = patterns.list_all(22)[0]["id"]
-    boost.record("malin", TUE, f"retell:{pid}", "retell")
+    boost.record("malin", TUE, f"retell:{pid}", "retell", score=8)
     assert boost.week_advanced("malin", MON, 22) is True
     assert boost.week_advanced("malin", MON, 30) is False
     assert boost.week_advanced("malin", "2026-11-16", 22) is False  # 下周不算
@@ -292,3 +292,68 @@ def test_boost_record_frozen_clock(env):
     with freeze_clock(datetime(2026, 11, 10, 12, 0, tzinfo=CN_TZ)):
         boost.record("malin", TUE, RET_REF, "retell", passed=True, score=7.5)
     assert boost.item_done("malin", TUE, RET_REF) is True
+
+
+# ---- 完成两态（pass_state：完成 ≠ 过关） ----
+
+def test_pass_state_two_states(env):
+    """memory 打卡即 passed；retell 未批 pending、低分 graded_low、
+    重交高分翻 passed（重交刷新口径）。"""
+    boost.record("malin", TUE, MEM_REF, "memory")
+    assert boost.pass_state("malin", TUE, MEM_REF) == "passed"
+    boost.record("malin", TUE, RET_REF, "retell")
+    assert boost.pass_state("malin", TUE, RET_REF) == "pending"
+    boost.record("malin", TUE, RET_REF, "retell", score=5)
+    assert boost.pass_state("malin", TUE, RET_REF) == "graded_low"
+    boost.record("malin", TUE, RET_REF, "retell", score=8)
+    assert boost.pass_state("malin", TUE, RET_REF) == "passed"
+
+
+def test_pass_state_map_window(env):
+    """窗内聚合取 MAX(score)；无记录的 ref 不在返回里。"""
+    boost.record("malin", TUE, RET_REF, "retell", score=5)
+    boost.record("malin", THU, RET_REF, "retell", score=9)
+    m = boost.pass_state_map("malin", MON, "2026-11-16")
+    assert m[RET_REF] == {"state": "passed", "day": TUE}
+    assert MEM_REF not in m
+    assert boost.pass_state_map("malin", "2026-11-16", "2026-11-20") == {}
+
+
+def test_advanced_rows_retell_needs_score(env):
+    """「基础点前进」过关口径：retell 未批/低分不算，memory 打卡算。"""
+    from grammar_kb import patterns
+    patterns.import_items(
+        [{"lecture": 22, "sentence": "There is no point (in) doing…"}])
+    pid = patterns.list_all(22)[0]["id"]     # 隔离库自增，不必是 12
+    rref = f"retell:{pid}"
+    boost.record("malin", TUE, MEM_REF, "memory")
+    boost.record("malin", TUE, rref, "retell")
+    rows = boost.advanced_rows("malin", MON, "2026-11-16")
+    assert (30, TUE) in rows
+    assert all(r[0] != 22 for r in rows)   # retell 未批不归属
+    boost.record("malin", TUE, rref, "retell", score=6)
+    assert all(r[0] != 22 for r in boost.advanced_rows("malin", MON, "2026-11-16"))
+    boost.record("malin", TUE, rref, "retell", score=7)
+    assert (22, TUE) in boost.advanced_rows("malin", MON, "2026-11-16")
+
+
+def test_schedule_boost_retell_low_score_rolls(env):
+    """欠账新口径：retell 未批（pending）不重派；批 <7 分回流下一提升日。"""
+    from grammar_kb import patterns
+    patterns.import_items(
+        [{"lecture": 30, "sentence": "The window was broken yesterday"}])
+    pid = patterns.list_all(30)[0]["id"]
+    rref = f"retell:{pid}"
+    store = _store(env)
+    store.put_week(MON, {"boost_days": [2, 4], "boost_items": [
+        {"type": "retell", "pattern_id": pid}]}, "", "malin")
+    # 周二提交未批：周四不重派（pending 不欠账）
+    boost.record("malin", TUE, rref, "retell")
+    assert _boost_rows(store, THU) == []
+    # 批 5 分：graded_low → 周四回流同一任务
+    boost.record("malin", TUE, rref, "retell", score=5)
+    thu = _boost_rows(store, THU)
+    assert [r["key"] for r in thu] == [f"boost:{rref}"]
+    # 周四重交 9 分：过关，周六兜底不再出
+    boost.record("malin", THU, rref, "retell", score=9)
+    assert _boost_rows(store, SAT) == []

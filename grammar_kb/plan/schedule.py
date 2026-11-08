@@ -523,15 +523,18 @@ class ScheduleMixin:
         sat_fallback = wn == 6 and bool(days) and max(days) < 6
         if wn not in days and not sat_fallback:
             return
-        passed = boost.passed_map(user, week_start,
-                                  add_days(week_start, 7))
+        states = boost.pass_state_map(user, week_start,
+                                      add_days(week_start, 7))
         for item in items:
             iref = boost.item_ref_of(item)
             if not iref:
                 continue  # 坏配置条目跳过（不出行）
-            done_day = passed.get(iref)
-            if done_day and done_day < ref:
-                continue  # 本周已过关：不再派生（欠账已清）
+            st = (states.get(iref) or {}).get("state")
+            st_day = (states.get(iref) or {}).get("day")
+            if st == "pending" and st_day and st_day < ref:
+                continue  # 之前提交待批：不欠账、不重派，等教师批改
+            if st == "passed" and st_day and st_day < ref:
+                continue  # 本周已过关且是之前过的：不再派生（欠账已清）
             text, detail = self._boost_label(item)
             tasks.append({
                 "type": "boost", "key": f"boost:{iref}",

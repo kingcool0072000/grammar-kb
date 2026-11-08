@@ -98,9 +98,23 @@ def loop_status(user: str, day: str, *, store=None, recite=None,
             boost_out = {"scheduled": True, "done": True, "label": label,
                          "configured": False}
         else:
+            # 两态口径（完成 ≠ 过关）：done=已提交/已打卡（当日闭环判定）；
+            # state=过关进度——memory 打卡即 passed，retell 看教师分
+            # （≥7 passed / 未批 pending / <7 graded_low 建议再练）
+            states = [plan_boost.pass_state(user, day_iso, r) for r in refs]
+            if states and all(s == "passed" for s in states):
+                state = "passed"
+            elif "graded_low" in states:
+                state = "graded_low"
+            elif "pending" in states:
+                state = "pending"
+            else:
+                state = "todo"
             boost_out = {
                 "scheduled": True,
                 "done": plan_boost.day_done(user, day_iso, refs),
+                "state": state,
+                "passed": state == "passed",
                 "label": label,
                 "configured": bool((boost_rows[0].get("boost") or {})
                                    .get("configured", True)),
@@ -120,7 +134,7 @@ def loop_status(user: str, day: str, *, store=None, recite=None,
         "streak": streak,
         "next_queue": {
             "recite_words": _recite_due_count(recite, user, nxt),
-            "micro_questions": _micro_wrong_open(micro, user),
+            "micro_questions": _micro_wrong_open(micro, user, day_iso),
         },
     }
 
@@ -160,24 +174,12 @@ def _recite_due_count(recite, user: str, day_iso: str) -> int:
 
 # ---- 微练习 ----
 
-def _micro_wrong_open(micro, user: str) -> int:
-    """micro 池中该生 wrong 未翻正题数（category=wrong 且最近一次作答
-    非正确；明日回炉展示口径，与 _pick_daily 优先级①同源）。"""
+def _micro_wrong_open(micro, user: str, day: str) -> int:
+    """明日回炉题数（与 micro._pick_daily 优先级①同一集合，见
+    micro.wrong_open_qids：category=wrong ∪ 近 3 天答错未翻正）。"""
     try:
-        with micro._connect() as conn:
-            pool = {r[0] for r in conn.execute(
-                "SELECT id FROM micro_question"
-                " WHERE status = 'published' AND category = 'wrong'")}
-            if not pool:
-                return 0
-            last: dict[int, int] = {}
-            for r in conn.execute(
-                "SELECT qid, is_correct FROM micro_log"
-                " WHERE user = ? ORDER BY id", (user,),
-            ):
-                last[r[0]] = r[1]
-            return sum(1 for q in pool if last.get(q, 0) != 1)
-    except sqlite3.Error:
+        return len(micro.wrong_open_qids(user, day))
+    except Exception:
         return 0
 
 

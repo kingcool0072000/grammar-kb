@@ -235,12 +235,16 @@ def ref_lecture(item_ref: str, kind: str = "") -> int | None:
 
 
 def advanced_rows(user: str, lo: str | None, hi: str | None) -> list:
-    """[lo, hi) 内 passed=1 且能归属到讲次的提升档记录 [(讲次, 北京日)]。
+    """[lo, hi) 内「过关」且能归属到讲次的提升档记录 [(讲次, 北京日)]。
 
+    过关口径与 :func:`pass_state_map` 一致：memory 打卡即过；retell
+    须教师批改 ≥ RETELL_PASS_SCORE（提交未批/低分不算前进）。
     lo/hi 为 None 表示该侧不限。缺表容错空列表。
     """
     sql = ("SELECT item_ref, kind, date FROM boost_log"
-           " WHERE user = ? AND passed = 1")
+           " WHERE user = ? AND passed = 1"
+           " AND (kind != 'retell'"
+           f"      OR (score IS NOT NULL AND score >= {RETELL_PASS_SCORE}))")
     args: list = [(user or "").strip()[:60]]
     if lo:
         sql += " AND date >= ?"
@@ -291,3 +295,56 @@ def passed_map(user: str, lo: str, hi: str) -> dict[str, str]:
             return {r["item_ref"]: r["d"] for r in rows}
     except sqlite3.Error:
         return {}
+
+
+# retell 过关线：教师批改 ≥7 分（与 videoStudy 批改口径一致）
+RETELL_PASS_SCORE = 7
+
+
+def pass_state_map(user: str, lo: str, hi: str) -> dict[str, dict]:
+    """[lo, hi) 内每个 item_ref 的过关状态（完成 ≠ 过关两态口径）：
+
+    - memory（及一切非 retell 事件）：任一条 passed=1 → ``passed``；
+    - retell：最高分 ≥ RETELL_PASS_SCORE → ``passed``；
+      有提交但还没批（score 全空）→ ``pending``（不欠账、不重派）；
+      最高分 < 线 → ``graded_low``（老师建议再练，回流下一提升日）。
+
+    返回 ``{item_ref: {"state": ..., "day": 窗内首次提交日}}``；
+    窗内无记录的 ref 不在返回里。
+    """
+    try:
+        with _connect() as conn:
+            conn.executescript(SCHEMA)
+            rows = conn.execute(
+                "SELECT item_ref, kind, MAX(passed) mp, MAX(score) ms,"
+                " MIN(date) d FROM boost_log"
+                " WHERE user = ? AND date >= ? AND date < ?"
+                " GROUP BY item_ref",
+                ((user or "").strip()[:60], lo[:10], hi[:10]),
+            ).fetchall()
+        out: dict[str, dict] = {}
+        for r in rows:
+            if str(r["kind"]) == "retell":
+                ms = r["ms"]
+                if ms is not None and float(ms) >= RETELL_PASS_SCORE:
+                    state = "passed"
+                elif ms is None:
+                    state = "pending"
+                else:
+                    state = "graded_low"
+            else:
+                state = "passed" if (r["mp"] or 0) == 1 else "pending"
+            out[r["item_ref"]] = {"state": state, "day": r["d"]}
+        return out
+    except sqlite3.Error:
+        return {}
+
+
+def pass_state(user: str, day: str, item_ref: str) -> str:
+    """单日单 ref 的过关状态（见 :func:`pass_state_map` 三态）；无记录 → todo。"""
+    m = pass_state_map(user, day, _next_day(day))
+    return (m.get(item_ref) or {}).get("state", "todo")
+
+
+def _next_day(day: str) -> str:
+    return (_date.fromisoformat(day) + timedelta(days=1)).isoformat()

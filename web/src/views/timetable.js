@@ -227,11 +227,18 @@ function loopCardHtml(loop) {
         go: 'reading', goText: '去泛读',
       })
   if (boost) {
+    // 两态口径（完成 ≠ 过关）：state 由后端给出——passed=已过关；
+    // pending=已提交待批改（done，闭环不卡）；graded_low=老师建议再练；
+    // 旧后端无 state 时回退 done 单态
     cells.push(boost.configured === false
       ? { name: '⭐ 提升档', state: '本周未配置提升任务', na: true }
-      : boost.done
-        ? { name: '⭐ 提升档', done: true }
-        : { name: '⭐ 提升档', state: boost.label || '今日提升任务', boost: true })
+      : boost.state === 'graded_low'
+        ? { name: '⭐ 提升档', state: '建议再练一次', boost: true }
+        : boost.state === 'pending'
+          ? { name: '⭐ 提升档', done: true, state: '已提交 · 待批改' }
+          : boost.done
+            ? { name: '⭐ 提升档', done: true, state: '已过关' }
+            : { name: '⭐ 提升档', state: boost.label || '今日提升任务', boost: true })
   }
 
   // 全绿判定：未配置提升任务（na）不算欠账，不挡闭环达成
@@ -250,7 +257,7 @@ function loopCardHtml(loop) {
         ${cells.map((c) => `
           <div class="tt-loop-cell ${c.done ? 'done' : c.na ? 'na' : 'todo'}" ${c.boost ? 'data-boost-cell' : ''}>
             <span class="tt-loop-name">${c.name}</span>
-            <b class="tt-loop-state" title="${escAttr(c.state || '')}">${c.done ? '✓' : escapeHtml(c.state || '')}</b>
+            <b class="tt-loop-state" title="${escAttr(c.state || '')}">${c.done ? (c.state ? `✓ ${escapeHtml(c.state)}` : '✓') : escapeHtml(c.state || '')}</b>
             ${c.go ? `<button type="button" class="tt-loop-go" data-loop-go="${c.go}">${c.goText} →</button>` : ''}
             ${c.boost ? '<button type="button" class="tt-loop-go" data-boost-go>去完成 →</button>' : ''}
           </div>`).join('')}

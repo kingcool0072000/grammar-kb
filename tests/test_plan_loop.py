@@ -341,3 +341,74 @@ def test_my_week_includes_loop(env, monkeypatch):
     assert data["week_start"] == MON
     assert len(data["days"]) == 7
     assert "breakdown" in data and "completion" in data
+
+
+# ---- 评审修复回归：明日回炉同源 + 提升档两态 ----
+
+def test_loop_next_queue_includes_recent_wrong(env):
+    """回炉计数与 _pick_daily 优先级① 同源：近 3 天答错的任意类目题都算
+    （此前只数 category=wrong，漏掉 tense 等近错题）。"""
+    with freeze_clock(datetime(2026, 11, 10, 12, 0, tzinfo=CN_TZ)):
+        store, recite, micro = _stores(env)
+        _put_week(store, {})
+        qt = micro.add_question(category="tense", stem="t1",
+                                options=["A", "B"], answer="A",
+                                status="published")
+        con = sqlite3.connect(env["fce"])
+        con.execute(
+            "INSERT INTO micro_log (user, qid, date, choice, is_correct)"
+            " VALUES ('malin', ?, ?, 'B', 0)", (qt, "2026-11-09"))  # 昨天错
+        con.commit()
+        con.close()
+        out = loop_status("malin", TUE, store=store, recite=recite,
+                          micro=micro)
+        assert out["next_queue"]["micro_questions"] == 1
+        # 此后答对 → 翻正，回炉清零
+        con = sqlite3.connect(env["fce"])
+        con.execute(
+            "INSERT INTO micro_log (user, qid, date, choice, is_correct)"
+            " VALUES ('malin', ?, ?, 'A', 1)", (qt, TUE))
+        con.commit()
+        con.close()
+        out = loop_status("malin", TUE, store=store, recite=recite,
+                          micro=micro)
+    assert out["next_queue"]["micro_questions"] == 0
+
+
+def test_loop_boost_pending_and_low_states(env):
+    """提升档两态：提交未批 done=True/state=pending（闭环不卡）；
+    批低分 done=True/state=graded_low；过关 state=passed。"""
+    with freeze_clock(datetime(2026, 11, 10, 12, 0, tzinfo=CN_TZ)):
+        store, recite, micro = _stores(env)
+        _put_week(store, {"boost_days": [2, 4],
+                          "boost_items": [{"type": "memory",
+                                           "topic_id": "lecture-30-passive-2",
+                                           "node_key": "k2"}]})
+        # 未做
+        out = loop_status("malin", TUE, store=store, recite=recite,
+                          micro=micro)
+        assert out["boost"]["state"] == "todo"
+        assert out["boost"]["done"] is False
+        # 打卡 → passed（memory 打卡即过关）
+        plan_boost.record("malin", TUE, MEM_REF, "memory")
+        out = loop_status("malin", TUE, store=store, recite=recite,
+                          micro=micro)
+        assert out["boost"]["done"] is True
+        assert out["boost"]["state"] == "passed"
+        assert out["boost"]["passed"] is True
+        # 换 retell 任务：提交未批 → pending，done=True（闭环不卡批改延迟）
+        _put_week(store, {"boost_days": [2, 4],
+                          "boost_items": [{"type": "retell",
+                                           "pattern_id": 12}]})
+        plan_boost.record("malin", TUE, "retell:12", "retell")
+        out = loop_status("malin", TUE, store=store, recite=recite,
+                          micro=micro)
+        assert out["boost"]["done"] is True
+        assert out["boost"]["state"] == "pending"
+        # 批 5 分 → graded_low（过关不达成）
+        plan_boost.record("malin", TUE, "retell:12", "retell", score=5)
+        out = loop_status("malin", TUE, store=store, recite=recite,
+                          micro=micro)
+        assert out["boost"]["done"] is True
+        assert out["boost"]["state"] == "graded_low"
+        assert out["boost"]["passed"] is False
