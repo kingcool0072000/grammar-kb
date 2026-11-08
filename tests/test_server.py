@@ -517,3 +517,40 @@ def test_topics_progress_flow(isolated_app):
 
         # 未登录 401
         assert c.get("/topics/progress").status_code == 401
+
+
+def test_topics_progress_list_matches_detail_for_shared_topic(isolated_app, tmp_path):
+    """多人专属专题：列表和详情返回同一份 done_keys（不再是列表 0、详情 3）。"""
+    import sqlite3
+
+    with TestClient(isolated_app) as c:
+        stu = _login(c, "malin")
+        r = c.put(
+            "/topics/tense-22-28/progress",
+            json={"done_keys": ["n3", "n1", "n2"], "assigned_user": "malin,mxy"},
+            headers=stu,
+        )
+        assert r.status_code == 200, r.text
+        detail = r.json()["data"]
+        assert detail["done_keys"] == ["n1", "n2", "n3"]
+        # 开放名单收成正在学的这个学生，不再整串落库
+        assert detail["assigned_user"] == "malin"
+
+        listed = c.get("/topics/progress", headers=stu).json()["data"]
+        match = [row for row in listed if row["topic_id"] == "tense-22-28"]
+        assert len(match) == 1
+        assert match[0]["done_keys"] == detail["done_keys"]
+
+        # 旧行仍把「malin,mxy」整串存在归属上：刷新列表也不能丢掉
+        con = sqlite3.connect(tmp_path / "fce.db")
+        con.execute(
+            "UPDATE topic_progress SET assigned_user = 'malin,mxy'"
+            " WHERE user = 'malin' AND topic_id = 'tense-22-28'"
+        )
+        con.commit()
+        con.close()
+        listed = c.get("/topics/progress", headers=stu).json()["data"]
+        match = [row for row in listed if row["topic_id"] == "tense-22-28"]
+        got = c.get("/topics/tense-22-28/progress", headers=stu).json()["data"]
+        assert len(match) == 1
+        assert match[0]["done_keys"] == got["done_keys"] == ["n1", "n2", "n3"]
