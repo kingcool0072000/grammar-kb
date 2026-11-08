@@ -191,7 +191,8 @@ class PlanStore(
                 raise ValueError("tasks 项须为对象")
             row: dict = {}
             for k in ("type", "key", "text", "detail", "article_id",
-                      "lecture", "quota", "book", "video_id", "vid", "why"):
+                      "lecture", "quota", "book", "video_id", "vid", "why",
+                      "boost"):
                 if t.get(k) is not None:
                     row[k] = t.get(k)
             for k in ("video_id", "vid"):

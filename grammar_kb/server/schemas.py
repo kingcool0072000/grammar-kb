@@ -5,10 +5,11 @@
 """
 from __future__ import annotations
 
+import re
 from typing import Optional
 
 try:
-    from pydantic import BaseModel, Field
+    from pydantic import BaseModel, Field, model_validator
 
     class ExamRecordIn(BaseModel):
         """作业成绩请求体（模块级定义：本文件启用延迟注解，闭包内模型无法被 FastAPI 解析）。"""
@@ -151,12 +152,39 @@ try:
         enabled: bool = True
 
     class VideoRetellIn(BaseModel):
-        """学生提交视频复述录音（base64，≤10 分钟）。"""
+        """学生提交复述录音（base64，≤10 分钟）。
 
-        vid: str = Field(min_length=11, max_length=16)
+        ref_kind=video 时 vid=YouTube 11 位 ID（默认，兼容旧前端）；
+        ref_kind=pattern 时 vid=句型 pattern_item.id（数字字符串）。
+        """
+
+        vid: str = Field(min_length=1, max_length=16)
         audio_b64: str = Field(min_length=8)
         mime: str = Field(default="audio/webm", max_length=40)
         duration_sec: int = Field(default=0, ge=0, le=600)
+        ref_kind: str = Field(default="video", max_length=16)
+
+        @model_validator(mode="after")
+        def _check_vid_shape(self):
+            if self.ref_kind == "pattern":
+                if not self.vid.isdigit():
+                    raise ValueError("ref_kind=pattern 时 vid 须为句型 id（纯数字）")
+            elif not re.fullmatch(r"[A-Za-z0-9_-]{11}", self.vid):
+                raise ValueError("vid 须为 YouTube 视频 ID（11 位字母数字）")
+            return self
+
+    class PatternItemIn(BaseModel):
+        """单条句型（提升档「句型跟读复述」素材，导入用）。"""
+
+        lecture: int = Field(ge=1, le=99)
+        sentence: str = Field(min_length=1, max_length=500)
+        translation: str = Field(default="", max_length=500)
+        hints: list[str] = Field(default_factory=list, max_length=8)
+
+    class PatternsImportIn(BaseModel):
+        """句型批量导入 body：{"items": [PatternItemIn, ...]}。"""
+
+        items: list[PatternItemIn] = Field(min_length=1, max_length=200)
 
     class VideoGradeIn(BaseModel):
         """教师给复述录音打分（10 分制）。"""
@@ -215,6 +243,7 @@ except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
     VideoItemIn = None
     VideoRetellIn = None
     VideoGradeIn = None
+    PatternsImportIn = None
     MicroAnswerIn = None
     MicroSubmitIn = None
     MicroQuestionIn = None

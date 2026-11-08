@@ -60,6 +60,8 @@ RULES: list[dict] = [
     {"id": "exam_user_scope", "name": "成绩只认该学生名下", "default": 1,
      "desc": "完成判定只统计归属为该学生的成绩登记（教师替孩子登记时"
              "请选对「学生」）；关闭则不过滤归属（兼容遗留数据）"},
+    {"id": "boost_gate_lecture", "name": "提升档过关才算讲次完成", "default": 0,
+     "desc": "开启后：讲次完成 = 成绩登记 ∪ 专题学完 ∪ 该讲当周提升档过关"},
 ]
 
 # tasks JSON 结构（全部字段可缺省）：
@@ -82,4 +84,11 @@ RULES: list[dict] = [
 #                                   # 周六集中 2 个、周日兜底清剩余（优先于 videos）
 #   "micro": 1                      # 微练习开关：不排计划行、不进完成率分母；
 #                                   # 周视图据此带 micro_enabled、周目标出微练习维度
+#   "boost_days": [2, 4],           # 提升档日（数字=周几，1=周一；每周 2 天）。
+#                                   # 缺省且 boost_items 非空时默认 [2,4]（周二/周四）
+#   "boost_items": [                # 提升档任务（每天一件难事，v3.0.0 设计 §2.3）：
+#     {"type": "memory",            #   A) 专题节点口诀卡翻面自评
+#      "topic_id": "lecture-30-passive-2", "node_key": "k2"} |
+#     {"type": "retell", "pattern_id": 12}   #   B) 句型跟读复述
+#   ]
 # }

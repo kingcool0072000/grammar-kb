@@ -19,6 +19,7 @@ def register_plan(app, ctx):
     plan = ctx.plan
     homework_admin = ctx.homework_admin
     library = ctx.library
+    micro = ctx.micro
 
     # ---- 计划表（教师专属：周维度计划 + 实时完成度 + 上周回顾） ----
 
@@ -107,12 +108,23 @@ def register_plan(app, ctx):
         """学生课程表：自己本周的周计划只读视图（week_view 同源数据）。
 
         学生只能看自己（教师身份给 403，教师看学生走 /plan/week-view）。
+        today 结构带今日闭环四格（plan/loop.loop_status，现算不缓存；
+        复用本端点已构造的 plan/recite/micro，一次调用内查完）。
         """
         if getattr(request.state, "role", "student") != "student":
             raise HTTPException(status_code=403, detail="课程表仅学生账号使用")
-        from ..clock import current_monday
+        from ..clock import current_monday, today_cn
+        from ..plan import loop as plan_loop
         week_start = current_monday().isoformat()
-        return _ok(plan.week_view(week_start, user=request.state.user))
+        data = plan.week_view(week_start, user=request.state.user)
+        today_iso = today_cn().isoformat()
+        data["today"] = {
+            "date": today_iso,
+            "loop": plan_loop.loop_status(
+                request.state.user, today_iso,
+                store=plan, recite=recite, micro=micro),
+        }
+        return _ok(data)
 
     @app.get("/plan/rules")
     def plan_rules(request: "fastapi.Request", user: str = "malin"):

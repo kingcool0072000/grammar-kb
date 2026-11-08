@@ -236,6 +236,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("POST", "/video-study/retells"),
         ("GET", "/video-study/retells"),
         ("GET", "/video-study/retells/"),
+        # 句型清单（v3 提升档「句型跟读复述」素材，只读；导入走教师专属
+        # /patterns-admin/import，不在此列）
+        ("GET", "/patterns"),
         # 微练习（学生拉当日题 + 判分提交；/micro-admin/* 教师专属不在此列）
         ("GET", "/micro/today"),
         ("POST", "/micro/submit"),

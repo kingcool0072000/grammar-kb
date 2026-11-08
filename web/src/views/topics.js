@@ -112,12 +112,32 @@ export async function mountTopics(el, { role } = {}) {
         <button class="topic-reveal-btn reopen">再想一遍，收起答案</button>
       </li>`
 
+    // ⭐ 背诵卡（提升档素材）：节点带 memory 字段才有。先看提示面，
+    // 翻开对答案，自评「记住了」= 向后端打卡（提升档过关依据）。
+    const memoryBlockHtml = (n) => `
+      <div class="topic-memory" data-mem="${escapeHtml(n.key)}">
+        <div class="topic-memory-head"><b>⭐ 背诵卡</b><span>先看提示想一想，能背出来再翻开</span></div>
+        <div class="topic-memory-front">
+          <p>${escapeHtml(n.memory.front || '（提示缺失）')}</p>
+          <button class="topic-memory-flip">翻开</button>
+        </div>
+        <div class="topic-memory-back" hidden>
+          <div class="topic-cardbox topic-memory-backbox">${escapeHtml(n.memory.back || '（口诀缺失）')}</div>
+          <div class="topic-memory-btns">
+            <button class="topic-memory-btn pass">记住了 ✓</button>
+            <button class="topic-memory-btn again">还没记住 ↻</button>
+          </div>
+        </div>
+        <span class="topic-memory-msg"></span>
+      </div>`
+
     const nodeHtml = (n, depth) => `
       <section class="topic-theme" id="th-${n.key}" style="--tc:#3a7ca5;--tcs:#e9f1f7" data-key="${n.key}">
         <div class="topic-theme-head">
           <h2>${depth > 0 ? '↳ ' : ''}${escapeHtml(n.title)}</h2>
         </div>
         ${n.explain ? `<div class="topic-cardbox">${n.explain}</div>` : ''}
+        ${n.memory && (n.memory.front || n.memory.back) ? memoryBlockHtml(n) : ''}
         ${(n.wrong_qs || []).length ? `
           <h3 class="topic-sub">错题讲解回顾（先想再点开）</h3>
           <ul class="topic-replay">${n.wrong_qs.map((q, i) => qBlock(q, i, 'wrong')).join('')}</ul>` : ''}
@@ -155,6 +175,38 @@ export async function mountTopics(el, { role } = {}) {
       btn.addEventListener('click', () => {
         if (btn.classList.contains('reopen')) btn.closest('li').classList.remove('open')  // 收起重想
         else btn.closest('li').classList.add('open')
+      })
+    })
+    // ⭐ 背诵卡：翻开 → 自评。记住了 = memory-pass 打卡（提升档过关）；
+    // 还没记住 = 折回提示面可再翻；接口失败保留现场可重试。
+    el.querySelectorAll('.topic-memory').forEach((block) => {
+      const front = block.querySelector('.topic-memory-front')
+      const back = block.querySelector('.topic-memory-back')
+      const msg = block.querySelector('.topic-memory-msg')
+      const flip = block.querySelector('.topic-memory-flip')
+      if (flip) flip.addEventListener('click', () => {
+        front.hidden = true
+        back.hidden = false
+      })
+      const again = block.querySelector('.topic-memory-btn.again')
+      if (again) again.addEventListener('click', () => {
+        back.hidden = true
+        front.hidden = false
+        if (msg) msg.textContent = ''
+      })
+      const pass = block.querySelector('.topic-memory-btn.pass')
+      if (pass) pass.addEventListener('click', async () => {
+        pass.disabled = true
+        try {
+          await api.topicMemoryPass(topicId, block.dataset.mem || '')
+          block.classList.add('passed')
+          block.innerHTML =
+            '<div class="topic-memory-head"><b>⭐ 背诵卡</b></div>' +
+            '<p class="topic-memory-done">⭐ 已打卡 · 这个口诀记住了</p>'
+        } catch (e) {
+          pass.disabled = false
+          if (msg) msg.textContent = `⚠️ 打卡失败：${e.message}`
+        }
       })
     })
     const barI = el.querySelector('#topic-bar-i')

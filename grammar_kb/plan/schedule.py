@@ -8,6 +8,7 @@ from datetime import date, timedelta
 from typing import Optional
 
 from ..clock import cn_dt, monday_of, today_cn, week_bounds
+from . import boost
 from .ctx import WeekCtx
 from .util import _short, _task_key, add_days, completion_percent, task_public
 
@@ -256,6 +257,8 @@ class ScheduleMixin:
                     })
                 if lec in today_hw:
                     tasks.append(hw_row(lec))
+        # 提升档行（boost_days 当日派生，欠账滚到下一个 boost_day/周六）
+        self._append_boost_tasks(tasks, t, user, week_start, ref, dow)
         self._append_video_tasks(tasks, t, user, lo, ref, upto, dow, wd_left,
                                  ctx=ctx)
         return tasks
@@ -488,6 +491,112 @@ class ScheduleMixin:
             "text": f"看视频+复述《{_short(title, 14)}》",
             "detail": detail,
         }
+
+    # ---- 提升档（v3.0.0 闭环版）：boost_days 当日派生 boost_items 行 ----
+
+    def _append_boost_tasks(self, tasks: list[dict], t: dict, user: str,
+                            week_start: str, ref: str, dow: int) -> None:
+        """提升档派生行：boost_days 对应日为每个 boost_item 出一行。
+
+        - boost_days 配了、items 空：提升日出「未配置」说明行
+          （configured=False，完成判定恒亮，不占完成率）；
+        - 两者都没配：完全不派生（默认 [2,4] 只在 items 非空时生效，
+          零配置不产生噪音行）；
+        - 欠账滚动：item 本周未过关 → 之后每个 boost_day 原样重现
+          （同「剩余重摊」思路：错过自动滚入后面的天），所有 boost_day
+          都错过 → 周六兜底；本周已过关不再派生（当日过关的 ✓ 行照出，
+          完成态由 completion 走 plan/boost.item_done 点亮）。
+        """
+        items = [x for x in (t.get("boost_items") or []) if isinstance(x, dict)]
+        days = boost.boost_days_of(t, items)
+        wn = dow + 1  # 周几（1=周一 … 6=周六 7=周日）
+        if not items:
+            if days and wn in days:
+                tasks.append({
+                    "type": "boost", "key": "boost:none",
+                    "text": "⭐ 提升日（本周未配置提升任务）",
+                    "detail": "教师还没给本周排提升任务，这天不用做难事",
+                    "boost": {"item_ref": "", "kind": "", "configured": False},
+                })
+            return
+        # 周六兜底：所有排定的 boost_day（都在周六前）都已过、还有欠账
+        sat_fallback = wn == 6 and bool(days) and max(days) < 6
+        if wn not in days and not sat_fallback:
+            return
+        passed = boost.passed_map(user, week_start,
+                                  add_days(week_start, 7))
+        for item in items:
+            iref = boost.item_ref_of(item)
+            if not iref:
+                continue  # 坏配置条目跳过（不出行）
+            done_day = passed.get(iref)
+            if done_day and done_day < ref:
+                continue  # 本周已过关：不再派生（欠账已清）
+            text, detail = self._boost_label(item)
+            tasks.append({
+                "type": "boost", "key": f"boost:{iref}",
+                "text": text, "detail": detail,
+                "boost": {"item_ref": iref,
+                          "kind": str(item.get("type") or ""),
+                          "configured": True},
+            })
+
+    def _boost_label(self, item: dict) -> tuple[str, str]:
+        """提升任务行文案：(text, detail)。素材查不到时兜底「⭐ 提升任务」。"""
+        kind = str(item.get("type") or "")
+        if kind == "memory":
+            title = self._memory_node_title(str(item.get("topic_id") or ""),
+                                            str(item.get("node_key") or ""))
+            if title:
+                return (f"⭐ 提升：背诵〈{_short(title, 20)}〉口诀卡",
+                        "口诀卡翻面自评：记住了即过关")
+        elif kind == "retell":
+            sent = self._pattern_sentence(item.get("pattern_id"))
+            if sent:
+                return (f"⭐ 提升：句型复述〈{_short(sent, 24)}〉",
+                        "听原句跟读复述并提交，教师批改 ≥7 分过关")
+        return "⭐ 提升任务", "本周提升档任务"
+
+    def _memory_node_title(self, topic_id: str,
+                           node_key: str) -> Optional[str]:
+        """专题节点标题（label 用）。专题缺失/坏 JSON/解析失败返回 None。"""
+        if not topic_id or not node_key:
+            return None
+        try:
+            from ..topics import TopicStore
+            topic = TopicStore(db_path=self.db_path).get_topic(
+                topic_id, expand=False)
+        except Exception:
+            return None
+        hit: list[str] = []
+
+        def walk(nodes) -> None:
+            for n in nodes or []:
+                if not isinstance(n, dict):
+                    continue
+                if str(n.get("key") or "") == node_key:
+                    hit.append(str(n.get("title") or ""))
+                walk(n.get("children"))
+
+        walk((topic or {}).get("nodes"))
+        return hit[0] if hit and hit[0] else None
+
+    def _pattern_sentence(self, pattern_id) -> Optional[str]:
+        """句型原句（label 用）。patterns 模块未部署/查不到返回 None。"""
+        try:
+            pid = int(pattern_id)
+        except (TypeError, ValueError):
+            return None
+        try:
+            from .. import patterns
+            row = patterns.get(pid)
+        except ImportError:
+            return None  # 句型模块（并行车道）未部署：兜底 label
+        except Exception:
+            return None
+        if not isinstance(row, dict):
+            return None
+        return str(row.get("sentence") or "").strip() or None
 
     def _video_title(self, vid: str) -> Optional[str]:
         try:

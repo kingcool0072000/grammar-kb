@@ -6,6 +6,16 @@ import { fmtDur } from '../fmt.js'
 // 评语 + 删除；音频走二进制端点直连（token 查询参数）。
 // 与精读录音批改保持同一套交互，教师无学习成本。
 
+// 提升档句型复述（ref_kind='pattern'）与视频复述共用本视图：
+// 行头标注「句型复述」，其余批改流程（评分/评语/删除）零改动。
+function retellSourceHtml(r) {
+  if (r.ref_kind === 'pattern') {
+    const what = r.pattern_sentence || r.sentence || `句型 #${r.vid}`
+    return `<span class="tag vr-kind-pattern">🗣 句型复述</span> ${escapeHtml(String(what).slice(0, 60))}`
+  }
+  return `🎬 ${escapeHtml(r.video_title || r.vid)}`
+}
+
 export async function renderVideoReview(el, retells, opts) {
   const onBack = (opts || {}).onBack
   const pending = retells.filter((r) => r.status === 'pending')
@@ -13,8 +23,8 @@ export async function renderVideoReview(el, retells, opts) {
   el.innerHTML = `
     <div class="view-head">
       <button class="fce-back-btn" id="vr-back">← 返回批改中心</button>
-      <h1>视频复述批改${pending.length ? `（待批 ${pending.length}）` : ''}</h1>
-      <p>听学生看完视频后的复述录音，10 分制打分 + 评语。</p>
+      <h1>复述批改${pending.length ? `（待批 ${pending.length}）` : ''}</h1>
+      <p>听学生的复述录音（视频复述 / 句型复述），10 分制打分 + 评语。</p>
     </div>
     <div id="vr-list"></div>
   `
@@ -25,7 +35,7 @@ export async function renderVideoReview(el, retells, opts) {
     row.className = 'reading-review-card'
     row.innerHTML = `
       <div class="reading-review-head">
-        <b>${escapeHtml(r.user)}</b> · 🎬 ${escapeHtml(r.video_title || r.vid)}
+        <b>${escapeHtml(r.user)}</b> · ${retellSourceHtml(r)}
         <span class="fce-his-date">${fmtDur(r.duration_sec || 0)} · ${(r.created_at || '').slice(0, 16).replace('T', ' ')}</span>
       </div>
       <audio controls preload="metadata" style="width:100%;margin:8px 0"></audio>
@@ -84,7 +94,7 @@ export function videoRetellRow(r) {
     : '<b class="fce-his-score pend">待批改</b>'
   return `
     <div class="fce-his-row reading-rec-row" data-vretell="${r.id}">
-      <span class="fce-his-what">${escapeHtml(r.user)} · 🎬 ${escapeHtml(r.video_title || r.vid)}</span>
+      <span class="fce-his-what">${escapeHtml(r.user)} · ${retellSourceHtml(r)}</span>
       ${score}
       <span class="fce-his-date">${fmtDur(r.duration_sec || 0)} · ${(r.created_at || '').slice(0, 10)}</span>
     </div>`

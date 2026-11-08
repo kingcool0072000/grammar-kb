@@ -7,6 +7,7 @@ from typing import Optional
 
 from .. import dbreg
 from ..clock import now_cn
+from . import boost
 from .schema import RULES, SCHEMA
 class RulesMixin:
 
@@ -95,9 +96,13 @@ class RulesMixin:
     def lecture_done(self, lo: Optional[str], hi: Optional[str], user: str,
                      kind: str = "lecture") -> set[int]:
         """讲次完成集合（唯一口径）：成绩登记 ∪ 自学专题学完（后者仅
-        lecture 口径且规则开启时）。hw 口径只认作业卷成绩。"""
+        lecture 口径且规则开启时）。hw 口径只认作业卷成绩。
+        ``boost_gate_lecture`` 开启时再 ∪ 第三支：该窗口内提升档过关
+        关联的讲次（v3.0.0「基础点前进」，默认关）。"""
         out = self._exam_done_lectures(lo, hi, user, kind)
         if kind == "lecture" and self._flag(user, "topic_counts_lecture"):
             out |= self._topic_done_lectures(lo or "0000-01-01",
                                              hi or "9999-12-31", user)
+        if kind == "lecture" and self._flag(user, "boost_gate_lecture"):
+            out |= boost.lectures_advanced(user, lo, hi)
         return out

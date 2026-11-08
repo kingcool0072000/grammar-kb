@@ -1,0 +1,46 @@
+[
+  {
+    "lecture": 30,
+    "sentence": "The Great Wall was built more than two thousand years ago.",
+    "translation": "长城建于两千多年前。",
+    "hints": [
+      "什么时候建的？（was built + 时间）",
+      "谁建的需要说出来吗？（不知道谁做时 by 短语整个省略）"
+    ]
+  },
+  {
+    "lecture": 30,
+    "sentence": "English is spoken by more and more people around the world.",
+    "translation": "全世界越来越多的人说英语。",
+    "hints": [
+      "一般现在时的被动是哪两个词？（is/are + 过去分词）",
+      "动作的执行者用什么引出？（by）"
+    ]
+  },
+  {
+    "lecture": 30,
+    "sentence": "The classroom must be cleaned every day.",
+    "translation": "教室必须每天打扫。",
+    "hints": [
+      "情态动词后面跟被动是什么结构？（must be + 过去分词）",
+      "谁打扫的重要吗？"
+    ]
+  },
+  {
+    "lecture": 30,
+    "sentence": "A new library is being built in our school.",
+    "translation": "我们学校正在建一座新图书馆。",
+    "hints": [
+      "「正在被建」是哪种时态的被动？（现在进行时 is/are being done）"
+    ]
+  },
+  {
+    "lecture": 30,
+    "sentence": "The flowers should be watered every day, or they will die.",
+    "translation": "花应该每天浇，否则会枯死。",
+    "hints": [
+      "「应该被浇」怎么表达？（should be + 过去分词）",
+      "or they will die 是什么用法？（否则/要不然，警示结果）"
+    ]
+  }
+]

@@ -48,6 +48,7 @@ class WeekCtx:
         self._exam_rows: list | None = None      # (lecture, date_raw, kind)
         self._exam_has_user: bool | None = None
         self._topic_rows: list | None = None     # (lecture, cn_day)
+        self._boost_rows: list | None = None     # (lecture, date) 提升档过关
         self._flag_cache: dict[str, int] = {}
         self._fce_rows: list | None = None       # (label, cn_dt)
         self._article_rows: list | None = None   # (article_id, created_at)
@@ -141,6 +142,15 @@ class WeekCtx:
                 self._topic_rows = []
         return self._topic_rows
 
+    def _boost_lecture_rows(self) -> list:
+        """周窗口内提升档过关的 (讲次, 北京日)。镜像 boost.lectures_advanced，
+        仅在 boost_gate_lecture 规则开启时预取（规则默认关，不白查一趟）。"""
+        if self._boost_rows is None:
+            from . import boost
+            self._boost_rows = boost.advanced_rows(
+                self.user, self.week_start, self.week_hi)
+        return self._boost_rows
+
     def lecture_done(self, lo: str, hi: str, kind: str) -> set:
         """[lo, hi) 讲次完成集合（ctx 窗口内切片，越界回退逐窗查询）。"""
         if not (self.week_start <= _sql_date(lo) and _sql_date(hi) <= self.week_hi):
@@ -150,6 +160,9 @@ class WeekCtx:
                if k == kind and lo_d <= d < hi_d}
         if kind == "lecture" and self.flag("topic_counts_lecture"):
             out |= {lec for lec, d in self._topic_done_rows()
+                    if lo_d <= d < hi_d}
+        if kind == "lecture" and self.flag("boost_gate_lecture"):
+            out |= {lec for lec, d in self._boost_lecture_rows()
                     if lo_d <= d < hi_d}
         return out
 

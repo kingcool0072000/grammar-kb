@@ -15,7 +15,9 @@ stem 全等。upsert 幂等跳过，批量脚本可重复跑。
 
 抽题（:meth:`MicroStore.today` 首次调用生成，确定性随机
 ``random.Random(f"{user}:{day}")`` 保证同日同题）：
-1. 错题未翻正最优先（category='wrong' 且该题最近一次作答非 correct）取 1；
+1. 错题未翻正最优先，并集「category='wrong' 且该题最近一次作答非
+   correct」∪「近 3 天答错且此后未答对过」（micro_log 读出，当日错题
+   次日自动回炉）取 1；
 2. 记忆库保底：phrasal/idiom/tense 里「最久没考」的类随机取 1（空类跳过）；
 3. 其余位置按 topic 最久没考（NULL 最先）→ 本周 focus_kps 倾斜 → 随机，
    近 3 天答对过的题降权不排除。
@@ -42,6 +44,8 @@ STATUSES = frozenset({"draft", "published"})
 DAILY_N = 3
 # 近 N 天答对过的题降权（北京日历，含当天）
 RECENT_CORRECT_DAYS = 3
+# 近 N 天答错过的题并入优先级①回炉（北京日历，含当天；当日错次日见）
+RECENT_WRONG_DAYS = 3
 # update_question 白名单字段
 EDITABLE_FIELDS = frozenset({"category", "topic", "stem", "options", "answer",
                              "explain", "status"})
@@ -248,6 +252,10 @@ class MicroStore:
             # 该生逐题最近一次作答（按 id 升序覆盖 → 最近一条）与最近答对日
             last_by_qid: dict[int, tuple[int, str]] = {}
             last_correct: dict[int, str] = {}
+            # 近 N 天答错过的题（当日错次日回炉；此后答对过则不再算欠账）
+            wrong_floor = (date.fromisoformat(day)
+                           - timedelta(days=RECENT_WRONG_DAYS - 1)).isoformat()
+            recent_wrong: set[int] = set()
             for r in conn.execute(
                 "SELECT qid, is_correct, date FROM micro_log"
                 " WHERE user = ? ORDER BY id", (user,),
@@ -257,6 +265,8 @@ class MicroStore:
                     prev = last_correct.get(r["qid"])
                     if prev is None or r["date"] > prev:
                         last_correct[r["qid"]] = r["date"]
+                elif r["date"] >= wrong_floor:
+                    recent_wrong.add(r["qid"])
             # 类目/专题最近被考日（今天窗口按练习日 day 比，与 log.date 同口径）
             cat_last: dict[str, str] = {}
             topic_last: dict[str, str] = {}
@@ -285,11 +295,12 @@ class MicroStore:
 
         picked: list[int] = []
 
-        # 1) 错题未翻正最优先：category=wrong 且最近一次作答非 correct
+        # 1) 错题未翻正最优先：category=wrong 且最近一次作答非 correct，
+        #    并集近 3 天答错且此后未答对过的题（当日错题次日自动回炉）
         wrong_open = sorted(
             q["id"] for q in pool
-            if q["category"] == "wrong"
-            and last_by_qid.get(q["id"], (0, ""))[0] != 1
+            if last_by_qid.get(q["id"], (0, ""))[0] != 1
+            and (q["category"] == "wrong" or q["id"] in recent_wrong)
         )
         if wrong_open:
             picked.append(rng.choice(wrong_open))
