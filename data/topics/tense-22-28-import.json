@@ -1,0 +1,896 @@
+{
+  "meta": {
+    "topic_id": "tense-22-28",
+    "title": "哈1 · 第22～28讲 动词时态专题",
+    "subtitle": "八种时态手册：总览 → 一般现在/过去/将来 → 现在进行 → 过去将来/过去进行 → 现在完成（含延续转换）→ 过去完成 → 标志词与固定句型 → 综合坑（if 双身份 / 宾从三律 / raise·rise 等）。绑定马林；作业卷原题只在「你错过的」里，热身题全部自含。",
+    "emoji": "⏰",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "overview",
+        "title": "① 八种时态总览——一张对照表先装进脑子",
+        "explain": "<p>马林你好！哈一第 22～28 讲其实在讲<strong>同一件事</strong>：谓语动词怎么告诉别人「这件事发生在什么时间、以什么方式」。英语里常用的就是下面这<strong>八种时态</strong>。先把这张总表背熟，后面每一关都是在往格子里填细节。</p><h5>八种时态 · 构成 + 一句话感觉</h5><table><tr><th>时态</th><th>构成</th><th>一句话感觉</th><th>典型标志</th></tr><tr><td>一般现在时</td><td class=\"en\">do / does</td><td>习惯、真理、现在状态</td><td class=\"en\">always / every day / on Sundays</td></tr><tr><td>一般过去时</td><td class=\"en\">did</td><td>过去某时做了（已翻篇）</td><td class=\"en\">yesterday / ago / last week / in 2015</td></tr><tr><td>一般将来时</td><td class=\"en\">will do / be going to do</td><td>将来要发生</td><td class=\"en\">tomorrow / next week / in two days / soon</td></tr><tr><td>过去将来时</td><td class=\"en\">would do / was(were) going to do</td><td>站在过去看将来（常在 said/told 后）</td><td class=\"en\">said / told / hoped + the next day</td></tr><tr><td>现在进行时</td><td class=\"en\">am/is/are + doing</td><td>此刻/这段时间正在做</td><td class=\"en\">now / Look! / Listen! / these days</td></tr><tr><td>过去进行时</td><td class=\"en\">was/were + doing</td><td>过去某时正在做（电影画面）</td><td class=\"en\">at 8 last night / this time yesterday / when…</td></tr><tr><td>现在完成时</td><td class=\"en\">have/has + done</td><td>过去→现在的桥梁（影响/持续/经历）</td><td class=\"en\">since / for / already / yet / ever / so far</td></tr><tr><td>过去完成时</td><td class=\"en\">had + done</td><td>过去的过去（更早那一下）</td><td class=\"en\">by the time / by the end of last… / before + 过去</td></tr></table><div class=\"topic-callout\"><b class=\"tag\">自学路线</b>先读本关总表 → 按 ②～⑪ 一关一关学 → 最后进 ⑫ 综合坑。每关下面有「热身自测」：先想再点开答案。作业卷原题只出现在「你错过的」里，不会剧透作业卷。</div><div class=\"topic-callout warn\"><b class=\"tag\">马林特别提醒</b>你 26～28 讲掉分最重的是<strong>现在完成时锚点</strong>和<strong>瞬间动词→延续</strong>。总表里这两格要额外多看两眼，对应后面第 ⑧、⑨ 关。</div>",
+        "qs_label": "热身：认时态（先想再点开）",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "看到 since 2018 / for three years / already，优先想到哪种时态？",
+            "answer": "现在完成时 have/has done",
+            "explain": "这些都是「算到现在」的标志：since/for 管持续，already 管已完成影响现在。"
+          },
+          {
+            "stem": "主句是 He said…，从句里谈「第二天要去」，从句用什么？",
+            "answer": "过去将来时 would do / was going to do",
+            "explain": "站在过去看将来：said 把 will 往后推一级 → would。"
+          },
+          {
+            "stem": "「昨天下午四点我正在写作业」——was writing 属于哪种时态？",
+            "answer": "过去进行时 was/were + doing",
+            "explain": "过去某一点/某一段正在进行的动作 = 过去进行时。"
+          }
+        ],
+        "children": []
+      },
+      {
+        "key": "present_simple",
+        "title": "② 一般现在时——习惯、真理、现在状态",
+        "explain": "<p>一般现在时说的是：<b>经常这样 / 现在就是这样 / 客观永远这样</b>。不是「正在做」（那是进行时），也不是「做过了」（那是过去/完成）。</p><pre class=\"topic-formula\">构成：主语 + do/does（实义动词）\n　　　主语 + am/is/are（be 动词）\n三单：he/she/it → 动词 +s/+es；否定用 doesn’t + 原形；疑问 Does…?</pre><h5>用法速查</h5><table><tr><th>用法</th><th>例句</th></tr><tr><td>现在状态</td><td class=\"en\">The soup <b>tastes</b> good.</td></tr><tr><td>习惯 / 经常性动作</td><td class=\"en\">I often <b>exercise</b> at the park.</td></tr><tr><td>性格 / 能力</td><td class=\"en\">I <b>am</b> rather outgoing.</td></tr><tr><td>客观真理 / 自然现象</td><td class=\"en\">The sun <b>rises</b> in the east.</td></tr></table><h5>标志词</h5><p>· 频度副词：<span class=\"en\">always / usually / often / sometimes / seldom / hardly / never</span><br>· 频度短语：<span class=\"en\">once a year / twice a month / three times a day</span><br>· 其他：<span class=\"en\">every day/week…, on Wednesdays, at weekends</span></p><div class=\"topic-callout warn\"><b class=\"tag\">别被 always 骗</b><span class=\"en\">I always eat apples.</span>（现在的习惯）≠ <span class=\"en\">I always <b>ate</b> apples when I was in France.</span>（过去那段时间的习惯 → 过去时）。标志词要看上下文！</div><h5>第三人称单数拼写</h5><table><tr><th>类别</th><th>方法</th><th>例</th></tr><tr><td>一般情况</td><td>+s</td><td class=\"en\">help→helps, stay→stays</td></tr><tr><td>s/x/ch/sh/o 结尾</td><td>+es</td><td class=\"en\">watch→watches, go→goes</td></tr><tr><td>辅音+y</td><td>去 y +ies</td><td class=\"en\">study→studies, fly→flies</td></tr><tr><td>特殊</td><td>—</td><td class=\"en\">have→has, do→does, be→is</td></tr></table>",
+        "qs_label": "热身自测",
+        "wrong_qs": [
+          {
+            "ref": {
+              "lecture": 22,
+              "qnum": 29
+            },
+            "note": "首次卷：teaches us（三单 + 宾格）"
+          },
+          {
+            "ref": {
+              "lecture": 23,
+              "qnum": 1
+            },
+            "note": "通常习惯 → has（三单）"
+          }
+        ],
+        "general_qs": [
+          {
+            "stem": "Amy usually ________ (have) sports on Sunday mornings.",
+            "answer": "has",
+            "explain": "usually = 习惯 → 一般现在；Amy 三单 → has（不是 have）。"
+          },
+          {
+            "stem": "The earth ________ (go) around the sun.",
+            "answer": "goes",
+            "explain": "客观真理 → 一般现在；go 以 o 结尾 → goes。"
+          },
+          {
+            "stem": "She ________ (not / watch) TV every night.",
+            "answer": "doesn't watch",
+            "explain": "否定：doesn’t + 原形。注意 watch 不要再加 -es。"
+          },
+          {
+            "stem": "Miss Gu is our English teacher. She ________ ________ English.\nA. teaches, our  B. teaches, us  C. teachs, our  D. teachs, us",
+            "answer": "B",
+            "explain": "she → teaches（ch 结尾 +es，不是 teachs）；teach 后人称代词用宾格 us。"
+          }
+        ],
+        "children": [],
+        "memory": {
+          "front": "一般现在时的构成公式？三单形式要注意什么？",
+          "back": "构成：主语 + do/does（实义动词）\n　　　主语 + am/is/are（be 动词）\n三单：he/she/it → 动词 +s/+es；否定用 doesn't + 原形；疑问 Does…?"
+        }
+      },
+      {
+        "key": "past_simple",
+        "title": "③ 一般过去时——过去档案（已翻篇）",
+        "explain": "<p>一般过去时是「过去的档案柜」：某时做了、某段时间反复做过、当时是什么状态——<b>和现在没有必然联系</b>。有具体过去时间点（yesterday / ago / in 2015）几乎必选它。</p><pre class=\"topic-formula\">构成：主语 + 动词过去式（did）\n　　　主语 + was / were\n否定：didn’t + 原形；疑问：Did … + 原形？</pre><h5>用法</h5><table><tr><th>用法</th><th>例句</th></tr><tr><td>过去某时 / 某段的动作或状态</td><td class=\"en\">I <b>lived</b> in Canada last year.</td></tr><tr><td>过去经常发生（常配 always/often + 过去语境）</td><td class=\"en\">I always <b>ate</b> apples when I was in France.</td></tr><tr><td>叙述过去的故事</td><td class=\"en\">Once upon a time, there <b>was</b> a king…</td></tr></table><h5>标志词</h5><p><span class=\"en\">yesterday / the day before yesterday / last week / … ago / in 1990 / just now / once upon a time / at that time / in the old days</span></p><h5>规则动词 -ed 拼写与读音</h5><table><tr><th>拼写</th><th>例</th><th>-ed 读音</th></tr><tr><td>一般 +ed</td><td class=\"en\">help→helped, play→played</td><td>清辅音后 [t]；浊/元音后 [d]；t/d 后 [ɪd]</td></tr><tr><td>不发音 e 结尾 +d</td><td class=\"en\">live→lived, hope→hoped</td><td>同上</td></tr><tr><td>辅音+y → ied</td><td class=\"en\">study→studied</td><td>[ɪd]</td></tr><tr><td>重读闭音节双写 +ed</td><td class=\"en\">stop→stopped, plan→planned</td><td>[t]/[d]</td></tr></table><div class=\"topic-callout\"><b class=\"tag\">和高危亲戚对比</b>看到 <b class=\"en\">yesterday / ago</b> → 过去时；看到 <b class=\"en\">yet / since / twice / 现在结果</b> → 完成时。详细辨析见第 ⑧ 关。</div>",
+        "qs_label": "热身自测",
+        "wrong_qs": [
+          {
+            "ref": {
+              "lecture": 22,
+              "qnum": 15
+            },
+            "note": "watched 的 -ed 读 [t]（清辅音后）"
+          },
+          {
+            "ref": {
+              "lecture": 22,
+              "qnum": 19
+            },
+            "note": "when he was in Beijing → went（过去习惯）"
+          },
+          {
+            "ref": {
+              "lecture": 22,
+              "qnum": 25
+            },
+            "note": "Yesterday afternoon → stopped（双写 p）"
+          },
+          {
+            "ref": {
+              "lecture": 23,
+              "qnum": 2
+            },
+            "note": "when she was young → had"
+          }
+        ],
+        "general_qs": [
+          {
+            "stem": "Tim always ________ (go) to work by bike when he was in Beijing.",
+            "answer": "went",
+            "explain": "when he was in Beijing 把整句钉在过去 → went（不是 goes）。"
+          },
+          {
+            "stem": "Yesterday afternoon, I ________ (stop) to help the old lady.",
+            "answer": "stopped",
+            "explain": "yesterday → 过去时；stop 重读闭音节 → 双写 p + ed。"
+          },
+          {
+            "stem": "watched 的 -ed 读音是？\nA. [t]  B. [d]  C. [ɪd]",
+            "answer": "A",
+            "explain": "watch 以清辅音 [tʃ] 结尾 → -ed 读 [t]。"
+          },
+          {
+            "stem": "—How many books ________ they ________ last summer? —Five.",
+            "answer": "did; borrow / did borrow",
+            "explain": "last summer 是过去档期，问「当时借了几本」→ 一般过去 did borrow。"
+          }
+        ],
+        "children": [],
+        "memory": {
+          "front": "一般过去时的构成公式？否定和疑问怎么变？",
+          "back": "构成：主语 + 动词过去式（did）\n　　　主语 + was / were\n否定：didn't + 原形；疑问：Did … + 原形？"
+        }
+      },
+      {
+        "key": "future_simple",
+        "title": "④ 一般将来时 + will vs be going to + 主将从现",
+        "explain": "<p>一般将来时：将来某个时间要发生，或将来经常发生。</p><pre class=\"topic-formula\">will + do　　／　　am/is/are going to + do\n否定：won’t / am not going to …\n疑问：Will you…? / Are you going to…?</pre><h5>will vs be going to</h5><table><tr><th>区别</th><th>说明</th><th>例句</th></tr><tr><td>事先计划</td><td><b>be going to</b>＝考虑过、打算好的</td><td class=\"en\">I’m <b>going to</b> visit the museum this weekend.</td></tr><tr><td>临时决定</td><td><b>will</b>＝当下才决定</td><td class=\"en\">Someone is knocking — I’ll answer it.</td></tr><tr><td>迹象预测</td><td>有眼前证据 → be going to</td><td class=\"en\">Look at the clouds — it’s <b>going to</b> rain.</td></tr><tr><td>纯粹意愿 / 承诺</td><td>will 更常见</td><td class=\"en\">I <b>will</b> help you.</td></tr></table><h5>标志词</h5><p><span class=\"en\">tomorrow / the day after tomorrow / next week / in two days / in 2050 / in the future / soon</span></p><h5>主将从现（超级高频）</h5><div class=\"topic-callout good\"><b class=\"tag\">口诀</b>主句将来时（或情态 / 祈使），条件/时间从句用<strong>一般现在</strong>表将来，<b>禁止 will</b>。</div><table><tr><th>引导词</th><th>例句</th></tr><tr><td class=\"en\">if 如果</td><td class=\"en\">I will stay at home if it <b>rains</b> tomorrow.</td></tr><tr><td class=\"en\">unless 除非</td><td class=\"en\">He will be late unless he <b>gets</b> up early.</td></tr><tr><td class=\"en\">as long as 只要</td><td class=\"en\">As long as you’re happy, I will be happy.</td></tr><tr><td class=\"en\">when / as soon as / until / before / after</td><td class=\"en\">I will call you when I <b>arrive</b>.</td></tr></table><div class=\"topic-callout warn\"><b class=\"tag\">和「是否」的 if 别混</b>这里的 if＝如果（条件句）。若 if＝是否（跟在 wonder/know/ask 后），从句该 will 就 will。详见第 ⑫ 关。</div>",
+        "qs_label": "热身自测",
+        "wrong_qs": [
+          {
+            "ref": {
+              "lecture": 22,
+              "qnum": 32
+            },
+            "note": "主将从现：will go … if it snows"
+          }
+        ],
+        "general_qs": [
+          {
+            "stem": "We ________ to play with snow if it ________ tomorrow.\nA. will go, will snow  B. will go, snows  C. go, will snow  D. go, snows",
+            "answer": "B",
+            "explain": "if＝如果 → 主将从现：主句 will go，从句 snows（禁 will snow）。"
+          },
+          {
+            "stem": "Look at those dark clouds! It ________ (rain).",
+            "answer": "is going to rain",
+            "explain": "眼前有迹象 → be going to（不是临时 will）。"
+          },
+          {
+            "stem": "—The phone is ringing. —OK, I ________ (answer) it.",
+            "answer": "will answer / I'll answer",
+            "explain": "临时决定 → will。"
+          },
+          {
+            "stem": "He will be late for school unless he ________ (get) up early.",
+            "answer": "gets",
+            "explain": "unless 条件从句 → 一般现在三单 gets（禁 will get）。"
+          }
+        ],
+        "children": [],
+        "memory": {
+          "front": "一般将来时的两种公式？各自的否定和疑问？",
+          "back": "will + do　　／　　am/is/are going to + do\n否定：won't / am not going to …\n疑问：Will you…? / Are you going to…?"
+        }
+      },
+      {
+        "key": "present_continuous",
+        "title": "⑤ 现在进行时 + 现在分词拼写",
+        "explain": "<p>现在进行时：说话这一刻正在做，或当前这一阶段正在做（此刻未必正在）。少数表示来去的动词（come/go/leave/start）也可用进行时表「按计划即将」。</p><pre class=\"topic-formula\">am / is / are + doing\n否定：isn’t / aren’t + doing；疑问：Is/Are … doing?</pre><h5>用法</h5><table><tr><th>用法</th><th>例句</th></tr><tr><td>说话瞬间正在做</td><td class=\"en\">The students <b>are listening</b> to the teacher.</td></tr><tr><td>现阶段活动（未必此刻）</td><td class=\"en\">We <b>are making</b> model planes these days.</td></tr><tr><td>计划好的近期将来（come/go/leave…）</td><td class=\"en\">Your aunt <b>is coming</b> this afternoon.</td></tr></table><h5>标志词</h5><p><span class=\"en\">now / right now / at this moment / at present / these days</span>；以及句子以 <b class=\"en\">Look!</b> / <b class=\"en\">Listen!</b> 开头。</p><h5>现在分词拼写（必背）</h5><table><tr><th>类别</th><th>方法</th><th>例</th></tr><tr><td>一般</td><td>+ing</td><td class=\"en\">help→helping, study→studying</td></tr><tr><td>不发音 e 结尾</td><td>去 e +ing</td><td class=\"en\">write→writing, take→taking</td></tr><tr><td>重读闭音节 + 单辅音</td><td>双写 +ing</td><td class=\"en\">stop→stopping, run→running, sit→sitting, swim→swimming</td></tr><tr><td>ie 结尾</td><td>变 y +ing</td><td class=\"en\">die→dying, lie→lying</td></tr></table>",
+        "qs_label": "热身自测",
+        "wrong_qs": [
+          {
+            "ref": {
+              "lecture": 23,
+              "qnum": 7
+            },
+            "note": "this afternoon 计划安排 → is coming"
+          },
+          {
+            "ref": {
+              "lecture": 23,
+              "qnum": 9
+            },
+            "note": "Look! → is dancing"
+          },
+          {
+            "ref": {
+              "lecture": 23,
+              "qnum": 14
+            },
+            "note": "now → are writing"
+          }
+        ],
+        "general_qs": [
+          {
+            "stem": "Look! The little girl ________ (dance) to the music.",
+            "answer": "is dancing",
+            "explain": "Look! 提示正在进行；主语 the little girl → is dancing。"
+          },
+          {
+            "stem": "Students ________ (write) their names on the board now.",
+            "answer": "are writing",
+            "explain": "now + 复数主语 → are writing（write 去 e +ing）。"
+          },
+          {
+            "stem": "Tom, your aunt ________ (come) this afternoon.",
+            "answer": "is coming",
+            "explain": "come 类动词用进行时表近期计划安排。"
+          },
+          {
+            "stem": "写出下列现在分词：run / write / die / swim",
+            "answer": "running / writing / dying / swimming",
+            "explain": "run/swim 双写；write 去 e；die → dying。"
+          }
+        ],
+        "children": [],
+        "memory": {
+          "front": "现在进行时的构成公式？否定和疑问怎么变？",
+          "back": "am / is / are + doing\n否定：isn't / aren't + doing；疑问：Is/Are … doing?"
+        }
+      },
+      {
+        "key": "past_future",
+        "title": "⑥ 过去将来时——站在过去看将来",
+        "explain": "<p>对比：Mary <b>will</b> go to Canada.（现在的将来）→ Tom said that Mary <b>would</b> go to Canada.（过去的将来）。</p><pre class=\"topic-formula\">would + do　　／　　was / were going to + do\n常见栖息地：said / told / hoped / promised / was not sure + 宾语从句</pre><h5>用法</h5><table><tr><th>用法</th><th>例句</th></tr><tr><td>宾语从句里（主句过去 → 从句回退）</td><td class=\"en\">She said she <b>would</b> never give up.</td></tr><tr><td>过去的打算 / 计划</td><td class=\"en\">He <b>was going to</b> return home.</td></tr></table><h5>条件/时间从句嵌进宾从时（主句过去）</h5><p>原来的「主将从现」也要整体回退一级：</p><pre class=\"topic-formula\">I will stay if it rains.\n⟹ I said I would stay if it rained.</pre><table><tr><th>现在说法</th><th>嵌进「I said…」之后</th></tr><tr><td class=\"en\">I will stay if it rains.</td><td class=\"en\">I said I <b>would</b> stay if it <b>rained</b>.</td></tr><tr><td class=\"en\">He will be late unless he gets up early.</td><td class=\"en\">I said he <b>would</b> be late unless he <b>got</b> up early.</td></tr><tr><td class=\"en\">I will call when I arrive.</td><td class=\"en\">I said I <b>would</b> call when I <b>arrived</b>.</td></tr></table><div class=\"topic-callout\"><b class=\"tag\">记忆</b>主句过去 → 将来变 would，从句里的一般现在也变成一般过去。come/go 等仍可用 <span class=\"en\">was/were coming</span> 表过去的「计划将来」。</div>",
+        "qs_label": "热身自测",
+        "wrong_qs": [
+          {
+            "ref": {
+              "lecture": 25,
+              "qnum": 13
+            },
+            "note": "said → would visit"
+          },
+          {
+            "ref": {
+              "lecture": 25,
+              "qnum": 23
+            },
+            "note": "hoped … the next Wednesday → was coming"
+          },
+          {
+            "ref": {
+              "lecture": 25,
+              "qnum": 25
+            },
+            "note": "were not sure whether → were going to grow"
+          },
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 7
+            },
+            "note": "首次 47 分卷：said → would call"
+          }
+        ],
+        "general_qs": [
+          {
+            "stem": "Miss Zhang said she ________ (visit) the Great Wall with me again.",
+            "answer": "would visit",
+            "explain": "said 过去 + 将来内容 → would visit。"
+          },
+          {
+            "stem": "I hoped Tina ______ to my birthday party the next Wednesday.\nA. to come  B. is coming  C. will come  D. was coming",
+            "answer": "D",
+            "explain": "hoped 过去 + the next Wednesday → 过去将来；come 可用 was coming。"
+          },
+          {
+            "stem": "We were not sure whether they ______ more vegetables.\nA. are going to grow  B. were going to grow  C. will grow  D. have grown",
+            "answer": "B",
+            "explain": "主句 were not sure 过去 → 从句 were going to grow。"
+          },
+          {
+            "stem": "把句子回退：I will stay at home if it rains tomorrow.\n→ I said I ________ stay at home if it ________ the next day.",
+            "answer": "would; rained",
+            "explain": "will→would，rains→rained；tomorrow 常改成 the next day。"
+          }
+        ],
+        "children": [],
+        "memory": {
+          "front": "过去将来时的两个公式？它常出现在哪类从句里？",
+          "back": "would + do　　／　　was / were going to + do\n常见栖息地：said / told / hoped / promised / was not sure + 宾语从句"
+        }
+      },
+      {
+        "key": "past_continuous",
+        "title": "⑦ 过去进行时——过去正在放的电影",
+        "explain": "<p><span class=\"en\">was / were + doing</span>。时间轴画法：<b>was doing 是一条横线，when 后的 did 是线上扎下的一根针</b>。</p><pre class=\"topic-formula\">锚点① when 模型：长动作（was doing）＋ when ＋ 瞬间动作（did）\n　　　——「正……着，突然……」：I was taking a walk when I met him.\n锚点② 过去某段/某点正进行：from 4:00 to 6:00 yesterday / at eight last night\n锚点③ while 两线并行：While mum was washing, I was making a kite.</pre><h5>标志词</h5><p><span class=\"en\">this time yesterday / at 6 o’clock this morning / then / at that moment / from…to… yesterday / at eight last night</span></p><div class=\"topic-callout warn\"><b class=\"tag\">和一般过去搭配</b>when 后的瞬间动作用一般过去（rang / entered / saw）；长时间动作才用 was doing。不要两边都用 did，也不要两边都用 was doing（除非 while 两线）。</div>",
+        "qs_label": "热身自测",
+        "wrong_qs": [
+          {
+            "ref": {
+              "lecture": 25,
+              "qnum": 9
+            },
+            "note": "when I entered → were making"
+          },
+          {
+            "ref": {
+              "lecture": 25,
+              "qnum": 10
+            },
+            "note": "When the bell rang（针）, Jenny was waiting（线）"
+          },
+          {
+            "ref": {
+              "lecture": 25,
+              "qnum": 14
+            },
+            "note": "at half past six yesterday → was having"
+          },
+          {
+            "ref": {
+              "lecture": 25,
+              "qnum": 30
+            },
+            "note": "were reading … when I saw you"
+          },
+          {
+            "ref": {
+              "lecture": 25,
+              "qnum": 33
+            },
+            "note": "While … was doing, I was making"
+          },
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 3
+            },
+            "note": "首次 47 分卷：when I was taking a walk"
+          },
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 29
+            },
+            "note": "was going … when the accident occurred"
+          },
+          {
+            "ref": {
+              "lecture": 27,
+              "qnum": 28
+            },
+            "note": "from 4:00 to 6:00 yesterday → was playing"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 5
+            },
+            "note": "when I got home → was sitting（sit 双写）"
+          }
+        ],
+        "general_qs": [
+          {
+            "stem": "They ________ (make) a model ship when I entered the room.",
+            "answer": "were making",
+            "explain": "entered 是针，make 是线 → were making。"
+          },
+          {
+            "stem": "I ________ (have) my breakfast at half past six yesterday morning.",
+            "answer": "was having",
+            "explain": "过去具体时间点 + 正在 → was having。"
+          },
+          {
+            "stem": "What book ______ you ______ when I ______ you at four yesterday?\nA. did, read, was seeing  B. did, read, saw  C. were, reading, saw  D. were, reading, was seeing",
+            "answer": "C",
+            "explain": "四点正在读 → were reading；看见是瞬间 → saw。"
+          },
+          {
+            "stem": "While mother ______ some washing, I ______ a kite for Kate.\nA. did, made  B. was doing, made  C. was doing, was making  D. did, was making",
+            "answer": "C",
+            "explain": "while 两线并行 → 两边都用过去进行。"
+          }
+        ],
+        "children": [],
+        "memory": {
+          "front": "过去进行时的三个锚点句型是什么？",
+          "back": "锚点① when 模型：长动作（was doing）＋ when ＋ 瞬间动作（did）\n　　　——「正……着，突然……」：I was taking a walk when I met him.\n锚点② 过去某段/某点正进行：from 4:00 to 6:00 yesterday / at eight last night\n锚点③ while 两线并行：While mum was washing, I was making a kite."
+        }
+      },
+      {
+        "key": "present_perfect",
+        "title": "⑧ 现在完成时——过去和现在的桥梁（头号敌人）",
+        "explain": "<p>现在完成时 <span class=\"en\">have/has + done</span> 不是「过去的事」，而是<b>站在现在，回头看过去</b>：要么影响到现在，要么持续到现在，要么算到现在的总账。</p><h5>公式卡 · 锚点速查表（背这个）</h5><table><tr><th>句中看到这些信号</th><th>用</th><th>例句锚点</th></tr><tr><td>since + 过去时间点 / since 从句</td><td class=\"en\">have/has done</td><td class=\"en\">Since we <b>began</b>..., our lives <b>have changed</b></td></tr><tr><td>for + 时间段（至今还在算）</td><td class=\"en\">have/has done</td><td class=\"en\">I <b>have been</b> here since five months ago</td></tr><tr><td>twice / three times（经历次数）</td><td class=\"en\">have/has done</td><td class=\"en\">I <b>have seen</b> it twice</td></tr><tr><td>ever / never / yet / already / so far</td><td class=\"en\">have/has done</td><td class=\"en\"><b>Have</b> you <b>ever</b> visited...?</td></tr><tr><td>in recent years / these days</td><td class=\"en\">have/has done</td><td class=\"en\">Online shopping <b>has become</b> popular</td></tr><tr><td>后半句是<b>现在的结果</b>：so... / now... / Can you...?</td><td class=\"en\">have/has done</td><td class=\"en\">I <b>have lost</b> my pen. <b>Can</b> you lend me yours?</td></tr><tr><td class=\"en\">It is the first / second time (that)...</td><td class=\"en\">从句 have/has done</td><td class=\"en\">It is the first time he <b>has written</b> a book</td></tr><tr><td>since 从句<b>里面</b>的动词</td><td class=\"en\">一般过去时</td><td class=\"en\">It is two years since I <b>became</b> a doctor</td></tr></table><div class=\"topic-callout warn\"><b class=\"tag\">⚠️ 最后一行最容易反</b>since 前半句用完成时，since 从句里的起点动作用过去时——「自从我成为医生（那一刻）已经两年了」，\"成为\"是过去的一瞬间。</div><h5>高危辨析 · 完成时 vs 一般过去</h5><div class=\"topic-callout\"><b class=\"tag\">一句话判断</b>问「做没做 / 影响到现在」（<b>现在算账</b>）→ 完成时；问「过去某时做了什么、做了几件」（<b>过去档案</b>）→ 一般过去。</div><div class=\"topic-callout good\">看到 <b class=\"en\">yesterday / in 2015 / two days ago</b> → 过去时；看到 <b class=\"en\">yet / ever / since / twice</b> 或<b>现在的结果</b> → 完成时。</div><p>· for + <b>时间段</b>；since + <b>时间点</b>或过去时从句。<br>· already 多用于肯定；yet 多用于疑问/否定。</p>",
+        "qs_label": "热身自测（换马甲，不剧透作业卷）",
+        "wrong_qs": [
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 1
+            },
+            "note": "首次 47 分卷：since → have been"
+          },
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 5
+            },
+            "note": "for a long time → has sat"
+          },
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 6
+            },
+            "note": "since 从句里 → became（过去时）"
+          },
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 12
+            },
+            "note": "twice + 影响现在 → has seen"
+          },
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 14
+            },
+            "note": "现在的乱象 → has left"
+          },
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 32
+            },
+            "note": "so 后是现在结果 → has lost"
+          },
+          {
+            "ref": {
+              "lecture": 27,
+              "qnum": 5
+            },
+            "note": "I have seen it twice"
+          },
+          {
+            "ref": {
+              "lecture": 27,
+              "qnum": 11
+            },
+            "note": "Can you lend… → have lost"
+          },
+          {
+            "ref": {
+              "lecture": 27,
+              "qnum": 31
+            },
+            "note": "ever + yet → Have visited"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 2
+            },
+            "note": "You can work… now → have fixed"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 4
+            },
+            "note": "Since we began… → have changed"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 7
+            },
+            "note": "It is the first time → has written"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 8
+            },
+            "note": "In recent years → has become"
+          }
+        ],
+        "general_qs": [
+          {
+            "stem": "Mr. Wang ________ (teach) in this school since 2018.",
+            "answer": "has taught",
+            "explain": "since 2018 → 现在完成；Mr. Wang 三单 → has taught。"
+          },
+          {
+            "stem": "—________ you ever ________ (try) Sichuan food? —Yes, twice.",
+            "answer": "Have; tried",
+            "explain": "ever + 经历 → 现在完成；主语 you → Have tried。"
+          },
+          {
+            "stem": "Look! Somebody ________ (break) the window. The glass is everywhere.",
+            "answer": "has broken",
+            "explain": "现在的结果（玻璃满地）→ has broken。"
+          },
+          {
+            "stem": "It is the third time she ________ (win) the first prize.",
+            "answer": "has won",
+            "explain": "It is the … time → 从句现在完成 has won。"
+          },
+          {
+            "stem": "—How many books ________ you ________ (read) during the summer holiday? —Three.",
+            "answer": "did; read",
+            "explain": "during the summer holiday 是过去档期，问当时读了几本 → 一般过去（同完成 vs 过去辨析）。"
+          }
+        ],
+        "children": []
+      },
+      {
+        "key": "continuity",
+        "title": "⑨ 瞬间动词不能牵手 for——延续性转换",
+        "explain": "<p>完成时 + for/since 时间段 ⇒ 谓语必须能一直持续。borrow、leave、die、buy 这类「一秒就完成」的动词撑不起一段时间，必须换成对应的状态表达。</p><h5>公式卡 · 瞬间 → 延续 转换表（必背）</h5><table><tr><th>瞬间动词（× for 时间段）</th><th>延续表达（✓）</th><th>中文</th></tr><tr><td class=\"en\">borrow 借</td><td class=\"en\"><b>keep</b></td><td>借了 → 一直留着</td></tr><tr><td class=\"en\">buy 买</td><td class=\"en\"><b>have</b></td><td>买了 → 一直拥有</td></tr><tr><td class=\"en\">leave 离开</td><td class=\"en\"><b>be away (from)</b></td><td>离开了 → 一直不在</td></tr><tr><td class=\"en\">die 死</td><td class=\"en\"><b>be dead</b></td><td>去世了 → 一直是故去状态</td></tr><tr><td class=\"en\">begin / start</td><td class=\"en\"><b>be on</b></td><td>开演了 → 一直进行</td></tr><tr><td class=\"en\">finish / end</td><td class=\"en\"><b>be over</b></td><td>结束了 → 一直是结束状态</td></tr><tr><td class=\"en\">join 加入</td><td class=\"en\"><b>be in / be a member of</b></td><td>加入了 → 一直是成员</td></tr><tr><td class=\"en\">make / become friends</td><td class=\"en\"><b>be friends</b></td><td>交了朋友 → 一直是朋友</td></tr><tr><td class=\"en\">open</td><td class=\"en\"><b>be open</b></td><td>开门了 → 一直营业</td></tr><tr><td class=\"en\">close</td><td class=\"en\"><b>be closed</b></td><td>关门了 → 一直关着</td></tr><tr><td class=\"en\">fall asleep</td><td class=\"en\"><b>be asleep</b></td><td>睡着了 → 一直睡着</td></tr><tr><td class=\"en\">catch a cold</td><td class=\"en\"><b>have a cold</b></td><td>感冒了 → 一直感冒</td></tr></table><p style=\"margin-bottom:4px;font-weight:600\">同义句转换套路：</p><pre class=\"topic-formula\">主语 + 瞬间动词 + ... + ago（过去一次性动作）\n⟹ 主语 + have/has + 延续表达 + ... + for + 时间段</pre><div class=\"topic-callout warn\"><b class=\"tag\">过去完成也要延续</b>for a few minutes 出现在过去完成里，同样不能用 had left，要用 <span class=\"en\">had been away from</span>。</div>",
+        "qs_label": "热身自测（同义句转换）",
+        "wrong_qs": [
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 30
+            },
+            "note": "首次 47 分卷：had been away from（过去完成也要延续）"
+          },
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 31
+            },
+            "note": "have been friends（made/became × since）"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 12
+            },
+            "note": "borrow→keep：has kept … for two days"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 13
+            },
+            "note": "同 28·T12 模板"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 14
+            },
+            "note": "leave→be away from（from 不能丢）"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 15
+            },
+            "note": "die→has been dead"
+          }
+        ],
+        "general_qs": [
+          {
+            "stem": "His father died five years ago.（同义句）\nHis father ________ ________ ________ for five years.",
+            "answer": "has been dead",
+            "explain": "die → be dead；完成时 + for → has been dead。"
+          },
+          {
+            "stem": "Lily bought the bike two weeks ago.（同义句）\nLily ________ ________ the bike for two weeks.",
+            "answer": "has had",
+            "explain": "buy → have；has had。"
+          },
+          {
+            "stem": "They joined the club in 2023.（同义句）\nThey ________ ________ ________ the club for about three years.",
+            "answer": "have been in",
+            "explain": "join → be in / be a member of。"
+          },
+          {
+            "stem": "The film began ten minutes ago.（同义句）\nThe film ________ ________ ________ for ten minutes.",
+            "answer": "has been on",
+            "explain": "begin → be on。"
+          },
+          {
+            "stem": "Mr. Li left Tianjin three days ago.（同义句）\nMr. Li ________ ________ ________ ________ Tianjin for three days.",
+            "answer": "has been away from",
+            "explain": "leave → be away from，from 不能丢。"
+          }
+        ],
+        "children": [],
+        "memory": {
+          "front": "瞬间动词不能牵手 for——怎么改写成延续性表达？",
+          "back": "主语 + 瞬间动词 + ... + ago（过去一次性动作）\n⟹ 主语 + have/has + 延续表达 + ... + for + 时间段"
+        }
+      },
+      {
+        "key": "past_perfect",
+        "title": "⑩ 过去完成时——过去的过去",
+        "explain": "<p><span class=\"en\">had + 过去分词</span>。句中已有一个「过去的时间参照物」，某动作发生在它更早之前。</p><pre class=\"topic-formula\">时间轴：[had done 更早] ────── [did 过去参照点] ────── 现在</pre><h5>锚点三兄弟（看到就选 had done）</h5><table><tr><th>锚点</th><th>例</th></tr><tr><td class=\"en\"><b>By the time</b> + 过去时从句</td><td class=\"en\">By the time I got up, Mum <b>had cooked</b> breakfast</td></tr><tr><td class=\"en\"><b>by the end of</b> + 过去时间</td><td class=\"en\">by the end of <b>last term</b> → <b>had studied</b></td></tr><tr><td class=\"en\"><b>Before</b> + 过去动作</td><td class=\"en\">Before she came to China, she <b>had heard</b> about the Great Wall</td></tr></table><div class=\"topic-callout\">判断口诀：句中两个过去动作，<b>先发生的那个用 had done</b>。</div><p>也可表「从过去某时持续到另一过去时」：<span class=\"en\">The film had been on for 5 minutes when I got to the cinema.</span></p>",
+        "qs_label": "热身自测",
+        "wrong_qs": [
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 8
+            },
+            "note": "by the end of last term → had studied"
+          },
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 10
+            },
+            "note": "By the time I got up → had cooked"
+          },
+          {
+            "ref": {
+              "lecture": 27,
+              "qnum": 9
+            },
+            "note": "By the time I was five → had read"
+          },
+          {
+            "ref": {
+              "lecture": 27,
+              "qnum": 12
+            },
+            "note": "Before she came → had heard"
+          }
+        ],
+        "general_qs": [
+          {
+            "stem": "By the time the police arrived, the thief ________ (run) away.",
+            "answer": "had run",
+            "explain": "arrived 是过去参照，逃跑更早 → had run。"
+          },
+          {
+            "stem": "When I got to the station, the train ________ (leave).",
+            "answer": "had left",
+            "explain": "到站时火车已经走了 → had left。"
+          },
+          {
+            "stem": "She ________ (learn) 2,000 English words by the end of last year.",
+            "answer": "had learned / had learnt",
+            "explain": "by the end of last year → 过去完成。"
+          },
+          {
+            "stem": "Before we arrived at the cinema, the film ________ (begin).",
+            "answer": "had begun",
+            "explain": "before + 过去 → 更早用 had begun。"
+          }
+        ],
+        "children": [],
+        "memory": {
+          "front": "过去完成时和一般过去时在时间轴上是什么关系？",
+          "back": "时间轴：[had done 更早] ────── [did 过去参照点] ────── 现在"
+        }
+      },
+      {
+        "key": "signals",
+        "title": "⑪ 看标志词 · 固定句型搭配（第27讲核心）",
+        "explain": "<p>第 27 讲的核心技能：<b>先圈标志词，再定时态</b>。再加几组「看见句型就填时态」的固定搭配。</p><h5>标志词速查总表</h5><table><tr><th>时态</th><th>标志词</th></tr><tr><td>一般现在</td><td class=\"en\">always, usually, often, sometimes, never, every day, on Sundays</td></tr><tr><td>一般过去</td><td class=\"en\">ago, yesterday, the day before yesterday, last week, just now</td></tr><tr><td>一般将来</td><td class=\"en\">tomorrow, next week, in two days, soon, the day after tomorrow</td></tr><tr><td>现在完成</td><td class=\"en\">already, yet, so far, up to now, for+段, since+点, over/in the past/last few years, recently</td></tr><tr><td>过去完成</td><td class=\"en\">before + 过去, by + 过去, by the time + 过去从句</td></tr><tr><td>现在进行</td><td class=\"en\">now, at the moment, these days, this week, at present, Look!, Listen!</td></tr><tr><td>过去进行</td><td class=\"en\">at this time yesterday, at 8 last night, then, from…to… yesterday</td></tr><tr><td>过去将来</td><td class=\"en\">said/told/hoped + the next day / the following week</td></tr></table><h5>固定句型</h5><table><tr><th>句型</th><th>从句时态</th><th>例</th></tr><tr><td class=\"en\">This/It is the first/second time that…</td><td>现在完成</td><td class=\"en\">This is the first time I <b>have visited</b> the Great Wall.</td></tr><tr><td class=\"en\">This/It was the first time that…</td><td>过去完成</td><td class=\"en\">It was the first time he <b>had spoken</b> in public.</td></tr><tr><td class=\"en\">This is the + 最高级 + N + that…</td><td>现在完成</td><td class=\"en\">This is the best book I <b>have ever</b> read.</td></tr></table><h5>状语从句时态三兄弟（复习）</h5><p>① <b>主将从现</b>：If it rains, we won’t go.<br>② <b>主情从现</b>：If it rains, we may change plans.<br>③ <b>主祈从现</b>：Let’s go if the weather is nice.</p>",
+        "qs_label": "热身自测",
+        "wrong_qs": [
+          {
+            "ref": {
+              "lecture": 27,
+              "qnum": 3
+            },
+            "note": "this afternoon 安排 → 进行表将来"
+          },
+          {
+            "ref": {
+              "lecture": 27,
+              "qnum": 8
+            },
+            "note": "and 并列过去"
+          },
+          {
+            "ref": {
+              "lecture": 27,
+              "qnum": 21
+            },
+            "note": "the day after tomorrow → 将来"
+          },
+          {
+            "ref": {
+              "lecture": 27,
+              "qnum": 24
+            },
+            "note": "昨天+明天混合卷看标志"
+          },
+          {
+            "ref": {
+              "lecture": 27,
+              "qnum": 33
+            },
+            "note": "thought 原以为 → 过去相关"
+          }
+        ],
+        "general_qs": [
+          {
+            "stem": "看到 so far / recently / in the past few years，优先选？",
+            "answer": "现在完成时 have/has done",
+            "explain": "这些都是「算到现在」的时段标志。"
+          },
+          {
+            "stem": "This is the best film that I ________ (see).",
+            "answer": "have seen",
+            "explain": "最高级 + that 从句 → 现在完成；常配 ever。"
+          },
+          {
+            "stem": "It was the first time that the little boy ________ (speak) in public.",
+            "answer": "had spoken",
+            "explain": "主句 was → 从句回退为过去完成 had spoken。"
+          },
+          {
+            "stem": "If it ________ (rain) tomorrow, we may stay at home.",
+            "answer": "rains",
+            "explain": "主情从现：从句用一般现在 rains。"
+          }
+        ],
+        "children": []
+      },
+      {
+        "key": "traps",
+        "title": "⑫ 综合坑：易混杀手组 + if 双身份 + 宾从三律（24/28 复习）",
+        "explain": "<p>第 24、28 讲是综合复习卷：把前面所有时态坑 + 易混词混在一起打。本关把杀手组一次收干净。</p><h5>卡 1 · if 的两张面孔</h5><table><tr><th>if 是谁</th><th>长什么样</th><th>从句时态</th></tr><tr><td><b>如果</b>（条件状语从句）</td><td>谈假设：If it is fine, we'll go</td><td><b>主将从现</b>：从句用一般现在表将来，<b>禁 will</b></td></tr><tr><td><b>是否</b>（宾语从句）</td><td>跟在 wonder / know / ask 后</td><td>正常时态：该将来就 <b class=\"en\">will</b></td></tr></table><div class=\"topic-callout\">27·T25 和 28·T22 是同一道题的两张皮：<br><span class=\"en\">We wonder <b>if</b> our parents <b>will come</b>...（wonder 后的 if＝是否 → 宾从，用 will）<br><b>If</b> they <b>come</b>, we'll be glad.（这里的 if＝如果 → 条件句，用 come）</span></div><h5>卡 2 · 宾语从句三律</h5><table><tr><th>律</th><th>内容</th></tr><tr><td>① 陈述语序</td><td class=\"en\">Could you tell me <b>when you will leave</b>（✗ when will you leave）</td></tr><tr><td>② 时态呼应</td><td>主句过去 → 从句回移一级（will→would）；但<b>客观真理永远一般现在</b>：<span class=\"en\">The sun <b>rises</b> in the east</span></td></tr><tr><td>③ Could 是礼貌</td><td class=\"en\">Could you tell me...? 的从句<b>不回移</b>，该将来就 will</td></tr></table><h5>卡 3 · raise vs rise</h5><table><tr><th>词</th><th>及物？</th><th>意思</th><th>记法</th></tr><tr><td class=\"en\"><b>raise</b> raised–raised</td><td>✓ 及物</td><td>举起；筹款；提高</td><td><b>raise 有手</b>（作用于别的东西）</td></tr><tr><td class=\"en\"><b>rise</b> rose–risen</td><td>✗ 不及物</td><td>升起；上涨</td><td><b>rise 自己飞</b></td></tr></table><div class=\"topic-callout good\">有宾语 → raise；没宾语、主语自己升 → rise。不及物无被动：rise / appear / happen / take place。</div><h5>卡 4 · has been to / in / gone to</h5><table><tr><th>短语</th><th>意思</th><th>人现在在哪</th></tr><tr><td class=\"en\">has been <b>to</b></td><td>去过（已回来）</td><td>回来了</td></tr><tr><td class=\"en\">has been <b>in</b></td><td>一直在（常接 for）</td><td>还在那儿</td></tr><tr><td class=\"en\">has <b>gone</b> to</td><td>去了（还没回）</td><td>在路上/在那儿</td></tr></table><h5>卡 5 · used to do vs be used to doing</h5><table><tr><th>短语</th><th>to 是什么</th><th>意思</th></tr><tr><td class=\"en\"><b>used to do</b></td><td>不定式 → 原形</td><td>过去常常（现在不了）</td></tr><tr><td class=\"en\"><b>be used to doing</b></td><td>介词 → doing</td><td>习惯于</td></tr></table><h5>卡 6 · open / close 词性</h5><p>· <b class=\"en\">open</b> 可作形容词：<span class=\"en\">be open</span>＝开着/营业中（可接 for 12 hours）<br>· <b class=\"en\">close</b> 作动词：<span class=\"en\">closes</span>＝关门动作；<span class=\"en\">is close</span>＝亲近，不是关门</p>",
+        "qs_label": "综合热身（混排）",
+        "wrong_qs": [
+          {
+            "ref": {
+              "lecture": 24,
+              "qnum": 2
+            },
+            "note": "综合五：rise → rose（过去，不及物）"
+          },
+          {
+            "ref": {
+              "lecture": 24,
+              "qnum": 27
+            },
+            "note": "is open … closes（状态 + 动作）"
+          },
+          {
+            "ref": {
+              "lecture": 24,
+              "qnum": 29
+            },
+            "note": "rises … raise（太阳自己升 / 人举手帘）"
+          },
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 15
+            },
+            "note": "客观真理 → rises"
+          },
+          {
+            "ref": {
+              "lecture": 26,
+              "qnum": 17
+            },
+            "note": "took place（无被动）"
+          },
+          {
+            "ref": {
+              "lecture": 27,
+              "qnum": 25
+            },
+            "note": "if 双身份：条件句 → come"
+          },
+          {
+            "ref": {
+              "lecture": 27,
+              "qnum": 29
+            },
+            "note": "for 时段 → has been in"
+          },
+          {
+            "ref": {
+              "lecture": 27,
+              "qnum": 35
+            },
+            "note": "has risen … appeared"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 17
+            },
+            "note": "There used to be"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 21
+            },
+            "note": "used to … is used to walking"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 22
+            },
+            "note": "if 双身份：is; will rain"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 26
+            },
+            "note": "陈述语序：when you will leave"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 27
+            },
+            "note": "is open … closes"
+          },
+          {
+            "ref": {
+              "lecture": 28,
+              "qnum": 33
+            },
+            "note": "raised（有宾语 $）"
+          }
+        ],
+        "general_qs": [
+          {
+            "stem": "If it ________ (not rain) tomorrow, we will go camping.",
+            "answer": "doesn't rain",
+            "explain": "if＝如果 → 主将从现，doesn't rain。"
+          },
+          {
+            "stem": "I don't know if it ________ (rain) tomorrow.",
+            "answer": "will rain",
+            "explain": "know 后的 if＝是否 → 宾从，该将来就 will rain。"
+          },
+          {
+            "stem": "Could you tell me where ________?\nA. does he live  B. he lives",
+            "answer": "B",
+            "explain": "宾从用陈述语序；Could 是礼貌，不回移。"
+          },
+          {
+            "stem": "The price of vegetables ________ a lot recently.\nA. has risen  B. has raised  C. has been risen  D. rose",
+            "answer": "A",
+            "explain": "价格自己涨 → rise；recently → 完成；无被动。"
+          },
+          {
+            "stem": "—Where is Tom? —He ________ the library. He'll be back soon.\nA. has been to  B. has gone to  C. has been in",
+            "answer": "B",
+            "explain": "人还没回来 → has gone to。"
+          },
+          {
+            "stem": "The bookstore ________ for 12 hours a day. It ________ at 10:00 p.m.\nA. opens; closes  B. opens; is closed  C. is open; is close  D. is open; closes",
+            "answer": "D",
+            "explain": "状态用 is open；每天关门动作用 closes（不是 is close）。"
+          },
+          {
+            "stem": "There ________ a noisy factory here.\nA. used to be  B. used to have  C. was used to be",
+            "answer": "A",
+            "explain": "There be 存在句 → used to be（不配 have）。"
+          },
+          {
+            "stem": "The teacher said light ________ (travel) faster than sound.",
+            "answer": "travels",
+            "explain": "宾从里的客观真理 → 永远一般现在 travels。"
+          }
+        ],
+        "children": []
+      }
+    ]
+  }
+}

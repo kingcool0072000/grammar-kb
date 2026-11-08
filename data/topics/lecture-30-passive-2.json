@@ -1,0 +1,411 @@
+{
+  "meta": {
+    "topic_id": "lecture-30-passive-2",
+    "title": "第30讲 · 被动语态② 自学",
+    "subtitle": "自学一遍再上课：热身回顾 be done → 背熟被动固定短语（be made 家族 · be used for · be sold out · It is said）→ 攻克「主动表被动」三大陷阱关 → 综合验收（共 7 关 · 50 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "review",
+        "title": "① 热身：先接上被动语态①的线",
+        "explain": "<p>第 29 讲我们搭好了被动语态的<b>骨架</b>：主语是动作的承受者 → 谓语变成 <b>be + 过去分词</b>，八种时态只换 be 的形状。先做三道热身题，确认骨架还在。</p><p>这一讲（被动语态②）学两块新东西：</p><table><tr><th>上半场</th><th>下半场</th></tr><tr><td><b>被动固定短语</b>：be made 家族、be covered with、be used for、be sold out、It is said that…<br>——「背诵就得分」的送分题</td><td><b>主动表被动</b>：taste / need doing / worth doing / easy to read / sells well / happen…<br>——明明「该被动」却<b>必须用主动</b>，考试专门在这儿挖坑</td></tr></table><p>下半场是本讲的胜负手：看到「食物尝起来很美味」，很多人会条件反射写 <b>is tasted</b>——错！这正是这一讲要根治的毛病。</p><p>自学方法：先读讲解 → 盖住答案做题 → 点「先想再看答案」核对 → 全懂了点「我学完了」进下一关。</p>",
+        "qs_label": "热身自测：三题回顾被动语态①（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "Look! The students' photos ________ (take) by the photographer now.",
+            "answer": "are being taken",
+            "explain": "Look! + now → 现在进行时；照片是「被拍」的 → 被动 are being taken，being 不能丢。这是第 29 讲万能表里最容易错的一格。"
+          },
+          {
+            "stem": "So far, the old bridge ________ (repair).",
+            "answer": "has been repaired",
+            "explain": "So far（到现在为止）→ 现在完成时；桥是「被修」的 → has been repaired，been 不能丢。"
+          },
+          {
+            "stem": "Last year, a big park ________ (build) in our town.",
+            "answer": "was built",
+            "explain": "Last year → 一般过去时；公园是「被建」的 → was built。build 的过去分词 built 不规则。"
+          }
+        ]
+      },
+      {
+        "key": "made",
+        "title": "② 被动固定短语·上：be made 四兄弟 + be covered with",
+        "explain": "<p>先背第一组<b>被动固定短语</b>。最重要的是 <b>be made 四兄弟</b>——同一个短语，介词不同意思就不同：</p><table><tr><th>短语</th><th>意思</th><th>判断标准</th><th>例句</th></tr><tr><td><b>be made of</b></td><td>由……制成</td><td><b>看得出</b>原材料</td><td>The table is made of wood. 桌子由木头制成（看得见木纹）。</td></tr><tr><td><b>be made from</b></td><td>由……制成</td><td><b>看不出</b>原材料</td><td>Paper is made from wood. 纸由木头制成（纸里找不到木头）。</td></tr><tr><td><b>be made in</b></td><td>在某地制造</td><td>接<b>地点</b></td><td>The car is made in China.</td></tr><tr><td><b>be made by</b></td><td>由某人制造</td><td>接<b>人</b>（执行者）</td><td>The cake was made by his mother.</td></tr></table><p><b>记法</b>：of 看得出、from 看不出——桌子摆在那儿，木纹看得见（of）；纸和木头早变了样（from）。in 装「产地」，by 装「工匠」。</p><p>同组还有一个：<b>be covered with</b> 被……覆盖（The road is covered with snow. 马路被雪覆盖着）。注意介词是 <b>with</b>，不要顺手写成 by。</p><p>提醒：短语里的 be 要随时态变——蛋糕是「昨天」做的，就说 The cake <b>was</b> made by his mother。</p>",
+        "qs_label": "课堂练习 1（上）：made 四兄弟 + covered with",
+        "general_qs": [
+          {
+            "stem": "这张桌子由木头制成。The table ________ ________ ________ wood.（一般现在时）",
+            "answer": "is made of",
+            "explain": "桌子看得见木纹 → 看得出原材料 → be made of。"
+          },
+          {
+            "stem": "纸由木头制成。Paper ________ ________ ________ wood.（一般现在时）",
+            "answer": "is made from",
+            "explain": "纸里找不到木头原来的样子 → 看不出原材料 → be made from。of / from 之别就看「原材料还认得出吗」。"
+          },
+          {
+            "stem": "首字母填空：The car is made i________ China.",
+            "answer": "in",
+            "explain": "China 是地点 → be made in 在某地制造。"
+          },
+          {
+            "stem": "首字母填空：The road is covered w________ snow.",
+            "answer": "with",
+            "explain": "be covered with 被……覆盖，介词固定用 with。"
+          },
+          {
+            "stem": "首字母填空：The cake was made b________ his mother.",
+            "answer": "by",
+            "explain": "his mother 是人（执行者）→ be made by 由某人制造。"
+          },
+          {
+            "stem": "这种酒是由葡萄酿成的。The wine ________ ________ ________ grapes.",
+            "options": [
+              "is made of",
+              "is made from",
+              "is made in",
+              "is made by"
+            ],
+            "answer": "B. is made from",
+            "explain": "酒里认不出葡萄了 → 看不出原材料 → from。A 死于「看得见原材料」；C 接地点；D 接人。"
+          },
+          {
+            "stem": "These chairs ________ ________ bamboo (竹子). You can see the bamboo!",
+            "options": [
+              "are made of",
+              "are made from",
+              "are made in",
+              "are made by"
+            ],
+            "answer": "A. are made of",
+            "explain": "看得见竹子 → of；chairs 复数 → are。B 死于「看不出原材料」——句末明说 You can see the bamboo。"
+          },
+          {
+            "stem": "Don't touch the chair. It ________ ________ ________ wet paint (湿油漆)!",
+            "options": [
+              "is covered with",
+              "covers with",
+              "is covering with",
+              "covered with"
+            ],
+            "answer": "A. is covered with",
+            "explain": "椅子「被覆盖着」湿油漆 → be covered with。B 主动方向错；C 进行时错（be covered with 表状态）；D 缺 be，句子没有谓语。"
+          }
+        ],
+        "memory": {
+          "front": "be made 四兄弟：of / from / in / by 各接什么？of 和 from 怎么区分？",
+          "back": "be made of　看得出原材料（桌子看得见木纹）\nbe made from　看不出原材料（纸里找不到木头）\nbe made in　接地点（The car is made in China.）\nbe made by　接人/执行者（The cake was made by his mother.）\n记法：of 看得出、from 看不出"
+        }
+      },
+      {
+        "key": "phrases2",
+        "title": "③ 被动固定短语·下：be used for / be sold out / It is said that…",
+        "explain": "<p>第二组固定短语，三个都是考点常客：</p><table><tr><th>短语</th><th>意思</th><th>例句</th></tr><tr><td><b>be used for doing</b> = <b>be used to do</b></td><td>被用来做……</td><td>Wood is used for making tables. = Wood is used to make tables.</td></tr><tr><td><b>be sold out</b></td><td>被卖完</td><td>All the books <b>have been sold out</b>.（现在完成时被动，been 不能丢）</td></tr><tr><td><b>It is said / reported / believed that…</b></td><td>据说 / 据报道 / 人们认为……</td><td>It is said that he's gone abroad.</td></tr></table><p>两个细节：</p><p>① <b>for 是介词</b>，后面的动词必须用 -ing（used <b>for making</b>）；<b>to 是不定式</b>，后面用动词原形（used <b>to make</b>）。一对孪生句，格式别串门。</p><p>② be sold out 常和完成时绑定：到现在为止 → <b>have been sold out</b>；到昨天中午为止（by noon yesterday）→ <b>had been sold out</b>（过去的过去，第 29 讲万能表的最后一行）。</p><p>It is said that… 里的 It 是<b>形式主语</b>，真正的主语是 that 后面一整句话。新闻里还常见 It is reported that… / It is believed that…——套子一样，换中间的动词而已。</p>",
+        "qs_label": "课堂练习 1（下）+ 变式填空",
+        "general_qs": [
+          {
+            "stem": "木头被用来制作桌子。Wood ________ ________ ________ make tables.（一般现在时，用 use）",
+            "answer": "is used to",
+            "explain": "be used for doing = be used to do，同义换装：for making ↔ to make。这里后面是动词原形 make → 用 to。"
+          },
+          {
+            "stem": "所有的书都已经被卖完了。All the books ________ ________ ________ ________.（现在完成时，用 sell out）",
+            "answer": "have been sold out",
+            "explain": "「已经……了」→ 现在完成时；书是「被卖完」的 → have been sold out。been 不能丢，out 不能丢（be sold 是「被卖」，加 out 才是「卖光」）。"
+          },
+          {
+            "stem": "到昨天中午为止，所有的牛奶都卖完了。By noon yesterday, all the milk ________ ________ ________ ________.（用 sell out）",
+            "answer": "had been sold out",
+            "explain": "by noon yesterday（到过去某一时刻为止）→ 过去完成时；牛奶「被卖完」→ had been sold out。第 29 讲万能表最后一行 + 本讲短语，拼起来就是这题。"
+          },
+          {
+            "stem": "It ________ that the famous singer will come to our city.",
+            "options": [
+              "says",
+              "is said",
+              "said",
+              "is saying"
+            ],
+            "answer": "B. is said",
+            "explain": "It is said that… 据说……固定句型，It 是形式主语。A / C 死于「据说」必须是被动——话是「被说」的；D 无此句型。"
+          },
+          {
+            "stem": "首字母填空：It is s________ that he's gone abroad.",
+            "answer": "said",
+            "explain": "据说 → It is said that…。"
+          },
+          {
+            "stem": "首字母填空：All the books have been sold o________.",
+            "answer": "out",
+            "explain": "被卖完 → be sold out，out 补足「卖光」的意思。"
+          },
+          {
+            "stem": "首字母填空：It is r________ that the waves are big today.",
+            "answer": "reported",
+            "explain": "据报道 → It is reported that…。report 加 -ed 变过去分词。"
+          },
+          {
+            "stem": "首字母填空：It is b________ that smoking is harmful to health.",
+            "answer": "believed",
+            "explain": "人们认为 → It is believed that…。believe → believed。"
+          },
+          {
+            "stem": "首字母填空：Wood is used f________ making tables.",
+            "answer": "for",
+            "explain": "be used for doing 里的 for 是介词，后面跟 making；记住一对孪生：for making = to make。"
+          }
+        ]
+      },
+      {
+        "key": "sense",
+        "title": "④ 主动表被动·一：五个感官系动词，永远不被动",
+        "explain": "<p>下半场开始，先立一条军规：<b>感官系动词，永远不穿被动马甲</b>。五个词都在描述主语「给人的感觉」：</p><table><tr><th>动词</th><th>意思</th><th>例句</th></tr><tr><td>look</td><td>看起来</td><td>She looks happy.</td></tr><tr><td>sound</td><td>听起来</td><td>Your idea sounds good.</td></tr><tr><td>smell</td><td>闻起来</td><td>The flowers smell sweet.</td></tr><tr><td>taste</td><td>尝起来</td><td>The food tastes delicious.</td></tr><tr><td>feel</td><td>摸起来</td><td>The blanket feels soft and cozy.</td></tr></table><p>「食物尝起来美味」——食物是被尝的，为什么不用被动？因为这五个词不是在说「一个动作被谁做」，而是在<b>描述主语本身的性质</b>（食物的性质：美味）。英语的规矩：这类句子<b>用主动形式表达被动意义</b>。</p><p>三条禁令（选择题的陪葬选项通常就这么出）：</p><p>① 不用被动：× The food <b>is tasted</b> delicious.<br>② 不用进行：× The food <b>is tasting</b> delicious.<br>③ 后面接<b>形容词</b>不接副词：√ tastes <b>delicious</b>，× tastes deliciously。</p>",
+        "qs_label": "热身练习：先划掉被动形状的选项",
+        "general_qs": [
+          {
+            "stem": "This material ________ comfortable.",
+            "options": [
+              "feels",
+              "is feeling",
+              "is felt",
+              "was felt"
+            ],
+            "answer": "A. feels",
+            "explain": "feel 摸起来，是感官系动词 → 主动形式表被动意义，一般现在时 feels。B 系动词不用进行；C / D 被动形状直接错——这就是本讲的军规。"
+          },
+          {
+            "stem": "The dumplings ________ delicious. Let's eat more!",
+            "options": [
+              "is tasted",
+              "tastes",
+              "taste",
+              "are tasted"
+            ],
+            "answer": "C. taste",
+            "explain": "taste 尝起来是系动词 → 不用被动，先划掉 A / D；dumplings 复数 → 不加 s，B 的 tastes 死于主谓一致。"
+          },
+          {
+            "stem": "The flowers in the garden ________ sweet.（用 smell 的适当形式填空）",
+            "answer": "smell",
+            "explain": "smell 闻起来是系动词 → 主动；flowers 复数 + 一般现在时 → smell（不加 s）。"
+          },
+          {
+            "stem": "选词填空：The song sounds ________ (beautiful / beautifully).",
+            "answer": "beautiful",
+            "explain": "sound 听起来是系动词，后面接形容词描述主语 → beautiful。副词 beautifully 修饰的是「动作」，系动词说的是「性质」，不配副词。"
+          },
+          {
+            "stem": "选词填空：The cotton quilt (棉被) feels ________ (soft / softly) and warm.",
+            "answer": "soft",
+            "explain": "同上：系动词后接形容词，soft and warm 两个形容词并列。"
+          },
+          {
+            "stem": "翻译填空：你的主意听起来很不错。Your idea ________ ________.",
+            "answer": "sounds good",
+            "explain": "主意「听起来」不错 → sound 作系动词 + 形容词；idea 单数 + 一般现在时 → sounds good（sounds great / nice 也对）。"
+          }
+        ]
+      },
+      {
+        "key": "todo",
+        "title": "⑤ 主动表被动·二：need doing / be worth doing / 形容词+to do / there be+to do",
+        "explain": "<p>第二类主动表被动：<b>doing 和 to do 不穿被动马甲</b>。四种结构一次记全：</p><table><tr><th>结构</th><th>意思</th><th>例句</th></tr><tr><td><b>need / require + doing</b></td><td>需要被……</td><td>The car <b>needs repairing</b>. 车需要修理。<br>= The car needs <b>to be repaired</b>.</td></tr><tr><td><b>be worth + doing</b></td><td>值得被……</td><td>The movie <b>is worth seeing</b>. 电影值得一看。</td></tr><tr><td><b>be + 形容词 + to do</b></td><td>easy / difficult / hard / safe / dangerous / convenient / interesting / impossible / nice / pleasant / tough…</td><td>The book <b>is easy to read</b>.<br>The problem is difficult to solve.</td></tr><tr><td><b>there be + 名词 + to do</b></td><td>有……要做</td><td>There is a lot of work <b>to do</b>.<br>There is nothing <b>to worry about</b>.</td></tr></table><p><b>为什么不用 to be done？</b>以 The book is easy to read 为例：真正在读的是「人」，书是「被读」的——但这个句型里主语就是不定式的逻辑宾语，英语习惯直接用<b>主动形式</b>，× to be read 反而是错的。</p><p><b>need doing 是最爱考的一个</b>：车「需要被修」，说 needs repairing（doing 主动形式表被动）或 needs to be repaired（不定式必须被动）——两种说法都对，格式各管各的，别杂交出 × needs to repair（那意思变成「车需要去修别的东西」了）。</p>",
+        "qs_label": "课堂练习 2（上）：need / worth / to do",
+        "general_qs": [
+          {
+            "stem": "The bike needs ______.",
+            "options": [
+              "fix",
+              "to fix",
+              "fixing",
+              "fixed"
+            ],
+            "answer": "C. fixing",
+            "explain": "need + doing 主动形式表被动：车「需要被修」→ needs fixing（= needs to be fixed）。A 缺形式；B × needs to fix 意思变成「车需要去修别的东西」；D needs 后不接过去分词。"
+          },
+          {
+            "stem": "The concert is worth ______.",
+            "options": [
+              "attend",
+              "to attend",
+              "being attended",
+              "attending"
+            ],
+            "answer": "D. attending",
+            "explain": "be worth + doing 值得做 → worth attending。A / B 不合句型；C being attended 多此一举——这个结构里 doing 本来就代表被动意义。"
+          },
+          {
+            "stem": "The math problem is challenging ______.",
+            "options": [
+              "to work out",
+              "to be worked out",
+              "to work in",
+              "to be worked in"
+            ],
+            "answer": "A. to work out",
+            "explain": "be + 形容词 + to do：不定式用主动形式（主语 problem 正是 work out 的逻辑宾语）→ to work out。B 被动形状反而不对；C / D 死于搭配——解题是 work out 不是 work in。"
+          },
+          {
+            "stem": "My hair is too long. It needs ________ (cut).",
+            "answer": "cutting",
+            "explain": "need + doing：头发「需要被剪」→ needs cutting（= needs to be cut）。cut 的过去式和过去分词都是 cut。"
+          },
+          {
+            "stem": "The question is very hard ________ ________ (answer).",
+            "answer": "to answer",
+            "explain": "be + 形容词 + to do，不定式用主动 → to answer（× to be answered）。"
+          },
+          {
+            "stem": "There is nothing ________ ________ ________ (worry about).",
+            "answer": "to worry about",
+            "explain": "there be + 名词 + to do：有什么要被做，to do 用主动形式 → to worry about（没什么可担心的）。about 不能丢——worry 自己不带宾语，靠 about 挂钩。"
+          },
+          {
+            "stem": "The old bike requires ________.",
+            "options": [
+              "to repair",
+              "repairing",
+              "repaired",
+              "repairs"
+            ],
+            "answer": "B. repairing",
+            "explain": "require 和 need 同款：require + doing 表被动（= requires to be repaired）。A × requires to repair 意思拧了；C / D 不合句型。"
+          }
+        ]
+      },
+      {
+        "key": "habit",
+        "title": "⑥ 主动表被动·三：属性动词与「永不被动」家族",
+        "explain": "<p>第三类分两组背。</p><p><b>第一组：属性动词——主语的「本事」用主动说</b>。sell（卖）、wash（洗）、wear（穿）、lock（锁）、write（写）描述主语的<b>固有属性</b>（好不好卖、好不好洗、耐不耐穿……）时，用主动 + 副词：</p><table><tr><th>例句</th><th>意思</th></tr><tr><td>The book <b>sells</b> well.</td><td>这本书卖得好。（畅销是书的属性）</td></tr><tr><td>This cloth <b>washes</b> easily.</td><td>这块布很好洗。</td></tr><tr><td>This jacket <b>wears</b> well.</td><td>这件夹克耐穿。</td></tr><tr><td>The door <b>locks</b> automatically.</td><td>门会自动上锁。</td></tr><tr><td>The pen <b>writes</b> smoothly.</td><td>这支钢笔写起来顺滑。</td></tr></table><p><b>第二组：永不被动家族——不及物动词没有被动</b>（第 29 讲讲过 rise / sit，这是第二批名单）：</p><table><tr><th>动词</th><th>例句</th></tr><tr><td>happen / take place 发生</td><td>An accident <b>happened</b> yesterday.（× was happened）<br>Great changes <b>have taken place</b> in my hometown.</td></tr><tr><td>belong to 属于</td><td>The wallet <b>belongs</b> to me.（× is belonged）</td></tr><tr><td>appear / disappear 出现 / 消失</td><td>A rainbow <b>appeared</b> in the sky.</td></tr><tr><td>start / begin / end / finish 开始 / 结束</td><td>The meeting <b>started</b> at 9:00.</td></tr></table><p>判断口诀：事情<b>自己发生、自己出现、自己属于谁</b>——没人「做」它，就没有承受者，自然没有被动。注意 take place 常和完成时连用：since 2015 / in the past few years → <b>have taken place</b>（主动的完成时，别手滑写成 has been taken place）。</p>",
+        "qs_label": "课堂练习 2（下）：属性动词 + 永不被动家族",
+        "general_qs": [
+          {
+            "stem": "This shirt ________ easily.",
+            "options": [
+              "wash",
+              "washes",
+              "is washing",
+              "is washed"
+            ],
+            "answer": "B. washes",
+            "explain": "wash 在这里说衬衫的属性「好洗」→ 主动 + 副词 easily；shirt 单数 → washes。D 的被动形状正是本题的陷阱选项——描述属性不用被动。"
+          },
+          {
+            "stem": "The novel ________ quite well in the market.",
+            "options": [
+              "to sell",
+              "sells",
+              "is sold",
+              "has been sold"
+            ],
+            "answer": "B. sells",
+            "explain": "sell well 说的是小说的属性「畅销」→ 主动 sells well。A to sell 不是谓语；C / D 被动形状死于「属性用主动」这条规则。"
+          },
+          {
+            "stem": "这支钢笔写起来很顺滑。The pen ________ (write) smoothly.",
+            "answer": "writes",
+            "explain": "write 描述钢笔的属性「顺滑好写」→ 主动；pen 单数 → writes。"
+          },
+          {
+            "stem": "门会自动上锁。The door ________ (lock) automatically.",
+            "answer": "locks",
+            "explain": "lock 描述门的属性「会自动上锁」→ 主动 locks + 副词 automatically。"
+          },
+          {
+            "stem": "昨天高速公路上发生了一起事故。An accident ________ (happen) on the highway yesterday.",
+            "answer": "happened",
+            "explain": "happen 不及物、永不被动（× was happened）；yesterday → 一般过去时 happened。"
+          },
+          {
+            "stem": "自从 2015 年以来，我的家乡发生了巨变。Great changes ________ ________ ________ (take place) in my hometown since 2015.",
+            "answer": "have taken place",
+            "explain": "since 2015 → 现在完成时；take place 永不被动 → 主动完成时 have taken place（× have been taken place）。changes 复数 → have。"
+          },
+          {
+            "stem": "The car ________ to my uncle.",
+            "options": [
+              "is belonged",
+              "belongs",
+              "is belonging",
+              "belonged"
+            ],
+            "answer": "B. belongs",
+            "explain": "belong to 属于：不及物永不被动（划掉 A），也不用进行（划掉 C）；说的是现在的归属 → 一般现在时 belongs。D 死于时态——句中没有过去时间标志。"
+          }
+        ],
+        "memory": {
+          "front": "「永不被动家族」的判断口诀？哪些动词上榜？",
+          "back": "判断口诀：事情自己发生、自己出现、自己属于谁——没人「做」它，就没有承受者，自然没有被动。\n第二批名单：happen / take place（发生）、belong to（属于）、appear / disappear（出现/消失）、start / begin / end / finish（开始/结束）\n注意：take place 常和完成时连用 → have taken place（主动的完成时，别写成 has been taken place）"
+        }
+      },
+      {
+        "key": "final",
+        "title": "⑦ 综合验收：十题混排自查",
+        "explain": "<p>最后一关，10 题混排。每题落笔前先走三步：</p><p><b>第一步：认固定短语吗？</b>（be made of / from / in / by、be covered with、be used for、be sold out、It is said that…）→ 认出来了，介词和时态直接填。</p><p><b>第二步：查「主动表被动」名单了吗？</b>（五感系动词、need / require doing、be worth doing、形容词 + to do、there be + to do、sell / wash / wear / lock / write 属性动词、happen / take place / belong to / appear）→ 名单上的，统统用<b>主动</b>，看到被动形状的选项先划掉。</p><p><b>第三步：都不是？</b>→ 标准被动 be + 过去分词，回第 29 讲万能表定时态：圈时间标志 → 看主语单复数 → 检查 be / being / been 没丢。</p><p>10 题对 8 题以上过关；错的题记下来，两天后回来重做一遍。</p><p style=\"color:#8a6410\">说明：这一讲的作业卷会留到课后当考试检验，所以这里不会出现作业卷原题——放心练，不会「剧透」。</p>",
+        "qs_label": "综合验收（用所给词的适当形式填空或选择）",
+        "general_qs": [
+          {
+            "stem": "The silk (丝绸) ________ (feel) soft and cool. It's comfortable in summer.",
+            "answer": "feels",
+            "explain": "feel 摸起来是感官系动词 → 主动；silk 不可数 → 一般现在时 feels。"
+          },
+          {
+            "stem": "Your bedroom is really in a mess. It needs ________ (clean) right now.",
+            "answer": "cleaning",
+            "explain": "need + doing 主动表被动：房间「需要被打扫」→ needs cleaning（= needs to be cleaned）。"
+          },
+          {
+            "stem": "This kind of umbrella (雨伞) ________ (sell) very well in summer.",
+            "answer": "sells",
+            "explain": "sell well 说伞的属性「好卖」→ 主动；this kind of … 作主语按单数对待 → sells。"
+          },
+          {
+            "stem": "The robot ________ Shanghai last year.",
+            "options": [
+              "is made in",
+              "was made in",
+              "is made from",
+              "was made by"
+            ],
+            "answer": "B. was made in",
+            "explain": "Shanghai 是地点 → made in（先划掉 D，by 接人）；last year → 过去时 → was made in。A 死于时态；C 死于「看不出原材料」且时态也不对。"
+          },
+          {
+            "stem": "Something terrible ________ (happen) in the street last night. Everyone was talking about it.",
+            "answer": "happened",
+            "explain": "happen 永不被动；last night → 一般过去时 happened。"
+          },
+          {
+            "stem": "Hurry up! All the tickets ________ ________ ________ ________ (sell out) already.",
+            "answer": "have been sold out",
+            "explain": "already → 现在完成时；票「被卖光」→ have been sold out（tickets 复数 → have）。"
+          },
+          {
+            "stem": "________ ________ ________ that the earth goes around the sun.（人们认为）",
+            "answer": "It is believed",
+            "explain": "「人们认为」→ It is believed that…；that 后面是客观事实，从句用一般现在时 goes。"
+          },
+          {
+            "stem": "The text is easy ________ ________ (understand).",
+            "answer": "to understand",
+            "explain": "be + 形容词 + to do：不定式用主动形式 → to understand（× to be understood）。"
+          },
+          {
+            "stem": "Listen! The music ________ (sound) beautiful.",
+            "answer": "sounds",
+            "explain": "sound 听起来是系动词 → 主动 + 形容词；music 不可数 → sounds。Listen! 只是提示「现在正听」，系动词不用进行时。"
+          },
+          {
+            "stem": "The wallet on the ground ________ (belong) to Tom. His name is on it.",
+            "answer": "belongs",
+            "explain": "belong to 永不被动也不用进行；说的是现在的归属 → 一般现在时 belongs。"
+          }
+        ]
+      }
+    ]
+  }
+}
