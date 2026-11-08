@@ -50,6 +50,11 @@ def test_import_lecture29_json_and_expand(tmp_path):
                 for n in got["nodes"])
     assert total == 43
 
+    listed = store.list_topics(viewer="teacher", role="teacher")
+    row = next(t for t in listed if t["topic_id"] == "lecture-29-passive-1")
+    assert row["node_keys"] == ["final", "steps", "tenses", "transitive", "usage", "what"]
+    assert row["node_count"] == len(row["node_keys"])
+
 
 def test_student_visibility_and_progress(tmp_path):
     data = json.loads(_TOPIC_JSON.read_text(encoding="utf-8"))
@@ -80,6 +85,49 @@ def test_student_visibility_and_progress(tmp_path):
                        assigned_user="malin")
     # 清空后再盖满会重新记时间（同一秒内两次 now 可能相同，只要求非空）
     assert redone["completed_at"]
+
+
+def test_shared_assignment_progress_shows_on_list(tmp_path):
+    """开放给 malin,mxy 时，详情能读到的 done_keys 列表也要能读到。
+
+    旧前端把整份名单写进 assigned_user，列表按整串精确匹配会丢掉这行，
+    详情仍返回 3 个 key，学生就看到详情 3/N、列表 0/N。
+    """
+    store = _store(tmp_path)
+    rec = store.put(
+        "malin", "tense-22-28", ["n3", "n1", "n2"],
+        assigned_user="malin,mxy",
+    )
+    assert rec["done_keys"] == ["n1", "n2", "n3"]
+    assert rec["assigned_user"] == "malin"
+    listed = store.list_for("malin", "student")
+    assert [r["topic_id"] for r in listed] == ["tense-22-28"]
+    assert listed[0]["done_keys"] == store.get("malin", "tense-22-28")["done_keys"]
+
+    # 库里已经是多人名单的旧行：不改一次进度，刷新列表也看得到
+    con = sqlite3.connect(tmp_path / "fce.db")
+    con.execute(
+        "UPDATE topic_progress SET assigned_user = 'malin,mxy'"
+        " WHERE user = 'malin' AND topic_id = 'tense-22-28'"
+    )
+    con.commit()
+    con.close()
+    again = _store(tmp_path)
+    listed = again.list_for("malin", "student")
+    assert listed[0]["done_keys"] == ["n1", "n2", "n3"]
+    assert again.get("malin", "tense-22-28")["done_keys"] == listed[0]["done_keys"]
+
+    # 另一名被点名的学生只看见自己的行
+    mine = again.put("mxy", "tense-22-28", ["n1"], assigned_user="malin，mxy")
+    assert mine["assigned_user"] == "mxy"
+    assert [r["user"] for r in again.list_for("mxy", "student")] == ["mxy"]
+    assert all(r["user"] == "malin" for r in again.list_for("malin", "student"))
+
+    # 单人归属写成别人：仍不出现在自己的列表里
+    again.put("malin", "other-topic", ["x"], assigned_user="someone")
+    ids = [r["topic_id"] for r in again.list_for("malin", "student")]
+    assert "tense-22-28" in ids
+    assert "other-topic" not in ids
 
 
 def test_legacy_partial_stamp_cleared_full_stamp_kept(tmp_path):

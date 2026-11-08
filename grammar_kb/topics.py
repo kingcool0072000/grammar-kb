@@ -5,9 +5,9 @@
   哪些主题」。一条 (user, topic_id) 一行，done_keys 存主题 key 的 JSON 数组，
   PUT 幂等覆盖。completed_at 只表示「全部节点都完成」的首次时间；
   少做任一节点则清空，再次全部完成会记新时间。
-- 专题对学生的可见性由表内 assignment 决定：assigned_user 为空＝全学生可见，
-  指定用户＝仅该用户（本专题绑定 malin）。学生 GET 只能看到自己的专题；
-  教师可看全部，用于跟进。
+- 进度行的 assigned_user 是这名学生自己的归属（空＝不限），不是专题开放名单。
+  「malin,mxy」按名单里有没有本人来显示，列表和详情读到同一份 done_keys。
+  专题对谁可见看 topic_content.assigned_to。教师可看全部进度，用于跟进。
 - 数据量小，不设删除。
 """
 from __future__ import annotations
@@ -44,6 +44,45 @@ CREATE TABLE IF NOT EXISTS topic_content (
 );
 CREATE INDEX IF NOT EXISTS idx_topic_progress_user ON topic_progress(user, topic_id);
 """
+
+
+def assigned_names(assigned_user: str) -> list[str]:
+    """开放名单拆成用户名。空串＝不限；兼容中文逗号。"""
+    raw = (assigned_user or "").replace("，", ",")
+    return [x.strip() for x in raw.split(",") if x.strip()]
+
+
+def progress_visible_to(assigned_user: str, viewer: str) -> bool:
+    """这名学生能否在列表里看见自己的进度行。
+
+    归属为空＝可见。单人归属必须是本人。多人开放名单（「malin,mxy」）
+    里包含本人也可见——名单是专题开放范围，不是「整串精确等于用户名」。
+    """
+    names = assigned_names(assigned_user)
+    return not names or (viewer or "").strip() in names
+
+
+def progress_assigned_user(user: str, stored: str, incoming: str, *,
+                           has_row: bool) -> str:
+    """进度行只记单个学生，不把开放名单整串存进 assigned_user。
+
+    已有的单人归属保持不动。旧数据把「malin,mxy」写进归属时，收成正在学的
+    这名学生，否则列表按整串匹配会显示 0。
+    """
+    def one(raw: str) -> str:
+        names = assigned_names(raw)
+        if not names:
+            return ""
+        if len(names) == 1:
+            return names[0][:60]
+        return user[:60] if user in names else ""
+
+    stored_names = assigned_names(stored) if has_row else []
+    if has_row and len(stored_names) == 1:
+        return stored_names[0][:60]
+    if has_row and len(stored_names) > 1:
+        return one(stored) or one(incoming)
+    return one(incoming)
 
 
 def node_keys_from_content(content_json: str) -> set[str]:
@@ -92,21 +131,28 @@ class TopicStore:
         }
 
     def list_for(self, viewer: str, role: str) -> list[dict]:
-        """专题进度列表：教师看全部，学生只看 assigned 给自己（或全员）的行。"""
+        """专题进度列表：教师看全部，学生看自己的行。
+
+        学生行再按归属过滤：空或名单里有自己才返回。不能按 assigned_user
+        整串相等来滤——开放给「malin,mxy」时，详情接口仍读得到 done_keys，
+        列表会把同一行丢掉，卡片就停在 0/N。
+        """
         viewer = (viewer or "").strip()
         with self._connect() as conn:
             if role == "teacher":
                 rows = conn.execute(
                     "SELECT * FROM topic_progress ORDER BY updated_at DESC"
                 ).fetchall()
-            else:
-                rows = conn.execute(
-                    "SELECT * FROM topic_progress WHERE user = ?"
-                    " AND (assigned_user = '' OR assigned_user = ?)"
-                    " ORDER BY updated_at DESC",
-                    (viewer, viewer),
-                ).fetchall()
-        return [_out(r) for r in rows]
+                return [_out(r) for r in rows]
+            rows = conn.execute(
+                "SELECT * FROM topic_progress WHERE user = ?"
+                " ORDER BY updated_at DESC",
+                (viewer,),
+            ).fetchall()
+        return [
+            _out(r) for r in rows
+            if progress_visible_to(r["assigned_user"] or "", viewer)
+        ]
 
     # ---- 写入 ----
     def put(
@@ -119,8 +165,8 @@ class TopicStore:
         覆盖全部节点且原先为空时记 now；已有时间戳不覆盖（已完成的行留在
         原来的完成周，避免周学分搬家）；任一节点未完成则清空，下次再盖满
         会记新时间。没有专题内容、无法知道节点全集时不记 completed_at。
-        assigned_user 仅在首次落行时写入（内容归属由前端静态清单声明，
-        后端不重复维护）。
+        assigned_user 是这名学生自己的归属，不是专题开放名单。单人值只在
+        首次落行时写入；「malin,mxy」这类名单会收成当前学生，避免列表滤掉。
         """
         user = (user or "").strip()[:60]
         topic_id = (topic_id or "").strip()[:64]
@@ -134,7 +180,12 @@ class TopicStore:
                 " WHERE user = ? AND topic_id = ?",
                 (user, topic_id),
             ).fetchone()
-            assigned = (old["assigned_user"] if old else "") or (assigned_user or "").strip()[:60]
+            assigned = progress_assigned_user(
+                user,
+                (old["assigned_user"] if old else "") or "",
+                assigned_user or "",
+                has_row=old is not None,
+            )
             prev = (old["completed_at"] if old else "") or ""
             if self._fully_done(conn, topic_id, keys):
                 completed_at = prev or now
@@ -430,6 +481,7 @@ class TopicStore:
             if role != "teacher":
                 if not r["published"] or (assigned and viewer not in assigned):
                     continue
+            keys = self._node_key_list(r["content"])
             out.append({
                 "topic_id": r["topic_id"], "title": r["title"],
                 "subtitle": r["subtitle"], "emoji": r["emoji"],
@@ -437,8 +489,17 @@ class TopicStore:
                 "published": bool(r["published"]),
                 "updated_at": r["updated_at"],
                 "node_count": self._count_nodes(r["content"]),
+                "node_keys": keys,
             })
         return out
+
+    @staticmethod
+    def _node_key_list(content_json: str) -> list[str]:
+        """节点 key（排序仅便于稳定比较）。坏 JSON 当空专题。"""
+        try:
+            return sorted(node_keys_from_content(content_json))
+        except (ValueError, TypeError, AttributeError):
+            return []
 
     @staticmethod
     def _count_nodes(content_json: str) -> int:

@@ -1,11 +1,13 @@
 // 专题学习：v2 结构化专题（topic_content 表）。列表/内容全走接口，
 // 学生只看被开放（assigned_to 为空=全员，或含自己）的专题；
 // 「我学完了」按节点 key 写后端（PUT /topics/{id}/progress——谁登录记谁的行）。
+// 开放名单（「malin,mxy 的专属专题」）不进学生标题，也不写入进度归属。
 // v1 静态手册（topicsV1.js）已退役：接口失败明确报错，不再静态兜底。
 import { api, getAuth } from '../api.js'
 import { escapeHtml, escAttr } from '../render.js'
 import { createFocusTracker } from './library/focus.js'
 import { focusMemoryCard, topicRouteFromHash } from './boostNav.js'
+import { studentTopicText, topicDoneCount } from './topicText.js'
 
 export async function mountTopics(el, { role } = {}) {
   // 结构化专题（topic_content 表）：列表从接口拿（含开放过滤）。
@@ -17,8 +19,12 @@ export async function mountTopics(el, { role } = {}) {
   }
 
   const list = v2list.map((x) => ({
-    id: x.topic_id, title: x.title, subtitle: x.subtitle,
-    emoji: x.emoji, assignedTo: x.assigned_to, nodeCount: x.node_count,
+    id: x.topic_id,
+    title: studentTopicText(x.title),
+    subtitle: studentTopicText(x.subtitle),
+    emoji: x.emoji,
+    nodeCount: x.node_count,
+    nodeKeys: Array.isArray(x.node_keys) ? x.node_keys : null,
   }))
 
   el.innerHTML = `
@@ -44,8 +50,10 @@ export async function mountTopics(el, { role } = {}) {
     listEl.innerHTML = list
       .map((t) => {
         const p = progressMap[t.id] || { done_keys: [] }
-        const total = t.nodeCount
-        const done = (p.done_keys || []).length
+        // 与详情同一口径：done_keys ∩ 节点 key。没有 key 清单时退回条数。
+        const frac = topicDoneCount(p.done_keys, t.nodeKeys)
+        const total = frac.total == null ? (t.nodeCount || 0) : frac.total
+        const done = frac.done
         const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0
         return `
       <article class="topic-card" data-topic="${t.id}" style="--tc:#3a7ca5">
@@ -88,6 +96,8 @@ export async function mountTopics(el, { role } = {}) {
     let p
     try { p = await api.topicProgress(topicId) } catch { p = { done_keys: [] } }
     const doneSet = new Set(p.done_keys || [])
+    const titleText = studentTopicText(t.title)
+    const subText = studentTopicText(t.subtitle)
     const flatKeys = []
     const walkKeys = (nodes) => nodes.forEach((n) => {
       flatKeys.push(n.key); walkKeys(n.children || [])
@@ -158,9 +168,9 @@ export async function mountTopics(el, { role } = {}) {
     <div class="topic-page">
       <button class="fce-back-btn" id="topic-back">← 返回专题列表</button>
       <div class="topic-hero detail" style="--tc:#3a7ca5">
-        <p class="eyebrow">和爸学 · 专题学习${t.assigned_to ? ` · ${escapeHtml(t.assigned_to)} 的专属专题` : ''}</p>
-        <h1>${t.emoji || '📘'} ${escapeHtml(t.title)}</h1>
-        <p class="sub">${escapeHtml(t.subtitle || '')}</p>
+        <p class="eyebrow">和爸学 · 专题学习</p>
+        <h1>${t.emoji || '📘'} ${escapeHtml(titleText)}</h1>
+        <p class="sub">${escapeHtml(subText)}</p>
         <div class="topic-progress-row">
           <div class="topic-bar"><i id="topic-bar-i"></i></div>
           <span id="topic-progress-label"></span>
@@ -213,9 +223,9 @@ export async function mountTopics(el, { role } = {}) {
     const barI = el.querySelector('#topic-bar-i')
     const label = el.querySelector('#topic-progress-label')
     function refreshProgress() {
-      const done = flatKeys.filter((k) => doneSet.has(k)).length
-      barI.style.width = `${flatKeys.length ? Math.round((done / flatKeys.length) * 100) : 0}%`
-      label.textContent = `${done}/${flatKeys.length} 个知识点`
+      const frac = topicDoneCount([...doneSet], flatKeys)
+      barI.style.width = `${frac.total ? Math.round((frac.done / frac.total) * 100) : 0}%`
+      label.textContent = `${frac.done}/${frac.total} 个知识点`
     }
     refreshProgress()
     el.querySelectorAll('.topic-done-btn').forEach((btn) => {
@@ -229,7 +239,9 @@ export async function mountTopics(el, { role } = {}) {
           nowDone ? '已记录 · 点一下可取消' : '学完点这里，爸爸能看到'
         refreshProgress()
         try {
-          await api.topicPutProgress(t.topic_id, [...doneSet], t.assigned_to || '')
+          // 不把 assigned_to（「malin,mxy」开放名单）写进进度归属。
+          // 名单整串存进去后，列表接口按用户名精确匹配会丢掉这行，卡片停在 0/N。
+          await api.topicPutProgress(t.topic_id, [...doneSet])
         } catch {
           btn.closest('.topic-done-row').querySelector('.topic-done-hint').textContent =
             '⚠️ 保存失败，稍后会重试（进度暂存本页）'
