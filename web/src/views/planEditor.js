@@ -6,6 +6,7 @@ import {
   migrateLegacyUnits, tasksForSave, appendArticleUnit, appendVideoUnit,
   removeArticleUnit, removeVideoUnit, toggleMicroGroup,
   articleUnitLine, videoUnitLine, articleUnitIds, videoUnitVids,
+  boostDetailsToggle, boostReady,
 } from './planAdd.js'
 
 const DAY = ['一', '二', '三', '四', '五', '六', '日']
@@ -16,7 +17,7 @@ function hasPlanItems(tasks) {
     (t.lectures || []).length || (t.hw_papers || []).length || (t.focus_kps || []).length
     || (t.article_units || []).length || (t.video_units || []).length || t.micro != null
     || (t.fce || []).length || (t.vocab_papers || []).length
-    || t.vocab_goal != null || t.speak
+    || t.vocab_goal != null
     || Object.keys(t.reading || {}).length)
 }
 
@@ -38,6 +39,9 @@ export async function openWeekEditor({
   // 装载转换：旧周的扁平 articles/videos 先转成一组 *_units（精读=周末集中、视频=工作日摊开，
   // 带 legacy 小标），编辑器里统一只操作 *_units，保存时自然不再有旧键。
   let tasks = copyTasks(migrateLegacyUnits(week?.tasks || {}))
+  // 朗读并进精读：旧的单独篇数不再占一行。没课文时留一句说明，保存不再写 speak。
+  const droppedSpeak = tasks.speak ? (Number(tasks.speak) || 0) : 0
+  delete tasks.speak
   let openKey = null
   let addOpen = !hasPlanItems(tasks)
   let addType = ''
@@ -60,6 +64,7 @@ export async function openWeekEditor({
   let boostPattern = ''
   let boostTopics = null
   let boostPatterns = null
+  let boostLoadSeq = 0
   const boostNodeMap = new Map()  // topic_id → 带 memory 字段的节点列表
 
   const books = ed.books || []
@@ -192,7 +197,7 @@ export async function openWeekEditor({
       const line = articleUnitLine(u, articleTitles)
       out.push({
         key: `article-unit:${idx}`, type: 'article', unitIdx: idx, mode: u.mode,
-        title: line.head, sub: line.sub,
+        title: line.head, sub: line.sub, count: (u.ids || []).length,
       })
     })
     for (const id of tasks.vocab_papers || []) {
@@ -200,7 +205,6 @@ export async function openWeekEditor({
       const head = p && Number(p.level) < 0 ? `已学混合卷 ${id}` : `单词试卷 ${id}`
       out.push({ key: `paper:${id}`, type: 'paper', paper_id: id, title: head })
     }
-    if (tasks.speak) out.push({ key: 'speak', type: 'speak', title: `朗读 ${tasks.speak} 篇` })
     return out
   }
 
@@ -301,9 +305,9 @@ export async function openWeekEditor({
   }
 
   function boostReadyToAdd() {
-    return boostType === 'memory'
-      ? Boolean(boostTopic && boostNode)
-      : Number(boostPattern) > 0
+    return boostReady({
+      type: boostType, topic: boostTopic, node: boostNode, pattern: boostPattern,
+    })
   }
 
   function boostBodyHtml() {
@@ -369,6 +373,7 @@ export async function openWeekEditor({
   }
 
   async function loadBoostData() {
+    const seq = ++boostLoadSeq
     const jobs = []
     if (boostTopics == null) {
       jobs.push(api.topicsAdminList().then((rows) => { boostTopics = rows || [] }).catch(() => { boostTopics = [] }))
@@ -381,6 +386,8 @@ export async function openWeekEditor({
       boostTopic,
       ...((tasks.boost_items || []).filter((it) => it && it.type === 'memory').map((it) => it.topic_id)),
     ])].map((id) => ensureBoostNodes(id)))
+    // 关上或又打开过一次：这次的重画会把老师刚点的下拉拆掉。
+    if (seq !== boostLoadSeq || !dlg.isConnected || !boostOpen) return
     paint()
   }
 
@@ -401,6 +408,9 @@ export async function openWeekEditor({
                 ? list.map(rowHtml).join('')
                 : '<p class="muted pe-empty">这周还没有安排。点下面的「添加」，把语法课、作业卷、本周要新掌握的词放进来。</p>'}
             </div>
+            ${droppedSpeak && !(tasks.article_units || []).length
+              ? `<p class="pe-wiz-hint">这周以前单独记了朗读 ${droppedSpeak} 篇。精读和朗读已经并成一项：在「添加」里勾课文，朗读跟着课文走。</p>`
+              : ''}
             ${addOpen
               ? addPanelHtml()
               : '<button class="chip" id="pe-add-open" type="button">＋ 添加</button>'}
@@ -416,7 +426,7 @@ export async function openWeekEditor({
           </div>
           <aside class="pe-preview-card">
             <b>学生课表预览</b>
-            <p class="pe-lead">按正式课表的办法摊到每一天：词汇个数分到工作日，精读和视频按各组的摊法排（工作日摊开或周末集中）。</p>
+            <p class="pe-lead">按正式课表的办法摊到每一天：词汇个数分到工作日，精读+朗读和视频按各组的摊法排（工作日摊开或周末集中）。</p>
             <div id="pe-preview-body"><p class="muted">正在按课表摊开…</p></div>
           </aside>
         </div>
@@ -433,7 +443,7 @@ export async function openWeekEditor({
       <div class="pe-row-main">
         <div class="pe-row-title">${escapeHtml(r.title)}</div>
         ${r.sub ? `<span class="pe-done-line">${escapeHtml(r.sub)}</span>` : ''}
-        <span class="pe-done-line">${escapeHtml(completionLine(r.type, { topicCounts: topicOn, mode: r.mode }))}</span>
+        <span class="pe-done-line">${escapeHtml(completionLine(r.type, { topicCounts: topicOn, mode: r.mode, count: r.count }))}</span>
         ${open ? `<div class="pe-edit" data-stop>${editHtml(r)}</div>` : ''}
       </div>
       <button class="chip pe-row-del" type="button" data-del="${escAttr(r.key)}">去掉</button>
@@ -442,17 +452,16 @@ export async function openWeekEditor({
 
   function editHtml(r) {
     if (r.type === 'vocab') return vocabFormHtml('pe-v', true)
-    if (r.type === 'speak') {
-      return `<label class="pe-speak">本周朗读
-        <input id="pe-speak-n" type="number" min="1" max="14" value="${Number(tasks.speak) || 1}"> 篇</label>`
-    }
     if (r.type === 'lecture' || r.type === 'hw_paper' || r.type === 'focus_kp') {
       return `<label class="pe-speak">改成 <select id="pe-swap-lec">${lecOptions(r)}</select></label>`
     }
     if (r.type === 'reading') return readingEditHtml(r)
     // 精读/视频组与微练习：没有单项换绑，换内容 = 删整组重加
-    if (r.type === 'article' || r.type === 'video') {
-      return '<p class="pe-wiz-hint">现在是 2 篇（个）一组：要换内容就点「去掉」删整组，再重新加一组。</p>'
+    if (r.type === 'article') {
+      return '<p class="pe-wiz-hint">一组是 1–2 篇精读+朗读。要换课文就点「去掉」删整组，再重新加。</p>'
+    }
+    if (r.type === 'video') {
+      return '<p class="pe-wiz-hint">现在是 2 个一组：要换内容就点「去掉」删整组，再重新加一组。</p>'
     }
     if (r.type === 'micro') {
       return '<p class="pe-wiz-hint">本周已启用微练习：每个工作日 3 题，不做不扣分。不要了点「去掉」。</p>'
@@ -549,11 +558,6 @@ export async function openWeekEditor({
       }
       return vocabFormHtml('pe-add', false)
     }
-    if (addType === 'speak') {
-      if (tasks.speak) return '<p class="pe-wiz-hint">朗读篇数已经在清单里。点那一行可以改篇数。</p>'
-      return `<label class="pe-speak">每周 <input id="pe-add-speak" type="number" min="1" max="14" value="2"> 篇</label>
-        <div><button class="btn-primary" id="pe-speak-add" type="button">放入清单</button></div>`
-    }
     if (addType === 'reading') return readingAddHtml()
     if (addType === 'video') return videoAddHtml()
     if (addType === 'article') return articleAddHtml()
@@ -599,7 +603,7 @@ export async function openWeekEditor({
       <div><button class="btn-primary" id="pe-vid-add" type="button" ${videoPick.length === 2 ? '' : 'disabled'}>放入清单（一组，已勾 ${videoPick.length}/2 个）</button></div>`
   }
 
-  /** 精读仿视频多选：勾 2 篇 + 摊法 radio，凑满一组才能放入。 */
+  /** 精读+朗读：勾 1 或 2 篇 + 摊法，就能放入。朗读跟着课文，不再单独填篇数。 */
   function articleAddHtml() {
     if (!articles.length) return '<p class="muted">没有可选项。先到备课里准备内容。</p>'
     const pool = articles.map((a) => ({
@@ -615,15 +619,15 @@ export async function openWeekEditor({
       ? '<p class="pe-wiz-hint">总目标里没有还没完成的，下面先列出全部。</p>' : ''
     return `${note}
       <label class="pe-speak"><input type="checkbox" id="pe-show-all" ${showAll ? 'checked' : ''}/> 显示全部（含已完成、总目标以外）</label>
-      <p class="pe-wiz-hint">勾 2 篇为一组再放：工作日摊开 = 每天精读 1 篇；周末集中 = 周六一次 2 篇。</p>
+      <p class="pe-wiz-hint">勾 1–2 篇为一组（含朗读）再放：工作日摊开 = 每天 1 篇；周末集中 = 周六一次做完（1 篇当天，2 篇同天）。</p>
       ${pickNote ? `<p class="pe-wiz-hint">${escapeHtml(pickNote)}</p>` : ''}
       <div class="pe-wiz-picks">${use.map((it) => {
         const on = articlePick.includes(Number(it.id))
         return `<button type="button" class="pe-pick ${on ? 'on' : ''} ${it.taken ? 'taken' : ''}" data-art-pick="${it.id}" ${it.taken ? 'disabled' : ''}>${escapeHtml(it.label)}${it.taken ? ' · 已在本周' : ''}${it.mark ? ` · ${escapeHtml(it.mark)}` : ''}</button>`
       }).join('')}</div>
       <label class="pe-speak"><input type="radio" name="pe-art-mode" value="daily" ${artMode === 'daily' ? 'checked' : ''}/> 工作日摊开（每天 1 篇）</label>
-      <label class="pe-speak"><input type="radio" name="pe-art-mode" value="weekend" ${artMode === 'weekend' ? 'checked' : ''}/> 周末集中（周六 2 篇）</label>
-      <div><button class="btn-primary" id="pe-art-add" type="button" ${articlePick.length === 2 ? '' : 'disabled'}>放入清单（一组，已勾 ${articlePick.length}/2 篇）</button></div>`
+      <label class="pe-speak"><input type="radio" name="pe-art-mode" value="weekend" ${artMode === 'weekend' ? 'checked' : ''}/> 周末集中（周六一次做完）</label>
+      <div><button class="btn-primary" id="pe-art-add" type="button" ${articlePick.length >= 1 && articlePick.length <= 2 ? '' : 'disabled'}>放入清单（一组，已勾 ${articlePick.length} 篇）</button></div>`
   }
 
   function microAddHtml() {
@@ -693,22 +697,6 @@ export async function openWeekEditor({
     if (vocabAdd) vocabAdd.addEventListener('click', () => {
       const form = readVocab('pe-add')
       if (form) placeVocab(form.level, form.count)
-    })
-    const speakAdd = dlg.querySelector('#pe-speak-add')
-    if (speakAdd) speakAdd.addEventListener('click', () => {
-      const n = Math.min(14, Math.max(1, Number(dlg.querySelector('#pe-add-speak').value) || 1))
-      tasks = appendPlanItem(tasks, { type: 'speak', n })
-      openKey = 'speak'
-      addOpen = false
-      paint()
-    })
-    const speakN = dlg.querySelector('#pe-speak-n')
-    if (speakN) speakN.addEventListener('input', () => {
-      const n = Math.min(14, Math.max(1, Number(speakN.value) || 1))
-      tasks.speak = n
-      const title = dlg.querySelector('[data-row="speak"] .pe-row-title')
-      if (title) title.textContent = `朗读 ${n} 篇`
-      schedulePreview()
     })
     const swapLec = dlg.querySelector('#pe-swap-lec')
     if (swapLec) swapLec.addEventListener('change', () => swapScalar('lec', Number(swapLec.value)))
@@ -789,7 +777,7 @@ export async function openWeekEditor({
     })
     const artAdd = dlg.querySelector('#pe-art-add')
     if (artAdd) artAdd.addEventListener('click', () => {
-      if (articlePick.length !== 2) return
+      if (articlePick.length < 1 || articlePick.length > 2) return
       tasks = appendArticleUnit(tasks, articlePick, artMode)
       openKey = `article-unit:${(tasks.article_units || []).length - 1}`
       articlePick = []
@@ -816,8 +804,12 @@ export async function openWeekEditor({
     const boostBox = dlg.querySelector('#pe-boost')
     if (boostBox) {
       boostBox.addEventListener('toggle', () => {
+        // paint() 会把已经打开的 details 再写一遍，浏览器补发 toggle。
+        // 状态没变就当回声丢掉，否则会一直拆掉下拉框，点不中。
+        const action = boostDetailsToggle(boostOpen, boostBox.open)
+        if (action === 'ignore') return
         boostOpen = boostBox.open
-        if (boostOpen) loadBoostData()
+        if (action === 'load') loadBoostData()
       })
     }
     dlg.querySelectorAll('[data-boost-day]').forEach((cb) => {
@@ -855,9 +847,16 @@ export async function openWeekEditor({
       else paint()
     })
     const nodeSel = dlg.querySelector('#pe-boost-node')
-    if (nodeSel) nodeSel.addEventListener('change', () => { boostNode = nodeSel.value })
+    if (nodeSel) nodeSel.addEventListener('change', () => {
+      boostNode = nodeSel.value
+      // 选齐才放开「添加提升任务」。不重画的话按钮一直 disabled，点不了。
+      paint()
+    })
     const patSel = dlg.querySelector('#pe-boost-pattern')
-    if (patSel) patSel.addEventListener('change', () => { boostPattern = patSel.value })
+    if (patSel) patSel.addEventListener('change', () => {
+      boostPattern = patSel.value
+      paint()
+    })
     const boostAdd = dlg.querySelector('#pe-boost-add')
     if (boostAdd) boostAdd.addEventListener('click', () => {
       if (!boostReadyToAdd()) return

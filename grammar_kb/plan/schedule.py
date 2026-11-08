@@ -175,17 +175,24 @@ class ScheduleMixin:
                 })
             # ---- 精读分组摊派（article_units 优先，旧 articles 平铺回退为
             # 一个 weekend 组=现状语义）：daily 组周末继续每天清尾 1 篇；
-            # weekend 组周六集中出未完成前 2 篇（一次两条行）。
+            # weekend 组周六一次做完，同日最多 2 行。只有 1 篇时只出 1 行，
+            # 不把空位再摊到周日。
             done_arts = ctx.done_article_ids(lo, upto)
             self._append_daily_article_row(tasks, t, done_arts, "周末清尾",
                                            ctx=ctx)
             for gi, u in enumerate(self._article_units(t), 1):
                 if u["mode"] != "weekend":
                     continue
-                detail = (f"精读{_cn_group(gi)}组 · 周末集中"
-                          if u.get("labeled") else
-                          "阅读训练里读全文 + 提交朗读录音")
-                for aid in [a for a in u["ids"] if a not in done_arts][:2]:
+                undone = [a for a in u["ids"] if a not in done_arts]
+                # 1 篇的组 cap=1；2 篇及以上仍是周六最多 2 行（其余下周，不占周日）。
+                cap = 1 if len(u["ids"]) <= 1 else 2
+                if u.get("labeled") and len(u["ids"]) <= 1:
+                    detail = f"精读{_cn_group(gi)}组 · 周末集中 · 1 篇"
+                elif u.get("labeled"):
+                    detail = f"精读{_cn_group(gi)}组 · 周末集中"
+                else:
+                    detail = "阅读训练里读全文 + 提交朗读录音"
+                for aid in undone[:cap]:
                     row = self._article_row(aid, detail, ctx=ctx)
                     if row:
                         tasks.append(row)
@@ -305,8 +312,9 @@ class ScheduleMixin:
         """周计划精读分组（读兼容：旧 ``articles:[int]`` = 一个 weekend 组，
         即现状「周六集中 2 篇」语义）。
 
-        新契约：``[{"ids":[58,82], "mode":"daily"|"weekend"}]``——daily 组
-        工作日每天 1 篇轮转、周末每天 1 篇清尾；weekend 组周六集中 2 篇。
+        新契约：``[{"ids":[58] 或 [58,82], "mode":"daily"|"weekend"}]``——
+        每组 1 或 2 篇。daily 组工作日每天 1 篇轮转、周末每天 1 篇清尾；
+        weekend 组周六一次做完（1 篇只出 1 行，不改派到别的天）。
         ``labeled`` 标记新分组行（detail 带组号）；旧字段回退组保持现状文案。
         """
         units: list[dict] = []
@@ -406,7 +414,8 @@ class ScheduleMixin:
 
         跨 daily 组按组序、组内按 id 序合并成一个队列，每天只出队首
         未完成 1 篇：当天做完次日队列自动前进；欠账=队首原样重现
-        （同日不堆多条）。weekend 组不在此列（周六集中出 2 篇）。
+        （同日不堆多条）。只有 1 篇的组同样只占 1 天，不拆成两天、
+        也不在同一天重复出行。weekend 组不在此列（周六一次做完）。
         """
         for gi, u in enumerate(self._article_units(t), 1):
             if u["mode"] != "daily":
@@ -415,9 +424,11 @@ class ScheduleMixin:
             for i, aid in enumerate(sids, 1):
                 if aid in done_arts:
                     continue
-                row = self._article_row(
-                    aid, f"精读{_cn_group(gi)}组 {i}/{len(sids)} · {phase}",
-                    ctx=ctx)
+                if len(sids) <= 1:
+                    detail = f"精读{_cn_group(gi)}组 · 1 篇 · {phase}"
+                else:
+                    detail = f"精读{_cn_group(gi)}组 {i}/{len(sids)} · {phase}"
+                row = self._article_row(aid, detail, ctx=ctx)
                 if row is None:
                     continue  # 已删除/下架：跳过出下一个
                 tasks.append(row)
