@@ -748,14 +748,18 @@ def test_rules_registry_and_switch(plan_env):
     con.commit()
     con.close()
 
-    # 1. 规则清单：默认全开（教师与学生各可读）；micro_bonus 已除名
+    # 1. 规则清单：默认开（教师与学生各可读）；micro_bonus 已除名；
+    #    boost_gate_lecture（v3.0.0 提升档门）默认关
     rules = c.get("/plan/rules", headers=ht,
                   params={"user": "malin"}).json()["data"]["rules"]
     by_id = {r["id"]: r for r in rules}
     assert set(by_id) == {"topic_counts_lecture", "speak_early_credit",
-                          "zombie_filter", "exam_user_scope"}
-    assert all(r["value"] == 1 for r in rules)  # 默认开
-    assert len(c.get("/plan/rules", headers=hs).json()["data"]["rules"]) == 4
+                          "zombie_filter", "exam_user_scope",
+                          "boost_gate_lecture"}
+    assert all(r["value"] == 1 for r in rules
+               if r["id"] != "boost_gate_lecture")
+    assert by_id["boost_gate_lecture"]["value"] == 0
+    assert len(c.get("/plan/rules", headers=hs).json()["data"]["rules"]) == 5
 
     # 2. 内核：默认（开）专题点亮 29 讲
     from grammar_kb.plan import PlanStore

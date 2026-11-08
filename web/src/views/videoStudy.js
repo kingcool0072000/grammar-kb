@@ -3,6 +3,7 @@ import { escapeHtml, escAttr } from '../render.js'
 import { fmtDur as fmtSec, fmtDurCn as fmtDur } from '../fmt.js'
 import { speak } from '../tts.js'
 import { loadYouTubeApi } from '../youtube.js'
+import { createRetellRecorder } from './boostRetell.js'
 
 // 视频学习（学生·任务制）：只看被安排的视频，按 本周任务 / 待完成 /
 // 已完成 分组；已完成的深度交互＝回听自己的复述录音 + 看老师评语 +
@@ -386,139 +387,25 @@ function setupRestrictedPlayer(el, video) {
 }
 
 // ---------- 复述录音机（交互对齐精读录音：音量条/静音拦截/自动提交） ----------
+// 录音核心（MediaRecorder/音量条/静音检查/base64）已抽到 boostRetell.js，
+// 与提升档句型复述面板共用；这里只传页面元素与提交回调，行为不变。
 function setupRetellRecorder(el, video) {
-  const btn = el.querySelector('#vs-record')
-  const timeEl = el.querySelector('#vs-rectime')
-  const msgEl = el.querySelector('#vs-recmsg')
-  if (!btn) return
-  let recorder = null
-  let chunks = []
-  let timer = null
-  let startedAt = 0
-  let recording = false
-  let meterStop = null
-
-  const startMeter = (stream) => {
-    const bar = el.querySelector('#vs-level')
-    if (!bar) return null
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)()
-      const src = ctx.createMediaStreamSource(stream)
-      const analyser = ctx.createAnalyser()
-      analyser.fftSize = 512
-      src.connect(analyser)
-      const buf = new Uint8Array(analyser.fftSize)
-      let raf = 0
-      const tick = () => {
-        analyser.getByteTimeDomainData(buf)
-        let peak = 0
-        for (let i = 0; i < buf.length; i++) peak = Math.max(peak, Math.abs(buf[i] - 128))
-        const level = Math.min(1, peak / 60)
-        bar.style.width = `${Math.round(level * 100)}%`
-        bar.classList.toggle('silent', level < 0.03)
-        raf = requestAnimationFrame(tick)
-      }
-      tick()
-      return () => {
-        cancelAnimationFrame(raf)
-        src.disconnect()
-        ctx.close().catch(() => {})
-        bar.style.width = '0%'
-      }
-    } catch {
-      return null
-    }
-  }
-
-  const blobIsSilent = async (blob) => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)()
-      const ab = await blob.arrayBuffer()
-      const audio = await ctx.decodeAudioData(ab)
-      let peak = 0
-      for (let c = 0; c < audio.numberOfChannels; c++) {
-        const d = audio.getChannelData(c)
-        for (let i = 0; i < d.length; i += 16) peak = Math.max(peak, Math.abs(d[i]))
-      }
-      ctx.close().catch(() => {})
-      return peak < 0.01
-    } catch {
-      return false
-    }
-  }
-
-  btn.addEventListener('click', async () => {
-    if (!recording) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        recorder = new MediaRecorder(stream)
-        chunks = []
-        recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data)
-        recorder.onstop = () => {
-          stream.getTracks().forEach((t) => t.stop())
-          if (meterStop) { meterStop(); meterStop = null }
-          submit()
-        }
-        recorder.start()
-        recording = true
-        btn.dataset.recording = '1'
-        startedAt = Date.now()
-        btn.textContent = '停止录音'
-        btn.classList.add('danger')
-        msgEl.textContent = ''
-        meterStop = startMeter(stream)
-        timer = setInterval(() => {
-          const sec = Math.floor((Date.now() - startedAt) / 1000)
-          timeEl.textContent = `⏱ ${fmtSec(sec)} / ${fmtSec(MAX_RECORD_SEC)}`
-          if (sec >= MAX_RECORD_SEC) recorder.stop()
-        }, 500)
-      } catch (e) {
-        msgEl.textContent = `无法访问麦克风：${e.message}`
-      }
-    } else {
-      recorder.stop()
-    }
-  })
-
-  async function submit() {
-    recording = false
-    delete btn.dataset.recording
-    clearInterval(timer)
-    btn.textContent = '开始录音'
-    btn.classList.remove('danger')
-    const duration = Math.round((Date.now() - startedAt) / 1000)
-    timeEl.textContent = ''
-    const blob = new Blob(chunks, { type: chunks[0]?.type || 'audio/webm' })
-    if (blob.size < 200) {
-      msgEl.textContent = '录音太短，请重试'
-      return
-    }
-    msgEl.textContent = '检查录音…'
-    if (await blobIsSilent(blob)) {
-      msgEl.innerHTML = '⚠️ 录音里没有任何声音，已取消提交。请检查：<br>' +
-        '① 电脑是否静音 / 麦克风被挡；② 系统设置 → 隐私与安全性 → 麦克风，是否允许 Chrome；<br>' +
-        '③ 换一个麦克风设备后重录。录音时上方的音量条应随说话跳动。'
-      return
-    }
-    msgEl.textContent = '提交中…'
-    const b64 = await blobToB64(blob)
-    try {
+  createRetellRecorder({
+    btn: el.querySelector('#vs-record'),
+    timeEl: el.querySelector('#vs-rectime'),
+    msgEl: el.querySelector('#vs-recmsg'),
+    levelEl: el.querySelector('#vs-level'),
+    maxSec: MAX_RECORD_SEC,
+    silentHtml: '⚠️ 录音里没有任何声音，已取消提交。请检查：<br>' +
+      '① 电脑是否静音 / 麦克风被挡；② 系统设置 → 隐私与安全性 → 麦克风，是否允许 Chrome；<br>' +
+      '③ 换一个麦克风设备后重录。录音时上方的音量条应随说话跳动。',
+    onSubmit: async ({ blob, b64, duration }) => {
+      const msgEl = el.querySelector('#vs-recmsg')
       await api.videoRetellSubmit({
         vid: video.vid, audio_b64: b64,
         mime: blob.type || 'audio/webm', duration_sec: duration,
       })
-      msgEl.innerHTML = `✅ 复述已提交（${fmtSec(duration)}），等待老师批改`
-    } catch (e) {
-      msgEl.textContent = `提交失败：${e.message}`
-    }
-  }
-}
-
-function blobToB64(blob) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader()
-    r.onload = () => resolve(r.result.split(',')[1])
-    r.onerror = reject
-    r.readAsDataURL(blob)
+      if (msgEl) msgEl.innerHTML = `✅ 复述已提交（${fmtSec(duration)}），等待老师批改`
+    },
   })
 }

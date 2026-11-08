@@ -209,8 +209,10 @@ class TopicStore:
         """结构校验：返回错误列表（空=通过）。
 
         结构：{nodes: [{key, title, explain, wrong_qs[], general_qs[],
-        children[]...}]}；wrong_qs/general_qs 项为
-        {ref: {lecture, qnum}} 或自含 {stem, answer, explain}。
+        memory?, children[]...}]}；wrong_qs/general_qs 项为
+        {ref: {lecture, qnum}} 或自含 {stem, answer, explain}；
+        memory 为可选口诀卡 {front, back}（front=提示面 ≤120 字，
+        back=口诀全文 ≤600 字，均非空），提升档翻面自评用。
         """
         errs = []
         if not isinstance(data, dict) or not isinstance(data.get("nodes"), list):
@@ -232,6 +234,21 @@ class TopicStore:
                     keys.add(k)
                 if not str(n.get("title") or "").strip():
                     errs.append(f"{p}.title 不能为空")
+                mem = n.get("memory")
+                if mem is not None:  # 可选口诀卡：给了就必须给全、给对
+                    if not isinstance(mem, dict):
+                        errs.append(f"{p}.memory 须为对象")
+                    else:
+                        front = str(mem.get("front") or "").strip()
+                        back = str(mem.get("back") or "").strip()
+                        if not front:
+                            errs.append(f"{p}.memory.front 不能为空")
+                        elif len(front) > 120:
+                            errs.append(f"{p}.memory.front 超 120 字")
+                        if not back:
+                            errs.append(f"{p}.memory.back 不能为空")
+                        elif len(back) > 600:
+                            errs.append(f"{p}.memory.back 超 600 字")
                 for qf in ("wrong_qs", "general_qs"):
                     qs = n.get(qf) or []
                     if not isinstance(qs, list):
@@ -343,15 +360,22 @@ class TopicStore:
         for n in nodes or []:
             if not isinstance(n, dict):
                 continue
-            out.append({
+            item = {
                 "key": str(n.get("key") or ""),
                 "title": str(n.get("title") or ""),
                 "explain": str(n.get("explain") or ""),
                 "qs_label": str(n.get("qs_label") or ""),
                 "wrong_qs": self._expand_qs(n.get("wrong_qs") or []),
                 "general_qs": self._expand_qs(n.get("general_qs") or []),
-                "children": self._expand_nodes(n.get("children") or []),
-            })
+            }
+            # 口诀卡（v3 提升档）：配置了才带 memory 键，存量节点不带，
+            # 前端按「有没有该键」决定是否出翻面自评
+            mem = n.get("memory")
+            if isinstance(mem, dict) and str(mem.get("front") or "").strip():
+                item["memory"] = {"front": str(mem.get("front") or ""),
+                                  "back": str(mem.get("back") or "")}
+            item["children"] = self._expand_nodes(n.get("children") or [])
+            out.append(item)
         return out
 
     def get_topic(self, topic_id: str, expand: bool = True) -> Optional[dict]:
@@ -377,6 +401,23 @@ class TopicStore:
             "nodes": self._expand_nodes(content.get("nodes") or []) if expand
                      else content.get("nodes") or [],
         }
+
+    def get_node(self, topic_id: str, node_key: str) -> Optional[dict]:
+        """单个展开节点（含 memory 口诀卡，若有）；专题或节点不存在返回 None。"""
+        topic = self.get_topic((topic_id or "").strip())
+        if topic is None:
+            return None
+
+        def find(nodes: list) -> Optional[dict]:
+            for n in nodes:
+                if n.get("key") == (node_key or "").strip():
+                    return n
+                hit = find(n.get("children") or [])
+                if hit is not None:
+                    return hit
+            return None
+
+        return find(topic["nodes"])
 
     def list_topics(self, viewer: str = "", role: str = "teacher") -> list[dict]:
         """专题内容列表：教师全量；学生只见 published 且 assigned 含自己。"""

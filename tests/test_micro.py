@@ -222,6 +222,43 @@ def test_wrong_unturned_first_and_memory_guarantee(env):
     assert day2["questions"][0]["id"] == wrong_q   # 最近一次非 correct → 最优先
 
 
+def test_recent_wrong_recycle(env):
+    """当日错题回流（v3.0.0 闭环版）：近 3 天答错且此后未答对过的题并入
+    优先级①，次日置顶回炉；此后答对过（翻正）则不再回炉。"""
+    store = _store(env)
+    # 4 题同 topic 语法题，保证翻正后优先级③也轮不到它（近答对降权）
+    g = [_add_q(store, "grammar", topic=f"G{i}", answer=a)
+         for i, a in enumerate("ABCD")]
+    recycle_q, fillers = g[0], g[1:]
+    con = sqlite3.connect(env["fce"])
+    con.execute("INSERT INTO micro_log (user, qid, date, choice, is_correct)"
+                " VALUES ('malin', ?, ?, 'B', 0)", (recycle_q, YESTERDAY))
+    con.commit()
+    con.close()
+    picked = store._pick_daily("malin", TODAY)
+    assert picked[0] == recycle_q        # 昨天答错 → 今天槽1回炉
+    # 翻正（答对）后：不再算欠账，槽1让位，且降权轮不到它
+    con = sqlite3.connect(env["fce"])
+    con.execute("INSERT INTO micro_log (user, qid, date, choice, is_correct)"
+                " VALUES ('malin', ?, ?, 'A', 1)", (recycle_q, TODAY))
+    con.commit()
+    con.close()
+    picked2 = store._pick_daily("malin", TODAY)
+    assert recycle_q not in picked2
+    # 老错题（4 天前答错、非 wrong 类）不在回炉并集里：不置顶（槽1由
+    # 记忆库保底或轮转填充，但它不能出现在 picked[0]）
+    old_q = _add_q(store, "grammar", topic="OLD")
+    con = sqlite3.connect(env["fce"])
+    con.execute("INSERT INTO micro_log (user, qid, date, choice, is_correct)"
+                " VALUES ('malin', ?, ?, 'C', 0)",
+                (old_q, (today_cn() - timedelta(days=4)).isoformat()))
+    con.commit()
+    con.close()
+    picked3 = store._pick_daily("malin", TODAY)
+    assert picked3[0] != old_q
+    assert fillers  # 满足 lint：填充题组存在（翻正后被挤出的是这批之前的名额）
+
+
 def test_topic_rotation_and_recent_correct_downweight(env):
     store = _store(env)
     # 同一 topic 4 题语法（池 > 3 才能看出谁被挤出）

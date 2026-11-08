@@ -1,15 +1,27 @@
-"""背单词、专注力心跳、自学专题进度与内容管理。"""
+"""背单词、专注力心跳、自学专题进度与内容管理、句型清单。"""
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 import fastapi  # noqa: F401  FastAPI 解析注解里的 fastapi.Request
 from fastapi import HTTPException
 
 from .http import _ok, _request_user, _require_teacher
-from .schemas import ReciteSessionIn, FocusSessionIn, TopicProgressIn, TopicImportIn, TopicFlagIn, TopicAssignIn
+from .schemas import ReciteSessionIn, FocusSessionIn, TopicProgressIn, TopicImportIn, TopicFlagIn, TopicAssignIn, PatternsImportIn
+from .. import patterns
+from ..clock import today_cn
 from ..recite import DuplicateSessionError
 from ..vocabulary import fill_word_gloss, vocab_match_words
+
+logger = logging.getLogger(__name__)
+
+# 提升档打卡（plan/boost.py，并行车道）：模块未就位时置 None 兜底，
+# 不影响本文件其余端点（集成时保证就位）。
+try:
+    from ..plan import boost
+except ImportError:  # noqa: F401
+    boost = None
 
 
 def register_study(app, ctx):
@@ -269,3 +281,55 @@ def register_study(app, ctx):
             if not got["published"] or (assigned and user not in assigned):
                 raise HTTPException(status_code=403, detail="该专题未对你开放")
         return _ok(got)
+
+    @app.put("/topics/{topic_id}/nodes/{node_key}/memory-pass")
+    def topic_memory_pass(topic_id: str, node_key: str, request: "fastapi.Request"):
+        """专题节点口诀卡翻面自评过关（v3 提升档 memory 打卡）。
+
+        学生打开节点只见提示面（front），点「翻开」看口诀（back）后自评
+        「记住了」即打卡，一次自评通过（与背词翻面自评同口径）。可见性
+        门禁与 /topics-v2/{topic_id} 同款。
+        """
+        user = _request_user(request)
+        role = getattr(request.state, "role", "")
+        got = topics.get_topic(topic_id)
+        if got is None:
+            raise HTTPException(status_code=404, detail=f"专题 {topic_id} 不存在")
+        if role != "teacher":
+            assigned = [x for x in (got["assigned_to"] or "").split(",") if x]
+            if not got["published"] or (assigned and user not in assigned):
+                raise HTTPException(status_code=403, detail="该专题未对你开放")
+        node = topics.get_node(topic_id, node_key)
+        if node is None:
+            raise HTTPException(status_code=404, detail=f"节点 {node_key} 不存在")
+        if not node.get("memory"):
+            raise HTTPException(status_code=422, detail="该节点没有口诀卡")
+        if boost is not None:
+            try:
+                boost.record(user, today_cn().isoformat(),
+                             f"memory:{topic_id}:{node_key}", "memory",
+                             passed=True)
+            except Exception:  # noqa: BLE001  打卡失败不拦自评成功
+                logger.warning("boost.record 失败（memory:%s:%s user=%s）",
+                               topic_id, node_key, user, exc_info=True)
+        else:
+            logger.warning("plan.boost 未就位，memory 打卡未落库（%s:%s）",
+                           topic_id, node_key)
+        return _ok({"ok": True})
+
+    # ---- 句型清单（v3 提升档「句型跟读复述」素材；提交走 video-study 复述链路） ----
+
+    @app.get("/patterns")
+    def patterns_list(request: "fastapi.Request", lecture: Optional[int] = None):
+        """句型清单（可 ?lecture=30 按讲次过滤）。学生可读。"""
+        return _ok(patterns.list_all(lecture))
+
+    @app.post("/patterns-admin/import")
+    def patterns_import(rec: "PatternsImportIn", request: "fastapi.Request"):
+        """批量导入句型（data/patterns/*.json 走此口；同讲次同句跳过）。教师。"""
+        _require_teacher(request)
+        try:
+            n = patterns.import_items([x.model_dump() for x in rec.items])
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        return _ok({"imported": n})

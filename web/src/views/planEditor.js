@@ -51,6 +51,16 @@ export async function openWeekEditor({
   let readChapters = []
   let previewTimer = 0
   let previewSeq = 0
+  // ⭐ 提升档（v3）：boost_days 周几 + boost_items（口诀卡/句型复述）。
+  // 选择态与懒加载的数据都挂本闭包，paint() 重画不丢。
+  let boostOpen = false
+  let boostType = 'memory'
+  let boostTopic = ''
+  let boostNode = ''
+  let boostPattern = ''
+  let boostTopics = null
+  let boostPatterns = null
+  const boostNodeMap = new Map()  // topic_id → 带 memory 字段的节点列表
 
   const books = ed.books || []
   const lectures = ed.lectures || []
@@ -265,6 +275,115 @@ export async function openWeekEditor({
     return []
   }
 
+  // ---- ⭐ 提升档编辑（最小版）：周几多选 + 口诀卡/句型复述列表增删 ----
+  // 保存走 tasks JSON 的 boost_days / boost_items 字段（整 JSON 覆盖）；
+  // 教师没碰过这块时不写这两个键，后端按默认策略（周二/周四）兜底。
+  function boostDaysOf() {
+    return Array.isArray(tasks.boost_days) ? tasks.boost_days.map(Number) : [2, 4]
+  }
+
+  function ensureBoost() {
+    if (tasks.boost_days == null) tasks.boost_days = boostDaysOf()
+    if (!Array.isArray(tasks.boost_items)) tasks.boost_items = []
+  }
+
+  function boostItemLabel(it) {
+    if (!it || it.type === 'retell') {
+      const p = (boostPatterns || []).find((x) => Number(x.id) === Number(it?.pattern_id))
+      return p ? `句型复述 · 第${p.lecture}讲 ${String(p.sentence || '').slice(0, 20)}`
+        : `句型复述 #${it?.pattern_id ?? '?'}`
+    }
+    const t = (boostTopics || []).find((x) => x.topic_id === it.topic_id)
+    const nodes = boostNodeMap.get(it.topic_id) || []
+    const n = nodes.find((x) => x.key === it.node_key)
+    if (t && n) return `背诵口诀卡 · ${t.emoji || '📘'} ${String(t.title).slice(0, 18)} / ${String(n.title || n.key).slice(0, 18)}`
+    return `背诵口诀卡 · ${it.topic_id || '?'}/${it.node_key || '?'}`
+  }
+
+  function boostReadyToAdd() {
+    return boostType === 'memory'
+      ? Boolean(boostTopic && boostNode)
+      : Number(boostPattern) > 0
+  }
+
+  function boostBodyHtml() {
+    const days = boostDaysOf()
+    const items = tasks.boost_items || []
+    const dayChips = DAY.map((d, i) => `
+      <label class="pe-boost-day" title="每周${d}为提升日">
+        <input type="checkbox" data-boost-day="${i + 1}" ${days.includes(i + 1) ? 'checked' : ''}/>周${d}
+      </label>`).join('')
+    const itemLines = items.map((it, idx) => `
+      <div class="pe-boost-item">
+        <span>⭐ ${escapeHtml(boostItemLabel(it))}</span>
+        <button class="chip pe-row-del" type="button" data-boost-del="${idx}">去掉</button>
+      </div>`).join('')
+    const picker = boostType === 'memory'
+      ? `
+        <select id="pe-boost-topic">
+          <option value="">选择专题…</option>
+          ${(boostTopics || []).filter((t) => t.published !== false).map((t) =>
+            `<option value="${escAttr(t.topic_id)}" ${t.topic_id === boostTopic ? 'selected' : ''}>${escapeHtml(`${t.emoji || '📘'} ${t.title || t.topic_id}`.slice(0, 34))}</option>`).join('')}
+        </select>
+        ${boostTopic ? `
+        <select id="pe-boost-node">
+          <option value="">选择背诵卡节点…</option>
+          ${(boostNodeMap.get(boostTopic) || []).map((n) =>
+            `<option value="${escAttr(n.key)}" ${n.key === boostNode ? 'selected' : ''}>${escapeHtml(String(n.title || n.key).slice(0, 34))}</option>`).join('')
+            || '<option value="" disabled>这个专题还没有带背诵卡的节点</option>'}
+        </select>` : ''}`
+      : `
+        <select id="pe-boost-pattern">
+          <option value="">选择句型…</option>
+          ${(boostPatterns || []).map((p) =>
+            `<option value="${p.id}" ${Number(boostPattern) === Number(p.id) ? 'selected' : ''}>${escapeHtml(`第${p.lecture ?? '?'}讲 ${String(p.sentence || '').slice(0, 20)}`)}</option>`).join('')}
+        </select>`
+    const loading = boostType === 'memory'
+      ? (boostTopics == null ? '<p class="muted">专题列表加载中…</p>' : '')
+      : (boostPatterns == null ? '<p class="muted">句型列表加载中…</p>' : '')
+    return `
+      <p class="pe-wiz-hint">提升日当天只做一件难事：背一张口诀卡，或复述一个句型。哪天都没配任务时，提升日显示「本周无提升任务」。</p>
+      <div class="pe-boost-days">${dayChips}</div>
+      <div class="pe-boost-items">${itemLines || '<p class="muted pe-empty">还没配提升任务。</p>'}</div>
+      <div class="pe-boost-add">
+        <label class="pe-speak"><input type="radio" name="pe-boost-type" value="memory" ${boostType === 'memory' ? 'checked' : ''}/> 口诀卡</label>
+        <label class="pe-speak"><input type="radio" name="pe-boost-type" value="retell" ${boostType === 'retell' ? 'checked' : ''}/> 句型复述</label>
+        ${loading}
+        ${picker}
+        <button class="btn-primary" id="pe-boost-add" type="button" ${boostReadyToAdd() ? '' : 'disabled'}>添加提升任务</button>
+      </div>`
+  }
+
+  async function ensureBoostNodes(topicId) {
+    if (!topicId || boostNodeMap.has(topicId)) return
+    try {
+      const t = await api.topicsAdminGet(topicId)
+      const memNodes = []
+      const walk = (ns) => (ns || []).forEach((n) => {
+        if (n.memory && (n.memory.front || n.memory.back)) memNodes.push(n)
+        walk(n.children)
+      })
+      walk(t.nodes || [])
+      boostNodeMap.set(topicId, memNodes)
+    } catch { boostNodeMap.set(topicId, []) }
+  }
+
+  async function loadBoostData() {
+    const jobs = []
+    if (boostTopics == null) {
+      jobs.push(api.topicsAdminList().then((rows) => { boostTopics = rows || [] }).catch(() => { boostTopics = [] }))
+    }
+    if (boostPatterns == null) {
+      jobs.push(api.patternsList().then((rows) => { boostPatterns = Array.isArray(rows) ? rows : [] }).catch(() => { boostPatterns = [] }))
+    }
+    await Promise.all(jobs)
+    await Promise.all([...new Set([
+      boostTopic,
+      ...((tasks.boost_items || []).filter((it) => it && it.type === 'memory').map((it) => it.topic_id)),
+    ])].map((id) => ensureBoostNodes(id)))
+    paint()
+  }
+
   function paint() {
     const prev = dlg.querySelector('.plan-editor-body')
     const sc = prev?.scrollTop || 0
@@ -286,6 +405,10 @@ export async function openWeekEditor({
               ? addPanelHtml()
               : '<button class="chip" id="pe-add-open" type="button">＋ 添加</button>'}
             <div class="pe-warn" id="pe-warn" ${warn ? '' : 'hidden'}>${escapeHtml(warn)}</div>
+            <details class="pe-boost" id="pe-boost" ${boostOpen ? 'open' : ''}>
+              <summary>⭐ 提升档 <i>每周挑两天，每天只做一件难事（默认周二/周四）</i></summary>
+              <div class="pe-boost-body">${boostBodyHtml()}</div>
+            </details>
             <div class="chip-row">
               <button class="btn-primary" id="pe-save" type="button">保存</button>
               <button class="chip" id="pe-cancel" type="button">取消</button>
@@ -688,6 +811,68 @@ export async function openWeekEditor({
     })
     dlg.querySelectorAll('input[name="pe-vid-mode"]').forEach((r) => {
       r.addEventListener('change', () => { vidMode = r.value })
+    })
+    // ---- ⭐ 提升档编辑区 ----
+    const boostBox = dlg.querySelector('#pe-boost')
+    if (boostBox) {
+      boostBox.addEventListener('toggle', () => {
+        boostOpen = boostBox.open
+        if (boostOpen) loadBoostData()
+      })
+    }
+    dlg.querySelectorAll('[data-boost-day]').forEach((cb) => {
+      cb.addEventListener('change', () => {
+        ensureBoost()
+        const picked = [...dlg.querySelectorAll('[data-boost-day]')]
+          .filter((x) => x.checked)
+          .map((x) => Number(x.dataset.boostDay))
+          .sort((a, b) => a - b)
+        if (picked.length) tasks.boost_days = picked
+        else delete tasks.boost_days  // 全不勾 = 交回后端默认（周二/周四）
+      })
+    })
+    dlg.querySelectorAll('[data-boost-del]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        ensureBoost()
+        tasks.boost_items.splice(Number(btn.dataset.boostDel), 1)
+        if (!tasks.boost_items.length) delete tasks.boost_items
+        paint()
+      })
+    })
+    dlg.querySelectorAll('input[name="pe-boost-type"]').forEach((r) => {
+      r.addEventListener('change', () => {
+        boostType = r.value
+        boostNode = ''
+        boostPattern = ''
+        paint()
+      })
+    })
+    const topicSel = dlg.querySelector('#pe-boost-topic')
+    if (topicSel) topicSel.addEventListener('change', () => {
+      boostTopic = topicSel.value
+      boostNode = ''
+      if (boostTopic) ensureBoostNodes(boostTopic).then(() => { if (dlg.isConnected) paint() })
+      else paint()
+    })
+    const nodeSel = dlg.querySelector('#pe-boost-node')
+    if (nodeSel) nodeSel.addEventListener('change', () => { boostNode = nodeSel.value })
+    const patSel = dlg.querySelector('#pe-boost-pattern')
+    if (patSel) patSel.addEventListener('change', () => { boostPattern = patSel.value })
+    const boostAdd = dlg.querySelector('#pe-boost-add')
+    if (boostAdd) boostAdd.addEventListener('click', () => {
+      if (!boostReadyToAdd()) return
+      ensureBoost()
+      const item = boostType === 'memory'
+        ? { type: 'memory', topic_id: boostTopic, node_key: boostNode }
+        : { type: 'retell', pattern_id: Number(boostPattern) }
+      const dup = (tasks.boost_items || []).some((it) => it.type === item.type
+        && (item.type === 'memory'
+          ? it.topic_id === item.topic_id && it.node_key === item.node_key
+          : Number(it.pattern_id) === item.pattern_id))
+      if (!dup) tasks.boost_items.push(item)
+      boostNode = ''
+      boostPattern = ''
+      paint()
     })
   }
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
+from . import boost
 from .util import _task_key
 
 if TYPE_CHECKING:
@@ -55,7 +56,8 @@ class CompletionMixin:
         else:
             for t in rows:
                 key = _task_key(t)
-                keys[key] = self._why_done(t, key, auto, read_titles, acts)
+                keys[key] = self._why_done(t, key, auto, read_titles, acts,
+                                           user, day)
             for key, on in auto.items():
                 keys.setdefault(
                     key,
@@ -76,8 +78,20 @@ class CompletionMixin:
         auto: dict,
         read_titles: list,
         acts: dict,
+        user: str = "",
+        day: str = "",
     ) -> dict:
         """单条派生任务的完成原因。规则与原先 today_tasks 循环一致。"""
+        if task.get("type") == "boost":
+            # 提升档行：过关与否看 boost_log 当日记录（缺 user/day 的
+            # 调用只可能来自外部兜底，按未完成计）。空 item_ref 是
+            # 「本周未配置」说明行——无可做任务，恒亮不占完成率。
+            ref = (task.get("boost") or {}).get("item_ref") or ""
+            if not ref:
+                return {"done": True, "why": "boost_none"}
+            done = boost.item_done(user, day, ref)
+            return {"done": done,
+                    "why": "提升档已完成" if done else "提升档未完成"}
         if task.get("type") == "reading":
             text = task.get("text") or ""
             # 百分比目标文案是「目标已达成」；按章目标达成文案是「已读完」。

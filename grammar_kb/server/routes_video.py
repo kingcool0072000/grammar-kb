@@ -145,17 +145,21 @@ def register_video(app, ctx):
 
     @app.post("/video-study/retells")
     def video_retell_submit(rec: VideoRetellIn, request: "fastapi.Request"):
-        """学生看完视频后提交复述录音（pending 待教师批改）。
+        """学生提交复述录音（pending 待教师批改）。
 
-        仅可提交被安排给自己（或此前做过）的视频。
+        ref_kind=video（默认）：仅可提交被安排给自己（或此前做过）的视频；
+        ref_kind=pattern：句型跟读复述，vid=pattern_item.id，须在当日
+        提升档清单里（门禁在 submit_retell 内，调 plan.boost 打卡）。
         """
         user = _request_user(request)
-        if getattr(request.state, "role", "") != "teacher" \
+        if rec.ref_kind != "pattern" \
+                and getattr(request.state, "role", "") != "teacher" \
                 and not _student_can_access(user, rec.vid):
             raise HTTPException(status_code=403, detail="该视频未安排给你，不能提交复述")
         try:
             return _ok(videos.submit_retell(
-                user, rec.vid, rec.audio_b64, rec.mime, rec.duration_sec))
+                user, rec.vid, rec.audio_b64, rec.mime, rec.duration_sec,
+                ref_kind=rec.ref_kind))
         except KeyError as e:
             raise HTTPException(status_code=404, detail=str(e).strip("'"))
         except ValueError as e:

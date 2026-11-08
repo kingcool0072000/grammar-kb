@@ -1,5 +1,6 @@
 import { api } from '../api.js'
-import { escapeHtml, todayIso, studyGoalMin, taskWhy, taskWhyShort } from '../render.js'
+import { escapeHtml, escAttr, todayIso, studyGoalMin, taskWhy, taskWhyShort } from '../render.js'
+import { openBoostRetell, parseBoostRef } from './boostRetell.js'
 
 // 学生版 · 课程表：教师计划看板-周计划的只读镜像（/plan/my-week，
 // week_view 同源数据）。只看自己 + 本周；展示周拆解汇总 + 周一至周日
@@ -26,6 +27,12 @@ export async function mountTimetable(el) {
   const gp = d.goal_progress || {}
   const dims = gp.dims || []
   const today = todayIso()
+  // 今日闭环（v3）：后端 today.loop 聚合了背词/微练习/泛读/提升档当日状态。
+  // 契约挂在 today 下；顶层 loop 也兜一手（并行后端落点漂移时不白屏）。
+  // 旧后端两个字段都没有时整卡不渲染，不影响页面其它部分。
+  const loop = (d.today && d.today.loop) || d.loop || null
+  const boostRows = ((d.days || []).find((day) => day && day.date === today)?.tasks || [])
+    .filter((t) => t && t.boost)
 
   // 周拆解摘要（与教师看板同口径）。泛读按书显示章区间
   // （reading_items 由后端带 title/chapter_range——「读完第6–7章」
@@ -84,6 +91,20 @@ export async function mountTimetable(el) {
       const whyShort = day.future ? '' : taskWhyShort(t.why)
       const tip = [t.detail, why].filter(Boolean).join(' · ')
         || (t.type === 'article' ? '去阅读练习读全文 + 提交朗读' : '')
+      // 提升档行（task_key 前缀 boost:）：未配置=灰字；其余点直达
+      // （口诀卡→专题页 / 句型复述→复述面板）
+      if (t.boost) {
+        const b = t.boost
+        const inner = `
+          <span class="tt-task-ic">⭐</span>
+          <span class="tt-task-text">${escapeHtml(t.text || t.label || t.key)}</span>
+          ${ok ? '<span class="tt-task-check">✓</span>' : ''}`
+        if (!b.configured)
+          return `<div class="tt-task boost unconfig" title="本周未配置提升任务">${inner}</div>`
+        return `<button type="button" class="tt-task link boost ${ok ? 'ok' : 'plan'}"
+          data-boost-ref="${escAttr(b.item_ref || '')}" data-boost-kind="${escAttr(b.kind || '')}"
+          data-boost-done="${ok ? '1' : '0'}" title="${escAttr(b.kind === 'retell' ? '打开句型复述' : '去专题页背口诀卡')}">${inner}</button>`
+      }
       const inner = `
         <span class="tt-task-ic">${TYPE_ICON[t.type] || '•'}</span>
         <span class="tt-task-text">${escapeHtml(t.text || t.key)}</span>
@@ -152,6 +173,7 @@ export async function mountTimetable(el) {
       <h1>课程表</h1>
       <p>本周（${d.week_start || ''} 起）${studentWeekRate(d.completion)} · 按学习信号自动计算，不用打卡</p>
     </div>
+    ${loop ? loopCardHtml(loop) : ''}
     <div id="tt-micro"></div>
     <div id="tt-loop"></div>
     ${summary.length ? `<div class="tt-summary">${summary.map((s) => `<span>${s}</span>`).join('')}</div>` : ''}
@@ -166,8 +188,156 @@ export async function mountTimetable(el) {
     </div>
     ${(d.notes || '').trim() ? `<section class="tt-notes card"><h3>📌 老师的话</h3><p>${escapeHtml(d.notes).replace(/\n/g, '<br>')}</p></section>` : ''}
   `
+  if (loop) bindLoopCard(el, loop, boostRows)
+  bindBoostRows(el, boostRows)
   renderReviewStrip(el.querySelector('#tt-loop'))
   renderMicroCard(el.querySelector('#tt-micro'), d.micro_enabled)
+}
+
+// ---------- 今日闭环卡（v3 日闭环：到期背词/微练习/泛读/提升档） ----------
+// 数据来自 /plan/my-week 的 today.loop；字段缺失按 falsy 兜底，不白屏。
+function loopCardHtml(loop) {
+  const recite = loop.recite || {}
+  const micro = loop.micro || {}
+  const reading = loop.reading || {}
+  const boost = loop.boost || null  // null=今天不是提升日，整格不渲染
+
+  const cells = []
+  cells.push(recite.clear
+    ? { name: '🔁 到期背词', done: true }
+    : {
+        name: '🔁 到期背词',
+        state: `剩 ${Number(recite.due) || 0} · 逾期 ${Number(recite.overdue) || 0}`,
+        go: 'recite', goText: '去复习',
+      })
+  cells.push(micro.done
+    ? { name: '📝 微练习', done: true }
+    : {
+        name: '📝 微练习',
+        state: `${Number(micro.answered) || 0}/${Number(micro.total) || 3}`,
+        go: 'micro', goText: '去做题',
+      })
+  cells.push(reading.ok
+    ? { name: '📖 泛读', done: true }
+    : {
+        name: '📖 泛读',
+        state: (Number(reading.target_words) || 0) > 0
+          ? `今日 ${Number(reading.today_words) || 0}/${Number(reading.target_words)} 词`
+          : `今日 ${Number(reading.today_words) || 0} 词`,
+        go: 'reading', goText: '去泛读',
+      })
+  if (boost) {
+    // 两态口径（完成 ≠ 过关）：state 由后端给出——passed=已过关；
+    // pending=已提交待批改（done，闭环不卡）；graded_low=老师建议再练；
+    // 旧后端无 state 时回退 done 单态
+    cells.push(boost.configured === false
+      ? { name: '⭐ 提升档', state: '本周未配置提升任务', na: true }
+      : boost.state === 'graded_low'
+        ? { name: '⭐ 提升档', state: '建议再练一次', boost: true }
+        : boost.state === 'pending'
+          ? { name: '⭐ 提升档', done: true, state: '已提交 · 待批改' }
+          : boost.done
+            ? { name: '⭐ 提升档', done: true, state: '已过关' }
+            : { name: '⭐ 提升档', state: boost.label || '今日提升任务', boost: true })
+  }
+
+  // 全绿判定：未配置提升任务（na）不算欠账，不挡闭环达成
+  const allGreen = cells.every((c) => c.done || c.na)
+  const streak = Number(loop.streak) || 0
+  const nq = loop.next_queue || {}
+  const nqBits = [
+    (Number(nq.recite_words) || 0) ? `背词 ${Number(nq.recite_words)} 词` : '',
+    (Number(nq.micro_questions) || 0) ? `练习 ${Number(nq.micro_questions)} 题` : '',
+  ].filter(Boolean)
+
+  return `
+    <section class="tt-loopcard card">
+      <h3>🔄 今日闭环</h3>
+      <div class="tt-loop-grid" style="grid-template-columns:repeat(${cells.length},minmax(0,1fr))">
+        ${cells.map((c) => `
+          <div class="tt-loop-cell ${c.done ? 'done' : c.na ? 'na' : 'todo'}" ${c.boost ? 'data-boost-cell' : ''}>
+            <span class="tt-loop-name">${c.name}</span>
+            <b class="tt-loop-state" title="${escAttr(c.state || '')}">${c.done ? (c.state ? `✓ ${escapeHtml(c.state)}` : '✓') : escapeHtml(c.state || '')}</b>
+            ${c.go ? `<button type="button" class="tt-loop-go" data-loop-go="${c.go}">${c.goText} →</button>` : ''}
+            ${c.boost ? '<button type="button" class="tt-loop-go" data-boost-go>去完成 →</button>' : ''}
+          </div>`).join('')}
+      </div>
+      ${allGreen ? `<p class="tt-loop-alldone">✅ 今日闭环达成${streak > 1 ? ` · 连续 ${streak} 天` : ''}</p>` : ''}
+      ${nqBits.length ? `<p class="tt-loop-next">明日回炉：${nqBits.join(' · ')}</p>` : ''}
+    </section>`
+}
+
+function bindLoopCard(el, loop, boostRows) {
+  el.querySelectorAll('[data-loop-go]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const which = btn.dataset.loopGo
+      if (which === 'recite') {
+        const over = Number(loop.recite && loop.recite.overdue) || 0
+        sessionStorage.setItem('gkb-recite-review', over > 0 ? 'overdue' : 'due')
+        location.hash = '/recite'
+      } else if (which === 'micro') {
+        location.hash = '/micro'
+      } else if (which === 'reading') {
+        location.hash = '/library'
+      }
+    })
+  })
+  const boostGo = el.querySelector('[data-boost-go]')
+  if (boostGo) {
+    boostGo.addEventListener('click', () => {
+      const actionable = boostRows.filter((t) => t.boost && t.boost.configured !== false)
+      const row = actionable.find((t) => !t.done) || actionable[0]
+      if (row) openBoostItem(el, boostRows, row.boost.item_ref, row.boost.kind)
+    })
+  }
+}
+
+// 今日任务里的提升档行（task_key 前缀 boost:）：口诀卡→专题页；句型复述→复述面板
+function bindBoostRows(el, boostRows) {
+  el.querySelectorAll('[data-boost-ref]').forEach((btn) => {
+    btn.addEventListener('click', () =>
+      openBoostItem(el, boostRows, btn.dataset.boostRef, btn.dataset.boostKind))
+  })
+}
+
+function openBoostItem(el, boostRows, itemRef, kind) {
+  const ref = parseBoostRef(itemRef, kind)
+  if (!ref) return
+  if (kind === 'retell') {
+    if (ref.patternId == null) return
+    const row = boostRows.find((t) => t.boost && t.boost.item_ref === itemRef)
+    openBoostRetell({
+      patternId: ref.patternId,
+      label: (row && (row.text || row.label)) || '',
+      onSubmitted: () => markBoostDone(el),
+    })
+    return
+  }
+  // memory：翻面自评在专题页完成，这里负责送到
+  if (ref.topicId) location.hash = `/topics/${ref.topicId}`
+}
+
+// 句型复述提交成功后，把本页提升档的格子和今天的任务行就地翻成完成态
+// （后端口径「当日有提交即完成」，刷新后与服务器状态一致）
+function markBoostDone(el) {
+  el.querySelectorAll('[data-boost-cell]').forEach((c) => {
+    c.classList.remove('todo', 'na')
+    c.classList.add('done')
+    const state = c.querySelector('.tt-loop-state')
+    if (state) state.textContent = '✓'
+    const go = c.querySelector('[data-boost-go]')
+    if (go) go.remove()
+  })
+  // 只翻今天格子里的行：未来提升日的行不受今天提交影响
+  const todayCell = el.querySelector('.tt-day.today')
+  if (!todayCell) return
+  todayCell.querySelectorAll('[data-boost-ref]').forEach((btn) => {
+    btn.dataset.boostDone = '1'
+    btn.classList.remove('plan')
+    btn.classList.add('ok')
+    if (!btn.querySelector('.tt-task-check'))
+      btn.insertAdjacentHTML('beforeend', '<span class="tt-task-check">✓</span>')
+  })
 }
 
 // 微练习入口卡：未做 → 去做题；已做 → 点开回看。

@@ -350,6 +350,16 @@ export const api = {
       done_keys: doneKeys,
       assigned_user: assignedUser,
     }),
+  // 提升档 · 口诀卡翻面自评打卡（学生；记住了才算过关）
+  topicMemoryPass: (topicId, nodeKey) =>
+    reqJson(
+      `/topics/${encodeURIComponent(topicId)}/nodes/${encodeURIComponent(nodeKey)}/memory-pass`,
+      'PUT',
+      {},
+    ),
+  // 提升档 · 句型库（lecture 缺省=全量；教师选任务、学生复述面板共用）
+  patternsList: (lecture) =>
+    req('/patterns', { searchParams: lecture != null ? { lecture } : {} }),
   // 服务端版本（免登录）。前端版本见 version.js，设置中心对照两边是否漂移。
   version: () => req('/version'),
   // 视频学习：清单/详情 + 复述录音提交与批改（教师）
@@ -364,6 +374,8 @@ export const api = {
     reqJson(`/video-study/items/${encodeURIComponent(vid)}`, 'PUT', rec),
   videoItemDelete: (vid) =>
     reqJson(`/video-study/items/${encodeURIComponent(vid)}`, 'DELETE'),
+  // 复述提交/列表：rec 原样透传——视频复述 {vid,...}；提升档句型复述
+  // 加 ref_kind:'pattern'、vid=patternId（后端按 ref_kind 区分来源）
   videoRetells: ({ user, status, limit = 100 } = {}) =>
     req('/video-study/retells', { searchParams: { user, status, limit } }),
   videoRetellSubmit: (rec) => reqJson('/video-study/retells', 'POST', rec),

@@ -15,7 +15,9 @@ stem 全等。upsert 幂等跳过，批量脚本可重复跑。
 
 抽题（:meth:`MicroStore.today` 首次调用生成，确定性随机
 ``random.Random(f"{user}:{day}")`` 保证同日同题）：
-1. 错题未翻正最优先（category='wrong' 且该题最近一次作答非 correct）取 1；
+1. 错题未翻正最优先，并集「category='wrong' 且该题最近一次作答非
+   correct」∪「近 3 天答错且此后未答对过」（micro_log 读出，当日错题
+   次日自动回炉）取 1；
 2. 记忆库保底：phrasal/idiom/tense 里「最久没考」的类随机取 1（空类跳过）；
 3. 其余位置按 topic 最久没考（NULL 最先）→ 本周 focus_kps 倾斜 → 随机，
    近 3 天答对过的题降权不排除。
@@ -42,6 +44,8 @@ STATUSES = frozenset({"draft", "published"})
 DAILY_N = 3
 # 近 N 天答对过的题降权（北京日历，含当天）
 RECENT_CORRECT_DAYS = 3
+# 近 N 天答错过的题并入优先级①回炉（北京日历，含当天；当日错次日见）
+RECENT_WRONG_DAYS = 3
 # update_question 白名单字段
 EDITABLE_FIELDS = frozenset({"category", "topic", "stem", "options", "answer",
                              "explain", "status"})
@@ -237,6 +241,36 @@ class MicroStore:
             "done": bool(row["done"]) if row else False,
         }
 
+    def wrong_open_qids(self, user: str, day: str) -> list[int]:
+        """明日回炉题集合（闭环卡 next_queue 与 _pick_daily 优先级① 同源）：
+
+        category='wrong' ∪ 近 RECENT_WRONG_DAYS 天答错过，且最近一次作答
+        非正确。返回按 id 升序的稳定列表（rng.choice 语义不受影响）。
+        """
+        try:
+            floor = (date.fromisoformat(day)
+                     - timedelta(days=RECENT_WRONG_DAYS - 1)).isoformat()
+            with self._connect() as conn:
+                pool: dict[int, str] = {r[0]: r[1] for r in conn.execute(
+                    "SELECT id, category FROM micro_question"
+                    " WHERE status = 'published'")}
+                if not pool:
+                    return []
+                last: dict[int, int] = {}
+                recent_wrong: set[int] = set()
+                for r in conn.execute(
+                    "SELECT qid, is_correct, date FROM micro_log"
+                    " WHERE user = ? ORDER BY id", (user,),
+                ):
+                    last[r["qid"]] = r["is_correct"]
+                    if not r["is_correct"] and r["date"] >= floor:
+                        recent_wrong.add(r["qid"])
+            return sorted(q for q, cat in pool.items()
+                          if last.get(q, 0) != 1
+                          and (cat == "wrong" or q in recent_wrong))
+        except (sqlite3.Error, ValueError):
+            return []
+
     def _pick_daily(self, user: str, day: str) -> list[int]:
         """抽题（见模块 docstring 优先级）。返回 qid 有序列表（≤3）。"""
         rng = random.Random(f"{user}:{day}")
@@ -245,14 +279,12 @@ class MicroStore:
                 "SELECT id, category, topic, ref_lecture FROM micro_question"
                 " WHERE status = 'published' ORDER BY id",
             )]
-            # 该生逐题最近一次作答（按 id 升序覆盖 → 最近一条）与最近答对日
-            last_by_qid: dict[int, tuple[int, str]] = {}
+            # 该生逐题最近答对日（近 N 天答对降权用；按 id 升序覆盖 → 最近一条）
             last_correct: dict[int, str] = {}
             for r in conn.execute(
                 "SELECT qid, is_correct, date FROM micro_log"
                 " WHERE user = ? ORDER BY id", (user,),
             ):
-                last_by_qid[r["qid"]] = (r["is_correct"], r["date"])
                 if r["is_correct"]:
                     prev = last_correct.get(r["qid"])
                     if prev is None or r["date"] > prev:
@@ -285,12 +317,8 @@ class MicroStore:
 
         picked: list[int] = []
 
-        # 1) 错题未翻正最优先：category=wrong 且最近一次作答非 correct
-        wrong_open = sorted(
-            q["id"] for q in pool
-            if q["category"] == "wrong"
-            and last_by_qid.get(q["id"], (0, ""))[0] != 1
-        )
+        # 1) 错题未翻正最优先（与闭环卡明日回炉同一集合，见 wrong_open_qids）
+        wrong_open = self.wrong_open_qids(user, day)
         if wrong_open:
             picked.append(rng.choice(wrong_open))
 
