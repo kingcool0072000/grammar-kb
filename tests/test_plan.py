@@ -1474,6 +1474,44 @@ def test_article_mixed_units_sat_order(plan_env):
     ], sat_rows
 
 
+def test_article_single_unit_one_day(plan_env):
+    """1 篇的精读组不把排程拆坏：daily 只占 1 个工作日（欠账仍是同一篇、
+    同一天不重复）；做完后下一天不再排。weekend 只在周六出 1 行，
+    工作日和周日都不占位。"""
+    from grammar_kb.plan import PlanStore
+    _seed_plan_articles(plan_env, 41, 42)
+    ps = PlanStore(str(plan_env / "fce.db"))
+    days = [(date.fromisoformat(MON) + timedelta(days=i)).isoformat()
+            for i in range(7)]
+
+    def _ids(day_iso):
+        return [(r["article_id"], r["detail"])
+                for r in _scheduled_article_rows(ps, day_iso)]
+
+    ps.put_week(MON, {"article_units": [
+        {"ids": [41], "mode": "daily"}]}, "", user="malin")
+    assert _ids(days[0]) == [(41, "精读一组 · 1 篇 · 工作日摊开")]
+    # 没做完：周二仍是这一篇，不是第二条、也不是空转后跳天
+    assert _ids(days[1]) == [(41, "精读一组 · 1 篇 · 工作日摊开")]
+    con = sqlite3.connect(plan_env / "fce.db")
+    con.execute(
+        "INSERT INTO reading_recordings (user, article_id, created_at)"
+        " VALUES ('malin', 41, ?)", (f"{days[0]}T12:00:00+00:00",))
+    con.commit()
+    con.close()
+    assert _ids(days[1]) == []
+    # 周末不再为这一篇补出第二天
+    assert _ids(days[5]) == []
+    assert _ids(days[6]) == []
+
+    ps.put_week(MON, {"article_units": [
+        {"ids": [42], "mode": "weekend"}]}, "", user="malin")
+    for i in range(5):
+        assert _ids(days[i]) == [], days[i]
+    assert _ids(days[5]) == [(42, "精读一组 · 周末集中 · 1 篇")]
+    assert _ids(days[6]) == []
+
+
 def test_video_units_weekend_and_daily(plan_env):
     """视频 weekend 组周六出未完成前 2 个、周日兜底清剩余、工作日不排；
     旧 videos 平铺 = 一个 daily 组（工作日每天 1 个，现状）。"""

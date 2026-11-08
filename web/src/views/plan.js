@@ -476,7 +476,8 @@ export async function mountPlan(el) {
         units?.length ? units.reduce((n, u) => n + (u.ids?.length || u.vids?.length || 0), 0)
           : legacy?.length || 0
       const artN = unitCount(t.article_units, t.articles)
-      if (artN) chips.push(`📄 精读 ${artN} 篇`)
+      if (artN) chips.push(`📄 精读+朗读 ${artN} 篇`)
+      else if (t.speak) chips.push(`📄 精读+朗读 ${t.speak} 篇`)
       const vidN = unitCount(t.video_units, t.videos)
       if (vidN) {
         const pool = ed?.videos || []
@@ -488,7 +489,6 @@ export async function mountPlan(el) {
         chips.push(`🎬 视频 ${names.join('、')}`)
       }
       if (t.vocab_papers?.length) chips.push(`📝 试卷 ${t.vocab_papers.length} 卷`)
-      if (t.speak) chips.push(`🎤 朗读 ${t.speak} 篇`)
       return chips
     }
 

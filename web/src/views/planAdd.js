@@ -1,7 +1,9 @@
 /**
  * 周计划清单的增删。tasks 仍是 plan_weeks 那份 JSON。
- * 精读/视频按组存：article_units / video_units（每组 2 篇/个，带摊法 mode），
+ * 精读+朗读按组存：article_units（每组 1–2 篇，带摊法 mode）。朗读不另开一项，
+ * 课文勾上就含朗读。视频按组存 video_units（每组 2 个）。
  * 微练习用 tasks.micro = 1 表示本周启用；旧扁平键 articles/videos 不再写。
+ * 旧的 tasks.speak（单独「朗读篇数」）保存时丢掉，课表只跟课文走。
  */
 
 function copyTasks(tasks) {
@@ -61,7 +63,8 @@ export function migrateLegacyUnits(tasks) {
   return t
 }
 
-/** 保存/预览用的形状：只留契约字段，编辑期的 legacy 小标不落库。 */
+/** 保存/预览用的形状：只留契约字段，编辑期的 legacy 小标不落库。
+ *  朗读已并进精读课文，不再单独落 speak。 */
 export function tasksForSave(tasks) {
   const t = copyTasks(tasks)
   if (Array.isArray(t.article_units)) {
@@ -70,7 +73,26 @@ export function tasksForSave(tasks) {
   if (Array.isArray(t.video_units)) {
     t.video_units = t.video_units.map((u) => ({ vids: u.vids, mode: u.mode }))
   }
+  delete t.speak
   return t
+}
+
+/**
+ * `<details open>` 重绘时，Chrome 会再发一次 toggle（open 仍是 true）。
+ * 状态没变必须忽略：否则「打开 → 拉数据 → paint → toggle」死循环，
+ * 下拉和「添加提升任务」在下一帧就被拆掉，点不中。
+ * 返回 'load'（刚打开，要拉素材）、'close'（刚关上）、'ignore'（回声）。
+ */
+export function boostDetailsToggle(wasOpen, isOpen) {
+  if (Boolean(wasOpen) === Boolean(isOpen)) return 'ignore'
+  return isOpen ? 'load' : 'close'
+}
+
+/** 口诀卡要专题+节点；句型复述要 pattern_id。没选齐时按钮保持禁用。 */
+export function boostReady({ type, topic, node, pattern } = {}) {
+  return type === 'memory'
+    ? Boolean(topic && node)
+    : Number(pattern) > 0
 }
 
 function pushUnique(arr, value, sortNum) {
@@ -121,11 +143,11 @@ export function videoUnitVids(tasks) {
   return out
 }
 
-/** 精读加一组：ids 必须正好 2 篇；与本周任一组重复的篇目会拒掉（整组不加）。 */
+/** 精读+朗读加一组：1 篇或 2 篇都可以；0 篇、超过 2 篇、或与本周重复的篇目整组不加。 */
 export function appendArticleUnit(tasks, ids, mode) {
   const t = copyTasks(tasks)
-  const list = [...new Set((ids || []).map(Number))]
-  if (list.length !== 2) return t
+  const list = [...new Set((ids || []).map(Number).filter((n) => Number.isFinite(n)))]
+  if (list.length < 1 || list.length > 2) return t
   const taken = articleUnitIds(t)
   if (list.some((id) => taken.includes(id))) return t
   t.article_units = [
@@ -182,12 +204,12 @@ function unitTitle(titles, key) {
   return v == null ? '' : String(v)
 }
 
-/** 清单行文案：主行「📄 精读一组 · 2 篇 · 工作日摊开」，小字行是组内文章名（legacy 组加「旧格式」）。 */
+/** 清单行文案：主行「📄 精读+朗读 · 1 篇 · 工作日摊开」，小字行是组内文章名（legacy 组加「旧格式」）。 */
 export function articleUnitLine(unit, titles) {
   const u = unit || {}
   const ids = (u.ids || []).map(Number)
   const names = ids.map((id) => (unitTitle(titles, id) || `#${id}`).slice(0, 20))
-  const head = ['📄 精读一组', `${ids.length} 篇`, MODE_TEXT[normMode(u.mode)]].join(' · ')
+  const head = ['📄 精读+朗读', `${ids.length} 篇`, MODE_TEXT[normMode(u.mode)]].join(' · ')
   return { head, sub: capSub((u.legacy ? '旧格式 · ' : '') + names.join('、')) }
 }
 
@@ -259,7 +281,7 @@ export function vocabRowTitle(tasks, vocabWeek) {
   return lv == null ? `本周新掌握 ${n} 个词` : `本周新掌握 L${lv} 词 ${n} 个`
 }
 
-export function completionLine(type, { topicCounts = true, mode = '' } = {}) {
+export function completionLine(type, { topicCounts = true, mode = '', count = 0 } = {}) {
   if (type === 'lecture') {
     return topicCounts
       ? '怎么算完成：这讲有「课程测验」成绩，或这讲专题的知识点都学完。'
@@ -274,9 +296,15 @@ export function completionLine(type, { topicCounts = true, mode = '' } = {}) {
   }
   if (type === 'fce') return '怎么算完成：本周交了这一道 FCE。'
   if (type === 'article') {
-    return mode === 'weekend'
-      ? '怎么算完成：这两篇各交了朗读录音。周六一次精读 2 篇。'
-      : '怎么算完成：这篇文章交了朗读录音。工作日每天精读 1 篇。'
+    const one = Number(count) === 1
+    if (mode === 'weekend') {
+      return one
+        ? '怎么算完成：这一篇交了朗读录音。周六精读+朗读 1 篇。'
+        : '怎么算完成：本组每篇都交了朗读录音。周六一起精读+朗读。'
+    }
+    return one
+      ? '怎么算完成：这一篇交了朗读录音。工作日精读+朗读 1 篇。'
+      : '怎么算完成：每篇交了朗读录音。工作日每天精读+朗读 1 篇。'
   }
   if (type === 'video') {
     return mode === 'weekend'
@@ -285,7 +313,6 @@ export function completionLine(type, { topicCounts = true, mode = '' } = {}) {
   }
   if (type === 'reading') return '怎么算完成：泛读进度读完选中的章节。'
   if (type === 'paper') return '怎么算完成：词汇考试里登记了这一卷的成绩。'
-  if (type === 'speak') return '怎么算完成：本周交够这么多篇朗读。课表上主要跟着精读课文走。'
   if (type === 'micro') return '怎么算完成：本周每个工作日做 3 题，不做不扣分。'
   return ''
 }
@@ -361,6 +388,7 @@ export function appendPlanItem(tasks, item) {
       delete t.vocab_new
       break
     case 'speak':
+      // 旧入口：编辑器已不再单独加朗读。保存时 tasksForSave 会丢掉 speak。
       t.speak = item.n
       break
     case 'reading': {
@@ -424,9 +452,8 @@ export const PLAN_ADD_TYPES = [
   { id: 'video', label: '视频学习', hint: '2 个一组，选摊法' },
   { id: 'reading', label: '泛读书目', hint: '按章加入' },
   { id: 'fce', label: 'FCE 大题', hint: '周六做' },
-  { id: 'article', label: '精读课文', hint: '2 篇一组，选摊法：工作日摊开或周末集中' },
+  { id: 'article', label: '精读+朗读', hint: '1–2 篇一组，勾上就含朗读；工作日摊开或周末集中' },
   { id: 'paper', label: '单词试卷', hint: '周日做卷' },
-  { id: 'speak', label: '朗读篇数', hint: '本周安排几篇录音' },
   { id: 'micro', label: '微练习', hint: '一组=本周每日 3 题，不做不扣分' },
   { id: 'focus_kp', label: '攻坚讲次', hint: '标注本周攻坚讲次：周验收对照，微练习优先出这些讲的题' },
 ]

@@ -48,9 +48,9 @@ export async function mountTimetable(el) {
   const artTitles = (d.article_titles || []).filter((a) => a.title)
   if (artTitles.length) {
     const names = artTitles.map((a) => a.title.slice(0, 16)).join('、')
-    summary.push(`📄 精读 ${names}`)
+    summary.push(`📄 精读+朗读 ${names}`)
   } else if (tasks.articles?.length) {
-    summary.push(`📄 精读 ${tasks.articles.length} 篇`)
+    summary.push(`📄 精读+朗读 ${tasks.articles.length} 篇`)
   }
   const vidTitles = (d.video_titles || []).filter((v) => v.title)
   if (vidTitles.length) {

@@ -75,9 +75,10 @@ RULES: list[dict] = [
 #   "reading": {"波西杰克逊1": 100} # 书名 → 周末目标进度 %
 #   "videos": ["xxxxxxxxxxx", ...]  # 旧字段：平铺 vid=一个 daily 组（工作日
 #                                   # 每天 1 个看+复述，欠账滚动）
-#   "article_units": [{"ids": [58, 82], "mode": "daily" | "weekend"}],
-#                                   # 精读分组：daily 组工作日每天 1 篇轮转、
-#                                   # 周末每天 1 篇清尾；weekend 组周六集中 2 篇。
+#   "article_units": [{"ids": [58], "mode": "daily" | "weekend"}],
+#                                   # 精读+朗读分组：每组 1 或 2 篇。daily 组工作日
+#                                   # 每天 1 篇轮转、周末每天 1 篇清尾；weekend 组周六
+#                                   # 一次做完（1 篇出 1 行，2 篇同天出 2 行，不摊到周日）。
 #                                   # 排程优先于旧 articles（旧字段=一个 weekend 组）
 #   "video_units":   [{"vids": ["abc", "def"], "mode": "daily" | "weekend"}],
 #                                   # 视频分组：daily 组=现状每天 1 个；weekend 组
