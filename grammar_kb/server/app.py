@@ -9,7 +9,10 @@ import os
 from pathlib import Path as _P
 from typing import Optional
 
+import fastapi  # noqa: F401  postponed annotations 下解析 fastapi.Request
+
 from .. import __version__, dbreg
+from ..birthday import greeting_for
 from ..ingest import open_db
 from ..paths import ROOT
 from ..query import Query
@@ -242,6 +245,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         # 微练习（学生拉当日题 + 判分提交；/micro-admin/* 教师专属不在此列）
         ("GET", "/micro/today"),
         ("POST", "/micro/submit"),
+        # 生日祝福（学生只看自己的；日期在端点内按北京时间判断）
+        ("GET", "/me/birthday"),
     )
 
     @app.middleware("http")
@@ -292,6 +297,16 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             raise HTTPException(status_code=401, detail="用户名或密码错误")
         return _ok({"user": rec.user, "role": role, "token": make_token(rec.user, role)})
 
+    @app.get("/me/birthday")
+    def me_birthday(request: fastapi.Request):
+        """当前登录用户的生日祝福。非生日 / 教师：birthday 为 false，没有文案。
+
+        ``date`` 是北京日历，前端用它做「弹层每天一次」，不要改用浏览器本地日期。
+        """
+        user = getattr(request.state, "user", "") or ""
+        role = getattr(request.state, "role", "") or ""
+        return _ok(greeting_for(user, role))
+
     # 阅读更多（杂志阅读器）：API 走统一 Bearer 鉴权，用户身份由
     # _auth 中间件注入 request.state.user（模块内取，数据按用户隔离）
     _readingmore._init_db()
@@ -331,6 +346,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
                     "GET /homework · GET /homework/{lecture}",
                     "GET/POST /exams · PUT/DELETE /exams/{id}",
                     "GET /micro/today · POST /micro/submit（微练习，教师另见 /micro-admin）",
+                    "GET /me/birthday",
                     "GET /docs (Swagger UI)",
                 ],
             }

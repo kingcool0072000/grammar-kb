@@ -93,6 +93,8 @@ async function reqBlob(path) {
 
 export const api = {
   login: (user, password) => reqJson('/auth/login', 'POST', { user, password }),
+  // 生日祝福：后端按北京时间判断。非生日 data.birthday === false
+  birthday: () => req('/me/birthday'),
   stats: () => req('/stats'),
   // 学情聚合（教师端）：user 缺省=教师看板默认学生，month 缺省=北京当前月
   analyticsSummary: (user, month) =>

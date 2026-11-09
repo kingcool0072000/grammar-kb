@@ -1,6 +1,7 @@
 // FCE 真题 · 学生做题流：提交历史 → 大题列表（Part 级过滤）→ 做题渲染 → 提交
 // （含听力频谱播放台、字号偏好）。入口骨架（卷列表/周计划过滤）见 ../fcePapers.js。
 import { api, getAuth } from '../../api.js'
+import { finishBlessing, showBirthdayToast } from '../../birthday.js'
 import { escapeHtml, escAttr } from '../../render.js'
 import { fmtDurPad as fmtDur } from '../../fmt.js'
 import { createSpectrumPlayer, getFceAudioPref } from '../fceAudio.js'
@@ -512,11 +513,15 @@ function updateProgress(el) {
 function renderResult(box, res, qs, isEssay, $form, dur) {
   $form.querySelectorAll('input, textarea').forEach((i) => (i.disabled = true))
   const durLine = dur != null ? `<p>⏱ 用时 ${fmtDur(dur)}</p>` : ''
+  const bday = finishBlessing('paper')
+  const bdayLine = bday ? `<p class="bday-finish">${escapeHtml(bday)}</p>` : ''
+  if (bday) showBirthdayToast('paper')
   if (isEssay || res.status === 'pending') {
     box.innerHTML = `
       <div class="fce-result-box pend">
         <h3>✅ 作文已提交</h3>
         <p>等待老师批改，批改后会出现在练习记录里。</p>
+        ${bdayLine}
         ${durLine}
       </div>`
     box.scrollIntoView({ behavior: 'smooth' })
@@ -541,6 +546,7 @@ function renderResult(box, res, qs, isEssay, $form, dur) {
     <div class="fce-result-box ${pct >= 80 ? 'good' : pct >= 60 ? 'mid' : 'low'}">
       <h3>得分：${res.auto_score} / ${res.total}（${pct}%）</h3>
       <p>${pct >= 80 ? '很棒！保持这个状态。' : pct >= 60 ? '不错，错题再看看解析。' : '错题较多，建议对照原文再练一次。'}</p>
+      ${bdayLine}
       ${durLine}
       <button class="fce-again-btn" id="fce-again">再练一次</button>
     </div>`

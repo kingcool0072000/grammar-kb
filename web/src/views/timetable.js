@@ -1,4 +1,5 @@
 import { api } from '../api.js'
+import { finishBlessing } from '../birthday.js'
 import { escapeHtml, escAttr, todayIso, studyGoalMin, taskWhy, taskWhyShort } from '../render.js'
 import { openBoostRetell } from './boostRetell.js'
 import {
@@ -248,6 +249,7 @@ function loopCardHtml(loop) {
 
   // 全绿判定：未配置提升任务（na）不算欠账，不挡闭环达成
   const allGreen = cells.every((c) => c.done || c.na)
+  const bday = allGreen ? finishBlessing('loop') : ''
   const streak = Number(loop.streak) || 0
   const nq = loop.next_queue || {}
   const nqBits = [
@@ -268,6 +270,7 @@ function loopCardHtml(loop) {
           </div>`).join('')}
       </div>
       ${allGreen ? `<p class="tt-loop-alldone">✅ 今日闭环达成${streak > 1 ? ` · 连续 ${streak} 天` : ''}</p>` : ''}
+      ${bday ? `<p class="bday-finish">${escapeHtml(bday)}</p>` : ''}
       ${nqBits.length ? `<p class="tt-loop-next">明日回炉：${nqBits.join(' · ')}</p>` : ''}
     </section>`
 }

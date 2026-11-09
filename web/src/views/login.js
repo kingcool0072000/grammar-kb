@@ -1,4 +1,5 @@
 import { api, setAuth } from '../api.js'
+import { clearBannerDismissForLogin } from '../birthday.js'
 
 // 登录页：学生/教师账号入口。成功后写入 localStorage 登录态并回调重启应用。
 export function mountLogin(el, { onLogin }) {
@@ -34,6 +35,8 @@ export function mountLogin(el, { onLogin }) {
     try {
       const auth = await api.login(user, password)
       setAuth(auth)
+      // 同日再次登录：首屏横幅再出现。弹层仍按北京日期每天一次。
+      clearBannerDismissForLogin(sessionStorage)
       onLogin(auth)
     } catch (err) {
       $err.textContent = err.message || '登录失败'
