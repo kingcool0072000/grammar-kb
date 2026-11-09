@@ -33,6 +33,8 @@ web/node_modules/
 # 凭据（登录账号与签名密钥，不入库）
 data/users.json
 data/auth_secret.key
+# 学生生日覆盖（可选）。缺文件时用代码默认 malin=11-10，不进库以免盖住服务器上的手工配置
+data/birthdays.json
 data/audio/
 
 # 泛读馆用户内容（epub/封面，不入库；library.db 沿 data/*.db 规则）

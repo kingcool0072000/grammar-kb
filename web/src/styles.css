@@ -3954,3 +3954,89 @@ button.tt-task {
   --cat-color: #7a5ba6;
   display: inline-block; margin-right: 4px;
 }
+
+/* ===== 学生生日祝福（仅生日当天挂上；教师端不渲染这些节点） ===== */
+.bday-banner {
+  background: linear-gradient(90deg, #fff6e4 0%, #ffe4c4 52%, #ffd9e2 100%);
+  border-bottom: 1px solid #e7c48a;
+}
+.bday-banner-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.bday-banner-mark, .bday-modal-mark {
+  font-size: 28px;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+.bday-banner-copy { flex: 1; min-width: 0; }
+.bday-banner-copy b {
+  display: block;
+  font-size: 16px;
+  color: #8a3d2f;
+}
+.bday-banner-copy p {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+.bday-banner-x {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink-soft);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.bday-banner-x:hover { background: #fff; color: var(--ink); }
+.bday-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 360;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+.bday-modal-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(58, 36, 24, 0.38);
+}
+.bday-modal-card {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 28px 24px 22px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 0%, #fff4df 0%, var(--card) 58%);
+}
+.bday-modal-card h2 {
+  margin: 8px 0 8px;
+  font-size: 22px;
+  color: #8a3d2f;
+}
+.bday-modal-card p {
+  margin: 0 0 18px;
+  color: var(--ink-soft);
+}
+.bday-modal-ok { min-width: 160px; }
+.bday-finish {
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #8a3d2f;
+}
+.bday-toast { background: #8a3d2f; }
+@media (max-width: 640px) {
+  .bday-banner-inner { padding: 10px 14px; align-items: flex-start; }
+  .bday-banner-copy b { font-size: 15px; }
+}

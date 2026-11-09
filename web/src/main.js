@@ -8,6 +8,7 @@ import { prepareTeacher, attachTeacherBack } from './shell/teacher.js'
 import { prepareStudent } from './shell/student.js'
 import { mountView } from './shell/mountView.js'
 import { loadWordCards } from './wordcard.js'
+import { mountBirthdayGreeting } from './birthday.js'
 
 // 专注模式：禁正文右键系统菜单（输入框保留）；查词交互只走我们的浮层
 document.addEventListener('contextmenu', (e) => {
@@ -82,16 +83,27 @@ async function bootstrap() {
   // 词汇表（~528KB）计划表等首屏用不到：只发起不 await，与知识点加载并行，
   // 消费者（背单词页）自行 await 这个 Promise。失败兜底收进 catch（空数组）。
   state.vocabPromise = api.vocabulary().catch(() => [])
+  // 学生生日与词卡并行拉。教师不请求、不渲染，避免教师端出现祝福。
+  let greetPromise = Promise.resolve(null)
   if (role === 'teacher') {
     const ok = await prepareTeacher(state, boot, signalCtx)
     if (!ok) return
   } else {
     const ok = await prepareStudent()
     if (!ok) return
+    greetPromise = api.birthday().catch(() => null)
   }
 
   try { await cardsReady } catch { /* 词卡开关读不到时用默认 */ }
+  const greet = await greetPromise
   boot.remove()
+  if (role !== 'teacher') {
+    mountBirthdayGreeting(greet, {
+      root: app,
+      localStorage: window.localStorage,
+      sessionStorage: window.sessionStorage,
+    })
+  }
 
   const viewEl = h('div')
   main.append(viewEl)

@@ -3,6 +3,7 @@
 // 已答过的题刷新后直接恢复结果态：拿 answered 重放一次提交取回对错与解析
 // （后端幂等，不会重复计分）；没答完的继续作答，只提交新答的题。
 import { api } from '../api.js'
+import { finishBlessing, showBirthdayToast } from '../birthday.js'
 import { escapeHtml, escAttr } from '../render.js'
 
 // 分类 → 徽标文案与配色（颜色见 styles.css 末尾 .mc-badge.*）
@@ -152,10 +153,12 @@ export async function mountMicro(el, { role } = {}) {
     const scoreLine = correctN != null
       ? `<p class="mc-done-sub">答对 ${correctN}/${total}，错题记得看解析</p>`
       : '<p class="mc-done-sub">明天还有 3 题等你</p>'
+    const bday = finishBlessing('micro')
     return `
       <div class="mc-card mc-done-card">
         <b>今日微练习已完成 ✓</b>
         ${scoreLine}
+        ${bday ? `<p class="bday-finish">${escapeHtml(bday)}</p>` : ''}
       </div>`
   }
 
@@ -186,9 +189,12 @@ export async function mountMicro(el, { role } = {}) {
       btn.disabled = true
       btn.textContent = '提交中…'
       try {
+        const wasDone = done
         const res = await api.microSubmit(answers)
         mergeResult(res)
+        const justFinished = !wasDone && done
         render()
+        if (justFinished) showBirthdayToast('micro')
       } catch (e) {
         alert(`提交失败：${e.message}`)
         btn.disabled = false
