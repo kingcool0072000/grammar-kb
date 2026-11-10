@@ -7,18 +7,12 @@
 // - 弹层：按后端返回的北京日期，每天一次（localStorage）。
 // 教师角色、非生日：什么都不挂。
 
+import { escapeHtml } from './fmt.js'
+
 const BANNER_PREFIX = 'gkb-bday-banner:'
 const MODAL_PREFIX = 'gkb-bday-modal:'
 
 let current = null
-
-function escapeHtml(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
 
 export function bannerKey(user, date) {
   return `${BANNER_PREFIX}${user}:${date}`

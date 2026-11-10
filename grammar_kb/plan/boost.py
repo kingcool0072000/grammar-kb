@@ -20,7 +20,6 @@ get(item_id)）；模块未部署时该分支按未过关处理，不抛异常�
 """
 from __future__ import annotations
 
-import json
 import logging
 import re
 import sqlite3
@@ -29,6 +28,7 @@ from datetime import datetime, timedelta, timezone as _tz
 
 from .. import dbreg
 from ..clock import monday_of
+from ..store_base import connect, loads_dict
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ DEFAULT_BOOST_DAYS = [2, 4]
 
 
 def _connect():
-    return dbreg.connect(dbreg.fce_db_path())
+    return connect(dbreg.fce_db_path())
 
 
 def _utc_now() -> str:
@@ -156,10 +156,7 @@ def today_items(user: str, date: str) -> list[dict]:
             ).fetchone()
     except (sqlite3.Error, ValueError):
         return []
-    try:
-        tasks = json.loads(row["tasks"] or "{}") if row else {}
-    except (ValueError, TypeError):
-        tasks = {}
+    tasks = loads_dict(row["tasks"]) if row else {}
     if not isinstance(tasks, dict):
         tasks = {}
     items = [x for x in (tasks.get("boost_items") or [])

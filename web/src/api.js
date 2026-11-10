@@ -102,20 +102,12 @@ export const api = {
   lectures: () => req('/lectures'),
   lecture: (number, format = 'markdown') =>
     req(`/lectures/${number}`, { searchParams: { format } }),
-  kp: (id, format = 'markdown') =>
-    req(`/kp/${id}`, { searchParams: { format } }),
-  search: (q, { category, limit = 20 } = {}) =>
-    req('/search', { searchParams: { q, category, limit } }),
-  markers: ({ category, tense } = {}) =>
-    req('/markers', { searchParams: { category, tense } }),
-  relation: (type) => req('/relation', { searchParams: { type } }),
   vocabulary: ({ limit = 2000, min_freq = 2 } = {}) =>
     req('/vocabulary', { searchParams: { limit, min_freq } }),
   // 全量词典（ECDICT）：任意单词可查，不限于讲义语料
   dict: (word) => req(`/dict/${encodeURIComponent(word)}`),
   taxonomy: () => req('/taxonomy'),
   // 作业卷题干（后端 grammar.db homework_question 表）
-  homework: (lecture) => req(`/homework/${lecture}`),
   homeworkBatch: (lectures) =>
     req('/homework', { searchParams: { lectures: lectures.join(',') } }),
   // 全量知识点（教师备课中心；替代旧的探测式 /search 聚合）
@@ -154,7 +146,6 @@ export const api = {
   fceListeningVocab: (testId) => req(`/fce-papers/${testId}/listening-vocab`),
   readingRecordings: ({ user, status, limit = 100 } = {}) =>
     req('/reading/recordings', { searchParams: { user, status, limit } }),
-  readingRecording: (id) => req(`/reading/recordings/${id}`),
   readingSubmitRecording: (rec) => reqJson('/reading/recordings', 'POST', rec),
   readingGradeRecording: (id, rec) => reqJson(`/reading/recordings/${id}`, 'PUT', rec),
   readingDeleteRecording: (id) => reqJson(`/reading/recordings/${id}`, 'DELETE'),
@@ -190,10 +181,6 @@ export const api = {
     reqJson(`/library/books/${bookId}/chapters/${idx}/skip`, 'PUT', { skip }),
   libraryOpenBook: (bookId) => reqJson(`/library/books/${bookId}/open`, 'POST'),
   libraryGetProgress: (bookId) => req(`/library/books/${bookId}/progress`),
-  libraryPutProgress: (bookId, rec) =>
-    reqJson(`/library/books/${bookId}/progress`, 'PUT', rec),
-  libraryPrep: (bookId, chapterIndex) =>
-    req(`/library/prep/${bookId}/${chapterIndex}`),
   libraryPrepBatch: (bookId, chapterIndexes) =>
     reqJson('/library/prep/batch', 'POST', { bookId, chapterIndexes }),
   libraryPrepBatchStatus: (jobId) => req(`/library/prep/batch/${jobId}`),
@@ -203,8 +190,6 @@ export const api = {
   librarySaveSettings: (patch) => reqJson('/library/settings', 'PUT', patch),
   libraryModels: (key) => req('/library/models', { searchParams: { key } }),
   libraryTestAi: (apiKey) => reqJson('/library/ai/test', 'POST', { apiKey }),
-  libraryDict: (word, context) =>
-    req(`/library/dict/${encodeURIComponent(word)}`, { searchParams: { context } }),
   // 学情分析 · AI 周报（手动触发上一自然周，教师专属；模型配置复用泛读馆设置）
   // 专注力（泛读馆阅读器行为采集；学生上报，教师批改中心查看）
   focusSubmit: (rec) => reqJson('/focus/sessions', 'POST', rec),
@@ -216,7 +201,7 @@ export const api = {
   // 阅读更多（杂志阅读器）会话列表（教师端学习日志；数据在独立 readingmore.db）
   rmSessions: ({ user, limit = 100 } = {}) =>
     req('/readingmore/api/sessions', { searchParams: { user, limit } }),
-  // 分层词库（vocab_word 表；学生端受教师 vocabUnlock 解锁约束）+ 错词本
+  // 分层词库（vocab_word 表；学生端受教师 vocabUnlock 解锁约束）
   vocabLevels: ({ maxLevel = 7, countsOnly = false, level = null } = {}) =>
     req('/vocab-levels', {
       searchParams: {
@@ -228,8 +213,6 @@ export const api = {
   // 词光词条（插画/录音/例句）。404 由调用方吞掉并退回浏览器 TTS。
   atlasEntry: (word) => req(`/atlas/${encodeURIComponent(word)}`),
   atlasInfo: () => req('/atlas-info'),
-  wrongbook: ({ user, limit = 500 } = {}) =>
-    req('/recite/wrongbook', { searchParams: { user, limit } }),
   conqueredPage: ({ user, page = 1, limit = 40, q = '' } = {}) =>
     req('/recite/conquered', { searchParams: { user, page, limit, q } }),
   reciteGloss: (words) =>
@@ -256,20 +239,13 @@ export const api = {
   planWeeks: ({ user } = {}) => req('/plan/weeks', { searchParams: { user } }),
   planWeekPut: (weekStart, payload) =>
     reqJson(`/plan/weeks/${weekStart}`, 'PUT', payload),
-  // 外循环（双循环教学）：诊断聚类 / 上周验收 / 日任务展开预览
-  planDiagnosis: ({ weeksBack } = {}) =>
-    req('/plan/diagnosis', { searchParams: weeksBack ? { weeks_back: weeksBack } : {} }),
+  // 计划表（学生侧）：week-todo 本周完成度 / my-week 我的本周（与 week_view 同源）
   planWeekTodo: () => req('/plan/week-todo'),
   planMyWeek: () => req('/plan/my-week'),
-  planReview: () => req('/plan/review'),
-  planDailyPreview: () => req('/plan/daily-preview'),
 
-  // 作业卷管理（教师）：题目+答案（历次逐题对错）+ 爱问云同步
+  // 作业卷管理（教师）：题目+答案
   hwPapers: () => req('/homework-admin/papers'),
   hwPaper: (lecture) => req(`/homework-admin/paper/${lecture}`),
-  hwAnswerPut: (lecture, qnum, answer) =>
-    reqJson('/homework-admin/answer', 'PUT', { lecture, qnum, answer }),
-  hwSyncAicloud: () => reqJson('/homework-admin/sync-aicloud', 'POST', {}),
 
   // 学生管理（教师）
   users: () => req('/users'),
@@ -290,9 +266,6 @@ export const api = {
     }),
   planWeekPreview: ({ week_start, user, tasks }) =>
     reqJson('/plan/week-preview', 'POST', { week_start, user, tasks }),
-  // 教师周历视图：周拆解 + 逐日任务矩阵
-  planMonthView: ({ month, user } = {}) =>
-    req('/plan/month-view', { searchParams: { ...(month ? { month } : {}), ...(user ? { user } : {}) } }),
   planOverview: ({ user } = {}) => req('/plan/overview', { searchParams: user ? { user } : {} }),
   planWeekView: ({ weekStart, user } = {}) =>
     req('/plan/week-view', { searchParams: { ...(weekStart ? { week_start: weekStart } : {}), ...(user ? { user } : {}) } }),
@@ -330,7 +303,6 @@ export const api = {
     }),
   // 词汇考试记录（登记 / 修改 / 删除；教师专属写）
   // 单词级别由 vocabUnlockPut 单独设定，不要求考试 80 分
-  vocabUnlockGet: () => req('/vocab-exams/unlock'),
   vocabUnlockPut: (user, level) =>
     reqJson('/vocab-exams/unlock', 'PUT', { user, level }),
   vocabExams: ({ user, includeAll } = {}) =>

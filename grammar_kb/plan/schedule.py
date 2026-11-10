@@ -306,7 +306,8 @@ class ScheduleMixin:
                   else ctx.vocab_actuals(lo, upto, words))
         return max(0, (vg - base) - gained)
 
-    # ---- 计划分组契约（article_units / video_units 优先，旧平铺字段回退）----
+    # ---- 计划分组契约（精读 article_units 优先、旧 articles 平铺回退；
+    #      视频 video_units 唯一来源，旧 videos 键由一次性脚本转换）----
 
     def _article_units(self, t: dict) -> list[dict]:
         """周计划精读分组（读兼容：旧 ``articles:[int]`` = 一个 weekend 组，
@@ -360,8 +361,9 @@ class ScheduleMixin:
         return out
 
     def _video_units(self, t: dict) -> list[dict]:
-        """周计划视频分组（读兼容：旧 ``videos:[str]`` = 一个 daily 组，
-        即现状「工作日每天 1 个、欠账滚动」语义）。"""
+        """周计划视频分组。``video_units`` 是唯一来源（旧平铺 ``videos`` 键
+        由 scripts/oneoff_2026-11_legacy_backfill.py 转成一组 mode=daily，
+        读路径不再兜底）。"""
         units: list[dict] = []
         for u in (t.get("video_units") or []):
             if not isinstance(u, dict):
@@ -376,13 +378,10 @@ class ScheduleMixin:
                     vids.append(s)
             if vids:
                 units.append({"vids": vids, "mode": mode, "labeled": True})
-        if units:
-            return units
-        vids = [str(v).strip() for v in (t.get("videos") or []) if str(v).strip()]
-        return [{"vids": vids, "mode": "daily", "labeled": False}] if vids else []
+        return units
 
     def _plan_videos(self, t: dict) -> list[str]:
-        """计划内全部视频 vid（去重保序；units 优先、旧 videos 回退）。"""
+        """计划内全部视频 vid（去重保序，与排程同一读法）。"""
         out: list[str] = []
         for u in self._video_units(t):
             for vid in u["vids"]:
@@ -438,7 +437,7 @@ class ScheduleMixin:
                             lo: str, ref: str, upto: str, dow: int,
                             wd_left: int,
                             ctx: Optional[WeekCtx] = None) -> None:
-        """视频分组摊派（video_units 优先，旧 videos 平铺=一个 daily 组）。
+        """视频分组摊派（daily 组现状语义 + weekend 组周末集中）。
 
         daily 组（现状语义）：工作日每天 1 个、欠账滚动同日不堆，周末
         每天至多补 1 个。weekend 组：周六出组内未完成前 2 个（同日两条
@@ -719,7 +718,6 @@ class ScheduleMixin:
 
         任务由本周 plan_weeks.tasks 派生（与教师驾驶舱「每日任务展开」
         同一规则）。完成态只认 ``day_completion``——学生做了即亮。
-        ``plan_day_checks`` 不读、不写。
         某日若已有 ``plan_history_days`` 快照，用快照代替派生清单
         （可选回填，不是每日流水）。
         ``ctx``：周级信号缓存；缺省自建（单日语义不变）。
@@ -874,8 +872,8 @@ class ScheduleMixin:
                 "fce": t.get("fce") or [],
                 "reading": t.get("reading") or {},
                 "focus_kps": t.get("focus_kps") or [],
-                # 读契约同款：units 优先、旧 videos 平铺回退（编辑器保存
-                # 会把旧键迁移进 video_units 并删除）
+                # 读契约同款：与排程同一读法（video_units 唯一来源，
+                # 旧 videos 键由一次性脚本转换后消失）
                 "videos": self._plan_videos(t),
             },
             "days": days,

@@ -176,41 +176,6 @@ def test_lecture_404(client):
     assert body["data"] is None
 
 
-def test_kp(client):
-    body = client.get("/kp/1").json()["data"]
-    assert "过去将来时的定义" in body["content"]
-
-
-def test_kp_html(client):
-    content = client.get("/kp/1?format=html").json()["data"]["content"]
-    assert "<html" in content
-
-
-def test_kp_404(client):
-    r = client.get("/kp/99999")
-    assert r.status_code == 404
-    assert r.json()["code"] == 404
-
-
-def test_search(client):
-    body = client.get("/search?q=过去将来时").json()["data"]
-    assert body["count"] >= 1
-
-
-def test_search_with_category(client):
-    assert client.get("/search?q=过去将来时&category=时态").json()["data"]["count"] >= 1
-    assert client.get("/search?q=过去将来时&category=词法").json()["data"]["count"] == 0
-
-
-def test_markers(client):
-    items = client.get("/markers?category=时态").json()["data"]["items"]
-    assert any(it["marker"] == "would" for it in items)
-
-
-def test_relation(client):
-    assert "items" in client.get("/relation?type=主将从现").json()["data"]
-
-
 def test_cors_header_present(client):
     """OPTIONS 预检或普通 GET 都应带 CORS 允许头。"""
     r = client.get("/stats", headers={"Origin": "http://example.com"})
@@ -219,7 +184,7 @@ def test_cors_header_present(client):
 
 def test_cors_preflight(client):
     r = client.options(
-        "/search",
+        "/stats",
         headers={
             "Origin": "http://example.com",
             "Access-Control-Request-Method": "GET",
@@ -425,7 +390,7 @@ def test_cors_preflight_without_token(isolated_app):
     """
     with TestClient(isolated_app) as c:
         r = c.options(
-            "/search",
+            "/stats",
             headers={
                 "Origin": "http://example.com",
                 "Access-Control-Request-Method": "GET",
@@ -437,9 +402,9 @@ def test_cors_preflight_without_token(isolated_app):
 
 
 def test_exam_db_path_resolved_not_none(tmp_path, monkeypatch):
-    """路径解析回归：exam_db_path=None 时 AnalyticsAI 不得落到 ./None。
+    """路径解析回归：exam_db_path=None 时 create_app 不得落到 ./None。
 
-    旧实现 AnalyticsAI(None) → str(None)="None" → sqlite3.connect("None")
+    旧实现曾有 store 拿到 None → str(None)="None" → sqlite3.connect("None")
     在 cwd 生成名为 None 的脏文件；create_app 必须先解析成具体路径再装配。
     """
     import sqlite3
@@ -458,17 +423,16 @@ def test_exam_db_path_resolved_not_none(tmp_path, monkeypatch):
     GrammarDB(db_path).close()
     app = create_app(db_path)
     with TestClient(app) as c:
-        # 触发 analytics 端点（list_reports 会打开 analytics 自己的库）
-        r = c.get("/analytics/ai/reports", headers=_login(c, "teacher"))
+        # 触发成绩端点（ExamStore 打开 exam 库）
+        r = c.get("/exams", headers=_login(c, "teacher"))
         assert r.status_code == 200, r.text
 
-    # 成绩库与 AI 周报表同落环境变量指定路径（而非 ./None）
+    # 成绩库落环境变量指定路径（而非 ./None）
     con = sqlite3.connect(exam_db)
     tables = {row[0] for row in con.execute(
         "SELECT name FROM sqlite_master WHERE type='table'")}
     con.close()
     assert "exam_records" in tables       # ExamStore 用了该路径
-    assert "ai_weekly_reports" in tables   # AnalyticsAI 用了同一具体路径
     assert not (tmp_path / "None").exists()
 
 

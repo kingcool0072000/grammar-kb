@@ -225,18 +225,22 @@ def test_conquered_is_full_mastered_list(recite_env):
     assert d["stats"]["total"] == 1 and d["stats"]["conquered_n"] == 1
 
 
-def test_review_backfill_from_history(recite_env):
-    """存量兼容：历史会话错过但无 recite_review 行的词，读 wrongbook 时回填。"""
+def test_wrongbook_shows_seeded_cycle(recite_env):
+    """错词本读 recite_review 存量行。历史会话的错词回填不再走懒迁移，
+    由一次性脚本（scripts/oneoff_2026-11_legacy_backfill.py）直接写
+    recite_review——这里种一行脚本口径的周期行（stage=0、最近错日+1）
+    验证读取展示。"""
     from grammar_kb.recite import ReciteStore
 
-    # 直接绕过新调度写一条历史会话（模拟旧版本数据）
+    # 模拟脚本回填后的存量周期行：3 天前错的，D+1 早已过期
     store = ReciteStore(str(recite_env / "fce.db"))
+    old_day = (datetime.now(_tz.utc) - timedelta(days=3)).date().isoformat()
     with store._connect() as conn:
         conn.execute(
-            "INSERT INTO recite_sessions (user, total, wrong, acc, duration_sec,"
-            " wrong_words, mode, scope, created_at) VALUES ('malin', 1, 1, 0, 5,"
-            " '[\"oldword\"]', 'flip', 'all', ?)",
-            ((datetime.now(_tz.utc) - timedelta(days=3)).isoformat(timespec="seconds"),),
+            "INSERT INTO recite_review (user, word, level, wrong_count, stage,"
+            " first_wrong_at, next_review, last_review_at)"
+            " VALUES ('malin', 'oldword', 0, 1, 0, ?, ?, ?)",
+            (old_day, old_day, old_day),
         )
     c = _client(recite_env)
     h = _login(c, "malin", "123456")
@@ -244,7 +248,7 @@ def test_review_backfill_from_history(recite_env):
     assert d["stats"]["total"] == 1
     w = d["in_cycle"][0]
     assert w["word"] == "oldword" and w["wrong_count"] == 1
-    assert w["due"] is True  # 3 天前错的，D+1 早已过期
+    assert w["due"] is True  # next_review 早已过期
 
 
 def test_conquered_page_is_server_side(recite_env):

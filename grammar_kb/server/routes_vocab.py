@@ -148,12 +148,6 @@ def register_vocab(app, ctx):
 
     # ---- 词汇级别考试（线下考卷 + 成绩登记；考试驱动解锁） ----
 
-    @app.get("/vocab-exams/unlock")
-    def vocab_unlock_get(request: "fastapi.Request"):
-        """已单独设定的单词级别：{学生: 级别}。未出现的学生表示还没设定。教师专属。"""
-        _require_teacher(request)
-        return _ok(vocab_exam.list_unlock_all())
-
     @app.put("/vocab-exams/unlock")
     def vocab_unlock_put(rec: dict, request: "fastapi.Request"):
         """设置某学生的单词级别（0-7，上限随 MAX_UNLOCK_LEVEL）。教师专属。

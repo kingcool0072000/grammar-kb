@@ -959,61 +959,8 @@ def _task_sig(tasks):
     return [(t.get("key"), t.get("done"), t.get("why")) for t in tasks]
 
 
-def test_checks_do_not_change_done_or_percent(plan_env, weekday_clock):
-    """完成率来自 day_completion。plan_day_checks 写满也不改 done / percent / why。"""
-    c = _client(plan_env)
-    hs = _login(c, "malin", "123456")
-    ht = _login(c, "teacher", "123456")
-    _put_week(c, ht, {"lectures": [29]})
-    day = today_cn().isoformat()
-    before = c.get("/plan/today", headers=hs).json()["data"]
-    assert before["basis"] == "signals"
-    assert before["tasks"], "当天应有派生任务，否则测不到「空打卡 ≠ 0%」"
-    assert all("why" in t for t in before["tasks"])
-    sig = _task_sig(before["tasks"])
-    # 有任务但还没做：percent 可以是 0，但这是信号结果，不是因为打卡表是空的。
-    if before["total"]:
-        assert before["percent"] == round(before["done"] / before["total"] * 100)
-    key = before["tasks"][0]["key"]
-    chk = c.post("/plan/day-check", headers=hs, json={
-        "user": "malin", "day": day, "task_key": key, "on": True})
-    assert chk.status_code == 200, chk.text
-    body = chk.json()["data"]
-    assert body["affects_done"] is False
-    assert "不计入" in body["note"]
-    after = c.get("/plan/today", headers=hs).json()["data"]
-    assert _task_sig(after["tasks"]) == sig
-    assert after["percent"] == before["percent"]
-    assert after["done"] == before["done"]
-
-    wv = c.get(f"/plan/week-view?week_start={MON}&user=malin",
-               headers=ht).json()["data"]
-    cell = next(x for x in wv["days"] if x["date"] == day)
-    assert cell["basis"] == "signals"
-    assert cell["percent"] == before["percent"]
-    assert all(t.get("why") for t in cell["tasks"])
-    # 未来日不因为「还没打卡」显示 0%
-    for fut in wv["days"]:
-        if fut["future"]:
-            assert fut["percent"] is None
-            assert all(t["why"] == "scheduled" for t in fut["tasks"])
-    assert "不看手动打卡" in wv["completion"]["note"]
-    assert wv["completion"]["percent"] == c.get(
-        "/plan/week-todo", headers=hs).json()["data"]["percent"]
-    todo = c.get("/plan/week-todo", headers=hs).json()["data"]
-    todo_day = next(x for x in todo["days"] if x["date"] == day)
-    assert todo_day["percent"] == before["percent"]
-    assert _task_sig(todo_day["tasks"]) == sig
-    assert "不看手动打卡" in todo["completion_note"]
-
-    con = sqlite3.connect(plan_env / "fce.db")
-    n = con.execute("SELECT COUNT(*) FROM plan_day_checks").fetchone()[0]
-    con.close()
-    assert n == 1  # 打卡行在，但上面的完成率没跟着变
-
-
 def test_past_week_rate_uses_signals_without_history_or_checks(plan_env):
-    """上周没有回填快照、打卡表也是空的，完成率仍按当天成绩信号，而不是 0%。"""
+    """上周没有回填快照，完成率仍按当天成绩信号，而不是 0%。"""
     c = _client(plan_env)
     hs = _login(c, "malin", "123456")
     ht = _login(c, "teacher", "123456")
@@ -1036,7 +983,6 @@ def test_past_week_rate_uses_signals_without_history_or_checks(plan_env):
     assert row["percent"] == wv["completion"]["percent"]
     assert row["percent"] > 0
     con = sqlite3.connect(plan_env / "fce.db")
-    assert con.execute("SELECT COUNT(*) FROM plan_day_checks").fetchone()[0] == 0
     assert con.execute(
         "SELECT COUNT(*) FROM plan_history_days").fetchone()[0] == 0
     con.close()
@@ -1537,8 +1483,9 @@ def test_video_units_weekend_and_daily(plan_env):
     rows_sun = _scheduled_video_rows(ps, sun)
     assert [r["vid"] for r in rows_sun] == ["vb", "vc"], rows_sun
     assert all("周日兜底" in r["detail"] for r in rows_sun)
-    # 旧 videos 平铺 = 一个 daily 组：工作日每天 1 个（现状文案）
-    ps.put_week(MON, {"videos": ["va", "vb"]}, "", user="malin")
+    # daily 组：工作日每天 1 个（现状文案）
+    ps.put_week(MON, {"video_units": [{"vids": ["va", "vb"], "mode": "daily"}]},
+                "", user="malin")
     rows_daily = _scheduled_video_rows(ps, mon)
     assert [r["vid"] for r in rows_daily] == ["va"], rows_daily
     assert "工作日每天 1 个" in rows_daily[0]["detail"]
@@ -1569,13 +1516,13 @@ def test_week_goal_micro_dimension(plan_env):
     c = _client(plan_env)
     ht = _login(c, "teacher", "123456")
     # 无 micro 组：不出微练习维度（视频复述维度正常在）
-    _put_week(c, ht, {"lectures": [29], "videos": ["v1"]})
+    _put_week(c, ht, {"lectures": [29], "video_units": [{"vids": ["v1"], "mode": "daily"}]})
     d = c.get(f"/plan/week-view?week_start={MON}&user=malin",
               headers=ht).json()["data"]
     names = [x["name"] for x in d["goal_progress"]["dims"]]
     assert "视频复述" in names and "微练习" not in names
     # 开 micro + 周一~周三各做完一组 → 微练习 3/7，位于视频复述之后
-    _put_week(c, ht, {"lectures": [29], "videos": ["v1"], "micro": 1})
+    _put_week(c, ht, {"lectures": [29], "video_units": [{"vids": ["v1"], "mode": "daily"}], "micro": 1})
     for i in (0, 1, 2):
         _seed_micro_daily(plan_env,
                           (date.fromisoformat(MON) + timedelta(days=i)).isoformat(),

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Optional
 
 from . import dbreg
+from .store_base import add_column, connect, loads_json
 from .wordutil import (_FUNCTION_WORDS, _IRREG_FORMS, _lemma_candidates,
                        _vocab_level_map, _vocab_pos_map, _proper_nouns)
 
@@ -45,7 +46,7 @@ class FcePaperStore:
         self.db_path = db_path or dbreg.fce_db_path()
 
     def _connect(self):
-        return dbreg.connect(self.db_path, readonly=True)
+        return connect(self.db_path, readonly=True)
 
     def list_papers(self) -> list[dict]:
         """概览：每套 Test 的 paper/part → 题数。库不存在返回 []。"""
@@ -200,10 +201,7 @@ class FcePaperStore:
 
 
 def _question_out(q: sqlite3.Row) -> dict:
-    try:
-        options = json.loads(q["options_json"] or "{}")
-    except (ValueError, TypeError):
-        options = {}
+    options = loads_json(q["options_json"], {})
     return {
         "qnum": q["qnum"],
         "type": q["type"],
@@ -242,10 +240,8 @@ CREATE INDEX IF NOT EXISTS idx_fce_sub_user ON fce_submission(user, created_at);
 
 def _ensure_duration_column(conn: sqlite3.Connection) -> None:
     """老库补列（duration_sec 后加的字段，ALTER 幂等）。"""
-    cols = {r[1] for r in conn.execute("PRAGMA table_info(fce_submission)")}
-    if "duration_sec" not in cols:
-        conn.execute("ALTER TABLE fce_submission ADD COLUMN duration_sec INTEGER")
-        conn.commit()
+    add_column(conn, "fce_submission", "duration_sec",
+               "ALTER TABLE fce_submission ADD COLUMN duration_sec INTEGER")
 
 # 字母作答的题型（比对首字母）；作文题型不自动批改
 _LETTER_TYPES = {"mcq3", "mcq4", "matchSentence", "matchPerson", "matchOpinion"}
@@ -305,7 +301,7 @@ class FceSubmissionStore:
             _ensure_duration_column(conn)
 
     def _connect(self):
-        return dbreg.connect(self.db_path)
+        return connect(self.db_path)
 
     def submit(
         self, user: str, test_id: int, paper: str, part: int, answers: dict,
@@ -406,17 +402,11 @@ class FceSubmissionStore:
 
 
 def _sub_out(r: sqlite3.Row) -> dict:
-    def _j(s, default):
-        try:
-            return json.loads(s) if s else default
-        except (ValueError, TypeError):
-            return default
-
     return {
         "id": r["id"], "user": r["user"], "test_id": r["test_id"],
         "paper": r["paper"], "part": r["part"],
-        "answers": _j(r["answers_json"], {}),
-        "detail": _j(r["detail_json"], []),
+        "answers": loads_json(r["answers_json"], {}),
+        "detail": loads_json(r["detail_json"], []),
         "auto_score": r["auto_score"], "total": r["total"],
         "status": r["status"],
         "teacher_score": r["teacher_score"], "teacher_comment": r["teacher_comment"],

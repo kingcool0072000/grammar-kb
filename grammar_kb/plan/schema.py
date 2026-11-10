@@ -14,14 +14,6 @@ CREATE TABLE IF NOT EXISTS plan_weeks (
     updated_at TEXT,
     PRIMARY KEY (user, week_start)
 );
--- 教师干预留痕。不参与 today_tasks.done，也不参与完成率。
-CREATE TABLE IF NOT EXISTS plan_day_checks (
-    user       TEXT NOT NULL,
-    date       TEXT NOT NULL,        -- YYYY-MM-DD
-    task_key   TEXT NOT NULL,        -- micro:26 / wrong_words / lecture:29 / fce / reading:书名
-    checked_at TEXT,
-    PRIMARY KEY (user, date, task_key)
-);
 CREATE TABLE IF NOT EXISTS plan_goals (
     user       TEXT PRIMARY KEY,
     goals      TEXT NOT NULL DEFAULT '{}',  -- 总目标 JSON（见 _goals_default）
@@ -79,10 +71,10 @@ RULES: list[dict] = [
 #                                   # 精读+朗读分组：每组 1 或 2 篇。daily 组工作日
 #                                   # 每天 1 篇轮转、周末每天 1 篇清尾；weekend 组周六
 #                                   # 一次做完（1 篇出 1 行，2 篇同天出 2 行，不摊到周日）。
-#                                   # 排程优先于旧 articles（旧字段=一个 weekend 组）
+#                                   # 旧 articles 平铺=一个 weekend 组（回填脚本已收敛）
 #   "video_units":   [{"vids": ["abc", "def"], "mode": "daily" | "weekend"}],
 #                                   # 视频分组：daily 组=现状每天 1 个；weekend 组
-#                                   # 周六集中 2 个、周日兜底清剩余（优先于 videos）
+#                                   # 周六集中 2 个、周日兜底清剩余
 #   "micro": 1                      # 微练习开关：不排计划行、不进完成率分母；
 #                                   # 周视图据此带 micro_enabled、周目标出微练习维度
 #   "boost_days": [2, 4],           # 提升档日（数字=周几，1=周一；每周 2 天）。

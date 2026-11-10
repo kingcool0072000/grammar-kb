@@ -68,7 +68,9 @@ test('横幅文案转义，避免用户名进 HTML', () => {
     message: '说"加油"',
   })
   assert.match(html, /a&lt;b，生日快乐/)
-  assert.match(html, /说&quot;加油&quot;/)
+  // escapeHtml（fmt.js 统一版）转义 & < >；「"」在元素文本节点里无特殊含义，
+  // 不转义也安全，属性上下文由 escAttr 负责
+  assert.match(html, /说"加油"/)
   assert.equal(html.includes('a<b'), false)
 })
 

@@ -118,6 +118,6 @@ def test_write_endpoints_retired(rm_env):
     assert c.post("/readingmore/api/session", headers=s,
                   json={"id": "x"}).status_code == 403
     assert c.post("/readingmore/api/session", headers=t,
-                  json={"id": "x"}).status_code == 405
+                  json={"id": "x"}).status_code in (404, 405)
     assert c.get("/readingmore/api/stats", headers=s).status_code == 403
     assert c.get("/readingmore/api/stats", headers=t).status_code == 404

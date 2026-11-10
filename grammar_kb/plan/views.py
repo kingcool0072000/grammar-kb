@@ -1,9 +1,9 @@
-"""周历、月历、总览。完成率走学习信号；打卡表不进 done。"""
+"""周历、总览。完成率走学习信号，不按手动打卡计。"""
 from __future__ import annotations
 
 import contextlib
 import sqlite3
-from datetime import date, datetime, timedelta, timezone as _tz
+from datetime import date, timedelta
 
 from ..clock import monday_of, today_cn
 from .ctx import WeekCtx
@@ -440,46 +440,6 @@ class ViewsMixin:
         return {"week_start": week_start, "days": days}
 
 
-    def month_view(self, month: str, user: str) -> dict:
-        """月历：某月每天 {date, in_month, future, done, total}，周一为每周之首。
-
-        同一周的日期共用一个 ``WeekCtx``（信号预取每周一次，约 6 周池）。
-        """
-        y, m = month.split("-")[:2]
-        first = date(int(y), int(m), 1)
-        nxt_month = (date(int(y) + 1, 1, 1) if int(m) == 12
-                     else date(int(y), int(m) + 1, 1))
-        today_iso = today_cn().isoformat()
-        grid_start = monday_of(first)
-        ctxs: dict[str, WeekCtx] = {}
-
-        def _ctx(ws: str) -> WeekCtx:
-            if ws not in ctxs:
-                ctxs[ws] = WeekCtx(self, user, ws)
-            return ctxs[ws]
-
-        days = []
-        d = grid_start
-        while d < nxt_month:
-            iso_ = d.isoformat()
-            cell = {"date": iso_, "in_month": d.month == first.month,
-                    "future": iso_ > today_iso}
-            ws = monday_of(d).isoformat()
-            if iso_ > today_iso:
-                td = self.week_daily_tasks(
-                    ws, for_date=iso_, user=user, ctx=_ctx(ws))
-                cell.update({"done": 0, "total": len(td), "percent": None})
-            else:
-                td = self.today_tasks(user=user, day=iso_, ctx=_ctx(ws))
-                cell.update({
-                    "done": td["done"], "total": td["total"],
-                    "percent": td["percent"],
-                })
-            days.append(cell)
-            d += timedelta(days=1)
-        return {"month": first.isoformat()[:7], "days": days}
-
-
     def overview(self, user: str) -> dict:
         """全览：最早已排计划周（无则回看 2 周）到冲刺线 2027-01-31 的逐周汇总。"""
         with self._connect() as conn:
@@ -542,33 +502,3 @@ class ViewsMixin:
             })
             ws = (date.fromisoformat(ws) + timedelta(days=7)).isoformat()
         return {"weeks": weeks, "current_week": cur}
-
-
-    def put_day_check(self, user: str, day: str, task_key: str, on: bool) -> None:
-        date.fromisoformat(day)  # 非法日期抛 ValueError → 422
-        now = datetime.now(_tz.utc).isoformat(timespec="seconds")
-        with self._connect() as conn:
-            if on:
-                conn.execute(
-                    "INSERT OR REPLACE INTO plan_day_checks"
-                    " (user, date, task_key, checked_at) VALUES (?,?,?,?)",
-                    (user, day, task_key[:80], now),
-                )
-            else:
-                conn.execute(
-                    "DELETE FROM plan_day_checks"
-                    " WHERE user = ? AND date = ? AND task_key = ?",
-                    (user, day, task_key),
-                )
-
-
-    def _day_checks(self, user: str, day: str) -> set[str]:
-        try:
-            with self._connect() as conn:
-                rows = conn.execute(
-                    "SELECT task_key FROM plan_day_checks"
-                    " WHERE user = ? AND date = ?", (user, day),
-                ).fetchall()
-            return {r["task_key"] for r in rows}
-        except sqlite3.Error:
-            return set()

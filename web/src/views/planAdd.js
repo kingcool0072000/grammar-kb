@@ -252,16 +252,8 @@ export function applyVocabTarget(tasks, { level, count, base, words }) {
   return t
 }
 
-/** 进度条上的「本周要新掌握」：目标词数减去周初已会。够了就是 0。 */
-export function weeklyNewCount(tasks, base) {
-  if (tasks?.vocab_goal == null || tasks.vocab_goal === '') return null
-  const goal = Number(tasks.vocab_goal)
-  if (!Number.isFinite(goal)) return null
-  const b = Math.max(0, Math.round(Number(base) || 0))
-  return Math.max(0, goal - b)
-}
-
-export function vocabBaseFor(tasks, vocabWeek) {
+/** 周初该级已会词数（进度条分母的基数）。 */
+function vocabBaseFor(tasks, vocabWeek) {
   if (tasks?.vocab_lv == null) return Number(vocabWeek?.base_all) || 0
   const row = (vocabWeek?.levels || []).find((x) => x.level === Number(tasks.vocab_lv))
   return Number(row?.base) || 0

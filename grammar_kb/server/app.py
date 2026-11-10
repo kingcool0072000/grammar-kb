@@ -76,11 +76,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from ..vocab_exam import VocabExamStore
     from ..vocab_paper import VocabPaperStore
     from ..micro import MicroStore
-    from ..analytics_ai import AnalyticsAI
 
-    # exam 库路径在此先落定：ExamStore 内部会自解析默认路径，但
-    # AnalyticsAI 拿到 None 会 str(None)="None" → sqlite3.connect("None")
-    # 在 cwd 生成名为 None 的脏文件。fce 系 store 均内部解析默认（无此风险）。
+    # exam 库路径在此先落定：显式传 None 时解析为环境变量/默认路径，
+    # 避免下游 store 拿到 None 落错文件。fce 系 store 均内部解析默认（无此风险）。
     if exam_db_path is None:
         exam_db_path = default_exam_db_path()
     kbq = Query(open_db(db_path))
@@ -89,7 +87,6 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     fce_papers = FcePaperStore(fce_db_path)
     fce_submissions = FceSubmissionStore(fce_db_path)
     reading = ReadingStore(fce_db_path)
-    analytics_ai = AnalyticsAI(exam_db_path)
     recite = ReciteStore(fce_db_path)
     focus = FocusStore(fce_db_path)
     topics = TopicStore(fce_db_path)
@@ -348,7 +345,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     ctx = AppCtx(
         kbq=kbq, exams=exams, users=users, fce_papers=fce_papers,
         fce_submissions=fce_submissions, reading=reading,
-        analytics_ai=analytics_ai, recite=recite, focus=focus, topics=topics,
+        recite=recite, focus=focus, topics=topics,
         videos=video_study,
         plan=plan, homework_admin=homework_admin, vocab_exam=vocab_exam,
         vocab_paper=vocab_paper, micro=micro,

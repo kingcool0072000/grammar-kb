@@ -33,6 +33,7 @@ from typing import Optional
 
 from . import dbreg
 from .clock import today_cn
+from .store_base import clamp_limit, connect, ensure_schema, loads_dict, loads_json
 
 # 题目类目（契约枚举；入口处校验）
 CATEGORIES = frozenset({"wrong", "variant", "tense", "phrasal", "idiom", "grammar"})
@@ -160,11 +161,10 @@ class MicroStore:
         self.db_path = fce_db_path or dbreg.fce_db_path()
         self.exam_db_path = exam_db_path or dbreg.exam_db_path()
         self.grammar_db_path = grammar_db_path or dbreg.grammar_db_path()
-        with self._connect() as conn:
-            conn.executescript(SCHEMA)
+        ensure_schema(self.db_path, SCHEMA)
 
     def _connect(self):
-        return dbreg.connect(self.db_path)
+        return connect(self.db_path)
 
     # ---- 日期与行读取 ----
 
@@ -206,16 +206,10 @@ class MicroStore:
                         (user, day, json.dumps(qids)),
                     )
         else:
-            try:
-                qids = json.loads(row["qids_json"] or "[]")
-            except (ValueError, TypeError):
-                qids = []
+            qids = loads_json(row["qids_json"], [])
         with self._connect() as conn:
             row = self._daily_row(conn, user, day)
-            try:
-                answered_raw = json.loads(row["answered_json"] or "{}") if row else {}
-            except (ValueError, TypeError):
-                answered_raw = {}
+            answered_raw = loads_dict(row["answered_json"]) if row else {}
             qmap: dict[int, dict] = {}
             if qids:
                 marks = ",".join("?" * len(qids))
@@ -380,15 +374,8 @@ class MicroStore:
                 row = self._daily_row(conn, user, day)
             if row is None:
                 raise ValueError("今日题池为空，无法提交")
-        try:
-            qids = json.loads(row["qids_json"] or "[]")
-        except (ValueError, TypeError):
-            qids = []
-        try:
-            answered = {str(k): v for k, v in
-                        (json.loads(row["answered_json"] or "{}")).items()}
-        except (ValueError, TypeError):
-            answered = {}
+        qids = loads_json(row["qids_json"], [])
+        answered = {str(k): v for k, v in loads_dict(row["answered_json"]).items()}
         qmap = {}
         if qids:
             with self._connect() as conn:
@@ -525,10 +512,7 @@ class MicroStore:
         except sqlite3.Error:
             return pairs
         for r in rows:
-            try:
-                wrong = json.loads(r["wrong"] or "[]")
-            except (ValueError, TypeError):
-                continue
+            wrong = loads_json(r["wrong"], [])
             if not isinstance(wrong, list):
                 continue
             for qn in wrong:
@@ -631,7 +615,7 @@ class MicroStore:
             sql += " AND category = ?"
             args.append(str(category))
         sql += " ORDER BY id DESC LIMIT ?"
-        args.append(max(1, min(int(limit or 500), 2000)))
+        args.append(clamp_limit(limit, 500, 2000))
         with self._connect() as conn:
             rows = conn.execute(sql, args).fetchall()
         return [{

@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Optional
 
 from . import dbreg
+from .store_base import connect, ensure_schema, loads_json
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS topic_progress (
@@ -109,12 +110,10 @@ class TopicStore:
                  grammar_db_path: Optional[str] = None):
         self.db_path = db_path or dbreg.fce_db_path()
         self.grammar_db_path = grammar_db_path or dbreg.grammar_db_path()
-        with self._connect() as conn:
-            conn.executescript(SCHEMA)
-            self._migrate_completed_meaning(conn)
+        ensure_schema(self.db_path, SCHEMA, self._migrate_completed_meaning)
 
     def _connect(self):
-        return dbreg.connect(self.db_path)
+        return connect(self.db_path)
 
     # ---- 读取 ----
     def get(self, user: str, topic_id: str) -> dict:
@@ -437,10 +436,9 @@ class TopicStore:
                 ((topic_id or "").strip(),)).fetchone()
         if row is None:
             return None
-        try:
-            content = json.loads(row["content"] or "{}")
-        except (ValueError, TypeError):
-            content = {"nodes": []}
+        # 坏 JSON 回 {"nodes": []}；下游只取 content.get("nodes")，空串旧口径
+        # 解析出的 {} 与该缺省值在此等价
+        content = loads_json(row["content"], {"nodes": []})
         return {
             "topic_id": row["topic_id"],
             "title": row["title"],
@@ -503,10 +501,7 @@ class TopicStore:
 
     @staticmethod
     def _count_nodes(content_json: str) -> int:
-        try:
-            nodes = json.loads(content_json or "{}").get("nodes") or []
-        except (ValueError, TypeError):
-            return 0
+        nodes = loads_json(content_json, {}).get("nodes") or []
 
         def cnt(ns):
             return sum(1 + cnt(n.get("children") or []) for n in ns
@@ -535,10 +530,7 @@ class TopicStore:
 
 
 def _out(row: sqlite3.Row) -> dict:
-    try:
-        keys = json.loads(row["done_keys"] or "[]")
-    except (ValueError, TypeError):
-        keys = []
+    keys = loads_json(row["done_keys"], [])
     return {
         "user": row["user"],
         "topic_id": row["topic_id"],

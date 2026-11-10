@@ -40,8 +40,10 @@ ALERT_IN_CYCLE = 50
 ALERT_QUIET_DAYS = 14
 # 学生卡「近 7 日攻克」窗口（含今天，北京日历）
 CONQUERED_RECENT_DAYS = 7
-# recite_meta 里记「错词回填水位」的 key 前缀（按用户）：已增量回填到的
-# 会话最大 id / created_at。有水位后错词本读取只扫水位之后的新会话。
+# recite_meta 里的「错词回填水位」key 前缀（按用户）：历史上懒迁移回填
+# 记到哪条会话。懒迁移已删（历史回填由 scripts/oneoff_2026-11_legacy_
+# backfill.py 一次性完成），代码不再读；保留常量只为 clear_progress 清
+# 进度时连带清掉水位行，保证清过的学生不会被旧脚本/回滚代码重新回填。
 BACKFILL_META_ID = "backfill_max_id:"
 BACKFILL_META_TS = "backfill_max_ts:"
 
@@ -100,131 +102,6 @@ CREATE TABLE IF NOT EXISTS recite_meta (
 def _headword(word: str) -> str:
     """别名折到词光词头。没有别名表时原样返回。"""
     return canonical_word(word)[:60]
-
-
-def _fold_alias_progress(conn: sqlite3.Connection) -> None:
-    """把派生词/拼写变体上的背词进度并到词光词头。
-
-    只改词这个键，right/wrong 相加，不删库、不清空。跑过的别名版本记在
-    recite_meta，别名表没变就不再扫。
-    """
-    from .atlas_vocab import load_alias_file
-
-    aliases = load_alias_file()
-    if not aliases:
-        return
-    import hashlib
-    revision = hashlib.sha256(
-        json.dumps(aliases, ensure_ascii=False, sort_keys=True).encode("utf-8")
-    ).hexdigest()[:16]
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS recite_meta (key TEXT PRIMARY KEY, value TEXT)"
-    )
-    row = conn.execute(
-        "SELECT value FROM recite_meta WHERE key = 'atlas_alias_revision'"
-    ).fetchone()
-    if row and row[0] == revision:
-        return
-    targets = {alias: canonical_word(alias, aliases) for alias in aliases}
-    _fold_table(conn, "recite_word_progress", targets, progress=True)
-    _fold_table(conn, "recite_review", targets, progress=False)
-    _rewrite_session_words(conn, targets)
-    conn.execute(
-        "INSERT INTO recite_meta(key, value) VALUES('atlas_alias_revision', ?) "
-        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-        (revision,),
-    )
-
-
-def _fold_table(conn, table: str, targets: dict[str, str], *, progress: bool) -> None:
-    names = {row[0] for row in conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table'"
-    )}
-    if table not in names:
-        return
-    rows = conn.execute(f"SELECT * FROM {table}").fetchall()
-    for row in rows:
-        alias = row["word"]
-        canon = targets.get(alias)
-        if not canon or canon == alias:
-            continue
-        parent = conn.execute(
-            f"SELECT * FROM {table} WHERE user = ? AND word = ?",
-            (row["user"], canon),
-        ).fetchone()
-        if parent is None:
-            conn.execute(
-                f"UPDATE {table} SET word = ? WHERE user = ? AND word = ?",
-                (canon, row["user"], alias),
-            )
-            continue
-        if progress:
-            firsts = [v for v in (parent["first_seen"], row["first_seen"]) if v]
-            lasts = [v for v in (parent["last_seen"], row["last_seen"]) if v]
-            mastered_vals = [v for v in (parent["mastered_at"], row["mastered_at"]) if v]
-            conn.execute(
-                "UPDATE recite_word_progress SET right = ?, wrong = ?, "
-                "mastered_at = ?, first_seen = ?, last_seen = ? "
-                "WHERE user = ? AND word = ?",
-                (
-                    parent["right"] + row["right"],
-                    parent["wrong"] + row["wrong"],
-                    min(mastered_vals) if mastered_vals else None,
-                    min(firsts) if firsts else None,
-                    max(lasts) if lasts else None,
-                    row["user"], canon,
-                ),
-            )
-        else:
-            conquered = parent["conquered_at"]
-            stage = parent["stage"]
-            nxt = parent["next_review"]
-            if not conquered and row["next_review"]:
-                if not nxt or row["next_review"] < nxt:
-                    nxt = row["next_review"]
-                    stage = row["stage"]
-            conn.execute(
-                "UPDATE recite_review SET wrong_count = ?, stage = ?, next_review = ? "
-                "WHERE user = ? AND word = ?",
-                (
-                    parent["wrong_count"] + row["wrong_count"],
-                    stage, nxt, row["user"], canon,
-                ),
-            )
-        conn.execute(
-            f"DELETE FROM {table} WHERE user = ? AND word = ?",
-            (row["user"], alias),
-        )
-
-
-def _rewrite_session_words(conn, targets: dict[str, str]) -> None:
-    names = {row[0] for row in conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table'"
-    )}
-    if "recite_sessions" not in names:
-        return
-    rows = conn.execute("SELECT id, wrong_words FROM recite_sessions").fetchall()
-    for row in rows:
-        try:
-            words = json.loads(row["wrong_words"] or "[]")
-        except (ValueError, TypeError):
-            continue
-        if not isinstance(words, list):
-            continue
-        changed = False
-        rewritten = []
-        for word in words:
-            text = str(word).strip().lower()
-            canon = targets.get(text, text)
-            if canon != text:
-                changed = True
-            if canon:
-                rewritten.append(canon)
-        if changed:
-            conn.execute(
-                "UPDATE recite_sessions SET wrong_words = ? WHERE id = ?",
-                (json.dumps(rewritten, ensure_ascii=False), row["id"]),
-            )
 
 
 def _calendar_today() -> str:
@@ -330,7 +207,6 @@ class ReciteStore:
             conn.execute(
                 "ALTER TABLE recite_word_progress ADD COLUMN first_seen TEXT"
             )
-        _fold_alias_progress(conn)
 
     def _recent_submit(self, user: str, now_iso: str) -> bool:
         """防重窗口内该用户是否刚提交过会话。缺表容错返回 False。"""
@@ -775,98 +651,16 @@ class ReciteStore:
     def _backfill_meta_keys(user: str) -> tuple[str, str]:
         return (BACKFILL_META_ID + user, BACKFILL_META_TS + user)
 
-    def _backfill_review(self, conn: sqlite3.Connection, user: str, limit: int = 500) -> None:
-        """历史会话错过但尚无 recite_review 行的词，按最近答错日回填。
-
-        增量化：recite_meta 记每用户已回填到的会话水位（最大 id 和
-        created_at 各一条）。无水位（首次/清进度后）按最近 limit 条全量
-        回填一次，口径与旧版逐行一致；有水位后每次只扫水位之后的新会话
-        ——生产 review-summary 不再每次重扫最近 500 条并逐条 JSON parse。
-        created_at 兜底是因为测试/运维可能删过最大 id 会话（rowid 复用）。
-        指针在回填行落库之后、同一事务内推进：插入失败整体回滚，指针不前
-        移，不会漏词；重复读同一批会话由 INSERT OR IGNORE 幂等兜住。
-        """
-        today = _calendar_today()
-        key_id, key_ts = self._backfill_meta_keys(user)
-        marks = {
-            r["key"]: r["value"] for r in conn.execute(
-                "SELECT key, value FROM recite_meta WHERE key IN (?, ?)",
-                (key_id, key_ts),
-            ).fetchall()
-        }
-        since_id_s = marks.get(key_id)
-        if since_id_s is None:
-            # 首次：按最近 limit 条回填（与旧口径一致），统一转 id 升序处理
-            rows = conn.execute(
-                "SELECT id, wrong_words, created_at FROM ("
-                "  SELECT id, wrong_words, created_at FROM recite_sessions"
-                "  WHERE user = ? ORDER BY id DESC LIMIT ?"
-                ") ORDER BY id ASC",
-                (user, int(limit)),
-            ).fetchall()
-        else:
-            try:
-                since_id = int(since_id_s)
-            except ValueError:
-                since_id = 0
-            since_ts = marks.get(key_ts) or ""
-            rows = conn.execute(
-                "SELECT id, wrong_words, created_at FROM recite_sessions"
-                " WHERE user = ? AND (id > ? OR created_at > ?)"
-                " ORDER BY id ASC LIMIT ?",
-                (user, since_id, since_ts, int(limit)),
-            ).fetchall()
-        if not rows:
-            return  # 无新会话：直接走存量 recite_review，零重扫
-        wrong_at: dict[str, str] = {}
-        counts: dict[str, int] = {}
-        for r in reversed(rows):  # 由新到旧：setdefault 拿到最近答错时间
-            try:
-                ws = json.loads(r["wrong_words"] or "[]")
-            except (ValueError, TypeError):
-                ws = []
-            for w in ws:
-                w = _headword(str(w).strip().lower())
-                if not w:
-                    continue
-                counts[w] = counts.get(w, 0) + 1
-                wrong_at.setdefault(w, r["created_at"] or "")
-        if counts:
-            have = {r[0] for r in conn.execute(
-                "SELECT word FROM recite_review WHERE user = ?", (user,)
-            ).fetchall()}
-            missing = [w for w in counts if w not in have]
-            levels = self._vocab_levels(missing) if missing else {}
-            for w in missing:
-                last_day = _cn_day_of(wrong_at.get(w) or "") or today
-                # OR IGNORE：并发同读时另一连接可能已插同一词，幂等不炸
-                conn.execute(
-                    "INSERT OR IGNORE INTO recite_review (user, word, level,"
-                    " wrong_count, stage, first_wrong_at, next_review, last_review_at)"
-                    " VALUES (?,?,?,?,?,?,?,?)",
-                    (user, w, levels.get(w), counts[w], 0, last_day,
-                     _add_days(last_day, EB_STAGES[0]), last_day),
-                )
-        # 水位最后写：上面任何一步抛错，整个事务回滚，指针不动（不丢数据）
-        max_ts = max((r["created_at"] or "" for r in rows), default="")
-        conn.executemany(
-            "INSERT INTO recite_meta(key, value) VALUES(?, ?)"
-            " ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-            [(key_id, str(rows[-1]["id"])), (key_ts, max_ts)],
-        )
-
     def wrongbook(self, user: str, limit: int = 500) -> dict:
         """错词本（艾宾浩斯口径）：在周期词（含到期/节点/日程）+ 已攻克词本。
 
-        返回 {in_cycle, due_today, conquered, stats}。存量兼容：历史会话
-        错过但尚无 recite_review 行的词，首次读取时按最近答错日回填
-        （stage=0、next_review=最近错日+1 天——绝大多数当天就到期，
-        立即进入复习流）。
+        返回 {in_cycle, due_today, conquered, stats}。历史会话的错词回填
+        由一次性脚本（scripts/oneoff_2026-11_legacy_backfill.py）完成，
+        这里只读 recite_review 存量行。
         """
         user = (user or "").strip()[:60]
         today = _calendar_today()
         with self._connect() as conn:
-            self._backfill_review(conn, user, limit)
             rr = conn.execute(
                 "SELECT word, level, wrong_count, stage, first_wrong_at, next_review,"
                 " last_review_at, conquered_at FROM recite_review WHERE user = ?",
@@ -985,7 +779,6 @@ class ReciteStore:
             )
         """
         with self._connect() as conn:
-            self._backfill_review(conn, user, 500)
             base_args = (user, user)
             summary = conn.execute(
                 "SELECT COUNT(*) AS n,"

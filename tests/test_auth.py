@@ -90,13 +90,13 @@ def test_student_scope(client):
     assert r_list.status_code == 200
     rows = r_list.json()["data"]
     assert [(x["id"], x["score"]) for x in rows] == [(exam_id, 90)], rows
-    # 学生禁用：改动/删除成绩（管理）、课程讲次、知识点检索
+    # 学生禁用：改动/删除成绩（管理）、课程讲次、备课中心全量知识点
     assert client.delete("/exams/1", headers=h).status_code == 403
     assert client.put(
         "/exams/1", headers=h, json={"lecture": 1, "date": "2026-08-29", "score": 1}
     ).status_code == 403
     assert client.get("/lectures", headers=h).status_code == 403
-    assert client.get("/search", headers=h, params={"q": "时态"}).status_code == 403
+    assert client.get("/points", headers=h).status_code == 403
     # 学生提交的成绩自己不能删（教师才能删）
     assert client.delete(f"/exams/{exam_id}", headers=h).status_code == 403
 

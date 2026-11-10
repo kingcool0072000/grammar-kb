@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Optional
 
 from . import dbreg, patterns
+from .store_base import add_column, connect, loads_json
 from .audioutil import MAX_AUDIO_B64, transcode_for_safari
 from .clock import CN_TZ, today_cn
 
@@ -153,10 +154,7 @@ def _norm_vocab(v) -> list[dict]:
     """vocab 入参宽容归一：[{word,gloss}] / [[word,gloss]] / ["word|gloss"] → 统一结构。"""
     out: list[dict] = []
     if isinstance(v, str):
-        try:
-            v = json.loads(v or "[]")
-        except (ValueError, TypeError):
-            v = []
+        v = loads_json(v, [])
     if not isinstance(v, list):
         return out
     for item in v:
@@ -173,10 +171,7 @@ def _norm_vocab(v) -> list[dict]:
 
 
 def _vid_out(r: sqlite3.Row) -> dict:
-    try:
-        vocab = json.loads(r["vocab"] or "[]")
-    except (ValueError, TypeError):
-        vocab = []
+    vocab = loads_json(r["vocab"], [])
     return {
         "vid": r["vid"], "title": r["title"], "category": r["category"] or "",
         "duration_sec": r["duration_sec"] or 0, "vocab": vocab,
@@ -223,16 +218,14 @@ class VideoStore:
             conn.close()
 
     def _connect(self):
-        return dbreg.connect(self.db_path)
+        return connect(self.db_path)
 
     @staticmethod
     def _migrate_ref_kind(conn: sqlite3.Connection) -> None:
         """老库补列（ref_kind 后加的字段，ALTER 幂等；存量行默认 'video' 不动）。"""
-        cols = {r[1] for r in conn.execute("PRAGMA table_info(video_retell)")}
-        if cols and "ref_kind" not in cols:
-            conn.execute(
-                "ALTER TABLE video_retell"
-                " ADD COLUMN ref_kind TEXT NOT NULL DEFAULT 'video'")
+        add_column(conn, "video_retell", "ref_kind",
+                   "ALTER TABLE video_retell"
+                   " ADD COLUMN ref_kind TEXT NOT NULL DEFAULT 'video'")
 
     @staticmethod
     def _seed(conn: sqlite3.Connection) -> None:

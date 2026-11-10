@@ -29,8 +29,9 @@ def register_video(app, ctx):
         try:
             cur = current_monday().isoformat()
             for w in plan.list_weeks(user=user) or []:
-                for v in (w.get("tasks") or {}).get("videos") or []:
-                    v = str(v).strip()
+                # 与排程同口径：video_units 是唯一来源（旧平铺 videos 已由
+                # 一次性脚本收敛，读路径不再兜底）
+                for v in plan._plan_videos(w.get("tasks") or {}):
                     if v:
                         assigned.add(v)
                         if w.get("week_start") == cur:

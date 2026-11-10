@@ -1,6 +1,7 @@
 import { api } from '../../api.js'
 import { ICONS } from './icons.js'
 import { escapeHtml } from '../../render.js'
+import { toast } from '../../toast.js'
 import './manage.css'
 
 // 泛读馆 · 章节预习管理（教师）
@@ -13,24 +14,6 @@ export async function mountLibraryManage(viewEl, { bookId } = {}) {
   const root = document.createElement('div')
   root.className = 'lib-manage'
   viewEl.append(root)
-
-  // ---------- 自制 toast ----------
-  function toast(msg, type = 'info') {
-    let wrap = root.querySelector(':scope > .lib-toast-wrap')
-    if (!wrap) {
-      wrap = document.createElement('div')
-      wrap.className = 'lib-toast-wrap'
-      root.append(wrap)
-    }
-    const t = document.createElement('div')
-    t.className = `lib-toast ${type}`
-    t.textContent = msg
-    wrap.append(t)
-    setTimeout(() => {
-      t.classList.add('out')
-      setTimeout(() => t.remove(), 260)
-    }, type === 'error' ? 5000 : 3000)
-  }
 
   // ---------- 链接无效（bookId 为 NaN 等） ----------
   if (!Number.isInteger(bookId)) {
@@ -178,7 +161,7 @@ export async function mountLibraryManage(viewEl, { bookId } = {}) {
         rcChapters = list.length ? list : null
         rcDirty = false
         renderRc()
-        toast('阅读目标已保存' + (list.length ? `：必读 ${list.length} 章` : '（已清除，回到全书）'))
+        toast('阅读目标已保存' + (list.length ? `：必读 ${list.length} 章` : '（已清除，回到全书）'), { root })
       } catch (e) { alert('保存失败：' + e.message) }
     })
     root.querySelector('[data-rc-clear]').addEventListener('click', async () => {
@@ -187,7 +170,7 @@ export async function mountLibraryManage(viewEl, { bookId } = {}) {
         rcChapters = null; rcDirty = false
         rcFrom.value = ''; rcTo.value = ''
         renderRc()
-        toast('已清除配置，回到全书口径')
+        toast('已清除配置，回到全书口径', { root })
       } catch (e) { alert('清除失败：' + e.message) }
     })
   }
@@ -400,7 +383,7 @@ export async function mountLibraryManage(viewEl, { bookId } = {}) {
       c.skipPrep = !c.skipPrep
       if (c.skipPrep) checked.delete(idx) // 跳过后不再参与批量
     } catch (e) {
-      toast(e.message || '操作失败', 'error')
+      toast(e.message || '操作失败', { type: 'error', root })
     } finally {
       togglingSkip = null
       renderAll()
@@ -416,7 +399,7 @@ export async function mountLibraryManage(viewEl, { bookId } = {}) {
       return c && !c.prepped && !c.skipPrep && c.wordCount > 0 && !failed.has(idx)
     })
     if (eligible.length === 0) {
-      toast('没有需要生成的章节', 'info')
+      toast('没有需要生成的章节', { root })
       return
     }
     submitting = true
@@ -424,13 +407,13 @@ export async function mountLibraryManage(viewEl, { bookId } = {}) {
     try {
       const r = await api.libraryPrepBatch(bookId, eligible)
       if (r.skipped || r.jobId == null) {
-        toast('没有需要生成的章节', 'info')
+        toast('没有需要生成的章节', { root })
         return
       }
-      toast(`已开始生成 ${eligible.length} 章预习`, 'success')
+      toast(`已开始生成 ${eligible.length} 章预习`, { type: 'success', root })
       await trackJob(r.jobId, eligible.length)
     } catch (e) {
-      toast(e.message || '提交失败', 'error')
+      toast(e.message || '提交失败', { type: 'error', root })
     } finally {
       submitting = false
       renderBar()
@@ -483,8 +466,8 @@ export async function mountLibraryManage(viewEl, { bookId } = {}) {
     await refreshChapters()
     renderAll()
     const failed = (job && job.failedIndexes) || []
-    if (failed.length) toast(`${failed.length} 章生成失败，可单独重试`, 'error')
-    else if (job && job.status === 'done') toast('全书预习生成完成', 'success')
+    if (failed.length) toast(`${failed.length} 章生成失败，可单独重试`, { type: 'error', root })
+    else if (job && job.status === 'done') toast('全书预习生成完成', { type: 'success', root })
   }
 
   async function refreshChapters() {
@@ -508,12 +491,12 @@ export async function mountLibraryManage(viewEl, { bookId } = {}) {
     renderProgress()
     try {
       await api.libraryPrepSingle(bookId, idx)
-      toast(`第 ${idx + 1} 章预习已生成`, 'success')
+      toast(`第 ${idx + 1} 章预习已生成`, { type: 'success', root })
       if (job) job.failedIndexes = (job.failedIndexes || []).filter((i) => i !== idx)
       checked.delete(idx)
       await refreshChapters()
     } catch (e) {
-      toast(e.message || '生成失败', 'error')
+      toast(e.message || '生成失败', { type: 'error', root })
     } finally {
       retrying = null
       renderAll()

@@ -2,6 +2,7 @@ import { api } from '../api.js'
 import { escapeHtml, escAttr, todayIso, studyGoalMin, taskWhy, taskWhyShort } from '../render.js'
 import { subTabBar, bindSubTabs } from '../tabs.js'
 import { openWeekEditor } from './planEditor.js'
+import { toast } from '../toast.js'
 
 // 教师版 · 计划表：周历视图。本周大卡（今日任务）+ 月历式周网格往下排，
 // 学情分析并入为子 Tab（#/plan?tab=analytics / #/plan 切换）。
@@ -646,12 +647,4 @@ function weekLabel(ws) {
   const [y, m, d] = ws.split('-').map(Number)
   const end = new Date(y, m - 1, d + 6)
   return `${m}.${d}–${end.getMonth() + 1}.${end.getDate()}`
-}
-
-function toast(msg) {
-  const t = document.createElement('div')
-  t.className = 'plan-toast'
-  t.textContent = msg
-  document.body.appendChild(t)
-  setTimeout(() => t.remove(), 3200)
 }

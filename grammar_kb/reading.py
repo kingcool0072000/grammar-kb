@@ -18,6 +18,7 @@ from typing import Optional
 from . import dbreg
 from .audioutil import MAX_AUDIO_B64, transcode_for_safari
 from .reading_build import READING_SCHEMA, word_count
+from .store_base import add_column, connect, ensure_schema
 from .wordutil import (_FUNCTION_WORDS, _lookup_level, _proper_nouns,
                        _vocab_level_map, _vocab_pos_map)
 
@@ -28,10 +29,8 @@ def _now() -> str:
 
 def _ensure_selected_text_column(conn: sqlite3.Connection) -> None:
     """老库补列（selected_text 后加的字段，ALTER 幂等）。"""
-    cols = {r[1] for r in conn.execute("PRAGMA table_info(reading_recordings)")}
-    if "selected_text" not in cols:
-        conn.execute("ALTER TABLE reading_recordings ADD COLUMN selected_text TEXT DEFAULT ''")
-        conn.commit()
+    add_column(conn, "reading_recordings", "selected_text",
+               "ALTER TABLE reading_recordings ADD COLUMN selected_text TEXT DEFAULT ''")
 
 
 class ReadingStore:
@@ -40,12 +39,10 @@ class ReadingStore:
     def __init__(self, db_path: Optional[str] = None):
         # 与 FcePaperStore 同库同路径解析（dbreg 统一口径）
         self.db_path = db_path or dbreg.fce_db_path()
-        with self._connect() as conn:
-            conn.executescript(READING_SCHEMA)
-            _ensure_selected_text_column(conn)
+        ensure_schema(self.db_path, READING_SCHEMA, _ensure_selected_text_column)
 
     def _connect(self):
-        return dbreg.connect(self.db_path)
+        return connect(self.db_path)
 
     # ---- 文章 ----
 

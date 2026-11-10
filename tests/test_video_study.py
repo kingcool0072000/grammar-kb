@@ -35,7 +35,7 @@ def assigned_env(video_env):
     from grammar_kb.clock import current_monday
     ws = current_monday().isoformat()
     r = c.put(f"/plan/weeks/{ws}", headers=t, json={
-        "tasks": {"videos": [vids[0]["vid"], vids[1]["vid"]]},
+        "tasks": {"video_units": [{"vids": [vids[0]["vid"], vids[1]["vid"]], "mode": "daily"}]},
         "notes": "", "user": "malin"})
     assert r.status_code == 200
     return video_env
@@ -107,7 +107,8 @@ def test_teacher_crud_and_student_scope(video_env):
     from grammar_kb.clock import current_monday
     ws = current_monday().isoformat()
     c.put(f"/plan/weeks/{ws}", headers=t, json={
-        "tasks": {"videos": ["abc123DEF-_"]}, "notes": "", "user": "malin"})
+        "tasks": {"video_units": [{"vids": ["abc123DEF-_"], "mode": "daily"}]},
+        "notes": "", "user": "malin"})
     d = c.get("/video-study", headers=s).json()["data"]
     assert any(v["vid"] == "abc123DEF-_" for v in d["videos"])
     r = c.put("/video-study/items/abc123DEF-_", headers=t, json={
@@ -244,7 +245,8 @@ def test_plan_editor_video_pool_and_one_per_day(video_env):
     four = [off["vid"], *enabled[:3]]
     ws = current_monday()
     r = c.put(f"/plan/weeks/{ws.isoformat()}", headers=t, json={
-        "tasks": {"videos": four}, "notes": "", "user": "malin"})
+        "tasks": {"video_units": [{"vids": four, "mode": "daily"}]},
+        "notes": "", "user": "malin"})
     assert r.status_code == 200
     friday = (ws + timedelta(days=4)).isoformat()
     rows = [x for x in c.get(f"/plan/today?day={friday}&user=malin", headers=t)

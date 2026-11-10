@@ -1,4 +1,4 @@
-"""计划表、作业卷管理、用户、AI 周报与作业成绩。"""
+"""计划表、作业卷管理、用户与作业成绩。"""
 from __future__ import annotations
 
 from typing import Optional
@@ -12,13 +12,9 @@ from .schemas import ExamRecordIn
 def register_plan(app, ctx):
     exams = ctx.exams
     users = ctx.users
-    fce_submissions = ctx.fce_submissions
-    reading = ctx.reading
-    analytics_ai = ctx.analytics_ai
     recite = ctx.recite
     plan = ctx.plan
     homework_admin = ctx.homework_admin
-    library = ctx.library
     micro = ctx.micro
 
     # ---- 计划表（教师专属：周维度计划 + 实时完成度 + 上周回顾） ----
@@ -62,33 +58,6 @@ def register_plan(app, ctx):
                                      user=str(user)[:32]))
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
-
-    # ---- 外循环（双循环教学）：诊断聚类 / 周验收 / 日任务展开 ----
-
-    @app.get("/plan/diagnosis")
-    def plan_diagnosis(request: "fastapi.Request", weeks_back: int = 8):
-        """错题信号按讲次聚类（外循环①：诊断感知）。教师专属。"""
-        _require_teacher(request)
-        weeks_back = min(max(weeks_back, 1), 52)
-        return _ok({"items": plan.diagnosis(weeks_back=weeks_back)})
-
-    @app.get("/plan/review")
-    def plan_review(request: "fastapi.Request", user: str = "malin"):
-        """上周攻坚验收（外循环④：收敛/滚动/升级）。教师专属。"""
-        _require_teacher(request)
-        from ..clock import current_monday
-        cur_mon = current_monday().isoformat()
-        return _ok(plan.week_review(cur_mon, user=user))
-
-    @app.get("/plan/daily-preview")
-    def plan_daily_preview(request: "fastapi.Request"):
-        """本周任务 → 每日学生任务建议（外循环③：任务展开预览）。教师专属。"""
-        _require_teacher(request)
-        from ..clock import current_monday
-        cur_mon = current_monday().isoformat()
-        return _ok({"week_start": cur_mon,
-                    "tasks": plan.week_daily_tasks(cur_mon,
-                                                   user=_request_user(request))})
 
     @app.get("/plan/week-view")
     def plan_week_view(request: "fastapi.Request", week_start: str = "",
@@ -280,19 +249,6 @@ def register_plan(app, ctx):
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
 
-    @app.get("/plan/month-view")
-    def plan_month_view(request: "fastapi.Request", month: str = "",
-                        user: str = "malin"):
-        """教师月历：某月逐日任务完成格子（周一为每周之首）。"""
-        _require_teacher(request)
-        from ..clock import today_cn
-        if not month:
-            month = today_cn().isoformat()[:7]
-        try:
-            return _ok(plan.month_view(month, user=user))
-        except (ValueError, IndexError):
-            raise HTTPException(status_code=422, detail="month 须为 YYYY-MM")
-
     @app.get("/plan/overview")
     def plan_overview(request: "fastapi.Request", user: str = "malin"):
         """教师全览：最早已排计划周到冲刺线的逐周汇总。"""
@@ -318,32 +274,6 @@ def register_plan(app, ctx):
         u = user if request.state.role == "teacher" else request.state.user
         return _ok(plan.week_todo(user=u))
 
-    @app.post("/plan/day-check")
-    def plan_day_check(request: "fastapi.Request", payload: dict):
-        """写入 plan_day_checks。该表不参与 done / 完成率。
-
-        完成只看学习信号。这里只留教师或学生的干预记录，打卡不是完成的前提。
-        """
-        auth_user = request.state.user
-        is_teacher = request.state.role == "teacher"
-        user = (payload.get("user") or "").strip() if isinstance(payload, dict) else ""
-        day = str(payload.get("day") or "") if isinstance(payload, dict) else ""
-        task_key = str(payload.get("task_key") or "") if isinstance(payload, dict) else ""
-        on = bool(payload.get("on")) if isinstance(payload, dict) else False
-        if not is_teacher and user != auth_user:
-            raise HTTPException(status_code=403, detail="只能操作自己的任务")
-        if not user or not day or not task_key:
-            raise HTTPException(status_code=422, detail="user/day/task_key 必填")
-        try:
-            plan.put_day_check(user, day, task_key, on)
-            return _ok({
-                "user": user, "day": day, "task_key": task_key, "on": on,
-                "affects_done": False,
-                "note": "打卡不计入完成率；完成只看学习信号",
-            })
-        except ValueError:
-            raise HTTPException(status_code=422, detail="day 须为 YYYY-MM-DD")
-
     @app.post("/plan/history-day")
     def plan_history_freeze(request: "fastapi.Request", payload: dict):
         """教师冻结某日快照。历史表是可选回填，不是每日完成流水。
@@ -362,39 +292,6 @@ def register_plan(app, ctx):
             return _ok(plan.freeze_history_day(user[:32], day, tasks))
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
-
-    # ---- 学情分析 · AI 周报（手动触发，分析上一自然周；教师专属） ----
-
-    @app.get("/analytics/ai/reports")
-    def analytics_ai_reports(request: "fastapi.Request", limit: int = 12):
-        """已生成的 AI 周报列表（最近优先）。"""
-        _require_teacher(request)
-        return _ok({"reports": analytics_ai.list_reports(limit=limit)})
-
-    @app.post("/analytics/ai/weekly")
-    def analytics_ai_weekly(request: "fastapi.Request"):
-        """手动触发生成上周学情分析：聚合四类作业 + 前四周基线 → GLM → 存档。
-
-        模型与 Key 复用泛读馆设置（library_settings.ai_json）；按周覆盖存档。
-        """
-        from .. import glm as _glm
-
-        _require_teacher(request)
-        settings = library.get_settings()
-        try:
-            report = analytics_ai.generate_weekly(
-                settings,
-                stores={
-                    "exams": exams,
-                    "fce_submissions": fce_submissions,
-                    "reading": reading,
-                    "recite": recite,
-                },
-            )
-        except _glm.GlmError as e:
-            raise HTTPException(status_code=getattr(e, "status", 502), detail=str(e))
-        return _ok(report)
-
 
     # ---- 作业成绩（可写；独立 exam.db） ----
 

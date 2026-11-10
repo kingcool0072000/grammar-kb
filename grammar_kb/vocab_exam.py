@@ -22,6 +22,7 @@ from typing import Optional
 
 from .atlas_vocab import exam_allowed
 from . import dbreg
+from .store_base import connect, ensure_schema, loads_json
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS vocab_unlock (
@@ -65,11 +66,10 @@ class VocabExamStore:
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or dbreg.fce_db_path()
         # SCHEMA 全部 CREATE IF NOT EXISTS，幂等（生产库已含 paper_id 列）
-        with self._connect() as conn:
-            conn.executescript(SCHEMA)
+        ensure_schema(self.db_path, SCHEMA)
 
     def _connect(self):
-        return dbreg.connect(self.db_path)
+        return connect(self.db_path)
 
     def record(self, user: str, level: int, score: int, exam_date: str,
                note: str = "", paper_id: str = "",
@@ -253,12 +253,6 @@ class VocabExamStore:
         lv = self._configured_level(user)
         return 0 if lv is None else lv
 
-    def list_unlock_all(self) -> dict[str, int]:
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT user, level FROM vocab_unlock").fetchall()
-        return {r["user"]: r["level"] for r in rows}
-
     def put_unlock(self, user: str, level: int) -> None:
         lv = min(MAX_UNLOCK_LEVEL, max(0, int(level)))
         with self._connect() as conn:
@@ -301,10 +295,7 @@ def load_level_words(level: int, limit: int = 0) -> list[dict]:
         rows = conn.execute(sql, (int(level),)).fetchall()
     out = []
     for r in rows:
-        try:
-            meanings = json.loads(r["meanings"] or "[]")
-        except (ValueError, TypeError):
-            meanings = []
+        meanings = loads_json(r["meanings"], [])
         # L0 的 meanings[0] 常是语料例句而非释义（many→“都表示‘许多’…”），
         # 题面用 gloss（词典式紧凑释义）兜底切分
         if not exam_allowed(r["extra"]):

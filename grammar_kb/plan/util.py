@@ -25,7 +25,6 @@ def completion_percent(done: int, total: int) -> Optional[int]:
     """已到任务的完成率。没有任务时返回 None，避免空清单被显示成 0%。
 
     分子分母必须来自 ``day_completion`` / ``today_tasks``。
-    ``plan_day_checks`` 不参与这个数。
     """
     total_n = int(total or 0)
     if total_n <= 0:
@@ -58,7 +57,7 @@ def task_public(t: dict, *, future: bool = False) -> dict:
 
 
 def _task_key(t: dict) -> str:
-    """派生任务 → 稳定键（与 plan_day_checks.task_key 同形，但打卡不进 done）。"""
+    """派生任务 → 稳定键（稳定用于完成率与打卡对齐，但不进 done）。"""
     if t.get("key"):
         return str(t["key"])
     ty = t.get("type")

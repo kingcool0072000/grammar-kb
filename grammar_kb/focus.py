@@ -18,6 +18,7 @@ from datetime import datetime, timezone as _tz
 from typing import Optional
 
 from . import dbreg
+from .store_base import connect, ensure_schema, loads_json
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS focus_sessions (
@@ -82,10 +83,7 @@ def _clamp_float(v, lo: float, hi: float) -> float:
 def _jitter_of(metrics) -> float:
     """从 mouse_metrics（dict 或 JSON 串）取乱晃指数 jitter，夹取 0-1。"""
     if isinstance(metrics, str):
-        try:
-            metrics = json.loads(metrics)
-        except (ValueError, TypeError):
-            metrics = None
+        metrics = loads_json(metrics, None)
     if not isinstance(metrics, dict):
         return 0.0
     try:
@@ -166,10 +164,7 @@ def _uniq_words(data) -> int:
 
 def _idle_gaps_of(metrics) -> list:
     if isinstance(metrics, str):
-        try:
-            metrics = json.loads(metrics)
-        except (ValueError, TypeError):
-            metrics = None
+        metrics = loads_json(metrics, None)
     if not isinstance(metrics, dict):
         return []
     gaps = metrics.get("idle_gaps")
@@ -246,9 +241,7 @@ class FocusStore:
 
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or dbreg.fce_db_path()
-        with self._connect() as conn:
-            conn.executescript(SCHEMA)
-            self._migrate_v2(conn)
+        ensure_schema(self.db_path, SCHEMA, self._migrate_v2)
 
     @staticmethod
     def _migrate_v2(conn: sqlite3.Connection) -> None:
@@ -265,7 +258,7 @@ class FocusStore:
                 )
 
     def _connect(self):
-        return dbreg.connect(self.db_path)
+        return connect(self.db_path)
 
     def submit(
         self, user: str, session_id: str, *,
@@ -402,10 +395,7 @@ def _maybe_json(s: Optional[str]):
 
 
 def _out(r: sqlite3.Row, detail: bool = False) -> dict:
-    try:
-        score_detail = json.loads(r["score_detail"] or "{}")
-    except (ValueError, TypeError):
-        score_detail = {}
+    score_detail = loads_json(r["score_detail"], {})
     out = {
         "id": r["id"], "session_id": r["session_id"], "user": r["user"],
         "book_id": r["book_id"], "book_title": r["book_title"],
@@ -427,10 +417,7 @@ def _out(r: sqlite3.Row, detail: bool = False) -> dict:
         "range_end": r["range_end"],
     }
     if detail:
-        try:
-            out["mouse_metrics"] = json.loads(r["mouse_metrics"]) if r["mouse_metrics"] else None
-        except (ValueError, TypeError):
-            out["mouse_metrics"] = None
+        out["mouse_metrics"] = loads_json(r["mouse_metrics"], None)
         out["polyline"] = _maybe_json(r["polyline"])
         out["lookup_words"] = _maybe_json(r["lookup_words"]) or []
         out["speak_words"] = _maybe_json(r["speak_words"]) or []

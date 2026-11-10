@@ -5,7 +5,7 @@ from dataclasses import asdict
 from typing import Optional
 
 import fastapi  # noqa: F401  FastAPI 解析注解里的 fastapi.Request
-from fastapi import HTTPException, Query as FQuery
+from fastapi import HTTPException
 
 from ..atlas import lookup_public
 from .http import _ok, _request_user
@@ -39,49 +39,10 @@ def register_query(app, ctx):
             }
         )
 
-    @app.get("/kp/{kp_id}")
-    def kp(kp_id: int, format: str = "markdown"):
-        content = kbq.kp_html(kp_id) if format == "html" else kbq.kp_markdown(kp_id)
-        if content is None:
-            raise HTTPException(status_code=404, detail=f"知识点 id={kp_id} 不存在")
-        return _ok({"id": kp_id, "format": format, "content": content})
-
     @app.get("/points")
     def points():
         """全量知识点（教师备课中心全量列表；不在学生白名单，学生 403）。"""
         return _ok({"items": [asdict(k) for k in kbq.points()]})
-
-    @app.get("/search")
-    def search(
-        q: str = FQuery(..., description="关键词"),
-        category: Optional[str] = None,
-        limit: int = 20,
-    ):
-        items = kbq.search_kps(q, category=category, limit=limit)
-        return _ok(
-            {"query": q, "category": category, "count": len(items), "items": [asdict(k) for k in items]}
-        )
-
-    @app.get("/markers")
-    def markers(category: str = "时态", tense: Optional[str] = None):
-        rows = kbq.markers_by_tense(tense) if tense else kbq.markers_by_category(category)
-        return _ok({"category": category, "tense": tense, "count": len(rows), "items": rows})
-
-    @app.get("/relation")
-    def relation(type: str = "主将从现"):
-        items = kbq.kps_by_relation(type)
-        return _ok({"type": type, "count": len(items), "items": [asdict(k) for k in items]})
-
-    @app.get("/exam-signals")
-    def exam_signals():
-        """列出数据中实际出现的所有考点信号维度。"""
-        return _ok(kbq.list_exam_signals())
-
-    @app.get("/exam-signal")
-    def exam_signal(signal: str = "时态"):
-        """反查：给定考点信号，返回会考该信号的知识点（反之亦然）。"""
-        items = kbq.kps_by_exam_signal(signal)
-        return _ok({"signal": signal, "count": len(items), "items": [asdict(k) for k in items]})
 
     @app.get("/taxonomy")
     def taxonomy():
@@ -99,14 +60,6 @@ def register_query(app, ctx):
             if part.isdigit():
                 nums.append(int(part))
         return _ok({n: (kbq.homework(n) or {}).get("items", []) for n in nums})
-
-    @app.get("/homework/{lecture}")
-    def homework(lecture: int):
-        """某讲作业卷全部题目（题干 + 选项，题号与测验平台一致）。"""
-        data = kbq.homework(lecture)
-        if data is None:
-            raise HTTPException(status_code=404, detail=f"第 {lecture} 讲的作业卷未导入")
-        return _ok(data)
 
     @app.get("/dict/{word}")
     def dict_lookup(word: str):

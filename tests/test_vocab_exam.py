@@ -1,6 +1,7 @@
 """词汇级别考试测试：解锁规则 / 成绩登记 / 考卷生成 / 权限。"""
 from __future__ import annotations
 
+import importlib.util
 import json
 import sqlite3
 from datetime import timedelta
@@ -15,6 +16,15 @@ from fastapi.testclient import TestClient  # noqa: E402
 from grammar_kb.clock import today_cn  # noqa: E402
 from grammar_kb.server import create_app  # noqa: E402
 from grammar_kb.vocab_exam import MAX_UNLOCK_LEVEL, PASS_SCORE  # noqa: E402
+
+# 旧版卷的 structure 回填逻辑在一次性脚本里（vocab_paper 的现场还原
+# fallback 已删）。这里直接测脚本里的同一份实现。
+_SPEC = importlib.util.spec_from_file_location(
+    "oneoff_legacy_backfill_vex",
+    Path(__file__).resolve().parent.parent / "scripts"
+    / "oneoff_2026-11_legacy_backfill.py")
+_oneoff = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_oneoff)
 
 
 @pytest.fixture()
@@ -188,9 +198,10 @@ def test_paper_structure_roundtrip(tmp_path, monkeypatch):
     assert json.loads(words_raw) == paper["words"]
 
 
-def test_paper_legacy_wordlist_fallback(tmp_path, monkeypatch):
-    """旧版卷（只存 50 词词序）取回：按 20/20/10 位置还原成 sections，
-    挖空位置以 paper_id 为种子（多次取回一致）。"""
+def test_paper_legacy_structure_backfill(tmp_path, monkeypatch):
+    """旧版卷（只存 50 词词序、structure 空）由一次性脚本回填 structure：
+    按 20 中译英 / 20 英译中 / 末段拼写位置还原，写回 structure/config 列；
+    get_paper 取回即所见；脚本重跑 0 行（幂等）。"""
     import grammar_kb.vocab_paper as vp
     names = [f"old{i:02d}" for i in range(50)]
     monkeypatch.setattr(vp, "_load_words_rich", lambda level: _rich_rows(names))
@@ -202,6 +213,11 @@ def test_paper_legacy_wordlist_fallback(tmp_path, monkeypatch):
             " VALUES (?,?,?,?)",
             (0, "L0-20251101010101-0001", json.dumps(names),
              "2025-11-01T00:00:00"))
+    con = sqlite3.connect(db)
+    con.row_factory = sqlite3.Row
+    assert _oneoff.backfill_paper_structure(con) == (1, 0)
+    con.commit()
+    con.close()
     paper = vp.get_paper("L0-20251101010101-0001", fce_db_path=db)
     assert paper["words"] == names
     assert [s["type"] for s in paper["sections"]] == ["zh2en", "en2zh", "spell"]
@@ -220,6 +236,10 @@ def test_paper_legacy_wordlist_fallback(tmp_path, monkeypatch):
     assert paper["config"]["total"] == 50
     assert paper["config"]["ratios"] == {"form": 0, "spell": 10, "ctx": 0,
                                          "zh2en": 20, "en2zh": 20}
+    # 幂等：structure 已非空，重跑不重复处理
+    con = sqlite3.connect(db)
+    assert _oneoff.backfill_paper_structure(con) == (0, 0)
+    con.close()
 
 
 def test_paper_seed_reproducible(tmp_path, monkeypatch):
@@ -735,4 +755,6 @@ def test_word_level_config_independent_of_score(vex_env):
         "exam_date": "2026-10-13"}).json()["data"]["unlocked_level"] == 1
     mxy = c.get("/vocab-exams", headers=hm).json()["data"]
     assert mxy["unlocked_level"] == 1 and mxy["level_configured"] is False
-    assert c.get("/vocab-exams/unlock", headers=hs).status_code == 403
+    # 单词级别设定是教师专属：学生 PUT 直接 403
+    assert c.put("/vocab-exams/unlock", headers=hs,
+                 json={"user": "malin", "level": 1}).status_code == 403

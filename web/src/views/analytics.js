@@ -1,4 +1,4 @@
-import { escapeHtml, escAttr } from '../render.js'
+import { escapeHtml, escAttr, todayIso } from '../render.js'
 import { api } from '../api.js'
 
 // 教师版 · 学情分析：实时渲染（替代旧静态快照 public/analytics-report.html，已删除）。
@@ -141,11 +141,6 @@ const FLAG_LABELS = {
 function fmtTime(t) {
   if (t === null || t === undefined || t === '') return DASH
   return esc(String(t).replace('T', ' ').slice(0, 19))
-}
-
-function currentMonth() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
 function barHtml(pct, color) {
@@ -426,7 +421,7 @@ function errorBody(e) {
 
 // ---- 入口：保持 mountAnalytics(el, { bare, user }) 签名 ----
 export async function mountAnalytics(el, { bare = false, user = '' } = {}) {
-  let month = currentMonth()
+  let month = todayIso().slice(0, 7) // 本地时区 YYYY-MM（todayIso 是 YYYY-MM-DD）
   let seq = 0 // 月份快速切换时丢弃过期响应
 
   function paint(bodyHtml, resolvedName, generatedAt = '') {

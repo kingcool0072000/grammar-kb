@@ -236,7 +236,7 @@ def _short_senses(gloss: str, max_phrases: int = _SENSE_MAX) -> str:
         return "；".join(phrases)
     flat = _SENSE_BRACKET.sub("", gloss or "").strip()
     while True:
-        nxt = _SENSE_POS.sub(flat, count=1)
+        nxt = _SENSE_POS.sub("", flat, count=1)
         if nxt == flat:
             break
         flat = nxt.strip()
@@ -968,7 +968,12 @@ class VocabPaperStore:
         return {"paper_id": pid, "level": level, "count": len(ws)}
 
     def get_paper(self, paper_id: str) -> dict | None:
-        """取一份历史卷（统一形态；旧卷走位置还原 fallback）。"""
+        """取一份历史卷（统一形态：structure 列存整卷，取回即所见）。
+
+        旧版卷（只存词序）由一次性脚本
+        scripts/oneoff_2026-11_legacy_backfill.py 回填 structure 后再上
+        新代码；这里不再做位置还原 fallback。
+        """
         pid = str(paper_id)[:64]
         with dbreg_connect(self.db_path) as conn:
             row = conn.execute(
@@ -997,11 +1002,6 @@ class VocabPaperStore:
         paper.setdefault("user", row["user"] or "")
         paper.setdefault("seed", row["seed"])
         paper.setdefault("overlap_with_history", 0)
-        if not isinstance(paper.get("config"), dict):
-            paper["config"] = _legacy_config(ws)
-        if not paper.get("sections"):
-            paper["sections"] = _sections_from_wordlist(
-                ws, row["level"], row["paper_id"])
         return paper
 
     def delete_paper(self, paper_id: str) -> bool:
@@ -1071,62 +1071,6 @@ class VocabPaperStore:
             except (ValueError, TypeError):
                 pass
         return out
-
-
-def _legacy_config(ws: list) -> dict:
-    """旧版卷的配置回填（位置还原口径：20 中译英 / 20 英译中 / 末段拼写）。"""
-    n = len(ws)
-    n_zh = min(20, n)
-    n_en = min(20, max(0, n - 20))
-    n_sp = max(0, n - 40)
-    return {"total": n,
-            "ratios": {"form": 0, "spell": n_sp, "ctx": 0,
-                       "zh2en": n_zh, "en2zh": n_en},
-            "simple_max_level": SIMPLE_MAX_LEVEL, "preset": "standard",
-            "source_mix": None}
-
-
-def _sections_from_wordlist(ws: list, level, paper_id: str) -> list[dict]:
-    """旧版卷（只存词序）→ sections：前 20 中译英、次 20 英译中、末 10 拼写。
-
-    词条从词库回填（历史卷可完整重建；词性一并带上）；拼写挖空用
-    paper_id 作随机种子，同一卷多次取回挖空位置一致。
-    """
-    if not ws:
-        return []
-    if level is not None and int(level) >= 0:
-        rich = {w["word"]: w for w in _load_words_rich(int(level))}
-    else:
-        rich = _load_words_by_names([w for w in ws if w])
-
-    def _entry(w: str, use_clean: bool) -> dict:
-        r = rich.get(w) or {}
-        gloss = (r.get("gloss_clean") if use_clean else r.get("gloss")) \
-            or r.get("gloss", "")
-        return {"word": w, "pos_cn": r.get("pos_cn", ""), "gloss": gloss}
-
-    zh2en = []
-    for w in ws[:20]:
-        item = _entry(w, True)
-        item["gloss"] = _short_senses(item.get("gloss") or "")
-        zh2en.append(item)
-    en2zh = [_entry(w, False) for w in ws[20:40]]
-    rng = random.Random(paper_id)
-    spell = []
-    for w in ws[40:]:
-        blanked, answer = _spell_blank(w, rng)
-        spell.append({**_entry(w, True), "blanked": blanked, "answer": answer})
-    out = []
-    if zh2en:
-        out.append({"type": "zh2en", "title": SECTION_TITLES["zh2en"],
-                    "items": zh2en})
-    if en2zh:
-        out.append({"type": "en2zh", "title": SECTION_TITLES["en2zh"],
-                    "items": en2zh})
-    if spell:
-        out.append({"type": "spell", "title": SECTION_TITLES["spell"],
-                    "items": spell})
-    return out
 
 
 # ---- 生成 ------------------------------------------------------------------ #

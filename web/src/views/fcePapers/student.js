@@ -385,7 +385,7 @@ async function renderPractice(el, testId, sec, role) {
     // 保险：容器已脱离文档（路由切走）时自停，避免空转（参考 manage.js 轮询）
     if (!el.isConnected) { clearInterval(timer); timer = null; return }
     const s = Math.floor((Date.now() - startAt) / 1000)
-    timerEl.textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+    timerEl.textContent = fmtDur(s) // = fmtDurPad：秒 → mm:ss（分钟补零）
   }, 1000)
   const elapsed = () => Math.round((Date.now() - startAt) / 1000)
 

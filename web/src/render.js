@@ -1,5 +1,9 @@
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { escapeHtml, escAttr } from './fmt.js'
+
+// HTML 转义的唯一定义在 fmt.js（零依赖）；这里 re-export 维持既有引用方不变。
+export { escapeHtml, escAttr }
 
 marked.setOptions({ gfm: true, breaks: true })
 
@@ -15,16 +19,6 @@ export function renderMd(md) {
     return `<pre>${escapeHtml(md)}</pre>`
   }
 }
-
-export function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-}
-
-// 属性上下文转义：escapeHtml 不处理引号，attr="..." 里含 " 会截断属性甚至注入新属性
-export const escAttr = (s) => escapeHtml(s).replace(/"/g, '&#34;').replace(/'/g, '&#39;')
 
 // 本地日期 YYYY-MM-DD。new Date().toISOString() 是 UTC——中国时区每天
 // 0-8 点会得到「昨天」，成绩登记/今日任务高亮全错位（时区坑统一出口）。

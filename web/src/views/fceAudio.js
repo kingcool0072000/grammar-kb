@@ -7,6 +7,7 @@
 // 对 /audio 路径开放 query token 通道）。
 
 import { getAuth } from '../api.js'
+import { fmtDur } from '../fmt.js'
 
 const FCE_PREF_KEY = 'gkb-fce-pref-v1'
 
@@ -173,11 +174,9 @@ export function createSpectrumPlayer(hostEl, src, opts = {}) {
   }
   window.addEventListener('resize', onResize)
 
-  const fmt = (s) => {
-    if (!isFinite(s)) return '--:--'
-    s = Math.max(0, Math.round(s))
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
-  }
+  // 秒 → m:ss 走 fmt.js 的 fmtDur；音频流在元数据就绪前 currentTime/duration
+  // 是 NaN/Infinity，fmtDur 不设防，这里保留 Guard（非有限值显示 --:--）。
+  const fmt = (s) => (isFinite(s) ? fmtDur(Math.max(0, Math.round(s))) : '--:--')
 
   function renderTime() {
     curEl.textContent = fmt(audio.currentTime)

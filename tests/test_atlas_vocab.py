@@ -1,6 +1,7 @@
 """词光词头优先：别名、考卷闸门、进度合并。"""
 from __future__ import annotations
 
+import importlib.util
 import json
 import sqlite3
 from pathlib import Path
@@ -8,12 +9,20 @@ from pathlib import Path
 from grammar_kb.atlas_vocab import (
     canon_key,
     exam_allowed,
+    load_alias_file,
     plan_vocab,
 )
-from grammar_kb.recite import _fold_alias_progress, _fold_table
 
 
 ROOT = Path(__file__).resolve().parent.parent
+
+# 别名折叠的懒迁移已从 recite.py 删除，逻辑移进一次性脚本（生产部署前
+# 对存量库跑一遍）。这里直接测脚本里的同一份实现。
+_SPEC = importlib.util.spec_from_file_location(
+    "oneoff_legacy_backfill",
+    ROOT / "scripts" / "oneoff_2026-11_legacy_backfill.py")
+_oneoff = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_oneoff)
 
 
 def _entry(word, cefr, fam=None, zh="义"):
@@ -130,7 +139,7 @@ def test_progress_fold_keeps_counts(tmp_path, monkeypatch):
         ('["happy","book"]',),
     )
     conn.commit()
-    _fold_alias_progress(conn)
+    _oneoff.fold_alias_progress(conn, load_alias_file())
     row = conn.execute(
         "SELECT right, wrong, mastered_at FROM recite_word_progress WHERE word='happiness'"
     ).fetchone()
@@ -145,8 +154,8 @@ def test_progress_fold_keeps_counts(tmp_path, monkeypatch):
     assert review["word"] == "happiness" and review["wrong_count"] == 1
     words = json.loads(conn.execute("SELECT wrong_words FROM recite_sessions").fetchone()[0])
     assert words == ["happiness", "book"]
-    # 再跑一次不把计数再加一遍
-    _fold_alias_progress(conn)
+    # 再跑一次不把计数再加一遍（别名表版本已记，直接跳过）
+    _oneoff.fold_alias_progress(conn, load_alias_file())
     again = conn.execute(
         "SELECT right FROM recite_word_progress WHERE word='happiness'"
     ).fetchone()["right"]
@@ -161,7 +170,7 @@ def test_progress_fold_keeps_counts(tmp_path, monkeypatch):
         ("malin", "labour", 2, 4, 0, "2026-04-01", "2026-04-01", "2026-04-01"),
     )
     conn.commit()
-    _fold_table(conn, "recite_word_progress", {"labour": "labor"}, progress=True)
+    _oneoff._fold_table(conn, "recite_word_progress", {"labour": "labor"}, progress=True)
     moved = conn.execute(
         "SELECT right FROM recite_word_progress WHERE word='labor'"
     ).fetchone()

@@ -64,34 +64,6 @@ class PlanStore(
         )
         with self._connect() as conn:
             conn.executescript(SCHEMA)
-            self._migrate_plan_weeks(conn)
-
-
-    @staticmethod
-    def _migrate_plan_weeks(conn):
-        """旧 plan_weeks（week_start 单主键）→ 新表（user+week_start 复合主键）。
-
-        存量周计划全部归 malin（历史上只有 malin 在用）。幂等：新表跳过。
-        SQLite 改主键必须重建表。
-        """
-        cols = [r[1] for r in conn.execute("PRAGMA table_info(plan_weeks)")]
-        if not cols or "user" in cols:
-            return
-        conn.executescript("""
-            ALTER TABLE plan_weeks RENAME TO plan_weeks_old;
-            CREATE TABLE plan_weeks (
-                user       TEXT NOT NULL DEFAULT 'malin',
-                week_start TEXT NOT NULL,
-                tasks      TEXT NOT NULL DEFAULT '{}',
-                notes      TEXT DEFAULT '',
-                updated_at TEXT,
-                PRIMARY KEY (user, week_start)
-            );
-            INSERT INTO plan_weeks (user, week_start, tasks, notes, updated_at)
-                SELECT 'malin', week_start, tasks, notes, updated_at
-                FROM plan_weeks_old;
-            DROP TABLE plan_weeks_old;
-        """)
 
 
     def _connect(self):

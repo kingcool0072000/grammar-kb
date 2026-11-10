@@ -1,6 +1,7 @@
 import { api } from '../../api.js'
 import { ICONS } from './icons.js'
 import { escapeHtml, escAttr } from '../../render.js'
+import { toast } from '../../toast.js'
 import './settings.css'
 
 // 泛读馆 · 教师设置（三张卡：AI 学习 / 字典 / 学生阅读主题）
@@ -21,24 +22,6 @@ export async function mountLibrarySettings(viewEl) {
   const root = document.createElement('div')
   root.className = 'lib-settings'
   viewEl.append(root)
-
-  // ---------- 自制 toast ----------
-  function toast(msg, type = 'info') {
-    let wrap = root.querySelector(':scope > .lib-toast-wrap')
-    if (!wrap) {
-      wrap = document.createElement('div')
-      wrap.className = 'lib-toast-wrap'
-      root.append(wrap)
-    }
-    const t = document.createElement('div')
-    t.className = `lib-toast ${type}`
-    t.textContent = msg
-    wrap.append(t)
-    setTimeout(() => {
-      t.classList.add('out')
-      setTimeout(() => t.remove(), 260)
-    }, type === 'error' ? 5000 : 3000)
-  }
 
   let cfg = null // GET 到的设置
   let models = [] // 已拉取的模型列表（空 = 未拉取，用内置候选）
@@ -229,8 +212,8 @@ export async function mountLibrarySettings(viewEl) {
         })
         try {
           await api.libraryBookUnlockPut(mapping)
-          toast('书籍解锁已保存')
-        } catch (e) { toast('保存失败：' + e.message, 'error') }
+          toast('书籍解锁已保存', { root })
+        } catch (e) { toast('保存失败：' + e.message, { type: 'error', root }) }
       })
     } catch (e) {
       host.innerHTML = `<p class="ls-desc">加载失败：${escapeHtml(e.message)}</p>`
@@ -335,7 +318,7 @@ export async function mountLibrarySettings(viewEl) {
     // ---- 测试连接 ----
     testBtn.addEventListener('click', async () => {
       const key = keyInput.value.trim()
-      if (!key) { toast('请先填写 API Key', 'error'); return }
+      if (!key) { toast('请先填写 API Key', { type: 'error', root }); return }
       busy(testBtn, true, '测试中…')
       testResult.hidden = true
       try {
@@ -361,11 +344,11 @@ export async function mountLibrarySettings(viewEl) {
         if (!r || !Array.isArray(r.models) || r.models.length === 0) throw new Error('返回列表为空')
         models = r.models
         rebuildModelOptions(modelSel.value)
-        toast(`获取到 ${r.models.length} 个模型`, 'success')
+        toast(`获取到 ${r.models.length} 个模型`, { type: 'success', root })
       } catch (e) {
         models = [...FALLBACK_MODELS]
         rebuildModelOptions(modelSel.value)
-        toast(`模型列表获取失败（${e.message || '接口异常'}），已显示内置候选`, 'error')
+        toast(`模型列表获取失败（${e.message || '接口异常'}），已显示内置候选`, { type: 'error', root })
       } finally {
         busy(modelsBtn, false)
       }
@@ -385,9 +368,9 @@ export async function mountLibrarySettings(viewEl) {
             prompt: promptTA.value,
           },
         })
-        toast('AI 学习设置已保存', 'success')
+        toast('AI 学习设置已保存', { type: 'success', root })
       } catch (e) {
-        toast(e.message || '保存失败', 'error')
+        toast(e.message || '保存失败', { type: 'error', root })
       } finally {
         busy(saveBtn, false)
       }
@@ -398,9 +381,9 @@ export async function mountLibrarySettings(viewEl) {
       busy(dictBtn, true, '保存中…')
       try {
         await api.librarySaveSettings({ dict: { aiFallback: !!aiFallbackCb.checked } })
-        toast('字典设置已保存', 'success')
+        toast('字典设置已保存', { type: 'success', root })
       } catch (e) {
-        toast(e.message || '保存失败', 'error')
+        toast(e.message || '保存失败', { type: 'error', root })
       } finally {
         busy(dictBtn, false)
       }
@@ -417,9 +400,9 @@ export async function mountLibrarySettings(viewEl) {
             fontFamily: segGet(fontSeg) || 'serif',
           },
         })
-        toast('学生阅读主题已保存', 'success')
+        toast('学生阅读主题已保存', { type: 'success', root })
       } catch (e) {
-        toast(e.message || '保存失败', 'error')
+        toast(e.message || '保存失败', { type: 'error', root })
       } finally {
         busy(studentBtn, false)
       }

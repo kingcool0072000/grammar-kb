@@ -1,7 +1,6 @@
 """复习闭环：摘要计数、攻克池、新词额度、教师告警阈值、试卷错词回流。"""
 from __future__ import annotations
 
-import json
 import sqlite3
 from datetime import datetime, timedelta, timezone as _tz
 
@@ -455,83 +454,30 @@ def test_alert_thresholds(recite_env):
     assert s["conquered_n"]["d7"] >= 1  # blast 今天掌握，学生卡近 7 日仍看得见
 
 
-def _seed_session(env, wrong_words, user="malin"):
-    """直接落一条历史会话（绕过 submit，模拟旧版本/存量数据）。"""
-    store = ReciteStore(str(env / "fce.db"))
-    with store._connect() as conn:
-        conn.execute(
-            "INSERT INTO recite_sessions (user, total, wrong, acc, duration_sec,"
-            " wrong_words, mode, scope, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-            (user, len(wrong_words), len(wrong_words), 0, 5,
-             json.dumps(wrong_words), "flip", "all",
-             datetime.now(_tz.utc).isoformat(timespec="seconds")),
-        )
+def test_clear_progress_clears_backfill_marks(recite_env):
+    """教师清空进度连带清回填水位。
 
-
-def test_backfill_incremental_watermark(recite_env):
-    """错词回填增量化：首次全量回填并记水位；无新会话零重扫；新会话只
-    增量回填（不重算旧词、不重复插行）；重复读幂等。"""
-    _seed_session(recite_env, ["oldword"])
+    懒迁移已删（历史回填由一次性脚本完成），代码不读写水位；但清进度
+    仍要扫掉水位行：万一回滚到旧代码，清过的学生不会被旧懒迁移拿历史
+    会话重新回填出已清掉的错词本。
+    """
+    ReciteStore(str(recite_env / "fce.db"))  # 建表（recite_meta 在 SCHEMA 里）
+    con = sqlite3.connect(recite_env / "fce.db")
+    con.executemany(
+        "INSERT INTO recite_meta (key, value) VALUES (?, ?)",
+        [("backfill_max_id:malin", "42"), ("backfill_max_ts:malin", "2026-01-01")],
+    )
+    con.commit()
+    con.close()
     c = _client(recite_env)
-    h = _login(c, "malin", "123456")
-    wb = c.get("/recite/wrongbook", headers=h).json()["data"]
-    assert [w["word"] for w in wb["in_cycle"]] == ["oldword"]
-    con = sqlite3.connect(recite_env / "fce.db")
-    max_sid = con.execute("SELECT MAX(id) FROM recite_sessions").fetchone()[0]
-    marks = dict(con.execute(
-        "SELECT key, value FROM recite_meta WHERE key LIKE 'backfill_max_%'"
-    ).fetchall())
-    assert marks["backfill_max_id:malin"] == str(max_sid)
-    n_rows = con.execute("SELECT COUNT(*) FROM recite_review").fetchone()[0]
-    con.close()
-
-    # 无新会话再读：不重扫、不重复回填
-    wb = c.get("/recite/wrongbook", headers=h).json()["data"]
-    assert [w["word"] for w in wb["in_cycle"]] == ["oldword"]
-    con = sqlite3.connect(recite_env / "fce.db")
-    assert con.execute("SELECT COUNT(*) FROM recite_review").fetchone()[0] == n_rows
-    con.close()
-
-    # 新会话（含旧词 + 新错词）：只增量回填新词，旧词不重算
-    _seed_session(recite_env, ["freshone", "freshone", "oldword"])
-    wb = c.get("/recite/wrongbook", headers=h).json()["data"]
-    words = {w["word"]: w for w in wb["in_cycle"]}
-    assert set(words) == {"oldword", "freshone"}
-    assert words["freshone"]["wrong_count"] == 2  # 新批次内错了两次
-    assert words["oldword"]["wrong_count"] == 1   # 已有周期行不因重扫累加
-    # 水位推进到新会话；重复读幂等
-    con = sqlite3.connect(recite_env / "fce.db")
-    max_sid = con.execute("SELECT MAX(id) FROM recite_sessions").fetchone()[0]
-    marks = dict(con.execute(
-        "SELECT key, value FROM recite_meta WHERE key LIKE 'backfill_max_%'"
-    ).fetchall())
-    assert marks["backfill_max_id:malin"] == str(max_sid)
-    assert con.execute(
-        "SELECT COUNT(*) FROM recite_review WHERE user='malin'"
-    ).fetchone()[0] == 2
-    con.close()
-    wb = c.get("/recite/wrongbook", headers=h).json()["data"]
-    assert {w["word"] for w in wb["in_cycle"]} == {"oldword", "freshone"}
-
-
-def test_backfill_watermark_resets_on_clear(recite_env):
-    """教师清空进度连带清回填水位：下次读错词本按旧口径重新全量回填。"""
-    _seed_session(recite_env, ["regrow"])
-    c = _client(recite_env)
-    h = _login(c, "malin", "123456")
-    assert c.get("/recite/wrongbook", headers=h).json()["data"]["stats"]["total"] == 1
     ht = _login(c, "teacher", "123456")
     r = c.delete("/recite/progress?user=malin", headers=ht)
     assert r.status_code == 200
     con = sqlite3.connect(recite_env / "fce.db")
-    assert con.execute("SELECT COUNT(*) FROM recite_review").fetchone()[0] == 0
     assert con.execute(
         "SELECT COUNT(*) FROM recite_meta WHERE key LIKE 'backfill_max_%:malin'"
     ).fetchone()[0] == 0
     con.close()
-    # 水位已清：下次读按旧口径重新回填，历史错词回到周期
-    wb = c.get("/recite/wrongbook", headers=h).json()["data"]
-    assert [w["word"] for w in wb["in_cycle"]] == ["regrow"]
 
 
 def test_vocab_level_totals_cached(recite_env, monkeypatch):

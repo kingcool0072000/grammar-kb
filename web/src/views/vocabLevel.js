@@ -3,6 +3,7 @@ import { escapeHtml } from '../render.js'
 import { FORM_CN } from '../fmt.js'
 import { fillAtlasHost } from '../atlas.js'
 import { getWordCard } from '../wordcard.js'
+import { toast } from '../toast.js'
 
 // 教师版 · 背单词级别详情（备课中心子页）：
 //   2.1 本级单词内容（词表+搜索，L0=哈一课本高频词=原词汇表）
@@ -389,13 +390,5 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
         <span class="vl-pos">${(w.pos || []).join(' ')}</span>
         <i>${escapeHtml(glossOf(w).slice(0, 36))}</i>
       </div>`).join('')
-  }
-
-  function toast(msg) {
-    const t = document.createElement('div')
-    t.className = 'plan-toast'
-    t.textContent = msg
-    document.body.appendChild(t)
-    setTimeout(() => t.remove(), 3200)
   }
 }

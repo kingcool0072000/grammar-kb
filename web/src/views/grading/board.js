@@ -5,6 +5,7 @@ import { renderReadingReview } from '../readingReview.js'
 import { renderVideoReview, videoRetellRow } from '../videoReview.js'
 import { focusRow, focusTitle } from './shared.js'
 import { openFocusDetail } from './focus.js'
+import { toast } from '../../toast.js'
 
 // 批改中心 · 批改看板子 Tab（默认）：五类待办队列（待批录音/待批复述/待批作文/
 // 异常专注/考试打分）+ 各待办列表与批改视图入口 + 已处理折叠区。
@@ -228,13 +229,6 @@ export async function mountBoard(el, { state, render, boardSnapshots, students, 
 }
 
 // ---- 考试打分卡：已存档单词试卷 + 逐卷登记成绩（关联学生，手动填分） ----
-function toast(msg) {
-  const t = document.createElement('div')
-  t.className = 'plan-toast'
-  t.textContent = msg
-  document.body.appendChild(t)
-  setTimeout(() => t.remove(), 3200)
-}
 
 // 错词标记（登记表单折叠 chips）+ 错词徽标。样式随视图注入一次
 // （对齐 analytics.js 的 ensureStyles 惯例），配色沿用本页暖色系。

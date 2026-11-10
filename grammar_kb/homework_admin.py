@@ -19,6 +19,7 @@ from typing import Optional
 from . import dbreg
 from .aicloud_sync import AiCloudClient, _lecture_of
 from .paths import data_path
+from .store_base import add_column
 
 # ---- 错题题库（data/wrongbank.json：测验平台错题导出，含作业卷答案+解析） ----
 
@@ -66,11 +67,8 @@ class HomeworkAdmin:
             conn.executescript(_SCHEMA)
             # answer 列迁移（存量库补列）。homework_question 本体由 ingest
             # 管线建，运行时不要求已存在（空库新部署不能崩）
-            cols = {r[1] for r in conn.execute(
-                "PRAGMA table_info(homework_question)")}
-            if cols and "answer" not in cols:
-                conn.execute(
-                    "ALTER TABLE homework_question ADD COLUMN answer TEXT")
+            add_column(conn, "homework_question", "answer",
+                       "ALTER TABLE homework_question ADD COLUMN answer TEXT")
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)

@@ -34,7 +34,6 @@ class CompletionMixin:
         ``tasks`` 为当日派生清单（含配额、书名）；缺省时只回活动信号键。
         ``historical`` 时：行上带 ``done`` 的按冻结值回放（不把未完成改成完成）；
         旧回填行没有 ``done`` 时仍视为该条已完成。实录仍按日算。
-        ``plan_day_checks`` 不读、不写。
         ``ctx``：周级信号缓存（week_view 逐日复用），缺省自建单日语义不变。
         """
         rows = list(tasks or [])

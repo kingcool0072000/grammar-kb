@@ -1,6 +1,7 @@
 import { api } from '../../api.js'
 import { ICONS } from './icons.js'
 import { escapeHtml, escAttr } from '../../render.js'
+import { toast } from '../../toast.js'
 import './shelf.css'
 
 // 泛读馆 · 书架（教师/学生共用）
@@ -13,24 +14,6 @@ export async function mountLibraryShelf(viewEl, { role } = {}) {
   const root = document.createElement('div')
   root.className = 'lib-shelf'
   viewEl.append(root)
-
-  // ---------- 自制 toast（顶部居中；error 5s，其余 3s） ----------
-  function toast(msg, type = 'info') {
-    let wrap = root.querySelector(':scope > .lib-toast-wrap')
-    if (!wrap) {
-      wrap = document.createElement('div')
-      wrap.className = 'lib-toast-wrap'
-      root.append(wrap)
-    }
-    const t = document.createElement('div')
-    t.className = `lib-toast ${type}`
-    t.textContent = msg
-    wrap.append(t)
-    setTimeout(() => {
-      t.classList.add('out')
-      setTimeout(() => t.remove(), 260)
-    }, type === 'error' ? 5000 : 3000)
-  }
 
   // ---------- 状态 ----------
   let data = null // {books, stats}；null = 加载中
@@ -319,11 +302,11 @@ export async function mountLibraryShelf(viewEl, { role } = {}) {
       mask.querySelector('[data-del-spin]').hidden = false
       try {
         await api.libraryDeleteBook(book.id)
-        toast(`已删除《${book.title}》`, 'success')
+        toast(`已删除《${book.title}》`, { type: 'success', root })
         mask.remove()
         await load()
       } catch (err) {
-        toast(err.message || '删除失败', 'error')
+        toast(err.message || '删除失败', { type: 'error', root })
         ok.disabled = false
         mask.querySelector('[data-del-spin]').hidden = true
       }
@@ -333,21 +316,21 @@ export async function mountLibraryShelf(viewEl, { role } = {}) {
   // ---------- 上传（教师） ----------
   async function uploadFile(file) {
     if (!file.name.toLowerCase().endsWith('.epub')) {
-      toast('只支持 .epub 格式的电子书', 'error')
+      toast('只支持 .epub 格式的电子书', { type: 'error', root })
       return
     }
     if (file.size > 100 * 1024 * 1024) {
-      toast('文件超过 100MB 上限', 'error')
+      toast('文件超过 100MB 上限', { type: 'error', root })
       return
     }
     uploading = true
     renderUploadState()
     try {
       const book = await api.libraryUpload(file)
-      toast(`《${book.title}》已导入，共 ${book.chapterCount} 章`, 'success')
+      toast(`《${book.title}》已导入，共 ${book.chapterCount} 章`, { type: 'success', root })
       location.hash = `/libraryManage/${book.id}`
     } catch (e) {
-      toast(e.message || '导入失败', 'error')
+      toast(e.message || '导入失败', { type: 'error', root })
     } finally {
       uploading = false
       renderUploadState()

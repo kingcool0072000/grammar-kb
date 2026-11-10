@@ -1,5 +1,6 @@
 import { api } from '../api.js'
 import { escapeHtml, todayIso } from '../render.js'
+import { toast } from '../toast.js'
 
 // 教师版 · 词汇考试记录：登记、修改、删除。
 // 成绩本身不改写已单独设定的单词级别（级别在背单词级别页设置）。
@@ -226,14 +227,6 @@ export async function mountVocabExam(el) {
   })
 
   await reload()
-
-  function toast(msg) {
-    const t = document.createElement('div')
-    t.className = 'plan-toast'
-    t.textContent = msg
-    document.body.appendChild(t)
-    setTimeout(() => t.remove(), 3200)
-  }
 }
 
 // ---- 错词明细（本页只读查看；标记在批改中心打分卡做） ----

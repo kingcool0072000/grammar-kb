@@ -165,7 +165,8 @@ def test_video_retell_unaffected_by_boost(tmp_path, monkeypatch):
                 headers=t).json()["data"][0]["vid"]  # 种子视频
     ws = current_monday().isoformat()
     r = c.put(f"/plan/weeks/{ws}", headers=t, json={
-        "tasks": {"videos": [vid]}, "notes": "", "user": "malin"})
+        "tasks": {"video_units": [{"vids": [vid], "mode": "daily"}]},
+        "notes": "", "user": "malin"})
     assert r.status_code == 200
     r = c.post("/video-study/retells", headers=s, json={
         "vid": vid, "audio_b64": _fake_audio(),
