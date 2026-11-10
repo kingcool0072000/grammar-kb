@@ -146,11 +146,30 @@ async function mountContent(el) {
             <button class="prep-card" data-go="topics">
               <b>${topicCount}</b><span>已上架专题 · 预览与学生进度</span>
             </button>
-            <button class="prep-card" data-go="microAdmin">
-              <b>微练习题库</b><span>审核 · 正确率 · 手动加题</span>
-            </button>
           </div>
           <p class="reading-hint">专题是结构化内容：子知识点{讲解+错题回顾+泛化题}，题目引用题库或自含；制作后上架、配置给特定学生；学生在学生版「专题学习」自学并标记进度。</p>
+        </div>
+      </section>
+
+      <!-- ================= 微练习（每日3题 + 提升档素材 + 完成度） ================= -->
+      <section class="gd-section">
+        <header class="gd-section-head">
+          <h2>✏️ 微练习</h2>
+        </header>
+        <div class="gd-subgroup">
+          <h3>📝 题库 · 句型 · 完成度</h3>
+          <div class="prep-cards">
+            <button class="prep-card" data-go="microAdmin">
+              <b>题库管理</b><span>审核 · 正确率 · 手动加题</span>
+            </button>
+            <button class="prep-card" data-go="microProgress">
+              <b>学生完成度</b><span>按学生汇总 · 逐天明细</span>
+            </button>
+            <button class="prep-card" data-go="microPatterns">
+              <b>句型素材</b><span>复述原句 · 编辑 · 删除</span>
+            </button>
+          </div>
+          <p class="reading-hint">学生每天自动抽 3 题（错题重练/变形/时态等）；句型素材是提升档「句型复述」的原句库；学生端「微练习」Tab 里可回看做题记录与提升回顾。</p>
         </div>
       </section>
 

@@ -129,3 +129,58 @@ def import_items(items: list[dict]) -> int:
             )
             n += 1
     return n
+
+
+def update_item(item_id: int, fields: dict) -> Optional[dict]:
+    """编辑单条句型（白名单字段），返回更新后的行；id 不存在返回 None。
+
+    删除素材对提升档历史的影响：boost_log.item_ref 存 ``retell:{id}``
+    字符串，历史流水照读，素材查不到时前端走「句型可能已被删除」兜底。
+    """
+    _ensure_schema()
+    sets, args = [], []
+    f = fields or {}
+    if "lecture" in f:
+        lecture = f["lecture"]
+        if isinstance(lecture, bool) or not isinstance(lecture, int) \
+                or not 1 <= lecture <= 99:
+            raise ValueError("lecture 须为 1-99 的整数")
+        sets.append("lecture = ?")
+        args.append(lecture)
+    if "sentence" in f:
+        sentence = str(f["sentence"] or "").strip()
+        if not sentence:
+            raise ValueError("sentence 不能为空")
+        sets.append("sentence = ?")
+        args.append(sentence[:500])
+    if "translation" in f:
+        sets.append("translation = ?")
+        args.append(str(f["translation"] or "").strip()[:500])
+    if "hints" in f:
+        hints = f["hints"] or []
+        if not isinstance(hints, list) \
+                or not all(isinstance(h, str) for h in hints):
+            raise ValueError("hints 须为字符串数组")
+        sets.append("hints_json = ?")
+        args.append(json.dumps([h.strip()[:200] for h in hints if h.strip()],
+                               ensure_ascii=False))
+    if not sets:
+        raise ValueError("没有可更新的字段")
+    with dbreg.connect(dbreg.fce_db_path()) as conn:
+        cur = conn.execute(
+            f"UPDATE pattern_item SET {', '.join(sets)} WHERE id = ?",
+            (*args, int(item_id)))
+        if cur.rowcount == 0:
+            return None
+        row = conn.execute(
+            "SELECT * FROM pattern_item WHERE id = ?", (int(item_id),)).fetchone()
+    return _out(row) if row else None
+
+
+def delete_item(item_id: int) -> bool:
+    """删除单条句型。返回是否删到（id 不存在 → False）。"""
+    _ensure_schema()
+    with dbreg.connect(dbreg.fce_db_path()) as conn:
+        cur = conn.execute(
+            "DELETE FROM pattern_item WHERE id = ?", (int(item_id),))
+        return cur.rowcount > 0

@@ -3,7 +3,7 @@ import { finishBlessing } from '../birthday.js'
 import { escapeHtml, escAttr, todayIso, studyGoalMin, taskWhy, taskWhyShort } from '../render.js'
 import { openBoostRetell } from './boostRetell.js'
 import {
-  boostClickFromRows, boostTasksForDate, openBoostFromClick, planBoostOpen,
+  boostClickFromRows, boostTasksForDate, openBoostFromClick,
 } from './boostNav.js'
 
 // 学生版 · 课程表：教师计划看板-周计划的只读镜像（/plan/my-week，
@@ -181,7 +181,6 @@ export async function mountTimetable(el) {
     </div>
     ${loop ? loopCardHtml(loop) : ''}
     <div id="tt-micro"></div>
-    <div id="tt-boost-hist"></div>
     <div id="tt-loop"></div>
     ${summary.length ? `<div class="tt-summary">${summary.map((s) => `<span>${s}</span>`).join('')}</div>` : ''}
     ${dims.length ? `
@@ -199,7 +198,6 @@ export async function mountTimetable(el) {
   bindBoostRows(el, boostRows)
   renderReviewStrip(el.querySelector('#tt-loop'))
   renderMicroCard(el.querySelector('#tt-micro'), d.micro_enabled)
-  renderBoostHistCard(el.querySelector('#tt-boost-hist'))
 }
 
 // ---------- 今日闭环卡（v3 日闭环：到期背词/微练习/泛读/提升档） ----------
@@ -395,57 +393,6 @@ async function renderMicroCard(host, microEnabled) {
   host.innerHTML = `<button type="button" class="tt-micro-card ${d.done ? 'done' : ''}">${inner}</button>`
   host.querySelector('.tt-micro-card').addEventListener('click', () => {
     location.hash = '/micro'
-  })
-}
-
-// ⭐ 提升档案：boost_log 全量流水（含上周与已过关的历史）。句型行点击
-// → 打开复述面板（内含「我的提交记录」与回放）；口诀卡行 → 直达背诵卡。
-async function renderBoostHistCard(host) {
-  if (!host) return
-  let items
-  try {
-    items = (await api.boostHistory({ limit: 30 })).items || []
-  } catch {
-    items = []
-  }
-  if (!items.length) { host.innerHTML = ''; return }
-  const rowHtml = (it) => {
-    const isRetell = it.kind === 'retell'
-    const label = isRetell
-      ? `句型复述${it.sentence ? `〈${it.sentence.slice(0, 26)}${it.sentence.length > 26 ? '…' : ''}〉` : ''}`
-      : `背诵口诀卡${it.card_title ? `〈${it.card_title}〉` : ''}`
-    const score = isRetell
-      ? (it.graded_score != null
-          ? `<b class="tt-bh-score ${(Number(it.graded_score) || 0) >= 7 ? 'ok' : ''}">${it.graded_score}/10</b>`
-          : (it.passed ? '<b class="tt-bh-score pend">待批改</b>' : '<b class="tt-bh-score pend">已提交</b>'))
-      : (it.passed ? '<b class="tt-bh-score ok">✓ 过关</b>' : '')
-    const comment = it.comment ? `<span class="tt-bh-comment">💬 ${escapeHtml(it.comment)}</span>` : ''
-    return `
-      <button type="button" class="tt-bh-row" data-bh-ref="${escAttr(it.item_ref || '')}" data-bh-kind="${escAttr(it.kind || '')}">
-        <span class="tt-bh-date">${escapeHtml(String(it.date || '').slice(5))}</span>
-        <span class="tt-bh-label">⭐ ${escapeHtml(label)}</span>
-        ${score}${comment}
-      </button>`
-  }
-  host.innerHTML = `
-    <section class="tt-boosthist card">
-      <h3>⭐ 提升档案 <small>做过都在这里，点开回看</small></h3>
-      ${items.slice(0, 10).map(rowHtml).join('')}
-      ${items.length > 10 ? `<p class="tt-bh-more">…共 ${items.length} 条记录</p>` : ''}
-    </section>`
-  host.querySelectorAll('[data-bh-ref]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const ref = btn.dataset.bhRef
-      const kind = btn.dataset.bhKind
-      const plan = planBoostOpen(ref, kind)
-      if (!plan.ok) { toastBoost(plan.message); return }
-      if (plan.kind === 'retell') {
-        Promise.resolve(openBoostRetell({ patternId: plan.patternId, label: '提升档案 · 回看' }))
-          .catch((e) => toastBoost(`句型复述打不开：${e && e.message ? e.message : e}`))
-      } else {
-        location.hash = plan.hash
-      }
-    })
   })
 }
 

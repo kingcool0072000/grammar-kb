@@ -90,3 +90,9 @@ def register_micro(app, ctx):
         """题库与作答统计（正确率由前端算）。"""
         _require_teacher(request)
         return _ok(micro.stats())
+
+    @app.get("/micro-admin/progress")
+    def micro_admin_progress(request: "fastapi.Request", user: str = ""):
+        """学生完成度：user 为空=全体汇总；指定=该生逐天明细（含逐题对错）。"""
+        _require_teacher(request)
+        return _ok(micro.progress((user or "").strip() or None))

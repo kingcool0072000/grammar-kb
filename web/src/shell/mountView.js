@@ -51,6 +51,16 @@ export function mountView(route, container, { role, state, ctx, pointsById }) {
     return import('../views/microAdmin.js').then(({ mountMicroAdmin }) =>
       mountMicroAdmin(container, { role }))
   }
+  // 微练习完成度（教师）：按学生汇总 + 逐天明细
+  if (route === 'microProgress') {
+    return import('../views/microProgress.js').then(({ mountMicroProgress }) =>
+      mountMicroProgress(container))
+  }
+  // 句型素材管理（教师）：清单 / 编辑 / 删除 / 新增
+  if (route === 'microPatterns') {
+    return import('../views/microPatterns.js').then(({ mountMicroPatterns }) =>
+      mountMicroPatterns(container))
+  }
   if (route === 'config') return mountConfig(container)
   if (route === 'taxonomy') {
     return mountTaxonomy(container, { pointsById, openKp: ctx.openKp })

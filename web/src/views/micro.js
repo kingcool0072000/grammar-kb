@@ -19,16 +19,13 @@ const catLabel = (c) => CAT[c] || '语法'
 const letterOf = (i) => String.fromCharCode(65 + i) // 0 -> A
 
 export async function mountMicro(el, { role } = {}) {
+  // 顶栏 Tab 页（原课程表入口卡进隐藏页）：今日题 + 做题记录 + 提升回顾
   el.innerHTML = `
-    <button class="fce-back-btn" id="mc-back">← 返回课程表</button>
     <div class="view-head">
       <h1>✏️ 微练习</h1>
       <p id="mc-date">加载中… · 每天 3 题，完成当天点亮</p>
     </div>
     <div id="mc-body"><p class="muted">加载中…</p></div>`
-  el.querySelector('#mc-back').addEventListener('click', () => {
-    location.hash = '/timetable'
-  })
 
   // ---- 页面状态 ----
   let data = null // /micro/today 原始返回
@@ -46,6 +43,7 @@ export async function mountMicro(el, { role } = {}) {
     return
   }
   mountHistory(el)
+  if (role !== 'teacher') mountBoostReview(el)
 
   const questions = Array.isArray(data.questions) ? data.questions : []
   done = !!data.done
@@ -281,4 +279,77 @@ function mountHistory(el) {
         ${historyDayHtml(d)}
       </details>`).join('')
   })
+}
+
+// ---- ⭐ 提升回顾（从课程表「提升档案」卡迁来，独立页放开条数） ----
+// boost_log 全量流水：句型行点击 → 复述面板（内含提交记录与回放）；
+// 口诀卡行 → 直达专题背诵卡。今日待办视角留在课程表（闭环卡/任务行）。
+function mountBoostReview(el) {
+  const host = document.createElement('div')
+  host.id = 'mc-boost-review'
+  el.appendChild(host)
+  renderBoostHistCard(host)
+}
+
+async function renderBoostHistCard(host) {
+  if (!host) return
+  let items
+  try {
+    items = (await api.boostHistory({ limit: 50 })).items || []
+  } catch {
+    items = []
+  }
+  if (!items.length) {
+    host.innerHTML = `
+      <section class="tt-boosthist card">
+        <h3>⭐ 提升回顾 <small>做过的提升任务都在这里</small></h3>
+        <p class="muted" style="margin:4px 0 0">还没有提升任务记录。老师排了提升档后，完成的句型复述和口诀卡会出现在这里。</p>
+      </section>`
+    return
+  }
+  const rowHtml = (it) => {
+    const isRetell = it.kind === 'retell'
+    const label = isRetell
+      ? `句型复述${it.sentence ? `〈${it.sentence.slice(0, 26)}${it.sentence.length > 26 ? '…' : ''}〉` : ''}`
+      : `背诵口诀卡${it.card_title ? `〈${it.card_title}〉` : ''}`
+    const score = isRetell
+      ? (it.graded_score != null
+          ? `<b class="tt-bh-score ${(Number(it.graded_score) || 0) >= 7 ? 'ok' : ''}">${it.graded_score}/10</b>`
+          : (it.passed ? '<b class="tt-bh-score pend">待批改</b>' : '<b class="tt-bh-score pend">已提交</b>'))
+      : (it.passed ? '<b class="tt-bh-score ok">✓ 过关</b>' : '')
+    const comment = it.comment ? `<span class="tt-bh-comment">💬 ${escapeHtml(it.comment)}</span>` : ''
+    return `
+      <button type="button" class="tt-bh-row" data-bh-ref="${escAttr(it.item_ref || '')}" data-bh-kind="${escAttr(it.kind || '')}">
+        <span class="tt-bh-date">${escapeHtml(String(it.date || '').slice(5))}</span>
+        <span class="tt-bh-label">⭐ ${escapeHtml(label)}</span>
+        ${score}${comment}
+      </button>`
+  }
+  host.innerHTML = `
+    <section class="tt-boosthist card">
+      <h3>⭐ 提升回顾 <small>做过的提升任务都在这里，点开回看</small></h3>
+      ${items.map(rowHtml).join('')}
+    </section>`
+  host.querySelectorAll('[data-bh-ref]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const { planBoostOpen } = await import('./boostNav.js')
+      const { openBoostRetell } = await import('./boostRetell.js')
+      const plan = planBoostOpen(btn.dataset.bhRef, btn.dataset.bhKind)
+      if (!plan.ok) { toastBoost(plan.message); return }
+      if (plan.kind === 'retell') {
+        Promise.resolve(openBoostRetell({ patternId: plan.patternId, label: '提升回顾 · 回看' }))
+          .catch((e) => toastBoost(`句型复述打不开：${e && e.message ? e.message : e}`))
+      } else {
+        location.hash = plan.hash
+      }
+    })
+  })
+}
+
+function toastBoost(msg) {
+  const t = document.createElement('div')
+  t.className = 'plan-toast'
+  t.textContent = msg
+  document.body.appendChild(t)
+  setTimeout(() => t.remove(), 4200)
 }

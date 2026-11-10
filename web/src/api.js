@@ -364,6 +364,14 @@ export const api = {
     reqJson(`/micro-admin/questions/${id}`, 'PUT', fields),
   microAdminDelete: (id) => reqJson(`/micro-admin/questions/${id}`, 'DELETE'),
   microAdminStats: () => req('/micro-admin/stats'),
+  microAdminProgress: (user) =>
+    req('/micro-admin/progress', { searchParams: user ? { user } : {} }),
+  // 句型素材（教师编辑/删除；清单 GET /patterns 师生可读已在上面）
+  patternsImport: (items) =>
+    reqJson('/patterns-admin/import', 'POST', { items }),
+  patternsUpdate: (id, fields) =>
+    reqJson(`/patterns-admin/${id}`, 'PUT', fields),
+  patternsDelete: (id) => reqJson(`/patterns-admin/${id}`, 'DELETE'),
 }
 
 // multipart 上传（epub 等大文件）：带登录态，返回解包后的 data

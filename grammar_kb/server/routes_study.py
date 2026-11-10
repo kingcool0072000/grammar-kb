@@ -333,3 +333,24 @@ def register_study(app, ctx):
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
         return _ok({"imported": n})
+
+    @app.put("/patterns-admin/{item_id}")
+    def patterns_update(item_id: int, rec: dict,
+                        request: "fastapi.Request"):
+        """编辑单条句型（白名单：lecture/sentence/translation/hints）。教师。"""
+        _require_teacher(request)
+        try:
+            item = patterns.update_item(item_id, rec or {})
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        if item is None:
+            raise HTTPException(status_code=404, detail=f"句型 {item_id} 不存在")
+        return _ok(item)
+
+    @app.delete("/patterns-admin/{item_id}")
+    def patterns_delete(item_id: int, request: "fastapi.Request"):
+        """删除单条句型（boost_log 历史流水保留）。教师。"""
+        _require_teacher(request)
+        if not patterns.delete_item(item_id):
+            raise HTTPException(status_code=404, detail=f"句型 {item_id} 不存在")
+        return _ok({"deleted": item_id})

@@ -826,3 +826,52 @@ class MicroStore:
                 log[r["c"]] = {"asked": r["asked"],
                                "correct": int(r["ok"] or 0)}
         return {"by_category": by_category, "log": log}
+
+    # ---- 教师完成度（按学生汇总 + 逐天明细） ----
+
+    def progress(self, user: Optional[str] = None) -> dict:
+        """教师视角完成度。user 为空 → 全体学生汇总；指定 → 该生逐天明细。
+
+        汇总行 {user, days_done, answered_n, correct_n, accuracy, last_day}：
+        days_done=micro_daily.done=1 的天数；answered/correct 来自 micro_log
+        首次作答流水（join 题库拿类目，被删题的 log 计入作答不计入类目）。
+        明细行 = history(user, limit=60) 的按天结构（含逐题对错）。
+        """
+        try:
+            with self._connect() as conn:
+                if not user:
+                    rows = conn.execute(
+                        "SELECT d.user, SUM(d.done) days_done, MAX(d.date) last_day"
+                        " FROM micro_daily d GROUP BY d.user ORDER BY d.user",
+                    ).fetchall()
+                    log_rows = conn.execute(
+                        "SELECT l.user, COUNT(*) n, SUM(l.is_correct) ok"
+                        " FROM micro_log l GROUP BY l.user",
+                    ).fetchall()
+                    log_by = {r["user"]: (r["n"], int(r["ok"] or 0))
+                              for r in log_rows}
+                    users = []
+                    for r in rows:
+                        n, ok = log_by.pop(r["user"], (0, 0))
+                        users.append({
+                            "user": r["user"],
+                            "days_done": int(r["days_done"] or 0),
+                            "answered_n": n, "correct_n": ok,
+                            "accuracy": round(ok / n, 3) if n else None,
+                            "last_day": r["last_day"],
+                        })
+                    for u, (n, ok) in log_by.items():  # 有作答但 daily 缺行
+                        users.append({
+                            "user": u, "days_done": 0,
+                            "answered_n": n, "correct_n": ok,
+                            "accuracy": round(ok / n, 3) if n else None,
+                            "last_day": None,
+                        })
+                    return {"users": users}
+                days = self.history(user, limit=60)
+                return {"user": user, "days": days,
+                        "days_done": sum(1 for d in days if d["done"]),
+                        "answered_n": sum(d["n"] for d in days),
+                        "correct_n": sum(d["correct_n"] for d in days)}
+        except sqlite3.OperationalError:  # 表不存在（老库）
+            return {"users": []} if not user else {"user": user, "days": []}

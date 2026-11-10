@@ -513,3 +513,64 @@ def test_boost_history_endpoint(env, client):
     # 学生 A 传 user=B → 收窄回自己（看不到 B 的）
     h2 = client.get("/boost/history?user=mxy", headers=hs).json()["data"]
     assert h2["user"] == "malin" and len(h2["items"]) == 1
+
+
+def test_micro_admin_progress(env, client):
+    """/micro-admin/progress：全体汇总（每生）+ 单生逐天明细；学生 403。"""
+    store = _store(env)
+    q1 = _add_q(store, "grammar", stem="进度题1", answer="A")
+    q2 = _add_q(store, "grammar", stem="进度题2", answer="B")
+    ht = _login(client, "teacher")
+    hs = _login(client, "malin")
+    client.get("/micro/today", headers=hs)
+    client.post("/micro/submit", headers=hs, json={
+        "answers": [{"id": q1, "choice": "A"}, {"id": q2, "choice": "A"}]})
+    # 学生 403（教师专属）
+    assert client.get("/micro-admin/progress", headers=hs).status_code == 403
+    # 全体汇总：malin 一行
+    agg = client.get("/micro-admin/progress", headers=ht).json()["data"]["users"]
+    row = next(u for u in agg if u["user"] == "malin")
+    assert row["days_done"] == 1 and row["answered_n"] == 2
+    assert row["correct_n"] == 1 and row["last_day"] == TODAY
+    # 单生明细：一天、含逐题对错
+    det = client.get("/micro-admin/progress?user=malin", headers=ht).json()["data"]
+    assert det["user"] == "malin" and det["days_done"] == 1
+    day = det["days"][0]
+    assert day["date"] == TODAY and day["correct_n"] == 1 and day["total"] == 2
+    by_id = {q["id"]: q for q in day["questions"]}
+    assert by_id[q1]["my_correct"] and not by_id[q2]["my_correct"]
+
+
+def test_patterns_update_and_delete(env, client):
+    """句型编辑（白名单字段生效）/删除（list 无、boost 历史流水保留）。"""
+    from grammar_kb import patterns
+    from grammar_kb.plan import boost
+    ht = _login(client, "teacher")
+    patterns.import_items([{
+        "lecture": 31, "sentence": "English is spoken here.",
+        "translation": "", "hints": []}])
+    pid = patterns.list_all(31)[0]["id"]
+    boost.record("malin", TODAY, f"retell:{pid}", "retell", score=8)
+    # 编辑：改 sentence + translation + hints
+    r = client.put(f"/patterns-admin/{pid}", headers=ht, json={
+        "sentence": "English is spoken everywhere.",
+        "translation": "到处都说英语。", "hints": ["被动语态？"]})
+    assert r.status_code == 200, r.text
+    after = patterns.get(pid)
+    assert after["sentence"] == "English is spoken everywhere."
+    assert after["translation"] == "到处都说英语。" and after["hints"] == ["被动语态？"]
+    # 空 sentence 422；不存在的 id 404；学生 403
+    assert client.put(f"/patterns-admin/{pid}", headers=ht,
+                      json={"sentence": "  "}).status_code == 422
+    assert client.put("/patterns-admin/99999", headers=ht,
+                      json={"sentence": "x"}).status_code == 404
+    hs = _login(client, "malin")
+    assert client.put(f"/patterns-admin/{pid}", headers=hs,
+                      json={"sentence": "x"}).status_code == 403
+    # 删除：素材没了，boost 历史流水仍在
+    assert client.delete(f"/patterns-admin/{pid}", headers=ht).status_code == 200
+    assert patterns.get(pid) is None
+    assert not patterns.list_all(31)
+    assert client.delete(f"/patterns-admin/{pid}", headers=ht).status_code == 404
+    from grammar_kb.plan import boost as _b
+    assert _b.history("malin", 10)[0]["item_ref"] == f"retell:{pid}"

@@ -3310,6 +3310,49 @@ li.open .topic-reveal-btn.reopen { display: inline-block; }
 }
 .tt-bh-more { margin: 6px 0 0; font-size: 12px; color: var(--ink-faint); }
 
+/* 微练习完成度（教师 #/microProgress） */
+.mp-user {
+  display: flex; align-items: center; gap: 16px; width: 100%; text-align: left;
+  font: inherit; font-size: 13.5px; cursor: pointer; margin-bottom: 10px;
+  padding: 12px 16px;
+}
+.mp-user:hover { background: var(--bg-soft, #f8fafc); }
+.mp-user-name { font-size: 15px; }
+.mp-user-stat { color: var(--ink-soft); }
+.mp-user-stat b { color: var(--ink); }
+.mp-user-go { margin-left: auto; font-size: 12.5px; color: var(--brand-ink, #93601a); font-weight: 700; }
+.mp-detail-head {
+  display: flex; align-items: center; gap: 12px; font-size: 13.5px;
+  color: var(--ink-soft); margin-bottom: 12px;
+}
+
+/* 句型素材管理（教师 #/microPatterns） */
+.mpt-toolbar { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
+.mpt-count { font-size: 12.5px; color: var(--ink-faint); }
+.mpt-group { margin-bottom: 18px; }
+.mpt-group h3 { margin: 0 0 8px; font-size: 14.5px; }
+.mpt-group h3 small { font-weight: 600; color: var(--ink-faint); margin-left: 6px; }
+.mpt-row { padding: 10px 14px; margin-bottom: 8px; }
+.mpt-row-head { display: flex; align-items: baseline; gap: 10px; }
+.mpt-id { flex-shrink: 0; font-size: 12px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.mpt-sentence { font-family: Georgia, "Times New Roman", serif; font-size: 15px; font-weight: 700; }
+.mpt-trans { margin: 4px 0 0 26px; font-size: 13px; color: var(--ink-soft); }
+.mpt-hints { margin: 6px 0 0 26px; font-size: 12.5px; color: var(--ink-soft); }
+.mpt-hints span {
+  display: inline-block; margin: 0 6px 4px 0; padding: 2px 10px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--bg-soft, #f8fafc);
+}
+.mpt-acts { display: flex; gap: 8px; margin: 8px 0 0 26px; }
+.mpt-form { padding: 12px 16px; margin-bottom: 10px; display: grid; gap: 8px; }
+.mpt-form b { font-size: 14px; }
+.mpt-form label { display: grid; gap: 4px; font-size: 12.5px; color: var(--ink-soft); font-weight: 700; }
+.mpt-form input {
+  font: inherit; font-size: 13.5px; font-weight: 400; padding: 7px 10px;
+  border: 1px solid var(--line, #e2e8f0); border-radius: 8px;
+}
+.mpt-form .mpt-acts { margin: 0; }
+.mpt-err { margin: 0; font-size: 12.5px; color: #b42318; }
+
 /* 课程表微练习入口卡 */
 .tt-micro-card {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
