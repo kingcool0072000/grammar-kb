@@ -1,7 +1,7 @@
-import { api } from '../api.js'
+import { api, getAuth } from '../api.js'
 import { escapeHtml } from '../render.js'
 import { fmtDur as fmtSec } from '../fmt.js'
-import { retellLoadState } from './boostNav.js'
+import { retellLoadState, retellMyRecords, retellRecordsHtml } from './boostNav.js'
 
 export { parseBoostRef } from './boostNav.js'
 
@@ -199,13 +199,15 @@ export async function openBoostRetell({ patternId, label, onSubmitted } = {}) {
   }
   let list = null
   let error = ''
+  let myRetells = []
   const idBad = patternId == null || patternId === '' || !Number.isFinite(Number(patternId))
   if (!idBad) {
-    try {
-      list = await api.patternsList()
-    } catch (e) {
-      error = e && e.message ? e.message : String(e)
+    // 句型原文与「我的提交记录」并行拉取；记录拉失败不拦面板（只是没有成绩区）
+    const jobs = [api.patternsList().catch((e) => { error = e && e.message ? e.message : String(e) })]
+    if (getAuth()?.role !== 'teacher') {
+      jobs.push(api.videoRetells().then((r) => { myRetells = Array.isArray(r) ? r : [] }).catch(() => {}))
     }
+    await Promise.all(jobs)
   }
   if (closed) return { close }
   const state = retellLoadState({ patternId, list, error })
@@ -215,7 +217,14 @@ export async function openBoostRetell({ patternId, label, onSubmitted } = {}) {
     return { close }
   }
   const hints = Array.isArray(p.hints) ? p.hints.filter(Boolean) : []
+  // 我的提交记录（学生端成绩反馈）：老师评分/评语/回放。首开在句型下方，
+  // 有成绩后挪到最顶——孩子重开面板第一眼先看到上次的成绩。
+  const token = getAuth()?.token || ''
+  const audioUrl = (id) => `/api/video-study/retells/${id}/audio?token=${encodeURIComponent(token)}`
+  let recState = retellMyRecords(myRetells, patternId, audioUrl)
+  const recHtml = () => retellRecordsHtml(recState, { escapeHtml, fmtDur: fmtSec })
   body.innerHTML = `
+    ${recState.records.length ? recHtml() : ''}
     <div class="boost-retell-sentence">${escapeHtml(p.sentence || '')}</div>
     ${p.translation ? `<p class="boost-retell-trans">${escapeHtml(p.translation)}</p>` : ''}
     ${hints.length ? `
@@ -231,7 +240,8 @@ export async function openBoostRetell({ patternId, label, onSubmitted } = {}) {
       </span>
       <span class="boost-retell-msg" data-msg></span>
     </div>
-    <p class="reading-hint">看清句型，用自己的话大声读出来（≤3 分钟）。提交后等老师批改，7 分以上算过关；不满意可重录刷新。</p>`
+    <p class="reading-hint">看清句型，用自己的话大声读出来（≤3 分钟）。提交后等老师批改，7 分以上算过关；不满意可重录刷新。</p>
+    <div data-hist>${recState.records.length ? '' : ''}</div>`
 
   const msgEl = body.querySelector('[data-msg]')
   recorder = createRetellRecorder({
@@ -252,6 +262,13 @@ export async function openBoostRetell({ patternId, label, onSubmitted } = {}) {
         duration_sec: duration,
       })
       msgEl.innerHTML = `✅ 已提交（${fmtSec(duration)}），等老师批改`
+      // 刷新记录区：新提交即刻出现在「我的提交记录」里（待批改态）
+      myRetells = await api.videoRetells().then((r) => (Array.isArray(r) ? r : [])).catch(() => myRetells)
+      recState = retellMyRecords(myRetells, patternId, audioUrl)
+      const hist = body.querySelector('[data-hist]')
+      if (hist) hist.innerHTML = recHtml()
+      const top = body.querySelector('.boost-retell-hist')
+      if (!top && hist && hist.innerHTML) body.insertBefore(hist.firstElementChild, body.firstChild)
       if (onSubmitted) onSubmitted()
     },
   })

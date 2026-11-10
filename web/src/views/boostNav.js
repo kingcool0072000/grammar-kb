@@ -158,6 +158,65 @@ export function retellLoadState({ patternId, list, error } = {}) {
   return { pattern, error: '' }
 }
 
+/** ISO 时间（UTC 带 Z / 本地串）→ 北京时间「MM-DD HH:mm」。
+ *  created_at 由后端存 UTC，直接 slice 会早 8 小时——必须经 Date 转换
+ *  （与批改中心 grading/shared.js fmtCnTime 同规则）。
+ *  无 Z 后缀的裸串（历史数据）按已是中国时间直解。 */
+export function retellTimeCn(iso) {
+  if (!iso) return '—'
+  const raw = String(iso)
+  const d = new Date(/[Z+]/.test(raw.slice(-6)) ? raw : raw + '+08:00')
+  if (isNaN(d.getTime())) return raw.slice(0, 16).replace('T', ' ')
+  const p = (n) => String(n).padStart(2, '0')
+  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+/** 句型复述「我的提交记录」区：从 videoRetells() 结果筛出该句型的提交，
+ *  按时间正序，供面板展示成绩反馈（老师 X/10 或 待批改 + 评语 + 回放地址）。
+ *  rows 里视频复述（ref_kind=video / vid 不匹配）全部过滤掉。 */
+export function retellMyRecords(rows, patternId, audioUrl) {
+  const pid = String(patternId == null ? '' : patternId)
+  const mine = (Array.isArray(rows) ? rows : [])
+    .filter((r) => r && r.ref_kind === 'pattern' && String(r.vid) === pid)
+    .sort((a, b) => (a.created_at < b.created_at ? -1 : 1))
+  const graded = mine.filter((r) => r.status === 'graded')
+  const best = graded.length
+    ? Math.max(...graded.map((r) => Number(r.teacher_score) || 0)) : null
+  return {
+    records: mine,
+    best,
+    passed: graded.some((r) => (Number(r.teacher_score) || 0) >= 7),
+    /** 回放地址；audioUrl(id) 由调用方注入（拼 token），缺省空串不渲染 */
+    audioOf: (r) => (typeof audioUrl === 'function' && r ? audioUrl(r.id) : ''),
+  }
+}
+
+/** 记录区 HTML（面板内联渲染，样式复刻视频复述的成绩行）。
+ *  传 escapeHtml 保持纯函数可测。 */
+export function retellRecordsHtml(state, { escapeHtml: esc = String, fmtDur = (s) => `${s || 0}s`, timeCn = retellTimeCn } = {}) {
+  const rs = state.records || []
+  if (!rs.length) return ''
+  const rows = rs.slice().reverse().map((r) => `
+    <div class="reading-graded-row" data-rid="${esc(String(r.id))}">
+      <div class="fce-his-row">
+        <span class="fce-his-date">${esc(timeCn(r.created_at))} · ${fmtDur(r.duration_sec || 0)}</span>
+        ${r.status === 'graded'
+          ? `<b class="fce-his-score ${(Number(r.teacher_score) || 0) >= 8 ? 'ok' : ''}">老师 ${esc(String(r.teacher_score))}/10</b>`
+          : '<b class="fce-his-score pend">待批改</b>'}
+      </div>
+      ${r.teacher_comment ? `<div class="reading-graded-comment">💬 ${esc(r.teacher_comment)}</div>` : ''}
+      ${state.audioOf(r) ? `<audio controls preload="metadata" src="${esc(state.audioOf(r))}"></audio>` : ''}
+    </div>`).join('')
+  const head = state.passed
+    ? '✅ 已过关（最高 ' + state.best + '/10）'
+    : (state.best != null ? '最高 ' + state.best + '/10 · 7 分以上算过关' : '已提交 · 等老师批改')
+  return `
+    <div class="boost-retell-hist">
+      <b>📝 我的提交记录（${rs.length} 次）· ${esc(head)}</b>
+      ${rows}
+    </div>`
+}
+
 function scrollTo(el) {
   if (!el || typeof el.scrollIntoView !== 'function') return
   try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }) }

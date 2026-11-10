@@ -4,7 +4,8 @@ import { routeSegs } from '../src/shell/dom.js'
 import {
   boostClickFromRows, boostTasksForDate, focusMemoryCard, memoryTopicHash,
   nodeKeyFromHash, openBoostFromClick, parseBoostRef, planBoostOpen,
-  retellLoadState, topicRouteFromHash,
+  retellLoadState, retellMyRecords, retellRecordsHtml, retellTimeCn,
+  topicRouteFromHash,
 } from '../src/views/boostNav.js'
 
 const MEM = 'memory:lecture-30-passive-2:k2'
@@ -241,4 +242,51 @@ test('专题深链聚焦指定背诵卡：滚入、高亮、打开提示面', ()
   assert.match(gone.message, /没有找到这张口诀卡/)
   assert.match(gone.message, /missing/)
   assert.equal(gone.anchor, null)
+})
+
+test('句型复述我的提交记录：筛选/两态/评语/回放/视频行过滤', () => {
+  const rows = [
+    // 视频复述 + 别的句型：都必须被过滤掉
+    { id: 11, vid: 'abcdefghijk', ref_kind: 'video', status: 'graded', teacher_score: 9, created_at: '2026-11-10T01:00:00+00:00', duration_sec: 30 },
+    { id: 12, vid: '2', ref_kind: 'pattern', status: 'graded', teacher_score: 8, created_at: '2026-11-10T01:10:00+00:00', duration_sec: 20 },
+    // 本句型（pattern 1）：一条待批改 + 一条已批改 5 分
+    { id: 13, vid: '1', ref_kind: 'pattern', status: 'pending', teacher_comment: '', created_at: '2026-11-10T02:00:00+00:00', duration_sec: 22 },
+    { id: 14, vid: 1, ref_kind: 'pattern', status: 'graded', teacher_score: 5, teacher_comment: '再练一次', created_at: '2026-11-10T01:30:00+00:00', duration_sec: 18 },
+  ]
+  const st = retellMyRecords(rows, 1, (id) => `/api/audio/${id}`)
+  assert.equal(st.records.length, 2)
+  assert.equal(st.best, 5)
+  assert.equal(st.passed, false)
+  // 时间正序：早的（01:30）在前
+  assert.equal(st.records[0].id, 14)
+  assert.equal(st.audioOf(st.records[0]), '/api/audio/14')
+  const html = retellRecordsHtml(st, {})
+  assert.match(html, /我的提交记录（2 次）/)
+  assert.match(html, /待批改/)
+  assert.match(html, /老师 5\/10/)
+  assert.match(html, /再练一次/)
+  assert.match(html, /api\/audio\/13/)
+  assert.match(html, /api\/audio\/14/)
+  // 7 分以上过关口径
+  const passed = retellMyRecords([
+    { id: 15, vid: '1', ref_kind: 'pattern', status: 'graded', teacher_score: 9, created_at: 'a' },
+  ], '1')
+  assert.equal(passed.passed, true)
+  assert.match(retellRecordsHtml(passed, {}), /已过关（最高 9\/10）/)
+  // 无提交 → 空串不渲染
+  assert.equal(retellRecordsHtml(retellMyRecords([], 1), {}), '')
+  // audioUrl 缺省时不渲染 <audio>
+  const noAudio = retellRecordsHtml(retellMyRecords([
+    { id: 16, vid: '1', ref_kind: 'pattern', status: 'pending', created_at: 'a' },
+  ], 1), {})
+  assert.equal(/<audio/.test(noAudio), false)
+})
+
+test('retellTimeCn：UTC 串转北京时间，裸串按中国时间直解', () => {
+  // UTC 02:30 → 北京 10:30
+  assert.equal(retellTimeCn('2026-11-10T02:30:00+00:00'), '11-10 10:30')
+  assert.equal(retellTimeCn('2026-11-09T16:00:00Z'), '11-10 00:00')
+  // 无时区标记的历史串：按已是北京时间直解
+  assert.equal(retellTimeCn('2026-11-10T09:05:00'), '11-10 09:05')
+  assert.equal(retellTimeCn(''), '—')
 })
