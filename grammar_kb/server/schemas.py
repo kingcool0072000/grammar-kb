@@ -9,7 +9,7 @@ import re
 from typing import Optional
 
 try:
-    from pydantic import BaseModel, Field, model_validator
+    from pydantic import BaseModel, Field, field_validator, model_validator
 
     class ExamRecordIn(BaseModel):
         """作业成绩请求体（模块级定义：本文件启用延迟注解，闭包内模型无法被 FastAPI 解析）。"""
@@ -163,6 +163,13 @@ try:
         mime: str = Field(default="audio/webm", max_length=40)
         duration_sec: int = Field(default=0, ge=0, le=600)
         ref_kind: str = Field(default="video", max_length=16)
+
+        # pattern id 在库里是自增整数，JSON 序列化成数字（patterns API
+        # 原样返回 int）——前端漏 String() 时宽容强转，别让它 422
+        @field_validator("vid", mode="before")
+        @classmethod
+        def _vid_str(cls, v):
+            return str(v) if isinstance(v, int) and not isinstance(v, bool) else v
 
         @model_validator(mode="after")
         def _check_vid_shape(self):

@@ -245,7 +245,7 @@ export async function openBoostRetell({ patternId, label, onSubmitted } = {}) {
     doneLabel: '↻ 重录',
     onSubmit: async ({ blob, b64, duration }) => {
       await api.videoRetellSubmit({
-        vid: p.id,
+        vid: String(p.id),  // patterns API 返回 int id，schema 要字符串
         ref_kind: 'pattern',
         audio_b64: b64,
         mime: blob.type || 'audio/webm',

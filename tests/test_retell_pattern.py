@@ -173,3 +173,21 @@ def test_video_retell_unaffected_by_boost(tmp_path, monkeypatch):
         "mime": "audio/webm", "duration_sec": 10})
     assert r.status_code == 200
     assert r.json()["data"]["ref_kind"] == "video"
+
+
+def test_pattern_retell_int_vid_regression(tmp_path, monkeypatch):
+    """vid 传数字（patterns API 原样返回 int id）不得 422。
+
+    2026-11-10 生产 Bug：boostRetell.js 直接 vid: p.id（int），
+    pydantic v2 不做 int→str 强转 → 提交录音 422。schema 已加宽容
+    强转，此处锁 API 层行为。
+    """
+    c = _client(tmp_path, monkeypatch)
+    t, s = _login(c, "teacher"), _login(c, "malin")
+    pid = _import_pattern()
+    _seed_boost_today(c, t, pid)
+    r = c.post("/video-study/retells", headers=s, json={
+        "vid": pid, "ref_kind": "pattern", "audio_b64": _fake_audio(),
+        "mime": "audio/webm", "duration_sec": 20})
+    assert r.status_code == 200, r.text
+    assert r.json()["data"]["vid"] == str(pid)
