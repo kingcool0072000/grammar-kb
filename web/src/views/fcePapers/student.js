@@ -382,7 +382,7 @@ async function renderPractice(el, testId, sec, role) {
   const startAt = Date.now()
   const timerEl = el.querySelector('#fce-timer-num')
   timer = setInterval(() => {
-    // 保险：容器已脱离文档（路由切走）时自停，避免空转（参考 manage.js 轮询）
+    // 保险：容器已脱离文档（路由切走）时自停，避免空转（路由切走自停）
     if (!el.isConnected) { clearInterval(timer); timer = null; return }
     const s = Math.floor((Date.now() - startAt) / 1000)
     timerEl.textContent = fmtDur(s) // = fmtDurPad：秒 → mm:ss（分钟补零）

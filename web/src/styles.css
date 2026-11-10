@@ -1741,10 +1741,6 @@ main { --fce-fs: 15px; }
   color: var(--lib-text-secondary);
   margin-bottom: 10px;
 }
-.lib-dict-source .ai {
-  color: var(--lib-accent-bright);
-  font-weight: 600;
-}
 .lib-dict-sense {
   margin-bottom: 10px;
 }

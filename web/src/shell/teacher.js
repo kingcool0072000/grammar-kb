@@ -78,12 +78,9 @@ export async function prepareTeacher(state, boot, signalCtx) {
   return true
 }
 
-/**
- * 教师子工具页 prepend 返回条。三个主 Tab 不加。
- * libraryManage 页内已有「← 返回书架」，再叠一条会双返回。
- */
+/** 教师子工具页 prepend 返回条。三个主 Tab 不加。 */
 export function attachTeacherBack(container, route, mounted) {
-  if (TAB_ROUTES.has(route) || route === 'libraryManage') return
+  if (TAB_ROUTES.has(route)) return
   const addBack = () => {
     if (!container.querySelector('.gd-tool-back')) {
       const [hash, label] = BACK_BASE[route] || ['/prep', '← 返回备课中心']

@@ -19,9 +19,9 @@
   行字段 dict：category/topic/stem/options(list)/answer/explain/source/
   ref_lecture/ref_qnum/status。micro.py 尚未合入时，只读子命令照常可用，
   写库子命令会报错提示。
-- GLM：grammar_kb.glm.chat_prose / extract_json；apiKey/model 取自
-  grammar_kb.library.LibraryStore.get_settings()["ai"]（library.db）。
-  所有 --dry-run 完全不触网（不取 key、不调 chat_prose）。
+- GLM：scripts/glm_client.chat_prose / extract_json（AI 已退役出 grammar_kb 生产包，
+  仅本离线脚本触网）；apiKey/model 读 library.db 的 ai_json 遗留列（历史教师配置）。
+  所有 --dry-run 完全不触网（不取 key、不 import glm_client、不调 chat_prose）。
 - 库路径一律走 grammar_kb.dbreg（$GRAMMAR_KB_* 环境变量 → 仓库根 data/）。
 """
 from __future__ import annotations
@@ -36,6 +36,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+# glm_client.py 与本脚本同目录（AI 已退役出 grammar_kb 生产包，仅离线脚本使用）；
+# 真正 import 放在触网函数内，--dry-run 不依赖 glm_client 可导入
+_SCRIPTS_DIR = str(Path(__file__).resolve().parent)
+if _SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_DIR)
 
 from grammar_kb import dbreg  # noqa: E402
 from grammar_kb.homework_admin import load_wrong_bank  # noqa: E402
@@ -373,35 +378,37 @@ def cmd_seed_tense(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------- GLM 相关（小函数封装，dry-run 不触网）
 
 
-def _ai_settings(dry_run: bool) -> dict:
-    """取 ai 设置（apiKey/model）。dry-run 下只读打开 library.db，不构造 LibraryStore
-    （其 __init__ 会跑建表脚本，保证 dry-run 零写库）。"""
-    if dry_run:
-        try:
-            conn = _readonly(dbreg.library_db_path())
-        except sqlite3.Error:
+def _ai_settings() -> dict:
+    """取 ai 设置（apiKey/model）：只读打开 library.db 读 ai_json 遗留列。
+
+    AI 退役后设置页不再写该列；历史教师配置的 key 仍供本离线脚本使用。
+    只读打开（不构造 LibraryStore、不跑建表），dry-run 与实跑路径一致且零写库。
+    """
+    try:
+        conn = _readonly(dbreg.library_db_path())
+    except sqlite3.Error:
+        return {}
+    try:
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(library_settings)")}
+        if "ai_json" not in cols:  # 后续版本若删列，静默视为未配置
             return {}
-        try:
-            row = conn.execute(
-                "SELECT ai_json FROM library_settings WHERE id = 1"
-            ).fetchone()
-            return _json_loads(row["ai_json"] if row else None, {}) or {}
-        finally:
-            conn.close()
-    from grammar_kb.library import LibraryStore  # noqa: PLC0415 重量级，函数内导入
-    store = LibraryStore(dbreg.library_db_path())
-    return store.get_settings()["ai"]
+        row = conn.execute(
+            "SELECT ai_json FROM library_settings WHERE id = 1"
+        ).fetchone()
+        return _json_loads(row["ai_json"] if row else None, {}) or {}
+    finally:
+        conn.close()
 
 
 def _glm_call(system_prompt: str, user_prompt: str, ai: dict,
               temperature: float = GLM_TEMPERATURE) -> str:
     """chat_prose 薄封装：统一 key/model/温度/异常文案。"""
-    from grammar_kb import glm  # noqa: PLC0415 触网入口，按需导入
+    import glm_client  # noqa: PLC0415 触网入口，按需导入（scripts/ 同目录）
     api_key = str(ai.get("apiKey") or "")
     model = str(ai.get("model") or "glm-4-flash")
     if not api_key:
-        raise glm.GlmError("library.db 未配置智谱 apiKey（教师端设置页填写）")
-    return glm.chat_prose(
+        raise glm_client.GlmError("library.db 未配置智谱 apiKey（ai_json 遗留列为空）")
+    return glm_client.chat_prose(
         api_key, model, system_prompt, user_prompt,
         temperature=temperature, max_tokens=8192)
 
@@ -486,7 +493,7 @@ def cmd_gen_variants(args: argparse.Namespace) -> int:
         print("  没有母题：先运行 seed-wrong。")
         return 0
 
-    ai = _ai_settings(args.dry_run)
+    ai = _ai_settings()
     if args.dry_run:
         m = mothers[0]
         print(f"  [dry-run] 模型: {ai.get('model') or '(未配置)'}；"
@@ -515,10 +522,10 @@ def cmd_gen_variants(args: argparse.Namespace) -> int:
         }
         try:
             text = _glm_call(VARIANT_SYSTEM_PROMPT, _variant_user_prompt(mother), ai)
-            from grammar_kb import glm  # noqa: PLC0415
-            ok, variant, reason = _validate_variant(glm.extract_json(text))
+            import glm_client  # noqa: PLC0415 触网入口，按需导入
+            ok, variant, reason = _validate_variant(glm_client.extract_json(text))
             if not ok:
-                raise glm.GlmError(f"输出校验失败: {reason}")
+                raise glm_client.GlmError(f"输出校验失败: {reason}")
         except Exception as e:  # GlmError / 解析失败：记一笔续跑
             failed += 1
             print(f"  [{i}/{len(mothers)}] 第 {m['ref_lecture']}讲 {m['ref_qnum']}题 失败: {e}")
@@ -602,7 +609,7 @@ _FENCE_RE = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.I)
 
 
 def _extract_json_array(text: str) -> list:
-    """容错提取第一个完整 JSON 数组（glm.extract_json 只支持对象，这里补数组版）。"""
+    """容错提取第一个完整 JSON 数组（glm_client.extract_json 只支持对象，这里补数组版）。"""
     s = (text or "").strip()
     s = _THINK_RE.sub("", s)
     m = _FENCE_RE.search(s)
@@ -721,7 +728,7 @@ def cmd_rewrite_explain(args: argparse.Namespace) -> int:
         print("  所选类别都没有待改写的题，无事可做。")
         return 0
 
-    ai = _ai_settings(False)
+    ai = _ai_settings()
     conn = sqlite3.connect(f"file:{fce_path}?mode=rw", uri=True)  # 库不存在时报错，不建空库
     try:
         grand_ok = grand_failed = 0
@@ -872,7 +879,7 @@ def cmd_gen_word_bank(args: argparse.Namespace, kind: str) -> int:
         print("  已达标，无需生成。")
         return 0
 
-    ai = _ai_settings(args.dry_run)
+    ai = _ai_settings()
     system_prompt = WORD_SYSTEM_PROMPT.format(label=spec["label"], batch=BATCH_SIZE)
     if args.dry_run:
         print(f"  [dry-run] 模型: {ai.get('model') or '(未配置)'}；"
@@ -889,11 +896,11 @@ def cmd_gen_word_bank(args: argparse.Namespace, kind: str) -> int:
     for b in range(1, batches + 1):
         try:
             text = _glm_call(system_prompt, _word_user_prompt(b, BATCH_SIZE, existing_phrases), ai)
-            from grammar_kb import glm  # noqa: PLC0415
+            import glm_client  # noqa: PLC0415 触网入口，按需导入
             entries, questions, reason = _validate_word_batch(
-                glm.extract_json(text), BATCH_SIZE)
+                glm_client.extract_json(text), BATCH_SIZE)
             if not entries:
-                raise glm.GlmError(f"批次校验失败: {reason}")
+                raise glm_client.GlmError(f"批次校验失败: {reason}")
         except Exception as e:
             failed += 1
             print(f"  [batch {b}/{batches}] 失败: {e}")

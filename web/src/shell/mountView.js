@@ -12,7 +12,6 @@ import { mountTimetable } from '../views/timetable.js'
 import { mountConquered } from '../views/conquered.js'
 import { mountLibraryShelf } from '../views/library/shelf.js'
 import { mountLibraryReader } from '../views/library/reader.js'
-import { mountLibraryManage } from '../views/library/manage.js'
 import { mountLibrarySettings } from '../views/library/settings.js'
 import { mountGrading } from '../views/grading.js'
 import { mountPrep } from '../views/prep.js'
@@ -72,9 +71,6 @@ export function mountView(route, container, { role, state, ctx, pointsById }) {
   if (route === 'library') return mountLibraryShelf(container, { role })
   if (route === 'libraryReader') {
     return mountLibraryReader(container, { role, bookId: Number(routeSegs()[1]) })
-  }
-  if (route === 'libraryManage') {
-    return mountLibraryManage(container, { bookId: Number(routeSegs()[1]) })
   }
   if (route === 'librarySettings') return mountLibrarySettings(container)
   if (route === 'vocabLevel') {

@@ -24,7 +24,7 @@ const TEACHER_ALLOWED = new Set([
   'courses', 'taxonomy', 'fceListen', 'exams', 'vocabLevel', 'vocabExam',
   'students', 'paperAdmin', 'readingAdmin', 'readingList', 'topicsAdmin',
   'videoAdmin',
-  'libraryManage', 'librarySettings',
+  'librarySettings',
   // 微练习题库管理（教师专属，不进顶部 Tab）
   'microAdmin',
   // 师生都能开的隐藏页（教师从卡片进专题、泛读馆）

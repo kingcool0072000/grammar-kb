@@ -354,8 +354,8 @@ export function createPrepDrawer({ onClose, onStart }) {
       <p class="lib-muted lib-prep-chapter">第 ${chapterIndex + 1} 节</p>
       <div class="lib-prep-empty">
         <div class="ico">${ICONS.seedling(40)}</div>
-        <h3>本章还没有预习</h3>
-        <p>请老师在书籍的「章节预习管理」页为这一章生成预习</p>
+        <h3>本章还没有预习内容</h3>
+        <p>预习内容由老师离线准备，同步后即可在这里查看</p>
       </div>
       <button type="button" class="lib-prep-start">已预习完，继续阅读 →</button>`
     const btn = d.body.querySelector('.lib-prep-start')

@@ -1,11 +1,15 @@
-"""智谱 GLM 调用（OpenAI 兼容接口，httpx 同步客户端）。
+"""智谱 GLM 调用客户端（OpenAI 兼容接口，httpx 同步客户端）。
+
+2026-11-10 生产退役迁出：线上零 LLM 代码（grammar_kb 包内已无本模块），
+本客户端仅供本机离线脚本（gen_micro_bank 等）使用，Key 从
+library.db library_settings.ai_json 读取。
 
 直译自 FCEReadingLib server/src/services/glm.ts（原生 fetch）。
 - ``generate_prep``：章节预习材料生成（JSON 输出，失败自动重试 1 次）
 - ``explain_word``：AI 词典兜底
 - ``list_models`` / ``test_api_key``：模型列表与 Key 连通性
 - ``extract_json``：容错解析 <think> 块 / ```json 围栏 / 杂文前缀
-异常统一为 :class:`GlmError`（RuntimeError 子类），由端点转 502。
+异常统一为 :class:`GlmError`（RuntimeError 子类）。
 """
 from __future__ import annotations
 

@@ -169,7 +169,6 @@ export async function mountLibraryShelf(viewEl, { role } = {}) {
         </div>
         <button class="lib-book-menu-btn" data-menu="${b.id}" aria-label="管理菜单">⋯</button>
         <div class="lib-book-menu" hidden data-menu-panel="${b.id}">
-          <button data-go-manage="${b.id}">章节预习管理</button>
           <button class="danger" data-del="${b.id}">删除本书</button>
         </div>
       </article>`
@@ -328,7 +327,7 @@ export async function mountLibraryShelf(viewEl, { role } = {}) {
     try {
       const book = await api.libraryUpload(file)
       toast(`《${book.title}》已导入，共 ${book.chapterCount} 章`, { type: 'success', root })
-      location.hash = `/libraryManage/${book.id}`
+      await load()
     } catch (e) {
       toast(e.message || '导入失败', { type: 'error', root })
     } finally {
@@ -342,12 +341,6 @@ export async function mountLibraryShelf(viewEl, { role } = {}) {
     if (e.target.closest('[data-menu-backdrop]')) { closeMenus(); return }
     const menuBtn = e.target.closest('[data-menu]')
     if (menuBtn) { toggleMenu(menuBtn); return }
-    const goManage = e.target.closest('[data-go-manage]')
-    if (goManage) {
-      closeMenus()
-      location.hash = `/libraryManage/${goManage.dataset.goManage}`
-      return
-    }
     const del = e.target.closest('[data-del]')
     if (del) {
       const book = byId(Number(del.dataset.del))
@@ -362,12 +355,10 @@ export async function mountLibraryShelf(viewEl, { role } = {}) {
       load()
       return
     }
-    // 点整卡：教师进章节管理页（教师不做泛读阅读）；学生进阅读器
+    // 点整卡：进阅读器（章节预习管理页已退役，教师学生同路由）
     const card = e.target.closest('.lib-book')
     if (card) {
-      location.hash = isTeacher
-        ? `/libraryManage/${card.dataset.id}`
-        : `/libraryReader/${card.dataset.id}`
+      location.hash = `/libraryReader/${card.dataset.id}`
     }
   })
 

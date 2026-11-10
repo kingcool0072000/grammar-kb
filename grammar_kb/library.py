@@ -1,8 +1,8 @@
-"""泛读馆数据层（data/library.db）：书架 / 章节 / 进度 / 预习 / 设置 / 查词缓存。
+"""泛读馆数据层（data/library.db）：书架 / 章节 / 进度 / 预习 / 设置 / 查词。
 
 直译自 FCEReadingLib server/src/db.ts + routes/* 的库访问逻辑，差异：
 - 不建 users 表——用户列直接存用户名字符串（复用 grammar-kb 现有 auth）
-- 每方法独立短连接（项目惯例，天然线程安全，供预习队列后台线程复用）
+- 每方法独立短连接（项目惯例，天然线程安全）
 路径解析经 dbreg 统一口径：GRAMMAR_KB_LIBRARY_DB → 仓库根 data/library.db；
 文件目录 GRAMMAR_KB_LIBRARY_DIR → data/library/{books,covers}。
 """
@@ -16,7 +16,7 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
-from . import dbreg, glm
+from . import dbreg
 from .dict_db import DictDB
 from .epub_parse import EpubParseError, parse_epub
 from .vocab_exam import MAX_UNLOCK_LEVEL
@@ -92,29 +92,11 @@ CREATE TABLE IF NOT EXISTS chapter_preps (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(book_id, chapter_index)
 );
-CREATE TABLE IF NOT EXISTS prep_jobs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
-  user TEXT NOT NULL DEFAULT '',
-  status TEXT NOT NULL DEFAULT 'running',
-  total INTEGER DEFAULT 0,
-  done INTEGER DEFAULT 0,
-  pending TEXT DEFAULT '[]',
-  failed_indexes TEXT DEFAULT '[]',
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
 CREATE TABLE IF NOT EXISTS library_settings (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   ai_json TEXT NOT NULL DEFAULT '{}',
   dict_json TEXT NOT NULL DEFAULT '{}',
   student_json TEXT NOT NULL DEFAULT '{}'
-);
-CREATE TABLE IF NOT EXISTS dict_cache (
-  word TEXT PRIMARY KEY,
-  source TEXT NOT NULL,
-  payload TEXT NOT NULL,
-  fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS book_reading_config (
   book_id    INTEGER PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
@@ -183,21 +165,11 @@ class LibraryStore:
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         with contextlib.closing(self._connect()) as conn:
             conn.executescript(SCHEMA)
-            # 全局设置默认行
+            # 全局设置默认行。ai_json/dict_json 列保留（历史存量 Key 供
+            # scripts/glm_client.py 等离线脚本读取），线上不再写入 AI 配置
             conn.execute(
                 "INSERT OR IGNORE INTO library_settings (id, ai_json, dict_json, student_json)"
-                " VALUES (1, ?, ?, '{}')",
-                (
-                    json.dumps({"model": "glm-4-flash", "difficulty": "L2", "maxWords": 12}),
-                    json.dumps({"aiFallback": True}),
-                ),
-            )
-            # 服务重启时，清掉旧策略留下的 not_found 缓存（词典策略升级后避免误报"未收录"）
-            conn.execute("DELETE FROM dict_cache WHERE source = 'not_found'")
-            # 服务重启时，将遗留 running/queued 任务标记为 interrupted
-            conn.execute(
-                "UPDATE prep_jobs SET status = 'interrupted',"
-                " updated_at = datetime('now') WHERE status IN ('running', 'queued')"
+                " VALUES (1, '{}', '{}', '{}')"
             )
             conn.commit()
 
@@ -529,7 +501,6 @@ class LibraryStore:
             return None
         with self._tx() as conn:
             conn.execute("DELETE FROM chapter_preps WHERE book_id = ?", (book_id,))
-            conn.execute("DELETE FROM prep_jobs WHERE book_id = ?", (book_id,))
             conn.execute("DELETE FROM reading_progress WHERE book_id = ?", (book_id,))
             conn.execute("DELETE FROM chapters WHERE book_id = ?", (book_id,))
             conn.execute("DELETE FROM books WHERE id = ?", (book_id,))
@@ -538,16 +509,6 @@ class LibraryStore:
                 with contextlib.suppress(OSError):
                     (self.dir / rel).unlink(missing_ok=True)
         return book_id
-
-    def set_skip(self, book_id: int, idx: int, skip: bool) -> Optional[dict]:
-        with self._tx() as conn:
-            cur = conn.execute(
-                "UPDATE chapters SET skip_prep = ? WHERE book_id = ? AND idx = ?",
-                (1 if skip else 0, book_id, idx),
-            )
-            if cur.rowcount == 0:
-                return None
-        return {"idx": idx, "skipPrep": bool(skip)}
 
     def touch_open(self, book_id: int) -> None:
         with contextlib.closing(self._connect()) as conn:
@@ -601,13 +562,6 @@ class LibraryStore:
 
     # ---- 章节预习 ----
 
-    def get_chapter(self, book_id: int, chapter_index: int) -> Optional[dict]:
-        with contextlib.closing(self._connect()) as conn:
-            row = conn.execute(
-                "SELECT title, text_content FROM chapters WHERE book_id = ? AND idx = ?",
-                (book_id, chapter_index),
-            ).fetchone()
-        return dict(row) if row else None
 
     def get_prep(self, book_id: int, chapter_index: int) -> Optional[dict]:
         with contextlib.closing(self._connect()) as conn:
@@ -633,102 +587,6 @@ class LibraryStore:
                  model, difficulty),
             )
 
-    # ---- 批量预习任务（行驱动，由 prep_queue 消费） ----
-
-    def filter_batch(self, book_id: int, chapter_indexes: list[int]) -> Optional[list[int]]:
-        """过滤出待生成章节（去掉已生成与 skip_prep）；书不存在返回 None。"""
-        with contextlib.closing(self._connect()) as conn:
-            if not conn.execute("SELECT id FROM books WHERE id = ?", (book_id,)).fetchone():
-                return None
-            existing = {
-                r["chapter_index"]
-                for r in conn.execute(
-                    "SELECT chapter_index FROM chapter_preps WHERE book_id = ?", (book_id,)
-                )
-            }
-            skipped = {
-                r["idx"]
-                for r in conn.execute(
-                    "SELECT idx FROM chapters WHERE book_id = ? AND skip_prep = 1", (book_id,)
-                )
-            }
-        return [int(i) for i in chapter_indexes if int(i) not in existing and int(i) not in skipped]
-
-    def insert_job(self, book_id: int, user: str, chapter_indexes: list[int]) -> int:
-        with self._tx() as conn:
-            cur = conn.execute(
-                "INSERT INTO prep_jobs (book_id, user, status, total, pending, failed_indexes)"
-                " VALUES (?, ?, 'queued', ?, ?, '[]')",
-                (book_id, user, len(chapter_indexes), json.dumps(chapter_indexes)),
-            )
-            return cur.lastrowid
-
-    def get_job_row(self, job_id: int) -> Optional[dict]:
-        with contextlib.closing(self._connect()) as conn:
-            row = conn.execute(
-                "SELECT id, book_id, status, pending, failed_indexes FROM prep_jobs WHERE id = ?",
-                (job_id,),
-            ).fetchone()
-        return dict(row) if row else None
-
-    def set_job_running(self, job_id: int) -> None:
-        with contextlib.closing(self._connect()) as conn:
-            conn.execute(
-                "UPDATE prep_jobs SET status = 'running', updated_at = datetime('now')"
-                " WHERE id = ? AND status = 'queued'",
-                (job_id,),
-            )
-            conn.commit()
-
-    def advance_job(self, job_id: int, pending: list[int], failed: Optional[list[int]] = None) -> None:
-        """出一章队：done+1、写回 pending（失败章同时写回 failed_indexes）。"""
-        with self._tx() as conn:
-            if failed is None:
-                conn.execute(
-                    "UPDATE prep_jobs SET done = done + 1, pending = ?,"
-                    " updated_at = datetime('now') WHERE id = ?",
-                    (json.dumps(pending), job_id),
-                )
-            else:
-                conn.execute(
-                    "UPDATE prep_jobs SET done = done + 1, pending = ?, failed_indexes = ?,"
-                    " updated_at = datetime('now') WHERE id = ?",
-                    (json.dumps(pending), json.dumps(failed), job_id),
-                )
-
-    def finish_job(self, job_id: int, failed: list[int]) -> None:
-        status = "done" if not failed else "partial"
-        with contextlib.closing(self._connect()) as conn:
-            conn.execute(
-                "UPDATE prep_jobs SET status = ?, updated_at = datetime('now') WHERE id = ?",
-                (status, job_id),
-            )
-            conn.commit()
-
-    def get_job_view(self, job_id: int) -> Optional[dict]:
-        with contextlib.closing(self._connect()) as conn:
-            row = conn.execute(
-                "SELECT j.status, j.total, j.done, j.failed_indexes,"
-                " (SELECT COUNT(*) FROM chapter_preps p WHERE p.book_id = j.book_id) AS prepped_total,"
-                " (SELECT chapter_count FROM books b WHERE b.id = j.book_id) AS book_chapters"
-                " FROM prep_jobs j WHERE j.id = ?",
-                (job_id,),
-            ).fetchone()
-        if not row:
-            return None
-        try:
-            failed = json.loads(row["failed_indexes"])
-        except ValueError:
-            failed = []
-        return {
-            "status": row["status"],
-            "total": row["total"],
-            "done": row["done"],
-            "failedIndexes": failed,
-            "preppedTotal": row["prepped_total"],
-            "bookChapters": row["book_chapters"],
-        }
-
     # ---- 设置 ----
 
     def get_settings(self) -> dict:
@@ -743,7 +601,12 @@ class LibraryStore:
         }
 
     def settings_view(self, teacher: bool) -> dict:
-        """设置视图。学生视图绝不能泄漏 apiKey/model/prompt（只给 student + hasKey）。"""
+        """设置视图：师生同构，只有 student 段。
+
+        LLM 退役后不再有教师专属的 ai/dict 段，hasKey 也一并取消（前端
+        没有 AI 设置页可 gate）。保留 teacher 形参以兼容既有调用与未来
+        可能重新出现的教师专属段。
+        """
         s = self.get_settings()
         student = {
             "preset": s["student"].get("preset") or "paper",
@@ -754,47 +617,15 @@ class LibraryStore:
             "vocabUnlock": max(0, min(MAX_UNLOCK_LEVEL, int(s["student"].get("vocabUnlock") or 0))),
             "wordCards": word_cards_view(s["student"].get("wordCards")),
         }
-        has_key = bool(s["ai"].get("apiKey"))
-        if not teacher:
-            return {"student": student, "hasKey": has_key}
-        return {
-            "ai": {
-                "apiKey": s["ai"].get("apiKey") or "",
-                "model": s["ai"].get("model") or "glm-4-flash",
-                "difficulty": s["ai"].get("difficulty") or "L2",
-                "maxWords": s["ai"].get("maxWords") or 12,
-                "prompt": s["ai"].get("prompt") or "",
-            },
-            "dict": {"aiFallback": bool(s["dict"].get("aiFallback"))},
-            "student": student,
-            "hasKey": has_key,
-            "defaultPrompt": glm.DEFAULT_PREP_PROMPT,
-        }
+        return {"student": student}
 
-    def update_settings(self, ai_patch: Optional[dict], dict_patch: Optional[dict],
-                        student_patch: Optional[dict]) -> dict:
-        """浅合并保存（仅接受各段内合法字段），返回教师视图。"""
-        cur = self.get_settings()
-        ai = dict(cur["ai"])
-        dct = dict(cur["dict"])
-        student = dict(cur["student"])
+    def update_settings(self, student_patch: Optional[dict]) -> dict:
+        """浅合并保存（仅接受 student 段内合法字段），返回设置视图。
 
-        if isinstance(ai_patch, dict):
-            if isinstance(ai_patch.get("apiKey"), str):
-                ai["apiKey"] = ai_patch["apiKey"].strip()
-            if isinstance(ai_patch.get("model"), str):
-                ai["model"] = ai_patch["model"]
-            if ai_patch.get("difficulty") in ("L1", "L2", "L3"):
-                ai["difficulty"] = ai_patch["difficulty"]
-            mw = ai_patch.get("maxWords")
-            if isinstance(mw, (int, float)) and not isinstance(mw, bool):
-                ai["maxWords"] = min(25, max(3, round(mw)))
-            if isinstance(ai_patch.get("prompt"), str):
-                # 空串 = 恢复默认；非空最多 8000 字
-                p = ai_patch["prompt"].strip()
-                ai["prompt"] = p[:8000]
-        if isinstance(dict_patch, dict) and isinstance(dict_patch.get("aiFallback"), bool):
-            dct["aiFallback"] = dict_patch["aiFallback"]
+        ai/dict 段随 LLM 退役移除：旧 payload 里带了也静默忽略（路由侧
+        不解析），存量 ai_json 原样保留（离线脚本仍要读 Key）。
+        """
+        student = dict(self.get_settings()["student"])
         if isinstance(student_patch, dict):
             if student_patch.get("preset") in ("paper", "sepia", "night", "contrast"):
                 student["preset"] = student_patch["preset"]
@@ -827,34 +658,12 @@ class LibraryStore:
 
         with self._tx() as conn:
             conn.execute(
-                "UPDATE library_settings SET ai_json = ?, dict_json = ?, student_json = ? WHERE id = 1",
-                (json.dumps(ai, ensure_ascii=False), json.dumps(dct),
-                 json.dumps(student, ensure_ascii=False)),
+                "UPDATE library_settings SET student_json = ? WHERE id = 1",
+                (json.dumps(student, ensure_ascii=False),),
             )
         return self.settings_view(teacher=True)
 
-    # ---- 查词（缓存 → ECDICT → AI 兜底 → not_found） ----
-
-    def cache_get(self, word: str) -> Optional[dict]:
-        with contextlib.closing(self._connect()) as conn:
-            row = conn.execute(
-                "SELECT payload FROM dict_cache WHERE word = ?", (word,)
-            ).fetchone()
-        if not row:
-            return None
-        try:
-            parsed = json.loads(row["payload"])
-        except ValueError:
-            return None
-        return parsed if isinstance(parsed, dict) else None
-
-    def cache_set(self, word: str, entry: dict) -> None:
-        with self._tx() as conn:
-            conn.execute(
-                "INSERT OR REPLACE INTO dict_cache (word, source, payload, fetched_at)"
-                " VALUES (?, ?, ?, datetime('now'))",
-                (word, entry.get("source", ""), json.dumps(entry, ensure_ascii=False)),
-            )
+    # ---- 查词（ECDICT → not_found；AI 兜底与 dict_cache 随 LLM 退役移除） ----
 
     def lookup_ecdict(self, raw_word: str) -> Optional[dict]:
         """内置词典（主词典，离线即时）。未命中返回 None。"""
@@ -889,44 +698,13 @@ class LibraryStore:
             entry["pos"] = "/".join(pos_list)
         return entry
 
-    def dict_lookup(self, raw_word: str, context: Optional[str] = None) -> dict:
-        """三级查词策略。ECDICT 命中不入缓存（本地查询零成本）。"""
-        word = normalize_word(raw_word)
-        # 1. 缓存（只缓存 AI 结果与未收录标记）
-        cached = self.cache_get(word) if word else None
-        if cached:
-            if cached.get("source") != "not_found" or not self.get_settings()["dict"].get("aiFallback"):
-                return cached
+    def dict_lookup(self, raw_word: str) -> dict:
+        """查词：ECDICT 命中 → {source:'ecdict',...}；未命中 → {source:'not_found'}。
 
-        # 2. 内置 ECDICT（优先于缓存中的 not_found 标记——词典可能后来升级）
+        结果不再落 dict_cache：ECDICT 本地查询零成本，AI 兜底退役后也没
+        有需要缓存的内容了。
+        """
         local = self.lookup_ecdict(raw_word)
         if local:
             return local
-
-        # 3. AI 兜底（可全局关闭）
-        s = self.get_settings()
-        api_key = s["ai"].get("apiKey")
-        if s["dict"].get("aiFallback") and api_key:
-            try:
-                ai = glm.explain_word(
-                    api_key, s["ai"].get("model") or "glm-4-flash", word,
-                    context=(context or "")[:300] or None,
-                )
-                entry = {
-                    "word": ai["word"],
-                    "phonetic": ai["phonetic"] or None,
-                    "pos": ai["pos"] or None,
-                    "meaning": ai["meaning"] or None,
-                    "example": ai["example"] or None,
-                    "source": "ai",
-                }
-                entry = {k: v for k, v in entry.items() if v is not None}
-                self.cache_set(word, entry)
-                return entry
-            except Exception:  # noqa: BLE001 - AI 失败则落到 not_found
-                pass
-
-        if not cached:
-            cached = {"word": word, "source": "not_found"}
-            self.cache_set(word, cached)
-        return cached
+        return {"word": normalize_word(raw_word), "source": "not_found"}

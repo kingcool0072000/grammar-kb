@@ -170,27 +170,19 @@ export const api = {
   libraryCoverBlob: (id) => reqBlob(`/library/books/${id}/cover`),
   libraryChapters: (bookId) => req(`/library/books/${bookId}/chapters`),
   libraryDeleteBook: (id) => reqJson(`/library/books/${id}`, 'DELETE'),
-  // 必读章配置（教师）：计划表阅读目标按配置算
-  libraryReadingConfig: (bookId) => req(`/library/books/${bookId}/reading-config`),
   libraryBookUnlock: () => req('/library/book-unlock'),
   libraryBookUnlockPut: (unlock) =>
     reqJson('/library/book-unlock', 'PUT', { unlock }),
-  libraryReadingConfigPut: (bookId, chapters) =>
-    reqJson(`/library/books/${bookId}/reading-config`, 'PUT', { chapters }),
-  librarySkipChapter: (bookId, idx, skip) =>
-    reqJson(`/library/books/${bookId}/chapters/${idx}/skip`, 'PUT', { skip }),
   libraryOpenBook: (bookId) => reqJson(`/library/books/${bookId}/open`, 'POST'),
   libraryGetProgress: (bookId) => req(`/library/books/${bookId}/progress`),
-  libraryPrepBatch: (bookId, chapterIndexes) =>
-    reqJson('/library/prep/batch', 'POST', { bookId, chapterIndexes }),
-  libraryPrepBatchStatus: (jobId) => req(`/library/prep/batch/${jobId}`),
-  libraryPrepSingle: (bookId, chapterIndex) =>
-    reqJson('/library/prep/single', 'POST', { bookId, chapterIndex }),
+  libraryPutProgress: (bookId, rec) =>
+    reqJson(`/library/books/${bookId}/progress`, 'PUT', rec),
+  libraryPrep: (bookId, chapterIndex) =>
+    req(`/library/prep/${bookId}/${chapterIndex}`),
   librarySettings: () => req('/library/settings'),
   librarySaveSettings: (patch) => reqJson('/library/settings', 'PUT', patch),
-  libraryModels: (key) => req('/library/models', { searchParams: { key } }),
-  libraryTestAi: (apiKey) => reqJson('/library/ai/test', 'POST', { apiKey }),
-  // 学情分析 · AI 周报（手动触发上一自然周，教师专属；模型配置复用泛读馆设置）
+  libraryDict: (word, context) =>
+    req(`/library/dict/${encodeURIComponent(word)}`, { searchParams: { context } }),
   // 专注力（泛读馆阅读器行为采集；学生上报，教师批改中心查看）
   focusSubmit: (rec) => reqJson('/focus/sessions', 'POST', rec),
   focusSessions: ({ user, limit = 50, offset = 0 } = {}) =>

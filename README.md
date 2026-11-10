@@ -90,13 +90,10 @@ PDF ──► pdf_parser   去水印（字体+方向过滤）+ 重排行 + 还�
 | `reading.py`    | 阅读训练读写层：派生文 CRUD + 学生录音提交 + 教师 10 分制批改（reading_recordings 表） |
 | `dict_db.py`    | ECDICT 全量词典导入与查询（36.5 万词条，`data/ecdict.db`） |
 | `homework.py`   | 哈一作业卷 PDF → 结构化题目（homework_question 表，题号与测验平台一致） |
-| `library.py`    | 泛读馆数据层（`data/library.db`）：书架 / 章节 / 进度 / AI 预习 / 设置 / 查词缓存 |
+| `library.py`    | 泛读馆数据层（`data/library.db`）：书架 / 章节 / 进度 / 预习（只读）/ 设置 / 查词（ECDICT） |
 | `epub_parse.py` | EPUB 解析（zipfile + ElementTree：元数据 / 封面 / 按 spine 拆章，zip 路径防逃逸） |
-| `glm.py`        | 智谱 GLM 调用层（OpenAI 兼容接口；超时 / 重试 / JSON 容错提取） |
-| `prep_queue.py` | AI 预习批量任务（进程内线程池并发 2 + prep_jobs 行驱动） |
 | `recite.py`     | 背单词成绩上报（recite_session 表，与 FCE/阅读同在 `data/fce.db`） |
 | `focus.py`      | 泛读专注力采集与评分（focus_session 表：活跃/互动/推进加权 − 离开/乱晃惩罚） |
-| `analytics_ai.py` | AI 学情周报（四类作业按周聚合 + 前四周基线对比，存 ai_weekly_reports 表） |
 | `theme_notes.py` | 主题讲义：每个语法主题的结构化总结（例句取教材原文） |
 | `wordfreq.py`   | 困难词粗筛（google-10000 高频词表，三档阈值教师可调） |
 | `aicloud_sync.py` | 爱问云测验平台成绩拉取入库（`sync-aicloud`，按讲次+日期幂等） |
@@ -204,12 +201,11 @@ uv run grammar-kb-server --host 0.0.0.0 --port 8000
 | DELETE | `/reading/recordings/{id}` | 教师删除一条录音提交 |
 | GET | `/reading/audio/{id}` | 派生文范读音频（`data/audio/reading/{id}.wav`，文件存在才返回） |
 | GET/POST | `/library/books` | 泛读馆书架：列表 / 上传 epub（≤100MB）；`/{id}` 下有 cover/file/chapters/progress/open 子资源 |
-| GET/PUT | `/library/settings` | 泛读馆设置（教师配 API Key/学生主题/困难词阈值；学生视角脱敏只读） |
-| GET | `/library/prep/{book_id}/{chapter_index}` | AI 章节预习材料（`/library/prep/batch` 走后台队列批量生成） |
-| GET | `/library/dict/{word}` | 泛读馆查词：缓存 → ECDICT → AI 三级降级 |
+| GET/PUT | `/library/settings` | 泛读馆设置（学生主题/困难词阈值；学生视角只读） |
+| GET | `/library/prep/{book_id}/{chapter_index}` | 章节预习材料（只读；数据由线下脚本生成，经 `scripts/import_prep.py` 同步入库） |
+| GET | `/library/dict/{word}` | 泛读馆查词：ECDICT 全量词典直查（未收录返回 not_found） |
 | GET/POST | `/recite/sessions` | 背单词成绩：列表（学生看自己）/ 完成一组练习上报 |
 | GET/POST | `/focus/sessions` | 泛读专注会话：列表与详情（教师）/ 阅读器心跳上报（按 session 幂等） |
-| POST | `/analytics/ai/weekly` | 生成 AI 学情周报（上一自然周四类作业 + 前四周基线）；`GET /analytics/ai/reports` 拉历史 |
 
 ### 哈一作业成绩数据存在哪
 
@@ -329,13 +325,14 @@ cd web && npm install && npm run dev     # http://localhost:5180
 - **📝 哈一作业成绩**：每讲一份作业卷（35 题，满分 100）。点题号记对错、分数自动算；
   多次作答全部保留、可修改可删除；错题本按「讲次+题号」汇总错误次数；
   数据经后端 `/exams` 写入 `data/exam.db`（见上文），跨浏览器不丢；旧 localStorage 记录首次打开自动迁移
-- **泛读馆**：整本书英文泛读（epubjs 阅读器，epub 上传由教师管理）。AI 章节预习（智谱 GLM）、
-  划词查词（ECDICT 全量 + AI 兜底）、阅读进度云同步；教师管控学生阅读主题（学生仅可调字号）。
+- **泛读馆**：整本书英文泛读（epubjs 阅读器，epub 上传由教师管理）。章节预习（数据线下生成，
+  经 `scripts/import_prep.py` 同步入库，端点只读）、划词查词（ECDICT 全量词典）、阅读进度云同步；
+  教师管控学生阅读主题（学生仅可调字号）。
   专注模式下压制系统弹窗/长按菜单，阅读行为静默采集为专注力评分（教师端轨迹详情弹窗）
 - **教师版三板块**：批改中心（FCE 听说读写 + 哈一语法 + 背单词/专注力待批与动态汇总）/
-  备课中心（知识点检索、错题本、阅读内容管理）/ 学情分析（周/月趋势图 + AI 学情周报）
+  备课中心（知识点检索、错题本、阅读内容管理）/ 学情分析（周/月趋势图）
 
-技术栈：Vite + 原生 ES Modules · epubjs（泛读馆电子书）· marked（Markdown 渲染）· DOMPurify（AI 内容消毒），无框架依赖。更多细节见 [`web/README.md`](web/README.md)。
+技术栈：Vite + 原生 ES Modules · epubjs（泛读馆电子书）· marked（Markdown 渲染）· DOMPurify（预习内容消毒），无框架依赖。更多细节见 [`web/README.md`](web/README.md)。
 
 ## 测试与代码质量
 
@@ -348,8 +345,8 @@ uvx ruff check .                        # lint（E4/E7/E9/F 传统默认集，�
 覆盖：水印过滤 / 行重排 / 表格还原 / 知识点切分 / 分类 / 关键词抽取 / DB 不截断往返 /
 FTS 中英文检索 / 级联清理（含 FTS 孤儿索引回归）/ id 重建可复现 / 查询 / 端到端集成 /
 认证与角色权限 / FCE OCR 解析 / FCE 提交批改与删除（含越权访问回归）/ 阅读文章权限与
-录音提交批改删除 / 泛读馆（epub 解析、上传、AI 预习、查词）/ 背单词 / 专注力上报与评分 /
-AI 学情周报 / 作业卷题号 / CORS 预检。
+录音提交批改删除 / 泛读馆（epub 解析、上传、预习、查词）/ 背单词 / 专注力上报与评分 /
+作业卷题号 / CORS 预检。
 
 集成测试需要一个 PDF 目录，用环境变量 `GRAMMAR_TEST_PDF_DIR` 指定；未指定或不存在则自动跳过。
 依赖真实 `data/grammar.db` 的数据校验用例同样在库缺失时自动 skip（CI 全新 checkout 可直接跑）。

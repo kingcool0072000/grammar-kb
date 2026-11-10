@@ -1,10 +1,11 @@
-"""泛读馆后端测试：epub 解析 / 词频粗筛 / glm JSON 容错 / API 行为与学生白名单。
+"""泛读馆后端测试：epub 解析 / 词频粗筛 / API 行为与学生白名单。
 
 环境变量必须在 create_app 之前设置（LibraryStore 构造时读取）。
 """
 import io
 import json
 import os
+import sqlite3
 import zipfile
 from pathlib import Path
 
@@ -16,7 +17,6 @@ pytest.importorskip("multipart")  # multipart-form 上传需要 python-multipart
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from grammar_kb import glm  # noqa: E402
 from grammar_kb.epub_parse import parse_epub  # noqa: E402
 from grammar_kb.library import WORD_CARD_DEFAULTS  # noqa: E402
 from grammar_kb.server import create_app  # noqa: E402
@@ -233,38 +233,6 @@ class TestWordfreq:
         assert words[0] == "xylophones"
 
 
-# ---- glm.extract_json：容错（不发网络请求） ----
-
-
-class TestExtractJson:
-    def test_plain(self):
-        assert glm.extract_json('{"a": 1}') == {"a": 1}
-
-    def test_think_block_stripped(self):
-        text = "<think>reasoning about {braces}</think>\n{\"a\": {\"b\": 2}}"
-        assert glm.extract_json(text) == {"a": {"b": 2}}
-
-    def test_code_fence(self):
-        text = "```json\n{\"a\": [1, 2]}\n```"
-        assert glm.extract_json(text) == {"a": [1, 2]}
-
-    def test_nested_braces_and_strings_with_braces(self):
-        text = '前言 {"a": {"b": "he said {not json} \\" ok"}, "c": 1} 尾巴'
-        assert glm.extract_json(text)["a"]["b"].startswith("he said")
-
-    def test_prose_before_and_after(self):
-        text = '好的，这是结果：{"word":"envy"} 请查收'
-        assert glm.extract_json(text) == {"word": "envy"}
-
-    def test_first_complete_object_wins(self):
-        text = '{"a": 1} then {"b": 2}'
-        assert glm.extract_json(text) == {"a": 1}
-
-    def test_broken_raises(self):
-        with pytest.raises(glm.GlmError):
-            glm.extract_json("no json here at all")
-
-
 # ---- API：上传 / 书架 / 章节 / 进度 ----
 
 
@@ -328,14 +296,6 @@ class TestBooksApi:
         assert by_idx[1]["skipPrep"] is False
         assert by_idx[1]["prepped"] is False
         assert by_idx[1]["spineIndex"] == 2
-
-    def test_skip_toggle(self, teacher, book_id):
-        r = teacher.put(f"/library/books/{book_id}/chapters/1/skip", json={"skip": True})
-        assert r.json()["data"] == {"idx": 1, "skipPrep": True}
-        cs = teacher.get(f"/library/books/{book_id}/chapters").json()["data"]["chapters"]
-        assert next(c for c in cs if c["idx"] == 1)["skipPrep"] is True
-        r = teacher.put(f"/library/books/{book_id}/chapters/1/skip", json={"skip": False})
-        assert r.json()["data"] == {"idx": 1, "skipPrep": False}
 
     def test_open_and_progress_roundtrip(self, teacher, book_id):
         assert teacher.post(f"/library/books/{book_id}/open").json()["data"] == {"ok": True}
@@ -401,41 +361,22 @@ class TestBooksApi:
 class TestSettings:
     def test_teacher_view(self, teacher):
         data = teacher.get("/library/settings").json()["data"]
-        assert data["ai"]["model"] == "glm-4-flash"
-        assert data["ai"]["difficulty"] == "L2"
-        assert data["ai"]["maxWords"] == 12
-        assert data["ai"]["apiKey"] == ""
-        assert data["dict"] == {"aiFallback": True}
         assert data["student"] == {
             "preset": "paper", "fontFamily": "serif", "focus": True, "vocabUnlock": 0,
             "wordCards": WORD_CARD_DEFAULTS,
         }
-        assert data["hasKey"] is False
-        assert "defaultPrompt" in data and "辅导老师" in data["defaultPrompt"]
+        # AI 退役：设置视图不再有 ai/dict/hasKey/defaultPrompt 段
+        assert set(data.keys()) == {"student"}
 
-    def test_clamp_and_merge(self, teacher):
+    def test_student_partial_merge(self, teacher):
+        # 部分传：只改传入的 student 字段，其余浅合并保留默认值
         r = teacher.put(
-            "/library/settings",
-            json={"ai": {"apiKey": " k123 ", "maxWords": 99, "difficulty": "L3",
-                         "prompt": "自定义"},
-                  "dict": {"aiFallback": False}},
-        ).json()["data"]
-        assert r["ai"]["maxWords"] == 25  # 99 → 夹 25
-        assert r["ai"]["apiKey"] == "k123"
-        assert r["ai"]["difficulty"] == "L3"
-        assert r["dict"]["aiFallback"] is False
-        # 部分传：只改 student 不动 ai
-        r2 = teacher.put(
             "/library/settings", json={"student": {"preset": "night", "fontFamily": "kai"}}
         ).json()["data"]
-        assert r2["ai"]["maxWords"] == 25  # 浅合并保留
-        assert r2["student"] == {
+        assert r["student"] == {
             "preset": "night", "fontFamily": "kai", "focus": True,
             "vocabUnlock": 0, "wordCards": WORD_CARD_DEFAULTS,
         }
-        # prompt 空串 = 恢复默认
-        r3 = teacher.put("/library/settings", json={"ai": {"prompt": ""}}).json()["data"]
-        assert r3["ai"]["prompt"] == ""
 
     def test_word_cards_defaults_and_patch(self, teacher, student):
         cards = teacher.get("/library/settings").json()["data"]["student"]["wordCards"]
@@ -457,120 +398,63 @@ class TestSettings:
 
     def test_invalid_values_ignored(self, teacher):
         r = teacher.put(
-            "/library/settings",
-            json={"ai": {"difficulty": "L9", "maxWords": 1}, "student": {"preset": "dark"}},
+            "/library/settings", json={"student": {"preset": "dark"}}
         ).json()["data"]
-        assert r["ai"]["difficulty"] == "L2"  # 非法档位忽略
-        assert r["ai"]["maxWords"] == 3  # maxWords=1 → 夹到下限 3（同 TS 的 clamp）
-        assert r["student"]["preset"] == "paper"
+        assert r["student"]["preset"] == "paper"  # 非法档位忽略
+        bad = teacher.put("/library/settings", json={"student": {"focus": "yes"}})
+        assert bad.status_code == 422  # focus 非布尔直接 422
 
-    def test_models_no_key_400(self, teacher):
-        r = teacher.get("/library/models")
-        assert r.status_code == 400
+    def test_no_ai_section_and_put_ignored(self, teacher, student):
+        """AI 退役：设置视图（师生）无 ai/apiKey/model 字段；PUT 带 ai/dict 段被静默忽略。"""
+        t = teacher.get("/library/settings").json()["data"]
+        assert "ai" not in t and "apiKey" not in t and "model" not in t
+        s = student.get("/library/settings").json()["data"]
+        assert "ai" not in s and "apiKey" not in s and "model" not in s
+        r = teacher.put(
+            "/library/settings",
+            json={"ai": {"apiKey": "k", "model": "glm-4-plus", "maxWords": 99},
+                  "dict": {"aiFallback": True}},
+        )
+        assert r.status_code == 200
+        assert "ai" not in r.json()["data"] and "dict" not in r.json()["data"]
+        # 再 GET 与 PUT 返回完全一致：ai/dict 段没有产生任何副作用
+        assert teacher.get("/library/settings").json() == r.json()
 
-    def test_ai_test_no_key_400(self, teacher):
-        r = teacher.post("/library/ai/test", json={})
-        assert r.status_code == 400
 
-    def test_ai_test_bad_key_502(self, teacher, monkeypatch):
-        monkeypatch.setattr(glm, "list_models",
-                            lambda key: (_ for _ in ()).throw(RuntimeError("boom")))
-        r = teacher.post("/library/ai/test", json={"apiKey": "bad"})
-        assert r.status_code == 502
+# ---- API：预习（AI 退役后只读：预习数据由线下脚本生成入库，端点仅读） ----
 
 
-# ---- API：prep（路由顺序 / batch 跳过逻辑 / single 无 key 502） ----
-
-
-class TestPrep:
-    def test_batch_route_not_swallowed_by_param_route(self, teacher):
-        # GET /library/prep/batch/1 必须命中任务路由（404 任务不存在），而非参数路由
-        r = teacher.get("/library/prep/batch/1")
-        assert r.status_code == 404
-        assert "任务不存在" in r.json()["message"]
-
-    def test_get_prep_null_when_missing(self, teacher, book_id):
+class TestPrepRead:
+    def test_get_prep_roundtrip(self, teacher, book_id):
+        # 未生成的章返回 null
         r = teacher.get(f"/library/prep/{book_id}/1")
         assert r.status_code == 200
         assert r.json()["data"] is None
 
-    def test_batch_all_skipped(self, teacher, book_id):
-        # 章 0 是 skip_prep=1（封面辅助页）；先给章 1 造一份预习，再批量 → 全跳过
-        from grammar_kb.library import LibraryStore
+        # 线下生成：直写 chapter_preps 一行（模拟 scripts/import_prep.py 的入库产物）
+        payload = {
+            "words": [{"word": "peruse", "phonetic": "/pə'ru:s/", "pos": "v.",
+                       "meaning": "细读", "example": "peruse a book",
+                       "exampleZh": "细读一本书"}],
+            "idioms": [{"phrase": "give up", "literal": "放弃", "actual": "认输",
+                        "usage": "口语"}],
+        }
+        with sqlite3.connect(os.environ["GRAMMAR_KB_LIBRARY_DB"]) as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO chapter_preps (book_id, chapter_index, payload)"
+                " VALUES (?, ?, ?)",
+                (book_id, 1, json.dumps(payload, ensure_ascii=False)),
+            )
 
-        store = LibraryStore()  # 沿环境变量指向测试库
-        store.put_prep(book_id, 1, {"words": [], "idioms": []}, "m", "L2")
-        r = teacher.post("/library/prep/batch", json={"bookId": book_id, "chapterIndexes": [0, 1]})
-        assert r.json()["data"] == {"jobId": None, "skipped": True}
-
-    def test_batch_creates_job_and_runs(self, teacher, book_id, monkeypatch):
-        calls = []
-
-        def fake_generate(api_key, model, chapter_title, text, candidates, max_words,
-                          system_prompt=None):
-            calls.append((chapter_title, tuple(candidates), max_words))
-            return {"words": [{"word": candidates[0], "phonetic": "/x/", "pos": "n.",
-                               "meaning": "测试", "example": "ex", "exampleZh": "例"}],
-                    "idioms": []}
-
-        monkeypatch.setattr(glm, "generate_prep", fake_generate)
-        teacher.put("/library/settings", json={"ai": {"apiKey": "test-key"}})
-
-        r = teacher.post("/library/prep/batch", json={"bookId": book_id, "chapterIndexes": [1, 2]})
-        data = r.json()["data"]
-        assert data["skipped"] is False and isinstance(data["jobId"], int)
-
-        # 轮询直到任务完结（后台线程跑）
-        import time
-
-        for _ in range(100):
-            job = teacher.get(f"/library/prep/batch/{data['jobId']}").json()["data"]
-            if job["status"] in ("done", "partial", "interrupted"):
-                break
-            time.sleep(0.05)
-        assert job["status"] == "done", job
-        assert job["total"] == 2 and job["done"] == 2 and job["failedIndexes"] == []
-        assert job["bookChapters"] == 3
-        assert len(calls) == 2  # 两章各调一次 AI
-
-        # 预习已可读
-        payload = teacher.get(f"/library/prep/{book_id}/1").json()["data"]
-        assert payload is not None and payload["words"]
-        # preppedCount / prepped 标记联动
+        data = teacher.get(f"/library/prep/{book_id}/1").json()["data"]
+        assert data == payload
+        # prepped 标记与章节列表联动（书架/章节页可见「已预习」）
         cs = teacher.get(f"/library/books/{book_id}/chapters").json()["data"]["chapters"]
-        assert sum(1 for c in cs if c["prepped"]) == 2
-
-    def test_single_no_key_502(self, teacher, book_id):
-        r = teacher.post("/library/prep/single", json={"bookId": book_id, "chapterIndex": 1})
-        assert r.status_code == 502
-        assert "API Key" in r.json()["message"]
-
-    def test_single_generates_synchronously(self, teacher, book_id, monkeypatch):
-        monkeypatch.setattr(
-            glm, "generate_prep",
-            lambda *a, **k: {"words": [], "idioms": [{"phrase": "give up", "literal": "放弃",
-                                                      "actual": "认输", "usage": "口语"}]},
-        )
-        teacher.put("/library/settings", json={"ai": {"apiKey": "k"}})
-        r = teacher.post("/library/prep/single", json={"bookId": book_id, "chapterIndex": 2})
-        assert r.status_code == 200 and r.json()["data"] == {"ok": True}
-        payload = teacher.get(f"/library/prep/{book_id}/2").json()["data"]
-        assert payload["idioms"][0]["phrase"] == "give up"
-
-    def test_single_empty_candidates_still_writes_payload(self, teacher, book_id, monkeypatch):
-        # 无候选词的章也写空 payload，避免反复重试
-        monkeypatch.setattr(
-            glm, "generate_prep",
-            lambda *a, **k: pytest.fail("无候选词不应调 AI"),
-        )
-        teacher.put("/library/settings", json={"ai": {"apiKey": "k"}})
-        r = teacher.post("/library/prep/single", json={"bookId": book_id, "chapterIndex": 0})
-        assert r.status_code == 200
-        payload = teacher.get(f"/library/prep/{book_id}/0").json()["data"]
-        assert payload == {"words": [], "idioms": []}
+        assert next(c for c in cs if c["idx"] == 1)["prepped"] is True
+        assert next(c for c in cs if c["idx"] == 2)["prepped"] is False
 
 
-# ---- API：查词（ECDICT 真库；AI 兜底 mock） ----
+# ---- API：查词（纯 ECDICT：命中 ecdict / 未收录 not_found，AI 兜底已退役） ----
 
 def _real_ecdict_available() -> bool:
     from grammar_kb.dict_db import default_db_path
@@ -583,6 +467,34 @@ requires_real_ecdict = pytest.mark.skipif(
     not _real_ecdict_available(),
     reason="data/ecdict.db 不存在（45MB 本地构建产物，未入 git），跳过真库查词用例",
 )
+
+
+@pytest.fixture()
+def teacher_mini_dict(tmp_path):
+    """教师客户端 + 迷你 ECDICT（GRAMMAR_KB_ECDICT_DB 指向临时词典，不依赖 45MB 真库）。"""
+    from grammar_kb.dict_db import SCHEMA
+
+    mini = tmp_path / "mini-ecdict.db"
+    conn = sqlite3.connect(mini)
+    conn.executescript(SCHEMA)
+    conn.execute(
+        "INSERT INTO dict VALUES (?, ?, ?, '', ?, '', 0)",
+        ("peruse", "pə'ru:s", json.dumps(["v. 细读"]), json.dumps(["v"])),
+    )
+    conn.commit()
+    conn.close()
+    os.environ["GRAMMAR_KB_USERS"] = str(tmp_path / "users.json")
+    os.environ["GRAMMAR_KB_AUTH_SECRET"] = str(tmp_path / "secret.key")
+    os.environ["GRAMMAR_KB_LIBRARY_DB"] = str(tmp_path / "library.db")
+    os.environ["GRAMMAR_KB_LIBRARY_DIR"] = str(tmp_path / "files")
+    os.environ["GRAMMAR_KB_ECDICT_DB"] = str(mini)
+    try:
+        app = create_app()
+        with TestClient(app) as c:
+            c.headers.update(_login(c, "teacher"))
+            yield c
+    finally:
+        os.environ.pop("GRAMMAR_KB_ECDICT_DB", None)  # 防泄漏进其他用例
 
 
 class TestDict:
@@ -623,7 +535,7 @@ class TestDict:
         assert entry["source"] == "ecdict"
         assert entry["word"] == "peruse"
         assert entry["senses"][0]["gloss"] == "细读"
-        # 不在典也无 AI key → not_found
+        # 不在典 → not_found（AI 兜底已退役）
         nf = store.dict_lookup("zzzqqq")
         assert nf["source"] == "not_found"
 
@@ -639,36 +551,26 @@ class TestDict:
         assert r.status_code == 200
         assert r.json()["data"]["entry"]["source"] == "not_found"
 
-    def test_ai_fallback_mocked(self, teacher, monkeypatch):
-        teacher.put("/library/settings",
-                    json={"ai": {"apiKey": "k"}, "dict": {"aiFallback": True}})
+    def test_pure_ecdict_hit_and_miss(self, teacher_mini_dict):
+        """AI 退役后查词纯 ECDICT：命中 source=ecdict，未收录 not_found，绝无 source='ai'。"""
+        c = teacher_mini_dict
+        # 即便把 ai/dict 配置塞回设置（被静默忽略），查词路径也不再有 AI 分支
+        r = c.put("/library/settings",
+                  json={"ai": {"apiKey": "k"}, "dict": {"aiFallback": True}})
+        assert r.status_code == 200
 
-        def fake_explain(api_key, model, word, context=None):
-            assert context == "the snorkbungler chattered"
-            return {"word": word, "phonetic": "/f/", "pos": "n.", "meaning": "饶舌的人",
-                    "example": "What a snorkbungler."}
+        hit = c.get("/library/dict/peruse").json()["data"]["entry"]
+        assert hit["source"] == "ecdict"
+        assert hit["word"] == "peruse"
+        assert hit["senses"][0]["gloss"] == "细读"
+        # ECDICT 命中字段固定，无任何 AI 专属字段
+        assert set(hit.keys()) <= {"word", "senses", "meaning", "phonetic", "pos", "source"}
 
-        monkeypatch.setattr(glm, "explain_word", fake_explain)
-        entry = teacher.get(
-            "/library/dict/snorkbungler", params={"context": "the snorkbungler chattered"}
-        ).json()["data"]["entry"]
-        assert entry["source"] == "ai"
-        assert entry["meaning"] == "饶舌的人"
-        assert entry["example"]
-
-        # 第二次查询命中 dict_cache（source=ai）
-        entry2 = teacher.get("/library/dict/snorkbungler").json()["data"]["entry"]
-        assert entry2["source"] == "ai"
-
-    def test_ai_fallback_disabled_not_found(self, teacher, monkeypatch):
-        teacher.put("/library/settings",
-                    json={"ai": {"apiKey": "k"}, "dict": {"aiFallback": False}})
-        monkeypatch.setattr(
-            glm, "explain_word",
-            lambda *a, **k: pytest.fail("aiFallback 关闭时不应调 AI"),
-        )
-        entry = teacher.get("/library/dict/qwertyzzz").json()["data"]["entry"]
+        nf = c.get("/library/dict/zzzqqqxxx")
+        entry = nf.json()["data"]["entry"]
         assert entry["source"] == "not_found"
+        assert set(entry.keys()) <= {"word", "source"}
+        assert '"ai"' not in nf.text  # 响应字段里不存在 AI 来源标记
 
 
 # ---- 学生白名单与权限 ----
@@ -719,34 +621,25 @@ class TestStudentPermissions:
     def test_delete_forbidden(self, student, book_id):
         assert student.delete(f"/library/books/{book_id}").status_code == 403
 
-    def test_skip_forbidden(self, student, book_id):
-        r = student.put(f"/library/books/{book_id}/chapters/1/skip", json={"skip": True})
-        assert r.status_code == 403
-        # 且未生效
-        cs = student.get(f"/library/books/{book_id}/chapters").json()["data"]["chapters"]
-        assert next(c for c in cs if c["idx"] == 1)["skipPrep"] is False
-
     def test_settings_write_forbidden(self, student):
-        assert student.put("/library/settings", json={"ai": {"maxWords": 5}}).status_code == 403
-
-    def test_teacher_endpoints_forbidden(self, student):
-        assert student.post("/library/prep/batch", json={"bookId": 1, "chapterIndexes": [1]}).status_code == 403
-        assert student.get("/library/prep/batch/1").status_code == 403
-        assert student.post("/library/prep/single", json={"bookId": 1, "chapterIndex": 1}).status_code == 403
-        assert student.get("/library/models").status_code == 403
-        assert student.post("/library/ai/test", json={"apiKey": "x"}).status_code == 403
+        assert student.put(
+            "/library/settings", json={"student": {"preset": "night"}}
+        ).status_code == 403
 
     def test_student_settings_no_leak(self, student, teacher):
-        teacher.put("/library/settings", json={"ai": {"apiKey": "SECRET-KEY", "model": "glm-4-plus",
-                                                      "prompt": "SECRET-PROMPT"}})
+        # AI 退役：即便 PUT 塞入 ai 段（被静默忽略），学生视图也不出现任何 AI 字段
+        teacher.put("/library/settings", json={"ai": {"apiKey": "SECRET-KEY",
+                                                      "model": "glm-4-plus",
+                                                      "prompt": "SECRET-PROMPT"},
+                                               "student": {"preset": "night"}})
         raw = student.get("/library/settings").text
         assert "SECRET-KEY" not in raw
         assert "SECRET-PROMPT" not in raw
         assert "glm-4-plus" not in raw
         assert "defaultPrompt" not in raw
         data = json.loads(raw)["data"]
-        assert set(data.keys()) == {"student", "hasKey"}
-        assert data["hasKey"] is True
+        assert set(data.keys()) == {"student"}
+        assert data["student"]["preset"] == "night"
 
     def test_student_open_and_progress(self, student, book_id):
         assert student.post(f"/library/books/{book_id}/open").json()["data"] == {"ok": True}

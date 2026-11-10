@@ -166,10 +166,10 @@ async function mountContent(el) {
               <b>${libCount}</b><span>书架 · 上传与管理</span>
             </button>
             <button class="prep-card" data-go="librarySettings">
-              <b>全馆设置</b><span>AI 预习 · 字典 · 学生主题</span>
+              <b>全馆设置</b><span>学生主题 · 书籍解锁</span>
             </button>
           </div>
-          <p class="reading-hint">书架里上传 epub、点开书籍做章节预习与必读章配置；学生侧的「泛读馆」Tab 不变。</p>
+          <p class="reading-hint">书架里上传 epub、点开书籍进入阅读器；学生侧的「泛读馆」Tab 不变。</p>
         </div>
       </section>
     </div>

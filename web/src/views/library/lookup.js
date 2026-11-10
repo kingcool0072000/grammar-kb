@@ -371,8 +371,6 @@ export function createLookupLayer(bodyEl, opts = {}) {
     dictPhEl.textContent = e.phonetic || ''
     if (e.source === 'ecdict') {
       dictSourceEl.innerHTML = '<span class="src">内置词典 · ECDICT</span>'
-    } else if (e.source === 'ai') {
-      dictSourceEl.innerHTML = '<span class="ai">AI 释义</span>'
     } else {
       dictSourceEl.innerHTML = ''
     }

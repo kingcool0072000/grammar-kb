@@ -66,7 +66,6 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from ..auth import UserStore, make_token, read_token
     from ..fce_query import FcePaperStore, FceSubmissionStore
     from ..library import LibraryStore
-    from ..prep_queue import PrepQueue
     from ..reading import ReadingStore
     from ..recite import ReciteStore
     from ..focus import FocusStore
@@ -115,7 +114,6 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     # 连接），而 WAL 是持久属性，启动时设一次后续连接自动继承。
     # fce.db 由 dbreg.connect 对每个可写连接幂等设置，无需在此处理。
     dbreg.enable_wal(library.db_path)
-    prep_queue = PrepQueue(library)
 
     # 派生文范读 WAV 目录（{article_id}.wav）：TTS 导出后部署放置，不入
     # git。默认随代码仓 data/audio/reading/，生产可用 GRAMMAR_KB_AUDIO_DIR 改指
@@ -222,8 +220,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("GET", "/library/dict/"),
         ("GET", "/library/prep/"),
         ("GET", "/library/settings"),
-        ("POST", "/library/books/"),  # 放行 /{id}/open（skip 等教师端点内有 _require_teacher 兜底）
-        ("PUT", "/library/books/"),   # 放行 /{id}/progress（skip 端点内有 _require_teacher 兜底）
+        ("POST", "/library/books/"),  # 放行 /{id}/open（其余教师端点内有 _require_teacher 兜底）
+        ("PUT", "/library/books/"),   # 放行 /{id}/progress（教师端点内有 _require_teacher 兜底）
         # 录音音频二进制（<audio src> 直连；端点内校验只能听自己的）
         ("GET", "/reading/recordings/"),
         # 视频学习
@@ -349,7 +347,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         videos=video_study,
         plan=plan, homework_admin=homework_admin, vocab_exam=vocab_exam,
         vocab_paper=vocab_paper, micro=micro,
-        library=library, prep_queue=prep_queue, audio_dir=audio_dir,
+        library=library, audio_dir=audio_dir,
     )
     # 注册顺序与拆分前 create_app 内的定义顺序一致（路径重叠时先注册者优先）
     register_query(app, ctx)
