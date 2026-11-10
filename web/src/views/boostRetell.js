@@ -203,7 +203,9 @@ export async function openBoostRetell({ patternId, label, onSubmitted } = {}) {
   const idBad = patternId == null || patternId === '' || !Number.isFinite(Number(patternId))
   if (!idBad) {
     // 句型原文与「我的提交记录」并行拉取；记录拉失败不拦面板（只是没有成绩区）
-    const jobs = [api.patternsList().catch((e) => { error = e && e.message ? e.message : String(e) })]
+    const jobs = [api.patternsList()
+      .then((r) => { list = r })
+      .catch((e) => { error = e && e.message ? e.message : String(e) })]
     if (getAuth()?.role !== 'teacher') {
       jobs.push(api.videoRetells().then((r) => { myRetells = Array.isArray(r) ? r : [] }).catch(() => {}))
     }
