@@ -348,10 +348,15 @@ export const api = {
   videoRetellGrade: (id, rec) =>
     reqJson(`/video-study/retells/${id}`, 'PUT', rec),
   videoRetellDelete: (id) => reqJson(`/video-study/retells/${id}`, 'DELETE'),
-  // 微练习（学生每日 3 题）：今日题目/提交作答（幂等可重复提交）
+  // 微练习（学生每日 3 题）：今日题目/提交作答（幂等可重复提交）/做题记录
   microToday: (day) => req('/micro/today', { searchParams: day ? { day } : {} }),
+  microHistory: (limit = 14) =>
+    req('/micro/history', { searchParams: { limit } }),
   microSubmit: (answers, day) =>
     reqJson('/micro/submit', 'POST', day ? { day, answers } : { answers }),
+  // ⭐ 提升档案（boost_log 流水：句型复述带批改分/评语，口诀卡带标题）
+  boostHistory: ({ user, limit = 50 } = {}) =>
+    req('/boost/history', { searchParams: { user, limit } }),
   // 微练习题库（教师）：列表 / 新增 / 编辑 / 上下架与删除 / 分类统计
   microAdminList: (params) => req('/micro-admin/questions', { searchParams: params }),
   microAdminAdd: (q) => reqJson('/micro-admin/questions', 'POST', q),

@@ -45,6 +45,7 @@ export async function mountMicro(el, { role } = {}) {
     body.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
     return
   }
+  mountHistory(el)
 
   const questions = Array.isArray(data.questions) ? data.questions : []
   done = !!data.done
@@ -202,4 +203,82 @@ export async function mountMicro(el, { role } = {}) {
       }
     })
   }
+}
+
+// ---- 📜 做题记录（学生回看历史，只读不交互） ----
+// 数据 = GET /micro/history（按天倒序）。与今日答题区互不影响：
+// 题卡直接渲染「我的作答 + 正确答案 + 解析」锁定态，不再接收点选。
+export function historyDayHtml(day) {
+  const qs = Array.isArray(day.questions) ? day.questions : []
+  const cards = qs.map((q, i) => {
+    const opts = Array.isArray(q.options) ? q.options : []
+    const optHtml = opts.map((t, j) => {
+      const key = letterOf(j)
+      const cls = ['mc-opt', 'locked']
+      if (key === q.answer) cls.push('right')
+      if (!q.my_correct && key === q.my_choice) cls.push('wrong')
+      return `
+        <div class="${cls.join(' ')}">
+          <span class="mc-opt-key">${key}</span>
+          <span class="mc-opt-text">${escapeHtml(t)}</span>
+          ${key === q.answer ? '<span class="mc-opt-tag">正确答案</span>' : ''}
+        </div>`
+    }).join('')
+    const verdict = `<span class="mc-verdict ${q.my_correct ? 'ok' : 'no'}">${q.my_correct ? '✅ 答对了' : '❌ 答错了'}</span>`
+    const answerRow = !q.my_correct
+      ? `<p class="mc-answer">正确答案：<b>${escapeHtml(q.answer || '')}</b>. ${escapeHtml(opts[(q.answer || 'A').charCodeAt(0) - 65] || '')}</p>` : ''
+    const explain = q.explain
+      ? `<div class="mc-explain"><b>解析</b>${escapeHtml(q.explain)}</div>` : ''
+    return `
+      <section class="mc-card">
+        <div class="mc-card-head">
+          <span class="mc-badge ${escAttr(q.category || 'grammar')}">${catLabel(q.category)}</span>
+          ${q.topic ? `<span class="mc-topic">${escapeHtml(q.topic)}</span>` : ''}
+          <span class="mc-qnum">第 ${i + 1} 题</span>
+          ${verdict}
+        </div>
+        <p class="mc-stem">${escapeHtml(q.stem)}</p>
+        <div class="mc-opts">${optHtml}</div>
+        ${answerRow}
+        ${explain}
+      </section>`
+  }).join('')
+  return cards
+}
+
+function mountHistory(el) {
+  const wrap = document.createElement('div')
+  wrap.className = 'mc-history'
+  wrap.innerHTML = `
+    <button class="mc-hist-toggle" type="button">📜 做题记录</button>
+    <div class="mc-hist-body" hidden><p class="muted">加载中…</p></div>`
+  el.appendChild(wrap)
+  const histBody = wrap.querySelector('.mc-hist-body')
+  let loaded = false
+  wrap.querySelector('.mc-hist-toggle').addEventListener('click', async () => {
+    const open = !histBody.hidden
+    histBody.hidden = open
+    wrap.classList.toggle('open', !open)
+    if (open || loaded) return
+    loaded = true
+    let days = []
+    try {
+      days = await api.microHistory(14)
+    } catch (e) {
+      histBody.innerHTML = `<p style="color:#b42318">记录加载失败：${escapeHtml(e.message)}</p>`
+      return
+    }
+    if (!Array.isArray(days) || !days.length) {
+      histBody.innerHTML = '<p class="muted">还没有做题记录，完成今天的 3 题就有了。</p>'
+      return
+    }
+    histBody.innerHTML = days.map((d) => `
+      <details class="mc-hist-day"${d.date === (new Date()).toISOString().slice(0, 10) ? ' open' : ''}>
+        <summary>
+          <b>${escapeHtml(d.date)}</b>
+          <span class="mc-hist-score">${d.correct_n != null ? `答对 ${d.correct_n}/${d.total}` : `做了 ${d.n}/${d.total}`}</span>
+        </summary>
+        ${historyDayHtml(d)}
+      </details>`).join('')
+  })
 }

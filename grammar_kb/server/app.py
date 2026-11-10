@@ -236,6 +236,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         # 微练习（学生拉当日题 + 判分提交；/micro-admin/* 教师专属不在此列）
         ("GET", "/micro/today"),
         ("POST", "/micro/submit"),
+        ("GET", "/micro/history"),  # 我的做题记录（按天回看，只读自己）
+        ("GET", "/boost/history"),  # ⭐ 提升档案（boost_log 流水，只读自己）
         # 生日祝福（学生只看自己的；日期在端点内按北京时间判断）
         ("GET", "/me/birthday"),
     )

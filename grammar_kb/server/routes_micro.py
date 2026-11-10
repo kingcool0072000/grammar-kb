@@ -41,6 +41,11 @@ def register_micro(app, ctx):
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
 
+    @app.get("/micro/history")
+    def micro_history(request: "fastapi.Request", limit: int = 14):
+        """我的做题记录（按天倒序，含题目/我的作答/对错/解析）。学生只看自己。"""
+        return _ok(micro.history(_request_user(request), limit))
+
     # ---- 教师端：题库管理 ----
 
     @app.get("/micro-admin/questions")

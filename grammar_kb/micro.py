@@ -448,6 +448,88 @@ class MicroStore:
             total = n = 0
         return {"done": bool(row["done"]), "n": n, "total": total}
 
+    def history(self, user: str, limit: int = 14) -> list[dict]:
+        """该生微练习按天历史（学生「做题记录」数据源，日期倒序）。
+
+        每天一条：当天题目（含选项与正确答案/解析——已做完的题回看
+        属复习场景，不再隐藏答案）+ 我的作答与对错。答案解析由
+        micro_question 直读；对错以 micro_log 首次作答为准，log 缺行
+        时按 answered 与答案比对兜底。只读，不落任何写。
+        """
+        user = (user or "").strip()[:60]
+        limit = max(1, min(int(limit or 14), 60))
+        try:
+            with self._connect() as conn:
+                day_rows = conn.execute(
+                    "SELECT date, qids_json, answered_json, done FROM micro_daily"
+                    " WHERE user = ? ORDER BY date DESC LIMIT ?",
+                    (user, limit),
+                ).fetchall()
+        except sqlite3.OperationalError:  # 表不存在（老库）
+            return []
+        # 首次作答 log：qid → (choice, is_correct)
+        try:
+            with self._connect() as conn:
+                log_rows = conn.execute(
+                    "SELECT qid, choice, is_correct FROM micro_log"
+                    " WHERE user = ? ORDER BY id", (user,),
+                ).fetchall()
+        except sqlite3.OperationalError:
+            log_rows = []
+        first_log: dict[int, tuple[str, int]] = {}
+        for r in log_rows:
+            first_log.setdefault(int(r["qid"]), (r["choice"] or "", int(r["is_correct"] or 0)))
+        out: list[dict] = []
+        for d in day_rows:
+            try:
+                qids = [int(x) for x in json.loads(d["qids_json"] or "[]")]
+                answered = {str(k): v for k, v in json.loads(
+                    d["answered_json"] or "{}").items()}
+            except (ValueError, TypeError):
+                continue
+            if not qids:
+                continue
+            questions = []
+            for qid in qids:
+                q = self._question_for_review(qid)
+                if not q:
+                    continue  # 题被删：跳过（不拦整天回看）
+                choice = answered.get(str(qid)) or ""
+                ok = first_log.get(qid, ("", 0))[1] if qid in first_log \
+                    else (1 if choice and choice == q["answer"] else 0)
+                questions.append({
+                    **q,
+                    "my_choice": choice,
+                    "my_correct": bool(ok and choice),
+                })
+            correct_n = sum(1 for q in questions if q["my_correct"])
+            out.append({
+                "date": d["date"], "done": bool(d["done"]),
+                "n": len(answered), "total": len(qids),
+                "correct_n": correct_n,
+                "questions": questions,
+            })
+        return out
+
+    def _question_for_review(self, qid: int) -> Optional[dict]:
+        """回看用单题（含答案与解析）；题不存在/表缺失返回 None。"""
+        try:
+            with self._connect() as conn:
+                r = conn.execute(
+                    "SELECT id, category, topic, stem, options_json,"
+                    " answer, explain FROM micro_question WHERE id = ?",
+                    (qid,),
+                ).fetchone()
+        except sqlite3.OperationalError:
+            return None
+        if r is None:
+            return None
+        return {
+            "id": r["id"], "category": r["category"], "topic": r["topic"],
+            "stem": r["stem"], "options": _parse_options(r["options_json"]),
+            "answer": r["answer"], "explain": r["explain"],
+        }
+
     # ---- 池同步（today 前置，幂等轻量） ----
 
     def _sync_pool(self, user: str) -> None:

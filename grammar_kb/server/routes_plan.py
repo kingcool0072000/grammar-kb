@@ -103,6 +103,20 @@ def register_plan(app, ctx):
             user = request.state.user
         return _ok({"user": user, "rules": plan.get_rules(user)})
 
+    @app.get("/boost/history")
+    def boost_history(request: "fastapi.Request", user: str = "malin",
+                      limit: int = 50):
+        """⭐ 提升档案：该生 boost_log 全量流水（学生只看自己的）。
+
+        句型复述行带最新批改分/评语/句型原文/录音 id（点开即复述面板
+        ——面板里就有「我的提交记录」回放）；口诀卡行带卡片标题。
+        """
+        from ..plan import boost as _boost
+        if (getattr(request.state, "role", "") != "teacher"
+                and request.state.user != user):
+            user = request.state.user
+        return _ok({"user": user, "items": _boost.history(user, limit)})
+
     @app.put("/plan/rules/{rule_id}")
     def plan_rule_set(rule_id: str, rec: dict, request: "fastapi.Request"):
         """教师修改某学生的完成判定规则开关。body: {value: 0|1, user}"""

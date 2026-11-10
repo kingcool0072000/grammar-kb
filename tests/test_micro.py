@@ -475,3 +475,41 @@ def test_micro_endpoints_and_role_gate(env, client):
                        json={"stem": "", "answer": "A"}).status_code == 422
     assert client.post("/micro/submit", headers=hs,
                        json={"answers": []}).status_code == 422
+
+
+def test_micro_history_endpoint(env, client):
+    """/micro/history：按天倒序含答案/我的作答/对错；学生互相隔离。"""
+    store = _store(env)
+    q1 = _add_q(store, "grammar", stem="历史题1", answer="A")
+    q2 = _add_q(store, "idiom", stem="历史题2", answer="B")
+    hs = _login(client, "malin")
+    hs2 = _login(client, "mxy", "mxy123")
+    # malin 答题：q1 对、q2 错
+    client.get("/micro/today", headers=hs)
+    r = client.post("/micro/submit", headers=hs, json={
+        "answers": [{"id": q1, "choice": "A"}, {"id": q2, "choice": "A"}]})
+    assert r.status_code == 200
+    h = client.get("/micro/history", headers=hs).json()["data"]
+    assert len(h) == 1 and h[0]["date"] == TODAY and h[0]["done"]
+    assert h[0]["correct_n"] == 1 and h[0]["total"] == 2
+    by_id = {q["id"]: q for q in h[0]["questions"]}
+    assert by_id[q1]["my_choice"] == "A" and by_id[q1]["my_correct"]
+    assert by_id[q1]["answer"] == "A"  # 历史回看带答案与解析
+    assert not by_id[q2]["my_correct"] and by_id[q2]["answer"] == "B"
+    assert "explain" in by_id[q1]  # 解析字段在（值可空，seed 题没写）
+    # mxy 没做题：空
+    assert client.get("/micro/history", headers=hs2).json()["data"] == []
+
+
+def test_boost_history_endpoint(env, client):
+    """/boost/history：boost_log 流水 + retell 批改字段；user 参数收窄防冒充。"""
+    from grammar_kb.plan import boost
+    boost.record("malin", TODAY, "memory:t1:n1", "memory")
+    hs = _login(client, "malin")
+    h = client.get("/boost/history?user=malin", headers=hs).json()["data"]
+    assert h["user"] == "malin" and len(h["items"]) == 1
+    it = h["items"][0]
+    assert it["kind"] == "memory" and it["passed"] and it["date"] == TODAY
+    # 学生 A 传 user=B → 收窄回自己（看不到 B 的）
+    h2 = client.get("/boost/history?user=mxy", headers=hs).json()["data"]
+    assert h2["user"] == "malin" and len(h2["items"]) == 1

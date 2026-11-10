@@ -353,3 +353,97 @@ def pass_state(user: str, day: str, item_ref: str) -> str:
 
 def _next_day(day: str) -> str:
     return (_date.fromisoformat(day) + timedelta(days=1)).isoformat()
+
+
+def history(user: str, limit: int = 50) -> list[dict]:
+    """该生提升档全量流水（学生「提升档案」数据源，按日期倒序）。
+
+    每条 = boost_log 事件 + ref 解析出的展示字段：
+    memory → kind/卡片标题；retell → 合并 video_retell 最新批改行
+    （score/comment/录音 id）。只读展示，与过关判定无耦合。
+    """
+    user = (user or "").strip()[:60]
+    limit = max(1, min(int(limit or 50), 200))
+    try:
+        with _connect() as conn:
+            conn.executescript(SCHEMA)
+            rows = conn.execute(
+                "SELECT date, item_ref, kind, passed, score, ts FROM boost_log"
+                " WHERE user = ? ORDER BY date DESC, item_ref LIMIT ?",
+                (user, limit),
+            ).fetchall()
+    except sqlite3.Error:
+        return []
+    # retell 最新批改/录音：按 pid 取该生最近一条（重交即刷新的口径）
+    retell_pids: dict[str, int] = {}
+    for r in rows:
+        if (r["kind"] or "") == "retell":
+            try:
+                retell_pids[r["item_ref"].split(":", 1)[1]] = 0
+            except IndexError:
+                continue
+    retell_extra: dict[int, dict] = {}
+    if retell_pids:
+        try:
+            from ..video_study import VideoStore
+            vs = VideoStore()
+            list_retells = vs.list_retells(user=user, limit=500)
+            for o in list_retells:
+                if o.get("ref_kind") != "pattern":
+                    continue
+                try:
+                    pid = int(o.get("vid") or 0)
+                except (TypeError, ValueError):
+                    continue
+                if str(pid) in retell_pids:
+                    retell_extra[pid] = o  # 倒序列表：先见=最新
+        except Exception:  # noqa: BLE001  展示字段缺失不拦流水
+            retell_extra = {}
+    out: list[dict] = []
+    for r in rows:
+        item = {
+            "date": r["date"], "item_ref": r["item_ref"],
+            "kind": r["kind"] or "", "passed": bool(r["passed"]),
+            "score": r["score"],
+        }
+        if (r["kind"] or "") == "retell":
+            try:
+                pid = int(r["item_ref"].split(":", 1)[1])
+            except (IndexError, ValueError):
+                pid = 0
+            ext = retell_extra.get(pid) or {}
+            item["retell_id"] = ext.get("id")
+            item["graded_score"] = ext.get("teacher_score")
+            item["comment"] = ext.get("teacher_comment") or ""
+            item["sentence"] = ext.get("pattern_sentence") or ""
+        else:
+            try:
+                _topic, node = r["item_ref"].split(":", 1)[1].split(":", 1)
+                title = _memory_title(_topic, node)
+                if title:
+                    item["card_title"] = title
+            except (IndexError, ValueError):  # noqa: B014
+                pass
+        out.append(item)
+    return out
+
+
+def _memory_title(topic_id: str, node_key: str) -> str | None:
+    """口诀卡节点标题（展示用；查不到返回 None 走兜底文案）。"""
+    try:
+        from ..topics import TopicStore
+        topic = TopicStore().get_topic(topic_id, expand=False) or {}
+    except Exception:  # noqa: BLE001
+        return None
+    found: list[str] = []
+
+    def walk(nodes) -> None:
+        for n in nodes or []:
+            if not isinstance(n, dict):
+                continue
+            if str(n.get("key") or "") == node_key:
+                found.append(str(n.get("title") or ""))
+            walk(n.get("children"))
+
+    walk(topic.get("nodes"))
+    return found[0] if found and found[0] else None
