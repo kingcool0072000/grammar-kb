@@ -45,7 +45,8 @@ async function mountContent(el) {
     const r = await api.users()
     students = (r.users || []).filter((u) => u.role === 'student').map((u) => u.user)
   } catch { /* 单学生/接口不可用时筛选条隐藏，队列展示全部 */ }
-  const qstate = { student: students[0] || '' }
+  // 默认空串 = 聚合全部学生待批（教师打开即见所有孩子的队列）；选具体学生才过滤
+  const qstate = { student: '' }
   const snapshots = new Map() // 队列数据快照按学生分键，切回学生时免重拉
   const unmounts = []
   let mountSeq = 0
@@ -58,6 +59,7 @@ async function mountContent(el) {
     <div class="pw-stubar">
       <label class="pw-student">学生
         <select id="pp-user">
+          <option value="" ${!qstate.student ? 'selected' : ''}>全部学生</option>
           ${students.map((x) => `<option value="${escapeHtml(x)}" ${qstate.student === x ? 'selected' : ''}>${escapeHtml(x)}</option>`).join('')}
         </select>
       </label>

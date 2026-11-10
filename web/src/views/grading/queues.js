@@ -68,7 +68,7 @@ export async function mountRecordingQueue(host, ctx) {
   const load = async () => {
     let recs = snapshots && snapshots.get(key)
     if (!recs) {
-      recs = await timed(api.readingRecordings({ limit: 200, user: student }))
+      recs = await timed(api.readingRecordings({ limit: 200, user: student || undefined }))
       recs = Array.isArray(recs) ? recs : []
       if (snapshots) snapshots.set(key, recs)
     }
@@ -79,7 +79,7 @@ export async function mountRecordingQueue(host, ctx) {
     host.replaceChildren(view)
     view.innerHTML = '<p class="muted">加载录音批改…</p>'
     try {
-      const recs = await api.readingRecordings({ limit: 200, user: student })
+      const recs = await api.readingRecordings({ limit: 200, user: student || undefined })
       await renderReadingReview(view, recs, {
         onBack: () => {
           if (snapshots) snapshots.delete(key) // 批改后作废快照，重挂拉新
@@ -130,7 +130,7 @@ export async function mountRetellQueue(host, ctx) {
   const load = async () => {
     let retells = snapshots && snapshots.get(key)
     if (!retells) {
-      retells = await timed(api.videoRetells({ limit: 200, user: student }))
+      retells = await timed(api.videoRetells({ limit: 200, user: student || undefined }))
       retells = Array.isArray(retells) ? retells : []
       if (snapshots) snapshots.set(key, retells)
     }
@@ -141,7 +141,7 @@ export async function mountRetellQueue(host, ctx) {
     host.replaceChildren(view)
     view.innerHTML = '<p class="muted">加载复述批改…</p>'
     try {
-      const retells = await api.videoRetells({ limit: 200, user: student })
+      const retells = await api.videoRetells({ limit: 200, user: student || undefined })
       await renderVideoReview(view, retells, {
         onBack: () => {
           if (snapshots) snapshots.delete(key)
@@ -188,7 +188,7 @@ export async function mountEssayQueue(host, ctx) {
   const load = async () => {
     let subs = snapshots && snapshots.get(key)
     if (!subs) {
-      subs = await timed(api.fceSubmissions({ limit: 200, user: student }))
+      subs = await timed(api.fceSubmissions({ limit: 200, user: student || undefined }))
       subs = Array.isArray(subs) ? subs : []
       if (snapshots) snapshots.set(key, subs)
     }
@@ -243,9 +243,9 @@ export async function mountRecentGraded(host, ctx) {
     return v
   }
   const [recs, vretells, fceSubs] = await Promise.all([
-    grab(`rec:${student}`, () => api.readingRecordings({ limit: 200, user: student })),
-    grab(`vretell:${student}`, () => api.videoRetells({ limit: 200, user: student })),
-    grab(`essay:${student}`, () => api.fceSubmissions({ limit: 200, user: student })),
+    grab(`rec:${student}`, () => api.readingRecordings({ limit: 200, user: student || undefined })),
+    grab(`vretell:${student}`, () => api.videoRetells({ limit: 200, user: student || undefined })),
+    grab(`essay:${student}`, () => api.fceSubmissions({ limit: 200, user: student || undefined })),
   ])
   const doneRec = recs.filter((r) => r.status !== 'pending')
   const doneVR = vretells.filter((r) => r.status !== 'pending')
