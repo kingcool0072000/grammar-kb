@@ -176,7 +176,6 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     # （analytics-report.html 静态月报已下线公开访问，数据改走
     #  /analytics/summary 鉴权端点）
     _STATIC_PREFIXES = ("/assets/", "/favicon", "/vite.svg",
-                        "/readingmore",  # 杂志阅读器静态页（API 另走 Bearer 鉴权）
                         # 词光插画/录音：<img>/<audio> 带不上 Authorization。
                         # 内容是 CC BY 公开素材，不是学生进度。
                         "/atlas-media",)
@@ -230,9 +229,6 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("PUT", "/library/books/"),   # 放行 /{id}/progress（skip 端点内有 _require_teacher 兜底）
         # 录音音频二进制（<audio src> 直连；端点内校验只能听自己的）
         ("GET", "/reading/recordings/"),
-        # 阅读更多（杂志阅读器统计）：心跳上报 + 自己的聚合数据
-        ("POST", "/readingmore/api/session"),
-        ("GET", "/readingmore/api/stats"),
         # 视频学习
         ("GET", "/video-study"),
         ("GET", "/video-study/items/"),
@@ -257,11 +253,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         if request.method == "OPTIONS":
             return await call_next(request)
         path = request.url.path.rstrip("/") or "/"
-        if path in _AUTH_OPEN or (
-            path.startswith(_STATIC_PREFIXES)
-            # 阅读更多：静态页免登录，但 /readingmore/api/* 必须走 Bearer 鉴权
-            and not path.startswith("/readingmore/api/")
-        ):
+        if path in _AUTH_OPEN or path.startswith(_STATIC_PREFIXES):
             return await call_next(request)
         auth_header = request.headers.get("Authorization", "")
         token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
@@ -307,8 +299,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         role = getattr(request.state, "role", "") or ""
         return _ok(greeting_for(user, role))
 
-    # 阅读更多（杂志阅读器）：API 走统一 Bearer 鉴权，用户身份由
-    # _auth 中间件注入 request.state.user（模块内取，数据按用户隔离）
+    # 阅读更多：只读历史查询（阅读器已退役，2026-11 归档 tag
+    # archive/readingmore）。GET /readingmore/api/sessions 教师专属，
+    # 走统一 Bearer 鉴权，用户身份由 _auth 中间件注入 request.state
     _readingmore._init_db()
     app.include_router(_readingmore._router)
 
@@ -400,11 +393,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
             resp.headers["Cache-Control"] = "no-cache"
             return resp
 
-        # /readingmore（无尾斜杠）不在此显式服务 HTML：页面内 assets/、dict/、
-        # PDF 全是相对路径，必须由 StaticFiles 原生 307 → /readingmore/ 后才
-        # 能正确解析（曾直接回 index.html 导致 /assets/pdf.min.js 404、
-        # pdfjsLib is not defined）。/readingmore/ 的 no-cache 由 _CachedStatic
-        # 的 .html 统一规则覆盖
+        # （/readingmore/ 杂志阅读器静态页已退役，2026-11 归档 tag
+        #  archive/readingmore；无尾斜杠 307 重定向的注意事项随页删除）
 
         # 静态资源长缓存：vite 产物文件名带内容 hash（index-xxxx.js），
         # 内容变则名变——可安全 immutable 一年；index.html 已显式 no-cache
@@ -414,7 +404,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         class _CachedStatic(_web_mount.__class__):
             def file_response(self, full_path, *args, **kwargs):  # noqa: ANN002, ANN003
                 resp = super().file_response(full_path, *args, **kwargs)
-                # HTML 无 hash 文件名（含 /readingmore/、analytics-report.html），
+                # HTML 无 hash 文件名（如旧版杂志页、报表类页面），
                 # immutable 一年会让用户发版后一直加载旧页面——一律 no-cache；
                 # 带 hash 的 JS/CSS/PDF 等其余资源仍长缓存。304 无响应体，
                 # 缓存语义跟随首次 200，无需特判
