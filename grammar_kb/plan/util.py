@@ -34,7 +34,12 @@ def completion_percent(done: int, total: int) -> Optional[int]:
 
 
 def task_public(t: dict, *, future: bool = False) -> dict:
-    """周历 / 周清单对外的一条任务（带完成原因，方便界面说明为什么亮或不亮）。"""
+    """周历 / 周清单对外的一条任务（带完成原因，方便界面说明为什么亮或不亮）。
+
+    提升档行透传 ``boost``（学生课程表点击落地口诀卡/句型复述靠它）；
+    未来日不带——提前提交会被 retell 门禁（boost.today_items）拒绝，
+    别给按钮。
+    """
     out = {
         "key": t.get("key") or _task_key(t),
         "text": t.get("text") or "",
@@ -47,6 +52,8 @@ def task_public(t: dict, *, future: bool = False) -> dict:
     vid = t.get("video_id") or t.get("vid")
     if vid:
         out["video_id"] = str(vid)
+    if not future and t.get("boost"):
+        out["boost"] = t["boost"]
     return out
 
 

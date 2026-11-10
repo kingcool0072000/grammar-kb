@@ -139,6 +139,8 @@ def today_items(user: str, date: str) -> list[dict]:
 
     供 retell 提交等入口校验「今天确实排了这件事」。教师没配 boost_items
     时不派生任务——即使该日落在默认提升日（周二/周四）也返回空列表。
+    周六兜底与派生口径一致（schedule._append_boost_tasks）：排定提升日
+    全在周六前时兜底行照出，提交不应被拒。
     """
     day = (date or "").strip()[:10]
     try:
@@ -164,8 +166,14 @@ def today_items(user: str, date: str) -> list[dict]:
              if isinstance(x, dict) and item_ref_of(x)]
     if not items:
         return []
-    if day not in _boost_day_dates(ws, boost_days_of(tasks, items)):
-        return []
+    days = boost_days_of(tasks, items)
+    if day not in _boost_day_dates(ws, days):
+        try:
+            wn = _date.fromisoformat(day).isoweekday()
+        except ValueError:
+            return []
+        if not (wn == 6 and days and max(days) < 6):
+            return []
     return items
 
 

@@ -137,7 +137,36 @@ def test_today_items_configured(env):
     assert boost.today_items("malin", TUE) == ITEMS
     assert boost.today_items("malin", THU) == ITEMS
     assert boost.today_items("malin", MON) == []   # 非提升日
+    # 周六兜底：排定提升日（周二/周四）全在周六前，兜底行照出、可提交
+    assert boost.today_items("malin", SAT) == ITEMS
+
+
+def test_today_items_sat_fallback_guard(env):
+    """兜底只在「排定提升日全在周六前」时生效；周日是提升日则周六不兜。"""
+    store = _store(env)
+    store.put_week(MON, {"boost_days": [7], "boost_items": ITEMS}, "", "malin")
     assert boost.today_items("malin", SAT) == []
+    assert boost.today_items("malin", "2026-11-15") == ITEMS   # 周日本身
+
+
+def test_week_view_boost_rows_reach_student(env):
+    """week_view 的 day 行必须透传 boost（学生课程表点击落地靠它，
+    PR #24 只改了前端导致「今天没有可打开的提升任务」）；未来日不带。"""
+    store = _store(env)
+    _seed_topic(store)
+    store.put_week(MON, {"boost_days": [2, 4], "boost_items": ITEMS}, "", "malin")
+    with freeze_clock(datetime(2026, 11, 10, 12, 0, tzinfo=CN_TZ)):
+        wv = store.week_view(MON, "malin")
+    by = {d["date"]: d for d in wv["days"]}
+    tue = [t for t in by[TUE]["tasks"] if t["type"] == "boost"]
+    assert [t["boost"]["item_ref"] for t in tue] == [MEM_REF, RET_REF]
+    assert tue[0]["boost"] == {"item_ref": MEM_REF, "kind": "memory",
+                               "configured": True}
+    assert tue[0]["key"] == f"boost:{MEM_REF}"
+    # 周一非提升日无行；未来日灰显且不带 boost（防提前提交被门禁拒）
+    assert [t for t in by[MON]["tasks"] if t["type"] == "boost"] == []
+    for fut in (THU, "2026-11-13", SAT):
+        assert all("boost" not in t for t in by[fut]["tasks"])
 
 
 def test_today_items_default_days(env):
