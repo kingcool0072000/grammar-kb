@@ -1,232 +1,14 @@
 import { api } from '../../api.js'
 import { escapeHtml, escAttr, todayIso } from '../../render.js'
-import { fmtDur } from '../../fmt.js'
-import { renderReadingReview } from '../readingReview.js'
-import { renderVideoReview, videoRetellRow } from '../videoReview.js'
-import { focusRow, focusTitle } from './shared.js'
-import { openFocusDetail } from './focus.js'
 import { toast } from '../../toast.js'
 
-// 批改中心 · 批改看板子 Tab（默认）：五类待办队列（待批录音/待批复述/待批作文/
-// 异常专注/考试打分）+ 各待办列表与批改视图入口 + 已处理折叠区。
-
-export async function mountBoard(el, { state, render, boardSnapshots, students, go }) {
-    const student = state.student
-    const openRecordingReview = async () => {
-      // 渲染进卡片网格容器（保留外层页头/子Tab），返回时重挂看板
-      const host = document.createElement('div')
-      el.replaceChildren(host)
-      host.innerHTML = '<p class="muted">加载录音批改…</p>'
-      try {
-        const recs = await api.readingRecordings({ limit: 200, user: student })
-        await renderReadingReview(host, recs, {
-          onBack: () => {
-            state.tab = 'board'
-            // 清除旧的批改视图节点后重建看板；返回值让 readingReview
-            // 知道回调已接管，不走同 hash 的路由兜底。
-            render()
-            return true
-          },
-        })
-      } catch (e) {
-        host.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
-      }
-    }
-    const openVideoReview = async () => {
-      const host = document.createElement('div')
-      el.replaceChildren(host)
-      host.innerHTML = '<p class="muted">加载视频复述批改…</p>'
-      try {
-        const retells = await api.videoRetells({ limit: 200, user: student })
-        await renderVideoReview(host, retells, {
-          onBack: () => {
-            state.tab = 'board'
-            render()
-            return true
-          },
-        })
-      } catch (e) {
-        host.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
-      }
-    }
-    el.innerHTML = '<p class="muted">加载中…</p>'
-    let recs, fceSubs, recite, exams, focus, vretells
-    const boardSnapshot = boardSnapshots.get(student)
-    if (boardSnapshot) {
-      ({ recs, fceSubs, recite, exams, focus, vretells } = boardSnapshot)
-    } else {
-      try {
-        const timed = (p, ms = 8000) => Promise.race([
-          p, new Promise((resolve) => setTimeout(() => resolve([]), ms)),
-        ]).catch(() => [])
-        ;[recs, fceSubs, recite, exams, focus, vretells] = await Promise.all([
-          timed(api.readingRecordings({ limit: 200, user: student })),
-          timed(api.fceSubmissions({ limit: 200, user: student })),
-          timed(api.reciteSessions({ limit: 100, user: student })),
-          timed(api.examsList(student)),
-          timed(api.focusSessions({ limit: 50, user: student })),
-          timed(api.videoRetells({ limit: 200, user: student })),
-        ])
-        focus = Array.isArray(focus) ? focus : []
-        await attachFocusRw(focus)
-        boardSnapshots.set(student, { recs, fceSubs, recite, exams, focus, vretells })
-      } catch (e) {
-        el.querySelector('p').innerHTML = `<span style="color:#b42318">加载失败：${escapeHtml(e.message)}</span>`
-        return
-      }
-    }
-
-  recs = Array.isArray(recs) ? recs : []
-  fceSubs = Array.isArray(fceSubs) ? fceSubs : []
-  exams = Array.isArray(exams) ? exams : []
-  focus = Array.isArray(focus) ? focus : []
-  recite = Array.isArray(recite) ? recite : []
-  vretells = Array.isArray(vretells) ? vretells : []
-
-  const pendRec = recs.filter((r) => r.status === 'pending')
-  const pendVR = vretells.filter((r) => r.status === 'pending')
-  const pendEssay = fceSubs.filter((s) => s.status === 'pending')
-  const abnormal = focus.filter(isAbnormalFocus)
-  const doneRec = recs.filter((r) => r.status !== 'pending')
-  const doneVR = vretells.filter((r) => r.status !== 'pending')
-  const doneEssay = fceSubs.filter((s) => s.status !== 'pending')
-  const calmFocus = focus.filter((s) => !isAbnormalFocus(s) && !isZombieFocus(s))
-  const handledN = doneRec.length + doneVR.length + doneEssay.length + calmFocus.length + exams.length
-
-  const queueBlock = (key, title, n, rows, empty, more) => `
-    <section class="g-queue-block ${n ? 'has-pend' : ''}" data-card="${key}">
-      <header class="gcard-head">
-        <h2>${title}</h2>
-        ${n ? `<b class="gcard-pend">待处理 ${n}</b>` : '<b class="gcard-n">0</b>'}
-      </header>
-      <div class="gcard-list">
-        ${rows || `<p class="reading-hint">${empty}</p>`}
-      </div>
-      ${more || ''}
-    </section>`
-
-  el.innerHTML = `
-    <section class="g-queue">
-      <header class="g-queue-head">
-        <h2>待处理</h2>
-        <p class="g-queue-note">待批录音 → 待批复述 → 待批作文 → 异常专注。已处理的收在下面。</p>
-      </header>
-      ${queueBlock(
-        'recording',
-        '1 · 待批录音',
-        pendRec.length,
-        pendRec.map((r) => recRow(r)).join(''),
-        '没有待批录音',
-        pendRec.length ? `<button class="gcard-more" data-all="recording">去批改录音（${pendRec.length}）→</button>` : '',
-      )}
-      ${queueBlock(
-        'vretell',
-        '2 · 待批复述',
-        pendVR.length,
-        pendVR.map((r) => videoRetellRow(r)).join(''),
-        '没有待批的视频复述',
-        pendVR.length ? `<button class="gcard-more" data-all="vretell">去批批复述（${pendVR.length}）→</button>` : '',
-      )}
-      ${queueBlock(
-        'essay',
-        '3 · 待批作文',
-        pendEssay.length,
-        pendEssay.map((s) => fceRow(s)).join(''),
-        '没有待批作文',
-        pendEssay.length ? `<button class="gcard-more" data-all="essay">去批改作文（${pendEssay.length}）→</button>` : '',
-      )}
-      ${queueBlock(
-        'focus',
-        '4 · 异常专注',
-        abnormal.length,
-        abnormal.map((s) => abnormalFocusRow(s)).join(''),
-        '最近没有需要看的异常专注',
-        abnormal.length ? `<button class="gcard-more" data-all="focus">打开学习日志 →</button>` : '',
-      )}
-    </section>
-    <section class="gcard gd-exam-grading" id="gd-exam-grading">
-      <header class="gcard-head">
-        <h2>📝 考试打分 <i>单词试卷 · 登记、修改、删除</i></h2>
-        <button class="chip" id="geg-all" type="button">全部记录</button>
-        <b class="gcard-n" id="geg-count">…</b>
-      </header>
-      <div class="gcard-list"><p class="reading-hint">加载试卷…</p></div>
-    </section>
-    <details class="g-handled">
-      <summary>已处理（${handledN}）<i>已批录音、已批复述、已阅练习、正常专注、哈一成绩</i></summary>
-      <div class="g-handled-grid">
-        <section class="gcard" data-card="recording-done">
-          <header class="gcard-head"><h2>已批录音</h2><b class="gcard-n">${doneRec.length}</b></header>
-          <div class="gcard-list">${doneRec.slice(0, 6).map((r) => recRow(r)).join('') || '<p class="reading-hint">暂无</p>'}</div>
-          ${doneRec.length ? `<button class="gcard-more" data-all="recording">查看全部录音 →</button>` : ''}
-        </section>
-        <section class="gcard">
-          <header class="gcard-head"><h2>已批复述</h2><b class="gcard-n">${doneVR.length}</b></header>
-          <div class="gcard-list">${doneVR.slice(0, 6).map((r) => videoRetellRow(r)).join('') || '<p class="reading-hint">暂无</p>'}</div>
-          ${doneVR.length ? `<button class="gcard-more" data-all="vretell">查看全部复述 →</button>` : ''}
-        </section>
-        <section class="gcard">
-          <header class="gcard-head"><h2>已阅作文与练习</h2><b class="gcard-n">${doneEssay.length}</b></header>
-          <div class="gcard-list">${doneEssay.slice(0, 6).map((s) => fceRow(s)).join('') || '<p class="reading-hint">暂无</p>'}</div>
-          ${doneEssay.length ? `<button class="gcard-more" data-all="essay">查看 FCE 记录 →</button>` : ''}
-        </section>
-        <section class="gcard">
-          <header class="gcard-head"><h2>正常专注</h2><b class="gcard-n">${calmFocus.length}</b></header>
-          <div class="gcard-list">${calmFocus.slice(0, 4).map((s) => focusRow(s)).join('') || '<p class="reading-hint">暂无</p>'}</div>
-          <button class="gcard-more" data-all="focus">学习日志 →</button>
-        </section>
-        <section class="gcard">
-          <header class="gcard-head"><h2>哈一成绩</h2><b class="gcard-n">${exams.length}</b></header>
-          <div class="gcard-list">${exams.slice(0, 6).map((e) => `
-            <div class="fce-his-row">
-              <span class="fce-his-what">${escapeHtml(e.user || '')} · 第 ${e.lecture} 讲</span>
-              <b class="fce-his-score ${e.score >= 90 ? 'ok' : e.score >= 70 ? '' : 'bad'}">${e.score}</b>
-              <span class="fce-his-date">${e.date}${e.wrong && e.wrong.length ? ` · 错 ${e.wrong.length} 题` : ''}</span>
-            </div>`).join('') || '<p class="reading-hint">暂无成绩</p>'}</div>
-          ${exams.length ? `<button class="gcard-more" data-all="haya-exam">成绩页 →</button>` : ''}
-        </section>
-      </div>
-      ${recite.length ? `<p class="reading-hint">背词记录 ${recite.length} 条在学习日志里。</p>` : ''}
-    </details>
-  `
-  mountExamGrading(el.querySelector('#gd-exam-grading'), students)
-
-  const showAll = {
-    recording: async () => openRecordingReview(),
-    vretell: async () => openVideoReview(),
-    essay: () => go('essay'),
-    'haya-exam': () => go('haya-exam'),
-    focus: () => { state.tab = 'log'; render() },
-  }
-  el.querySelectorAll('[data-all]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const fn = showAll[b.dataset.all]
-      if (fn) fn()
-    }))
-  const recList = el.querySelector('[data-card="recording"] .gcard-list')
-  if (recList) recList.addEventListener('click', (e) => {
-    if (e.target.closest('[data-rec-del],[data-rec-edit],audio,a')) return
-    if (!e.target.closest('.fce-his-row')) return
-    openRecordingReview()
-  })
-  const vrList = el.querySelector('[data-card="vretell"] .gcard-list')
-  if (vrList) vrList.addEventListener('click', (e) => {
-    if (e.target.closest('audio')) return
-    if (!e.target.closest('.fce-his-row')) return
-    openVideoReview()
-  })
-  const essayList = el.querySelector('[data-card="essay"] .gcard-list')
-  if (essayList) essayList.addEventListener('click', (e) => {
-    if (e.target.closest('.fce-his-row')) go('essay')
-  })
-  el.querySelectorAll('[data-focus-id]').forEach((row) =>
-    row.addEventListener('click', () => openFocusDetail(Number(row.dataset.focusId))))
-  // readingAdmin 跳转联动：自动展开批改视图
-  if (sessionStorage.getItem('gkb-open-review') === '1') {
-    sessionStorage.removeItem('gkb-open-review')
-    openRecordingReview()
-  }
-}
+// 背单词 · 考试打分卡（自原批改看板视图整体平移，挂进备课中心背单词分区）。
+//
+// 签名：mountExamGrading(host, { state, students, refresh })
+//   students  学生名单（登记表单的下拉选项；缺省回落 state.students）
+//   refresh   可选，登记/修改/删除成功后调用——宿主可用来刷新分区角标
+//             或重挂分区；不传则无操作。
+// 卡片壳（gcard gd-exam-grading）由本函数渲染，宿主给一个空容器即可。
 
 // ---- 考试打分卡：已存档单词试卷 + 逐卷登记成绩（关联学生，手动填分） ----
 
@@ -369,11 +151,27 @@ async function openVocabWrongOverlay(examId) {
     x.addEventListener('click', closeVocabWrongOverlay))
 }
 
-async function mountExamGrading(host, students) {
+export async function mountExamGrading(host, { state, students, refresh } = {}) {
   if (!host) return
+  const studs = (Array.isArray(students) && students.length)
+    ? students
+    : ((state && state.students) || [])
   ensureGegStyles()
-  const list = host.querySelector('.gcard-list')
-  const countEl = host.querySelector('#geg-count')
+  // 卡片壳在此渲染（原先由批改看板视图提供），内部引用改用 data 属性避免多实例 id 冲突
+  host.innerHTML = `
+    <section class="gcard gd-exam-grading">
+      <header class="gcard-head">
+        <h2>📝 考试打分 <i>单词试卷 · 登记、修改、删除</i></h2>
+        <button class="chip" data-geg-all type="button">全部记录</button>
+        <b class="gcard-n" data-geg-count>…</b>
+      </header>
+      <div class="gcard-list"><p class="reading-hint">加载试卷…</p></div>
+    </section>`
+  const card = host.querySelector('.gd-exam-grading')
+  const list = card.querySelector('.gcard-list')
+  const countEl = card.querySelector('[data-geg-count]')
+  // 登记/修改/删除成功后通知宿主（刷新分区角标等）；不传则无操作
+  const notify = () => { if (typeof refresh === 'function') { try { refresh() } catch { /* 宿主刷新失败不影响本卡 */ } } }
   let papers = []
   // 及格线：与词汇考试页同一条路径——响应里的 pass_score，取不到回退 80
   let passScore = 80
@@ -382,7 +180,7 @@ async function mountExamGrading(host, students) {
   try {
     const [grading, pairs] = await Promise.all([
       api.vocabPaperGrading(),
-      Promise.all((students || []).map(async (s) => {
+      Promise.all((studs || []).map(async (s) => {
         try {
           const d = await api.vocabExams({ user: s })
           const n = Number(d.unlocked_level)
@@ -408,6 +206,7 @@ async function mountExamGrading(host, students) {
   }
   const pending = papers.filter((p) => !(p.exams || []).length)
   countEl.textContent = `${pending.length} 卷待打分`
+  notify()
 
   if (!papers.length) {
     list.innerHTML = '<p class="reading-hint">还没有存档试卷——备课中心 → 背单词 → 生成试卷并保存后，在这里登记线下考试成绩。</p>'
@@ -420,7 +219,7 @@ async function mountExamGrading(host, students) {
   const rowHtml = (p) => {
     const graded = (p.exams || [])
     const isMix = Number(p.level) < 0 || String(p.paper_id || '').startsWith('MIX-')
-    const defaultLv = registerLevel(students[0])
+    const defaultLv = registerLevel(studs[0])
     return `
     <div class="geg-row ${graded.length ? 'graded' : ''}" data-pid="${escapeHtml(p.paper_id)}">
       <div class="geg-info">
@@ -441,7 +240,7 @@ async function mountExamGrading(host, students) {
       </div>
       <div class="geg-form">
         <select class="geg-user" data-pid="${escapeHtml(p.paper_id)}">
-          ${students.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+          ${studs.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
         </select>
         ${isMix ? `
         <label class="geg-lv-wrap">登记到
@@ -462,7 +261,7 @@ async function mountExamGrading(host, students) {
     </div>`
   }
   list.innerHTML = papers.map(rowHtml).join('')
-  const allBtn = host.querySelector('#geg-all')
+  const allBtn = card.querySelector('[data-geg-all]')
   if (allBtn) allBtn.addEventListener('click', () => { location.hash = '/vocabExam' })
 
   // 换学生时，混合卷登记级别跟着该生当前解锁级别走
@@ -550,6 +349,7 @@ async function mountExamGrading(host, students) {
         await api.vocabExamDel(delBtn.dataset.gdel)
         toast('已删除')
         if (row && pid) await refreshRow(pid, row)
+        notify()
       } catch (err) {
         alert(err.message)
         delBtn.disabled = false
@@ -613,84 +413,11 @@ async function mountExamGrading(host, students) {
       }
       toast(msg)
       await refreshRow(pid, row)
+      notify()
     } catch (err) {
       alert((editId ? '修改失败：' : '登记失败：') + err.message)
       btn.disabled = false
       btn.textContent = editId ? '保存修改' : '登记'
     }
   })
-}
-
-function isZombieFocus(s) {
-  const flags = (s.rw && s.rw.flags) || []
-  return flags.includes('无有效阅读') && !(s.rw && s.rw.words) && !(s.rw && s.rw.overlap)
-}
-
-function isAbnormalFocus(s) {
-  if (isZombieFocus(s)) return false
-  const flags = ((s.rw && s.rw.flags) || []).filter((f) => f !== '无有效阅读')
-  if (flags.length) return true
-  const link = s.rw && s.rw.link
-  if (link && link !== 'next' && link !== 'first') return true
-  if (typeof s.score === 'number' && s.score < 60) return true
-  if ((s.fast_scroll_flags || 0) > 0) return true
-  const start = Number(s.percent_start)
-  const end = Number(s.percent_end)
-  if (Number.isFinite(start) && Number.isFinite(end) && end + 1 < start) return true
-  return false
-}
-
-async function attachFocusRw(focus) {
-  const libIds = focus
-    .filter((s) => (s.module || 'library') === 'library')
-    .map((s) => s.id)
-  if (!libIds.length) return
-  try {
-    const wm = await api.focusWords(libIds.slice(0, 50))
-    if (!wm || typeof wm !== 'object') return
-    for (const s of focus) {
-      const hit = wm[s.id] || wm[String(s.id)]
-      if (hit) s.rw = hit
-    }
-  } catch { /* 没有逐会话标记时仍按分数 / 快滚判断 */ }
-}
-
-function abnormalFocusRow(s) {
-  const flags = ((s.rw && s.rw.flags) || []).filter((f) => f !== '无有效阅读')
-  const link = s.rw && s.rw.link && s.rw.link !== 'next' && s.rw.link !== 'first'
-    ? (s.rw.link_note || s.rw.link) : ''
-  const bits = [...flags]
-  if (link) bits.push(link)
-  if (typeof s.score === 'number' && s.score < 60) bits.push(`专注 ${Math.round(s.score)}`)
-  if (s.fast_scroll_flags) bits.push(`快滚 ${s.fast_scroll_flags}`)
-  return `
-    <div class="fce-his-row gd-focus-row" data-focus-id="${s.id}">
-      <span class="fce-his-what">${escapeHtml(focusTitle(s))}</span>
-      <b class="fce-his-score bad">异常</b>
-      <span class="fce-his-date">${bits.map((b) => escapeHtml(String(b))).join(' · ') || '需要看一眼'}</span>
-    </div>`
-}
-
-function recRow(r) {
-  return `
-    <div class="fce-his-row">
-      <span class="fce-his-what">${escapeHtml(r.user)} · ${escapeHtml(r.article_title || `#${r.article_id}`)}</span>
-      ${r.status === 'graded'
-        ? `<b class="fce-his-score ok">${r.teacher_score}/10</b>`
-        : '<b class="fce-his-score pend">待批改</b>'}
-      <span class="fce-his-date">${fmtDur(r.duration_sec || 0)} · ${(r.created_at || '').slice(0, 10)}</span>
-    </div>`
-}
-
-function fceRow(s) {
-  return `
-    <div class="fce-his-row">
-      <span class="fce-his-what">${escapeHtml(s.user)} · T${s.test_id} P${s.part}</span>
-      ${s.status === 'auto'
-        ? `<b class="fce-his-score">${s.auto_score}/${s.total}</b>`
-        : s.status === 'graded'
-          ? `<b class="fce-his-score ok">老师 ${s.teacher_score ?? '-'}</b>`
-          : '<b class="fce-his-score pend">待批改</b>'}
-      <span class="fce-his-date">${s.duration_sec ? fmtDur(s.duration_sec) + ' · ' : ''}${(s.created_at || '').slice(0, 10)}</span>
-    </div>`
 }

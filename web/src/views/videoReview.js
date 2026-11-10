@@ -84,7 +84,7 @@ export async function renderVideoReview(el, retells, opts) {
         if (result !== false) return
       }
     } catch { /* 回退到路由 */ }
-    location.hash = '/grading?tab=board&from=videoReview'
+    location.hash = '/prep?from=videoReview' // 带 query 防同 hash（#/prep）赋值不触发路由
   })
 }
 

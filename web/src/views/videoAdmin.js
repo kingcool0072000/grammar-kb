@@ -113,7 +113,7 @@ export async function mountVideoAdmin(el) {
         ? '<p class="reading-hint">该生还没有任何视频安排或复述记录。</p>' : ''}
     `
     const go = body.querySelector('#va-go-grade')
-    if (go) go.addEventListener('click', () => { location.hash = '/grading' })
+    if (go) go.addEventListener('click', () => { location.hash = '/prep' })
   }
 
   // ---- 📚 内容管理：清单 CRUD ----

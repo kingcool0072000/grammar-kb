@@ -1,21 +1,19 @@
-import { api, getAuth } from '../api.js'
+import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
 import { subTabBar, bindSubTabs } from '../tabs.js'
-import { mountBoard } from './grading/board.js'
 import { mountLog } from './grading/log.js'
 
-// 教师版 · 批改中心。打开默认是待办队列：
-//   待批录音 → 待批复述 → 待批作文 → 异常专注
-// 已批改 / 已自动阅卷 / 正常专注收进折叠区，不和队列抢位置。
+// 教师版 · 学情与日志（原批改中心瘦身后独立页）。
+// 批改队列已按学科内嵌进备课中心各分区（views/grading/queues.js +
+// views/grading/vocabGrading.js），本页只留学习日志与学情分析。
+// 旧链接 ?tab=board 或无 tab 一律回落学习日志，不在此重定向
+// （#/grading → 备课中心的跳转由 catalog.js 侧统一处理）。
 export async function mountGrading(el) {
-  // 三子 Tab：批改看板（默认）/ 学习日志 / 学情分析（原计划表子 Tab 迁入）
-  const subTab = new URLSearchParams(location.hash.split('?')[1] || '').get('tab') || 'board'
+  const subTab = new URLSearchParams(location.hash.split('?')[1] || '').get('tab')
   const state = {
-    tab: subTab === 'analytics' ? 'analytics' : subTab === 'log' ? 'log' : 'board',
+    tab: subTab === 'analytics' ? 'analytics' : 'log',
     student: '',
   }
-  // 批改视图返回看板时复用最近一次已加载数据，避免再次等待 5 个接口（按学生分键）。
-  const boardSnapshots = new Map()
   let students = []
   try {
     const r = await api.users()
@@ -27,7 +25,7 @@ export async function mountGrading(el) {
   function render() {
     el.innerHTML = `
       <div class="view-head">
-        <h1>批改中心</h1>
+        <h1>学情与日志</h1>
       </div>
       ${students.length ? `
       <div class="pw-stubar" style="margin-bottom:14px">
@@ -37,7 +35,7 @@ export async function mountGrading(el) {
           </select>
         </label>
       </div>` : ''}
-      ${subTabBar('gtab', [['board', '📋 批改看板'], ['log', '📚 学习日志'], ['analytics', '📊 学情分析']], state.tab)}
+      ${subTabBar('gtab', [['log', '📚 学习日志'], ['analytics', '📊 学情分析']], state.tab)}
       <div id="gd-body"></div>
     `
     bindSubTabs(el, 'gtab', (t) => { state.tab = t; render() })
@@ -55,25 +53,15 @@ export async function mountGrading(el) {
       })
       return
     }
-    if (state.tab === 'log') {
-      mountLog(body, { state })
-      return
-    }
-    mountBoard(body, { state, render, boardSnapshots, students, go })
+    mountLog(body, { state })
   }
 }
 
-// 跳转路由（sessionStorage 联动目标页自动打开对应面板）
+// 跳转路由（sessionStorage 联动目标页自动打开对应面板）。
+// 录音/作文批改已内嵌进备课中心分区，旧的批改外跳分支（录音 / 作文 /
+// FCE 记录，及其 sessionStorage 置位联动）全部删除。
 export function go(target) {
-  if (target === 'recording') {
-    sessionStorage.setItem('gkb-open-review', '1')
-    location.hash = '#/readingAdmin'
-  } else if (target === 'essay') {
-    sessionStorage.setItem('gkb-open-essay', '1')
-    location.hash = '#/fcePapers'
-  } else if (target === 'fce-subs') {
-    location.hash = '#/fcePapers'
-  } else if (target === 'haya-exam') {
+  if (target === 'haya-exam') {
     location.hash = '#/exams'
   } else if (target === 'recite') {
     // 背单词全量趋势在学情分析板块；改 query 触发 hashchange 重挂子 Tab

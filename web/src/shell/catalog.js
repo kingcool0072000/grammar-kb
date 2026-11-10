@@ -1,10 +1,9 @@
 import { routeSegs } from './dom.js'
 
-// 教师壳只露出三个 Tab。子工具页走 hash，不进顶部导航。
+// 教师壳只露出两个 Tab（批改闭环已按学科并入备课中心）。子工具页走 hash，不进顶部导航。
 export const TEACHER_TABS = [
   { key: 'prep', label: '备课中心' },
   { key: 'plan', label: '计划表' },
-  { key: 'grading', label: '批改中心' },
 ]
 
 // 学生壳。已攻克词本从背单词进入，不占 Tab。
@@ -21,6 +20,8 @@ export const STUDENT_TABS = [
 
 const TEACHER_ALLOWED = new Set([
   ...TEACHER_TABS.map((t) => t.key),
+  // 批改中心不再进顶栏，但保留路由（学情分析/学习日志入口 + 旧链接防 404）
+  'grading',
   // 备课 / 批改 / 计划跳进来的工具页
   'courses', 'taxonomy', 'fceListen', 'exams', 'vocabLevel', 'vocabExam',
   'students', 'paperAdmin', 'readingAdmin', 'readingList', 'topicsAdmin',
@@ -55,6 +56,15 @@ export function normalizeKey() {
   if (key === 'plan' && /(?:^|&)tab=analytics(?:&|$)/.test(location.hash.split('?')[1] || '')) {
     location.replace('#/grading?tab=analytics')
     key = 'grading'
+  }
+  // 批改看板已并入备课中心：#/grading（无 tab 或 tab=board）→ 备课中心；
+  // tab=log / tab=analytics 保持原样（学情与日志仍走独立批改页）。
+  if (key === 'grading') {
+    const tab = new URLSearchParams(location.hash.split('?')[1] || '').get('tab')
+    if (tab !== 'log' && tab !== 'analytics') {
+      location.replace('#/prep')
+      key = 'prep'
+    }
   }
   return key
 }
