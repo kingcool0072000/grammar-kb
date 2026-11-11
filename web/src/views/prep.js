@@ -110,8 +110,9 @@ async function mountContent(el) {
               <b>📈 考试成绩记录</b><span>单词考试 · 成绩与趋势</span>
             </button>
           </div>
-          <p class="reading-hint">点开级别可管理词库、生成考卷，并为每个学生设置单词级别（直接指定，不要求考试 80 分）。考试打分与成绩登记在本区下方队列。</p>
+          <p class="reading-hint">词表规定能看见哪一级。出卷后先存档，再挂到某周计划（一般周日）；线下做完，在下面按试卷编号登记分数和错词。还没存档的卷不能记分。</p>
         </div>
+        <div id="pp-vocab-board"></div>
         <div class="prep-queue" data-q="vocabGrading"><p class="muted">加载中…</p></div>
       </section>
 
@@ -264,10 +265,65 @@ async function mountContent(el) {
     sel.addEventListener('change', (e) => {
       qstate.student = e.target.value
       remountQueues()
+      paintVocabBoard()
     })
   }
 
+  function vocabStudent() {
+    if (qstate.student) return qstate.student
+    return students.length === 1 ? students[0] : ''
+  }
+
+  async function paintVocabBoard() {
+    const host = el.querySelector('#pp-vocab-board')
+    if (!host) return
+    const student = vocabStudent()
+    if (!student) {
+      host.innerHTML = `<section class="pp-vocab-board">
+        <h3>单词这一周</h3>
+        <p class="reading-hint">先在上面选一个学生。这里看他本周新掌握、错词曲线里的到期和逾期，下面的待打分也只留他的卷。</p>
+      </section>`
+      return
+    }
+    host.innerHTML = `<section class="pp-vocab-board"><p class="muted">加载 ${escapeHtml(student)} 的单词进度…</p></section>`
+    const [summary, week, vex] = await Promise.all([
+      api.reviewSummary({ user: student }).catch(() => null),
+      api.planWeekView({ user: student }).catch(() => null),
+      api.vocabExams({ user: student }).catch(() => null),
+    ])
+    if (vocabStudent() !== student) return
+    const tasks = (week && week.tasks) || {}
+    const dim = ((week && week.goal_progress && week.goal_progress.dims) || [])
+      .find((d) => d.name === '词汇')
+    const lv = tasks.vocab_lv
+    const papers = tasks.vocab_papers || []
+    const unlocked = Number(vex && vex.unlocked_level)
+    const configured = !!(vex && vex.level_configured)
+    const due = Number(summary && summary.due_today) || 0
+    const over = Number(summary && summary.overdue) || 0
+    const inCycle = Number(summary && summary.in_cycle) || 0
+    const masteredLine = dim
+      ? `本周新掌握 ${dim.done}/${dim.total}${lv == null ? '' : `（记在 L${lv}，不管能不能看见这一级）`}`
+      : '这周还没定新掌握目标'
+    const levelLine = Number.isFinite(unlocked)
+      ? (configured
+        ? `能背到 L${unlocked} · 手动锁定，考试分数不再改级别`
+        : `能背到 L${unlocked} · 考试自动解锁，某一级满 80 分才开下一级`)
+      : '级别还没取到'
+    const paperLine = papers.length
+      ? `本周挂了 ${papers.length} 份试卷，线下做完再按编号登记`
+      : '这周还没挂单词试卷'
+    host.innerHTML = `<section class="pp-vocab-board">
+      <h3>单词这一周 · ${escapeHtml(student)}</h3>
+      <p>${escapeHtml(levelLine)}</p>
+      <p>${escapeHtml(masteredLine)}</p>
+      <p>错词曲线：在周期 ${inCycle} · 到期 ${due} · 逾期 ${over}</p>
+      <p class="reading-hint">${escapeHtml(paperLine)}。掌握是练对累计达标，用来算本周新词；攻克是六个复习节点走完，才离开错词本。</p>
+    </section>`
+  }
+
   remountQueues()
+  paintVocabBoard()
 
   /** 懒挂载/重挂各学科待批队列。学生切换时整体重挂；动态 import 失败给出可见错误。 */
   function remountQueues() {
@@ -327,7 +383,9 @@ async function mountContent(el) {
       mountOne('recentGraded', (h) =>
         queues.mountRecentGraded(h, { ...base, onCount: () => {} }))
       mountOne('vocabGrading', (h) =>
-        vocabGrading.mountExamGrading(h, { state: qstate, students }))
+        vocabGrading.mountExamGrading(h, {
+          state: qstate, students, student: vocabStudent(),
+        }))
     }).catch((e) => {
       if (seq !== mountSeq) return
       hosts.forEach((host) => {

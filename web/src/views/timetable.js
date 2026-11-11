@@ -210,12 +210,24 @@ function loopCardHtml(loop) {
 
   const cells = []
   cells.push(recite.clear
-    ? { name: '🔁 到期背词', done: true }
+    ? { name: '🔁 今日复习', done: true, state: '到期和逾期已清' }
     : {
-        name: '🔁 到期背词',
-        state: `剩 ${Number(recite.due) || 0} · 逾期 ${Number(recite.overdue) || 0}`,
+        name: '🔁 今日复习',
+        state: `到期 ${Number(recite.due) || 0} · 逾期 ${Number(recite.overdue) || 0}`,
         go: 'recite', goText: '去复习',
       })
+  const fresh = recite.new_words
+  if (fresh && fresh.scheduled) {
+    cells.push(fresh.done
+      ? { name: '🆕 今日新词', done: true, state: `新掌握 ${Number(fresh.gained) || 0}/${Number(fresh.quota) || 0}` }
+      : {
+          name: '🆕 今日新词',
+          state: `新掌握 ${Number(fresh.gained) || 0}/${Number(fresh.quota) || 0}`,
+          go: 'recite-new', goText: '去背新词',
+        })
+  } else if (fresh) {
+    cells.push({ name: '🆕 今日新词', state: '今天不排新词', na: true })
+  }
   cells.push(micro.done
     ? { name: '📝 微练习', done: true }
     : {
@@ -282,6 +294,9 @@ function bindLoopCard(el, loop, boostRows) {
       if (which === 'recite') {
         const over = Number(loop.recite && loop.recite.overdue) || 0
         sessionStorage.setItem('gkb-recite-review', over > 0 ? 'overdue' : 'due')
+        location.hash = '/recite'
+      } else if (which === 'recite-new') {
+        sessionStorage.removeItem('gkb-recite-review')
         location.hash = '/recite'
       } else if (which === 'micro') {
         location.hash = '/micro'

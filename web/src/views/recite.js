@@ -1,5 +1,5 @@
 import { api } from '../api.js'
-import { escapeHtml } from '../render.js'
+import { escapeHtml, todayIso } from '../render.js'
 import { fmtDuration } from '../fmt.js'
 import { rememberAtlas } from '../atlas.js'
 import { migrateLegacyProgress, shuffle, startSession } from './recite/engine.js'
@@ -80,9 +80,10 @@ export async function mountRecite(el, { vocabPromise, role }) {
   el.innerHTML = `
     <div class="view-head">
       <h1>背单词</h1>
-      <p>基于词汇表（<span id="rc-vocab-n">…</span> 词）的全屏卡片：中译英、英译中、拼写挖空。翻面自动发音，答错的词按艾宾浩斯记忆法复习（1、2、4、7、15、30 天），直到攻克。</p>
+      <p>词表（<span id="rc-vocab-n">…</span> 词）规定范围。今天先清到期和逾期的错词，再背本周要新掌握的词。错词按 1、2、4、7、15、30 天复习，六个节点走完才算攻克。考试是线下做的。</p>
       <p class="atlas-footnote">部分单词的插画和录音来自 <a href="https://github.com/designfuchen/word-atlas" target="_blank" rel="noopener">词光 Word Atlas</a>，<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>，署名 Word Atlas contributors（词光）。没有录音时仍用浏览器语音。<a href="#/config">发音设置</a></p>
     </div>
+    <div id="rc-today"></div>
     <div id="rc-loop"></div>
     <div class="card recite-dash recite-dash-secondary" id="rc-dash"></div>
     <div class="recite-setup card">
@@ -96,7 +97,7 @@ export async function mountRecite(el, { vocabPromise, role }) {
           ${GROUP_SIZES.map((n, i) => `<button class="chip ${i === 0 ? 'active' : ''}" data-size="${n}">${n} 词</button>`).join('')}
         </div>
       </div>
-      <button class="btn-primary" id="rc-start">开始背单词</button>
+      <button class="btn-primary" id="rc-start">再背本周新词</button>
     </div>
     <div class="recite-stats" id="rc-stats"></div>
     <div id="rc-history"></div>
@@ -105,6 +106,8 @@ export async function mountRecite(el, { vocabPromise, role }) {
 
   const state = { scope: 'all', size: 20, mode: 'flip' }
   let reviewSummary = null
+  let weekPlan = null
+  let levelMode = null
   // 词库默认激活已解锁的最新级别（L0 只是兜底；解锁信息加载后校正）
   // 选词池就绪前禁用开始钮：pool 为空时点击会静默无反应
   const startBtn = el.querySelector('#rc-start')
@@ -367,8 +370,83 @@ export async function mountRecite(el, { vocabPromise, role }) {
       reviewSummary = await api.reviewSummary()
     } catch { /* 摘要失败时沿用上一次 */ }
     renderBoard()
+    try { weekPlan = await api.planMyWeek() } catch { /* 周进度沿用上一次 */ }
+    renderToday()
     renderReviewLoop()
     renderWrongbook()
+  }
+
+  function renderToday() {
+    const host = el.querySelector('#rc-today')
+    if (!host) return
+    const s = reviewSummary
+    const sunday = new Date(`${todayIso()}T00:00:00`).getDay() === 0
+    const due = Number(s && s.due_today) || 0
+    const over = Number(s && s.overdue) || 0
+    const inCycle = Number(s && s.in_cycle) || 0
+    const conquered = Number(s && s.conquered_n && s.conquered_n.total) || 0
+    const cap = s ? s.new_cap : null
+    const tasks = (weekPlan && weekPlan.tasks) || {}
+    const dim = ((weekPlan && weekPlan.goal_progress && weekPlan.goal_progress.dims) || [])
+      .find((d) => d.name === '词汇')
+    const papers = tasks.vocab_papers || []
+    const planLv = tasks.vocab_lv
+    const configured = !!(levelMode && levelMode.level_configured)
+    const lvShown = levelMode && Number.isFinite(Number(levelMode.unlocked_level))
+      ? Number(levelMode.unlocked_level) : unlocked
+    const levelText = configured
+      ? `能背到 L${lvShown} · 手动锁定，考试不再改级别`
+      : `能背到 L${lvShown} · 考试自动解锁，满 80 分才开下一级`
+    const weekText = dim ? `本周新掌握 ${dim.done}/${dim.total}` : '这周还没定新掌握目标'
+    const planLvText = planLv == null || planLv === '' ? '' : `新词记在 L${planLv}`
+    const capText = cap == null
+      ? ''
+      : Number(cap) === 0
+        ? '逾期还没清完，今天先不放新词。'
+        : `逾期还没清完，今天新词最多 ${cap} 个（已见 ${Number(s.new_used) || 0}）。`
+    const lead = sunday
+      ? '今天是周日。主任务是清一档还在错词曲线里的词，不排新词。'
+      : '今天先清到期和逾期的错词，再背本周要新掌握的词。'
+    const examText = papers.length
+      ? `本周有 ${papers.length} 份单词考试，线下做，做完由老师登记。`
+      : ''
+    const dueNow = due + over
+    const batch = Math.min(30, inCycle)
+    host.innerHTML = `
+      <section class="rc-today">
+        <h3>${sunday ? '周日 · 清错词' : '今天的背词'}</h3>
+        <p>${lead}${capText ? ` ${escapeHtml(capText)}` : ''}</p>
+        <div class="rc-today-layers">
+          <span>${escapeHtml(levelText)}</span>
+          <span>${escapeHtml(weekText)}${planLvText ? ` · ${escapeHtml(planLvText)}` : ''}</span>
+          <span>错词曲线 ${inCycle} · 到期 ${due} · 逾期 ${over}</span>
+          <span>已攻克 ${conquered}</span>
+        </div>
+        <p class="reading-hint">掌握是练对累计达标，用来算本周新词。攻克是六个节点走完，才离开错词本。${examText ? ` ${escapeHtml(examText)}` : ''}</p>
+        <div class="chip-row" style="margin-top:8px">
+          ${sunday
+            ? `<button type="button" class="btn-primary" id="rc-today-main" ${batch ? '' : 'disabled'}>清一档错词${batch ? `（${batch}）` : ''}</button>`
+            : (dueNow
+              ? `<button type="button" class="btn-primary" id="rc-today-main">先复习到期和逾期（${Math.min(20, dueNow)}）</button>`
+              : '<span class="muted">到期和逾期已经清完。</span>')}
+        </div>
+      </section>`
+    const main = host.querySelector('#rc-today-main')
+    if (main && s) {
+      main.addEventListener('click', () => {
+        if (sunday) {
+          const first = [...(s.due_words || []), ...(s.overdue_words || [])]
+          const rest = (s.conquer_pool || []).filter((w) => !first.includes(w))
+          startConquer([...first, ...rest].slice(0, 30))
+          return
+        }
+        startConquer([...(s.due_words || []), ...(s.overdue_words || [])])
+      })
+    }
+    if (startBtn) {
+      startBtn.textContent = sunday ? '周日不排新词' : '再背本周新词'
+      if (sunday) startBtn.disabled = true
+    }
   }
 
 
@@ -519,7 +597,7 @@ export async function mountRecite(el, { vocabPromise, role }) {
   const poolReady = (async () => {
     levelVocab = await loadLevelItems(LEVEL_MAX)
     await vocabReady
-    startBtn.disabled = false
+    if (new Date(`${todayIso()}T00:00:00`).getDay() !== 0) startBtn.disabled = false
   })()
 
   // ---- 旧本地进度一次性迁移上云（malin 的 559 词次历史无缝衔接）----
@@ -532,6 +610,8 @@ export async function mountRecite(el, { vocabPromise, role }) {
   const pCounts = api.vocabLevels({ maxLevel: LEVEL_MAX, countsOnly: true }).catch(() => null)
   const pSessions = fetchSessions()
   const pSummary = api.reviewSummary().catch(() => null)
+  const pWeek = api.planMyWeek().catch(() => null)
+  const pExam = api.vocabExams().catch(() => null)
 
   // ---- 渲染第一波：进度/层级计数/会话到齐即出主体（不等 2s+ 的复习摘要）----
   const [progRes, countsRes] = await Promise.all([pProgress, pCounts, pSessions])
@@ -548,7 +628,8 @@ export async function mountRecite(el, { vocabPromise, role }) {
   renderHistory()
 
   // ---- 渲染第二波：复习摘要到达，再补复习环 / 错题本区块 ----
-  reviewSummary = await pSummary
+  ;[reviewSummary, weekPlan, levelMode] = await Promise.all([pSummary, pWeek, pExam])
+  renderToday()
   renderReviewLoop()
   renderWrongbook()
   maybeAutoReview()

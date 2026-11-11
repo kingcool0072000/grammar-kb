@@ -6,7 +6,7 @@ import re
 import sqlite3
 from datetime import date, timedelta
 
-from ..clock import cn_date, cn_dt, monday_of
+from ..clock import cn_dt, monday_of
 from ..topics import node_keys_from_content
 from .ctx import WeekCtx
 
@@ -88,10 +88,8 @@ class SignalsMixin:
         - 背词/专注/朗读/FCE/试卷：fce.db（plan 主库）一个连接一趟查完
           ——focus_sessions 原「时长一遍 + 书名一遍」合并为一趟，SELECT
           只取所需列（不碰 polyline/activity_json 等大列）；
-        - vocab_paper_history 加周窗口边界，不再全表扫描。试卷级别兜底
-          只影响「计划外试卷键」的内部 signals（不进任何响应 JSON）；
-          计划内试卷仍由 paper_id 精确匹配 + L{n}- 前缀解析点亮，判定
-          输出与全表扫描版本一致。
+        - 单词试卷只点亮登记里写明、且仍在存档里的那一份。没有试卷编号、
+          编号对不上存档、或同级另一份卷，都不算完成。
 
         各表缺表/缺库均容错返回空。阅读书名列表供 today_tasks 按书模糊
         匹配（focus_sessions.book_title）。
@@ -125,19 +123,29 @@ class SignalsMixin:
                     ).fetchone()
                     if row and row["done"]:
                         out["micro"] = True
-                if "recite_word_progress" in tabs:
-                    # mastered_at 是 UTC ISO。和背词周窗口同一北京日切，
-                    # 否则北京时间凌晨新掌握的词不会点亮当天的错词信号。
-                    mastered_day = cn_date("mastered_at")
-                    row = conn.execute(
-                        "SELECT COUNT(*) n FROM recite_word_progress"
-                        f" WHERE user = ? AND {mastered_day} >= date(?)"
-                        f" AND {mastered_day} < date(?)",
-                        (user, day, nxt),
-                    ).fetchone()
-                    if row and row["n"]:
-                        out["wrong_words"] = True
+                if "recite_review" in tabs:
+                    # 周日「错词再练」：复习了当时到期/逾期的词，或当天攻克了词。
+                    # 普通背词会话、当天新掌握，都不点亮这一格。
+                    rr_cols = {r[1] for r in conn.execute(
+                        "PRAGMA table_info(recite_review)")}
+                    parts = []
+                    args: list = [user]
+                    if "due_touch" in rr_cols:
+                        parts.append("due_touch = ?")
+                        args.append(day)
+                    if "conquered_at" in rr_cols:
+                        parts.append("conquered_at = ?")
+                        args.append(day)
+                    if parts:
+                        row = conn.execute(
+                            "SELECT 1 FROM recite_review WHERE user = ? AND ("
+                            + " OR ".join(parts) + ") LIMIT 1",
+                            args,
+                        ).fetchone()
+                        if row:
+                            out["wrong_words"] = True
                 if "recite_sessions" in tabs:
+                    # 会话词数只进学习时长实录，不拿来给「背词 n 词」或周日错词打勾。
                     row = conn.execute(
                         "SELECT COUNT(*) n, COALESCE(SUM(total),0) w,"
                         " COALESCE(SUM(duration_sec),0) dur"
@@ -147,7 +155,6 @@ class SignalsMixin:
                         (user, f"{day} 00:00:00", f"{nxt} 00:00:00"),
                     ).fetchone()
                     if row and row["n"]:
-                        out.setdefault("wrong_words", True)
                         acts["vocab_n"] = row["w"]
                         acts["vocab_min"] = round(row["dur"] / 60)
                         acts["recite_sec"] = row["dur"]
@@ -182,46 +189,33 @@ class SignalsMixin:
                     if row and row["n"]:
                         out["fce"] = True
                 if "vocab_exams" in tabs:
-                    # 试卷任务完成：当天有该学生的考试成绩登记（paper_id
-                    # 精确匹配；登记记录没有 paper_id 时按「当天有本级
-                    # 考试」兜底——线下考完卷面即回收，级别口径够用）。
+                    # 只点亮「已存档且绑了这份试卷编号」的登记。
+                    # 空编号、编号不在存档里、同级另一份卷，都不连坐。
                     vex_cols = {r[1] for r in conn.execute(
                         "PRAGMA table_info(vocab_exams)")}
-                    has_pid = "paper_id" in vex_cols
-                    rows = conn.execute(
-                        ("SELECT level, paper_id FROM vocab_exams"
-                         " WHERE user = ? AND exam_date = ?") if has_pid else
-                        ("SELECT level, '' AS paper_id FROM vocab_exams"
-                         " WHERE user = ? AND exam_date = ?"),
-                        (user, day),
-                    ).fetchall()
-                    ws = monday_of(date.fromisoformat(day)).isoformat()
-                    # 本周计划里的试卷（删档卷也包含——级别从 L{n}- 前缀解析）
-                    planned_papers = list((ctx.week_tasks(ws).get("tasks")
-                                           or {}).get("vocab_papers") or [])
-                    lv_by_pid: dict = {}
-                    if "vocab_paper_history" in tabs and rows:
-                        # 原来全表扫描（words 大列随表增长越捞越贵）。收敛为
-                        # 考试所在周的生成窗口 [ws, nxt)：计划内试卷的级别
-                        # 兜底另有 L{n}- 前缀解析覆盖，判定输出不变。
-                        lv_by_pid = {r["paper_id"]: r["level"] for r in
-                                     conn.execute(
-                                         "SELECT paper_id, level FROM"
-                                         " vocab_paper_history"
-                                         " WHERE created_at >= ?"
-                                         " AND created_at < ?",
-                                         (ws, nxt)).fetchall()}
-                    for r in rows:
-                        pid = r["paper_id"] or ""
-                        if pid:
+                    if "paper_id" not in vex_cols:
+                        rows = []
+                    else:
+                        rows = conn.execute(
+                            "SELECT paper_id FROM vocab_exams"
+                            " WHERE user = ? AND exam_date = ?"
+                            " AND paper_id IS NOT NULL AND paper_id != ''",
+                            (user, day),
+                        ).fetchall()
+                    pids = [str(r["paper_id"]) for r in rows if r["paper_id"]]
+                    archived: set[str] = set()
+                    if pids and "vocab_paper_history" in tabs:
+                        marks = ",".join("?" * len(pids))
+                        archived = {
+                            r["paper_id"] for r in conn.execute(
+                                "SELECT paper_id FROM vocab_paper_history"
+                                f" WHERE paper_id IN ({marks})",
+                                pids,
+                            )
+                        }
+                    for pid in pids:
+                        if pid in archived:
                             out[f"paper:{pid}"] = True
-                        # 同级兜底：当天考过该级，视为该级试卷任务完成
-                        lv_match = {p2 for p2, lv2 in lv_by_pid.items()
-                                    if lv2 == r["level"]}
-                        lv_match |= {p2 for p2 in planned_papers
-                                     if self._pid_level(p2) == r["level"]}
-                        for p2 in lv_match:
-                            out[f"paper:{p2}"] = True
                 if "reading_recordings" in tabs:
                     rows = conn.execute(
                         "SELECT article_id FROM reading_recordings"

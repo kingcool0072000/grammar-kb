@@ -135,12 +135,14 @@ async function openVocabWrongOverlay(examId) {
       </div>
       <div class="gd-focus-detail-body">
         ${wrong.length
-          ? `<p class="reading-hint" style="margin:0 0 8px">共 ${wrong.length} 个错词，已自动加入背词复习队列。</p>
+          ? `<p class="reading-hint" style="margin:0 0 8px">共 ${wrong.length} 个错词，已回流错词曲线：掌握清掉，周期从答错日重计。</p>
              <div class="gd-focus-chips">${wrong.map((w) => {
                const q = qByWord.get(w)
                return `<i class="gd-focus-chip warn">${escapeHtml(w)}${q ? ` · ${escapeHtml(gegQtypeLabel(q))}` : ''}</i>`
              }).join('')}</div>`
-          : '<p class="reading-hint">这场考试登记为全对，没有错词。</p>'}
+          : (Number(exam.score) >= 100
+            ? '<p class="reading-hint">这场是满分，没有错词。</p>'
+            : '<p class="reading-hint">分数不是满分，但没有登记错词。请核对，不要当成全对。</p>')}
       </div>
     </div>`
   document.body.append(overlay)
@@ -151,11 +153,12 @@ async function openVocabWrongOverlay(examId) {
     x.addEventListener('click', closeVocabWrongOverlay))
 }
 
-export async function mountExamGrading(host, { state, students, refresh } = {}) {
+export async function mountExamGrading(host, { state, students, student, refresh } = {}) {
   if (!host) return
   const studs = (Array.isArray(students) && students.length)
     ? students
     : ((state && state.students) || [])
+  const filterUser = String(student || (state && state.student) || '').trim()
   ensureGegStyles()
   // 卡片壳在此渲染（原先由批改看板视图提供），内部引用改用 data 属性避免多实例 id 冲突
   host.innerHTML = `
@@ -179,7 +182,7 @@ export async function mountExamGrading(host, { state, students, refresh } = {}) 
   const unlockByUser = new Map()
   try {
     const [grading, pairs] = await Promise.all([
-      api.vocabPaperGrading(),
+      api.vocabPaperGrading({ user: filterUser }),
       Promise.all((studs || []).map(async (s) => {
         try {
           const d = await api.vocabExams({ user: s })
@@ -219,19 +222,24 @@ export async function mountExamGrading(host, { state, students, refresh } = {}) 
   const rowHtml = (p) => {
     const graded = (p.exams || [])
     const isMix = Number(p.level) < 0 || String(p.paper_id || '').startsWith('MIX-')
-    const defaultLv = registerLevel(studs[0])
+    const bound = String(p.user || '').trim()
+    const picked = studs.includes(bound) ? bound : (filterUser && studs.includes(filterUser) ? filterUser : studs[0])
+    const defaultLv = registerLevel(picked)
     return `
     <div class="geg-row ${graded.length ? 'graded' : ''}" data-pid="${escapeHtml(p.paper_id)}">
       <div class="geg-info">
         <b>${isMix ? '🧩 已学混合卷' : `L${p.level} 卷`} ${escapeHtml(p.paper_id)}</b>
-        <span>${p.count} 词 · ${escapeHtml((p.created_at || '').slice(0, 10))}</span>
+        <span>${p.count} 词 · ${escapeHtml((p.created_at || '').slice(0, 10))}${bound ? ` · 绑定 ${escapeHtml(bound)}` : ''}</span>
       </div>
       <div class="geg-grades">
         ${graded.length
           ? graded.map((e) => {
               const wn = wrongCountOf(e)
+              const unmarked = !wn && Number(e.score) < 100
               return `<span class="geg-chip ${e.score >= passScore ? 'ok' : ''}">${escapeHtml(e.user)} L${e.level} ${e.score} 分
-              ${wn ? `<button type="button" class="geg-wbadge" data-gwrong-view="${e.id}" title="查看错词明细">错 ${wn}</button>` : ''}
+              ${wn ? `<button type="button" class="geg-wbadge" data-gwrong-view="${e.id}" title="错词已回流曲线">错 ${wn} · 已回流</button>` : ''}
+              ${unmarked ? '<i class="geg-wbadge">未标错词</i>' : ''}
+              ${!wn && Number(e.score) >= 100 ? '<i class="geg-wbadge" style="background:#f0f9f0;border-color:#bfe5bf;color:#2e7d32">满分</i>' : ''}
               <button type="button" class="geg-op" data-gedit="${e.id}" data-user="${escapeHtml(e.user)}" data-level="${e.level}" data-score="${e.score}" data-date="${escapeHtml(e.exam_date || '')}" data-gwords="${escAttr(wrongWordsKey(e))}" data-gwn="${wn}">修改</button>
               <button type="button" class="geg-op" data-gdel="${e.id}">删除</button>
             </span>`
@@ -240,7 +248,7 @@ export async function mountExamGrading(host, { state, students, refresh } = {}) 
       </div>
       <div class="geg-form">
         <select class="geg-user" data-pid="${escapeHtml(p.paper_id)}">
-          ${studs.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+          ${studs.map((s) => `<option value="${escapeHtml(s)}" ${s === picked ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}
         </select>
         ${isMix ? `
         <label class="geg-lv-wrap">登记到
@@ -253,7 +261,7 @@ export async function mountExamGrading(host, { state, students, refresh } = {}) 
         <button class="reading-btn small primary" data-geg="${escapeHtml(p.paper_id)}" data-lv="${p.level}">登记</button>
       </div>
       <details class="geg-wrong">
-        <summary>标记错词 <i class="geg-wn">未选</i><i class="geg-whint">点选=错词，全对不用标</i></summary>
+        <summary>标记错词 <i class="geg-wn">未选</i><i class="geg-whint">点选=错词。不是满分就标出，不要空着当成全对</i></summary>
         <div class="geg-words">
           ${(p.words || []).map((w) => `<button type="button" class="geg-word" data-w="${escapeHtml(w)}">${escapeHtml(w)}</button>`).join('')}
         </div>
@@ -274,7 +282,7 @@ export async function mountExamGrading(host, { state, students, refresh } = {}) 
   })
 
   async function refreshRow(pid, row) {
-    const fresh = (await api.vocabPaperGrading()).papers || []
+    const fresh = (await api.vocabPaperGrading({ user: filterUser })).papers || []
     const np = fresh.find((x) => x.paper_id === pid)
     if (np && row.isConnected) row.outerHTML = rowHtml(np)
     countEl.textContent = `${fresh.filter((x) => !(x.exams || []).length).length} 卷待打分`
@@ -403,7 +411,7 @@ export async function mountExamGrading(host, { state, students, refresh } = {}) 
         if (payload.wrong_words.length) {
           msg += editId
             ? `，错词已更新为 ${payload.wrong_words.length} 个`
-            : `，已记 ${payload.wrong_words.length} 个错词并加入复习队列`
+            : `，已记 ${payload.wrong_words.length} 个错词并回流错词曲线`
         } else if (editId) {
           msg += '，错词已清空'
         }

@@ -524,7 +524,7 @@ def test_daily_spread_future_days_carry_plan(plan_env, weekday_clock):
 
 
 def test_vocab_quota_done_judgement(plan_env, weekday_clock):
-    """背词配额完成判定：当天背词词数 ≥ quota 即点亮。"""
+    """背词配额按当天新掌握打勾，不按会话里练过的词数。"""
     c = _client(plan_env)
     hs = _login(c, "malin", "123456")
     ht = _login(c, "teacher", "123456")
@@ -532,22 +532,25 @@ def test_vocab_quota_done_judgement(plan_env, weekday_clock):
     d = c.get("/plan/today", headers=hs).json()["data"]
     vocab = next(t for t in d["tasks"] if t["type"] == "vocab")
     assert vocab["done"] is False
-    # 背满周目标 20 词（≥任何工作日的均摊 quota——quota=ceil(剩余/剩余
-    # 工作日)，周中任何一天跑都成立）→ 完成。created_at 归一到本地今天
-    # 12:00Z——凌晨跑测试时 UTC 串还是昨天，会跨日聚合不到（同 study_min
-    # 测试做法）
+    quota = int(vocab["quota"])
+    # 练过的词数够，但一个都没掌握：不打勾。
     c.post("/recite/sessions", headers=hs, json={
         "total": 20, "wrong": 0, "acc": 100, "duration_sec": 300,
         "wrong_words": [], "mode": "flip", "scope": "all", "details": [],
     })
-    con = sqlite3.connect(plan_env / "fce.db")
-    con.execute("UPDATE recite_sessions SET created_at = ? || 'T12:00:00Z'",
-                (today_cn().isoformat(),))
-    con.commit()
-    con.close()
     d = c.get("/plan/today", headers=hs).json()["data"]
     vocab = next(t for t in d["tasks"] if t["type"] == "vocab")
-    assert vocab["done"] is True and "✓" in (vocab.get("detail") or "")
+    assert vocab["done"] is False and "新掌握" in (vocab.get("detail") or "")
+    # 当天新掌握达到配额才打勾。文案跟的是这个数，不是会话词数。
+    c.post("/recite/sessions", headers=hs, json={
+        "total": quota, "wrong": 0, "acc": 100, "duration_sec": 300,
+        "wrong_words": [], "mode": "flip", "scope": "all",
+        "details": [{"word": f"n{i}", "correct": True} for i in range(quota)],
+    })
+    d = c.get("/plan/today", headers=hs).json()["data"]
+    vocab = next(t for t in d["tasks"] if t["type"] == "vocab")
+    assert vocab["done"] is True and vocab["why"] == "quota_met"
+    assert f"今日新掌握 {quota}" in (vocab.get("detail") or "")
 
 
 def test_teacher_exam_student_attribution(plan_env):
@@ -902,16 +905,13 @@ def test_day_completion_is_the_done_exit(plan_env, weekday_clock):
     assert finished["keys"]["reading:percy"] == {"done": True, "why": "goal_reached"}
     c.post("/recite/sessions", headers=hs, json={
         "total": 20, "wrong": 0, "acc": 100, "duration_sec": 300,
-        "wrong_words": [], "mode": "flip", "scope": "all", "details": [],
+        "wrong_words": [], "mode": "flip", "scope": "all",
+        "details": [{"word": f"w{i}", "correct": True} for i in range(20)],
     })
-    con = sqlite3.connect(plan_env / "fce.db")
-    con.execute(
-        "UPDATE recite_sessions SET created_at = ? || 'T12:00:00Z'", (day,))
-    con.commit()
-    con.close()
     td = ps.today_tasks("malin", day)
     vocab = next(t for t in td["tasks"] if t["type"] == "vocab")
     assert vocab["done"] is True and vocab["why"] == "quota_met"
+    assert "今日新掌握" in (vocab.get("detail") or "")
     c.post("/exams", headers=hs, json={
         "lecture": 29, "date": day, "score": 90, "wrong": [], "kind": "lecture"})
     td = ps.today_tasks("malin", day)
@@ -1537,3 +1537,139 @@ def test_week_goal_micro_dimension(plan_env):
     # 微练习计入周目标聚合分母，不把聚合算炸
     assert d["goal_progress"]["total_items"] >= 7
     assert d["goal_progress"]["percent"] is not None
+
+
+def test_vocab_quota_ignores_other_levels(plan_env, weekday_clock):
+    """标了级别时，别的级别新掌握不算进当天「背词 n 词」。"""
+    con = sqlite3.connect(plan_env / "grammar.db")
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS vocab_word (word TEXT PRIMARY KEY, level INTEGER NOT NULL,"
+        " pos TEXT DEFAULT '[]', gloss TEXT DEFAULT '', meanings TEXT DEFAULT '[]',"
+        " example TEXT DEFAULT '', extra TEXT DEFAULT '{}')"
+    )
+    con.execute("INSERT INTO vocab_word (word, level) VALUES ('l0only', 0)")
+    con.execute("INSERT INTO vocab_word (word, level) VALUES ('l1only', 1)")
+    con.commit()
+    con.close()
+    c = _client(plan_env)
+    hs = _login(c, "malin", "123456")
+    ht = _login(c, "teacher", "123456")
+    _put_week(c, ht, {"vocab_lv": 1, "vocab_goal": 1, "vocab_new": 1})
+    c.post("/recite/sessions", headers=hs, json={
+        "total": 1, "wrong": 0, "acc": 100, "duration_sec": 5,
+        "wrong_words": [], "mode": "flip", "scope": "all",
+        "details": [{"word": "l0only", "correct": True}],
+    })
+    d = c.get("/plan/today", headers=hs).json()["data"]
+    vocab = next(t for t in d["tasks"] if t["type"] == "vocab")
+    assert vocab["done"] is False
+    c.post("/recite/sessions", headers=hs, json={
+        "total": 1, "wrong": 0, "acc": 100, "duration_sec": 5,
+        "wrong_words": [], "mode": "flip", "scope": "L1",
+        "details": [{"word": "l1only", "correct": True}],
+    })
+    d = c.get("/plan/today", headers=hs).json()["data"]
+    vocab = next(t for t in d["tasks"] if t["type"] == "vocab")
+    assert vocab["done"] is True
+    assert "今日新掌握 1" in (vocab.get("detail") or "")
+
+
+def _sunday():
+    return (date.fromisoformat(MON) + timedelta(days=6)).isoformat()
+
+
+def test_sunday_wrong_words_needs_due_review_or_conquer(plan_env):
+    """周日错词再练：普通背词或新掌握不点亮；复习到期词或当天攻克才点亮。"""
+    sun = _sunday()
+    later = (date.fromisoformat(sun) + timedelta(days=3)).isoformat()
+    when = datetime(int(sun[:4]), int(sun[5:7]), int(sun[8:10]), 12, 0, tzinfo=CN_TZ)
+    with freeze_clock(when):
+        c = _client(plan_env)
+        hs = _login(c, "malin", "123456")
+        ht = _login(c, "teacher", "123456")
+        _put_week(c, ht, {})
+        con = sqlite3.connect(plan_env / "fce.db")
+        con.execute(
+            "INSERT INTO recite_review (user, word, stage, next_review, first_wrong_at)"
+            " VALUES ('malin', 'later', 1, ?, ?)", (later, sun))
+        con.commit()
+        con.close()
+        c.post("/recite/sessions", headers=hs, json={
+            "total": 1, "wrong": 0, "acc": 100, "duration_sec": 5,
+            "wrong_words": [], "mode": "flip", "scope": "all",
+            "details": [{"word": "fresh", "correct": True}],
+        })
+        d = c.get("/plan/today", headers=hs).json()["data"]
+        row = next(t for t in d["tasks"] if t["type"] == "wrong_words")
+        assert row["done"] is False
+
+        con = sqlite3.connect(plan_env / "fce.db")
+        con.execute(
+            "INSERT INTO recite_review (user, word, stage, next_review, first_wrong_at)"
+            " VALUES ('malin', 'duew', 0, ?, ?)", (sun, sun))
+        con.commit()
+        con.close()
+        c.post("/recite/sessions", headers=hs, json={
+            "total": 1, "wrong": 0, "acc": 100, "duration_sec": 5,
+            "wrong_words": [], "mode": "conquer", "scope": "wrongbook",
+            "details": [{"word": "duew", "correct": True}],
+        })
+        d = c.get("/plan/today", headers=hs).json()["data"]
+        row = next(t for t in d["tasks"] if t["type"] == "wrong_words")
+        assert row["done"] is True
+
+
+def test_sunday_conquered_today_lights_wrong_words(plan_env):
+    """当天攻克若干，即使没有再复习别的到期词，周日错词再练也点亮。"""
+    sun = _sunday()
+    later = (date.fromisoformat(sun) + timedelta(days=4)).isoformat()
+    when = datetime(int(sun[:4]), int(sun[5:7]), int(sun[8:10]), 12, 0, tzinfo=CN_TZ)
+    with freeze_clock(when):
+        c = _client(plan_env)
+        hs = _login(c, "malin", "123456")
+        ht = _login(c, "teacher", "123456")
+        _put_week(c, ht, {})
+        con = sqlite3.connect(plan_env / "fce.db")
+        con.execute(
+            "INSERT INTO recite_review (user, word, stage, next_review)"
+            " VALUES ('malin', 'still', 1, ?)", (later,))
+        con.execute(
+            "INSERT INTO recite_review (user, word, stage, conquered_at, next_review)"
+            " VALUES ('malin', 'donew', 6, ?, NULL)", (sun,))
+        con.commit()
+        con.close()
+        d = c.get("/plan/today", headers=hs).json()["data"]
+        row = next(t for t in d["tasks"] if t["type"] == "wrong_words")
+        assert row["done"] is True
+
+
+def test_paper_lights_only_the_archived_id(plan_env):
+    """登记只点亮绑了编号且已存档的那一份，同级另一份和空编号都不连坐。"""
+    sun = _sunday()
+    when = datetime(int(sun[:4]), int(sun[5:7]), int(sun[8:10]), 12, 0, tzinfo=CN_TZ)
+    with freeze_clock(when):
+        c = _client(plan_env)
+        hs = _login(c, "malin", "123456")
+        ht = _login(c, "teacher", "123456")
+        p1, p2 = "L3-kept-0001", "L3-other-0002"
+        _put_week(c, ht, {"vocab_papers": [p1, p2]})
+        con = sqlite3.connect(plan_env / "fce.db")
+        con.executemany(
+            "INSERT INTO vocab_paper_history (level, paper_id, words, created_at)"
+            " VALUES (3, ?, '[]', ?)",
+            [(p1, sun), (p2, sun)])
+        con.execute(
+            "INSERT INTO vocab_exams (user, level, score, exam_date, paper_id, created_at)"
+            " VALUES ('malin', 3, 90, ?, ?, ?)", (sun, p1, sun))
+        con.execute(
+            "INSERT INTO vocab_exams (user, level, score, exam_date, paper_id, created_at)"
+            " VALUES ('malin', 3, 88, ?, '', ?)", (sun, sun))
+        con.execute(
+            "INSERT INTO vocab_exams (user, level, score, exam_date, paper_id, created_at)"
+            " VALUES ('malin', 3, 91, ?, 'L3-missing', ?)", (sun, sun))
+        con.commit()
+        con.close()
+        d = c.get("/plan/today", headers=hs).json()["data"]
+        by_key = {t["key"]: t for t in d["tasks"] if t["type"] == "paper"}
+        assert by_key[f"paper:{p1}"]["done"] is True
+        assert by_key[f"paper:{p2}"]["done"] is False

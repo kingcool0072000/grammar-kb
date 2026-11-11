@@ -118,7 +118,10 @@ def test_loop_baseline_boost_day(env):
         _put_week(store, {"boost_days": [2, 4], "boost_items": ITEMS})
         out = loop_status("malin", TUE, store=store, recite=recite,
                           micro=micro)
-    assert out["recite"] == {"clear": True, "due": 0, "overdue": 0}
+    assert out["recite"]["clear"] is True
+    assert out["recite"]["due"] == 0 and out["recite"]["overdue"] == 0
+    assert out["recite"]["new_words"]["scheduled"] is False
+    assert out["recite"]["new_words"]["done"] is True
     assert out["micro"] == {"done": False, "answered": 0, "total": 3}
     assert out["reading"] == {"ok": False, "today_words": 0,
                               "target_words": None}  # 没配泛读书 → 目标 None
@@ -179,7 +182,9 @@ def test_loop_recite_due_and_next_queue(env):
         con.close()
         out = loop_status("malin", TUE, store=store, recite=recite,
                           micro=micro)
-    assert out["recite"] == {"clear": False, "due": 1, "overdue": 0}
+    assert out["recite"]["clear"] is False
+    assert out["recite"]["due"] == 1 and out["recite"]["overdue"] == 0
+    assert out["recite"]["new_words"]["done"] is True
     assert out["next_queue"]["recite_words"] == 1
 
 
@@ -412,3 +417,16 @@ def test_loop_boost_pending_and_low_states(env):
         assert out["boost"]["done"] is True
         assert out["boost"]["state"] == "graded_low"
         assert out["boost"]["passed"] is False
+
+
+def test_loop_new_words_stay_open_when_review_is_clear(env):
+    """复习队列是空的，也不能把今天的新掌握算成完成。"""
+    with freeze_clock(datetime(2026, 11, 10, 12, 0, tzinfo=CN_TZ)):
+        store, recite, micro = _stores(env)
+        _put_week(store, {"vocab_goal": 10})
+        out = loop_status("malin", TUE, store=store, recite=recite, micro=micro)
+    assert out["recite"]["clear"] is True
+    assert out["recite"]["new_words"]["scheduled"] is True
+    assert out["recite"]["new_words"]["done"] is False
+    assert out["recite"]["new_words"]["quota"] >= 1
+    assert out["recite"]["new_words"]["gained"] == 0

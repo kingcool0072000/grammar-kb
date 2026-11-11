@@ -1,8 +1,11 @@
 """今日闭环聚合（v3.0.0 设计 §2.1）：纯派生，不落库。
 
 四格口径：
-- 背词：``recite.review_summary`` 的 due_today+overdue（今天）；历史日按
-  recite_review 的 next_review 直算（同一口径的回看版）；
+- 背词拆成两格，不能互相代替：``review`` 看到期+逾期是否清完
+  （``clear`` 仍是这一格，历史日按 recite_review 的 next_review 回看）；
+  ``new_words`` 看工作日「背词 n 词」是否按新掌握达标。今天不排新词时
+  new_words.done 为真，不拿复习清零冒充新词完成。
+  连击里的背词格 = 复习清完 且 新词格达标。
 - 微练习：``micro.day_status`` 的 done（micro_daily 整组做完）；
 - 泛读：当日有效泛读词数 vs week_daily_tasks 泛读行当日摊派（books.py
   「今日 +N 词」同一公式）；拿不到目标（没配书/全部已达成）时
@@ -10,7 +13,7 @@
 - 提升档：当日课程表派生出的 boost 行（week_daily_tasks 同一来源），
   非提升日=None，完成与否走 plan/boost.day_done。
 
-streak（连续全绿天数）从查询日往前回溯，recite clear + micro done +
+streak（连续全绿天数）从查询日往前回溯，复习清完且新词达标 + micro done +
 reading ok 三项（boost 不计入），全部用历史信号重算、无落库；历史日的
 泛读额度无法精确回放（目标词数随当前读位漂移），回看口径=当日有有效
 泛读会话。回溯上限 60 天。
@@ -67,7 +70,8 @@ def loop_status(user: str, day: str, *, store=None, recite=None,
         overdue = int(rs.get("overdue") or 0)
     else:
         due, overdue = _recite_counts(recite, user, day_iso)
-    recite_clear = due + overdue == 0
+    review_clear = due + overdue == 0
+    new_words = _new_word_day(store, user, day_iso)
 
     # ---- 微练习 ----
     st = micro.day_status(user, day_iso)
@@ -121,11 +125,16 @@ def loop_status(user: str, day: str, *, store=None, recite=None,
             }
 
     # ---- 连击：从今天往前回溯连续全绿天数（boost 不计入）----
+    # 复习清了不等于今天的新词也做完。两格都达标，连击才把背词算绿。
     streak = _streak(store, recite, micro, user, d,
-                     today_green=(recite_clear and micro_done and reading_ok))
+                     today_green=(review_clear and new_words["done"]
+                                  and micro_done and reading_ok))
 
     return {
-        "recite": {"clear": recite_clear, "due": due, "overdue": overdue},
+        "recite": {
+            "clear": review_clear, "due": due, "overdue": overdue,
+            "new_words": new_words,
+        },
         "micro": {"done": micro_done, "answered": int(st.get("n") or 0),
                   "total": int(st.get("total") or 0) or 3},
         "reading": {"ok": reading_ok, "today_words": words,
@@ -299,9 +308,77 @@ def _reading_session_days(store, user: str, lo: str, hi: str) -> set[str]:
 
 # ---- 连击 ----
 
+def _new_word_day(store, user: str, day_iso: str) -> dict:
+    """工作日新掌握是否达到当天配额。
+
+    没排词汇目标、或周六日不排新词时 ``scheduled`` 为假、``done`` 为真：
+    这一格不拦闭环。配额算法与 ``week_daily_tasks`` 相同（目标 − 周初已会
+    − 截至当天已新掌握，再摊剩余工作日）。
+    """
+    empty = {
+        "scheduled": False, "done": True,
+        "gained": 0, "quota": 0,
+        "week_gained": 0, "week_target": 0,
+    }
+    try:
+        d = date.fromisoformat(str(day_iso)[:10])
+    except ValueError:
+        return empty
+    ws = monday_of(d).isoformat()
+    try:
+        week = store._get_week(ws, user)
+        t = week.get("tasks") or {}
+        vg = int(t.get("vocab_goal") or 0)
+    except (TypeError, ValueError, AttributeError, sqlite3.Error):
+        return empty
+    if vg <= 0:
+        return empty
+    lv = t.get("vocab_lv")
+    words = None
+    if lv is not None:
+        try:
+            words = store._vocab_level_words(int(lv))
+        except (TypeError, ValueError):
+            words = None
+    week_hi = (date.fromisoformat(ws) + timedelta(days=7)).isoformat()
+    try:
+        base = store._vocab_mastered_before(ws, user, words)
+        week_gained = store._vocab_actuals(ws, week_hi, user, words)
+    except (TypeError, ValueError, sqlite3.Error):
+        base, week_gained = 0, 0
+    week_target = vg if lv is None else max(0, vg - base)
+    out = {
+        "scheduled": False, "done": True,
+        "gained": 0, "quota": 0,
+        "week_gained": week_gained, "week_target": week_target,
+    }
+    if d.weekday() >= 5:
+        return out
+    upto = (d + timedelta(days=1)).isoformat()
+    try:
+        rem = store._vocab_week_remaining(t, ws, upto, user)
+        gained = store._vocab_actuals(d.isoformat(), upto, user, words)
+    except (TypeError, ValueError, sqlite3.Error):
+        return out
+    ws_d = date.fromisoformat(ws)
+    rest = [ws_d + timedelta(days=i) for i in range((d - ws_d).days, 7)]
+    wd_left = sum(1 for x in rest if x.weekday() < 5)
+    if rem <= 0 or wd_left <= 0:
+        out["gained"] = gained
+        return out
+    quota = -(-int(rem) // wd_left)
+    out.update({
+        "scheduled": True,
+        "quota": quota,
+        "gained": gained,
+        "done": gained >= quota,
+    })
+    return out
+
+
 def _streak(store, recite, micro, user: str, day: date, *,
             today_green: bool) -> int:
-    """从 day 往前连续全绿天数（recite clear + micro done + reading ok）。
+    """从 day 往前连续全绿天数（复习清完且新词达标 + micro done + reading ok）。
 
     查询日当格用上面算好的三项真值（today_green）；更早的日子回看口径：
     - 背词：当前在周期 backlog（conquered_at 为空、next_review ≤ 当日为空
@@ -322,7 +399,8 @@ def _streak(store, recite, micro, user: str, day: date, *,
             green = today_green
         else:
             clear = not any(x <= di for x in backlog)
-            green = (clear and di in micro_days and di in reading_days)
+            new_ok = _new_word_day(store, user, di)["done"]
+            green = (clear and new_ok and di in micro_days and di in reading_days)
         if not green:
             break
         streak += 1
