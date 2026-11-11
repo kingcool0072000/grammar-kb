@@ -80,8 +80,6 @@ export async function mountRecite(el, { vocabPromise, role }) {
   el.innerHTML = `
     <div class="view-head">
       <h1>背单词</h1>
-      <p>词表（<span id="rc-vocab-n">…</span> 词）规定范围。今天先清到期和逾期的错词，再背本周要新掌握的词。错词按 1、2、4、7、15、30 天复习，六个节点走完才算攻克。考试是线下做的。</p>
-      <p class="atlas-footnote">部分单词的插画和录音来自 <a href="https://github.com/designfuchen/word-atlas" target="_blank" rel="noopener">词光 Word Atlas</a>，<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>，署名 Word Atlas contributors（词光）。没有录音时仍用浏览器语音。<a href="#/config">发音设置</a></p>
     </div>
     <div id="rc-today"></div>
     <div id="rc-loop"></div>
@@ -114,7 +112,7 @@ export async function mountRecite(el, { vocabPromise, role }) {
   startBtn.disabled = true
 
   // ---- L0 兜底词表（契约：第二参为 vocabPromise，可能 reject/undefined）----
-  // 不在进页路径上阻塞等待：头部件数与兜底 chips 由 vocabReady 异步补齐
+  // 不在进页路径上阻塞等待：兜底 chips 由 vocabReady 异步补齐
   let vocabArr = []
   const vocabReady = (async () => {
     try {
@@ -122,8 +120,6 @@ export async function mountRecite(el, { vocabPromise, role }) {
     } catch {
       vocabArr = []
     }
-    const $n = el.querySelector('#rc-vocab-n')
-    if ($n) $n.textContent = String(vocabArr.length)
     // 只有 counts 拉失败（chips 走基础表兜底）时，chips 文案才依赖词数
     if (!Object.keys(levelCounts).length) renderScopeChips()
   })()
@@ -384,52 +380,28 @@ export async function mountRecite(el, { vocabPromise, role }) {
     const due = Number(s && s.due_today) || 0
     const over = Number(s && s.overdue) || 0
     const inCycle = Number(s && s.in_cycle) || 0
-    const conquered = Number(s && s.conquered_n && s.conquered_n.total) || 0
-    const cap = s ? s.new_cap : null
     const tasks = (weekPlan && weekPlan.tasks) || {}
-    const dim = ((weekPlan && weekPlan.goal_progress && weekPlan.goal_progress.dims) || [])
-      .find((d) => d.name === '词汇')
     const papers = tasks.vocab_papers || []
-    const planLv = tasks.vocab_lv
-    const configured = !!(levelMode && levelMode.level_configured)
-    const lvShown = levelMode && Number.isFinite(Number(levelMode.unlocked_level))
-      ? Number(levelMode.unlocked_level) : unlocked
-    const levelText = configured
-      ? `能背到 L${lvShown} · 手动锁定，考试不再改级别`
-      : `能背到 L${lvShown} · 考试自动解锁，满 80 分才开下一级`
-    const weekText = dim ? `本周新掌握 ${dim.done}/${dim.total}` : '这周还没定新掌握目标'
-    const planLvText = planLv == null || planLv === '' ? '' : `新词记在 L${planLv}`
-    const capText = cap == null
-      ? ''
-      : Number(cap) === 0
-        ? '逾期还没清完，今天先不放新词。'
-        : `逾期还没清完，今天新词最多 ${cap} 个（已见 ${Number(s.new_used) || 0}）。`
-    const lead = sunday
-      ? '今天是周日。主任务是清一档还在错词曲线里的词，不排新词。'
-      : '今天先清到期和逾期的错词，再背本周要新掌握的词。'
     const examText = papers.length
       ? `本周有 ${papers.length} 份单词考试，线下做，做完由老师登记。`
       : ''
     const dueNow = due + over
     const batch = Math.min(30, inCycle)
+    const action = sunday
+      ? `<button type="button" class="btn-primary" id="rc-today-main" ${batch ? '' : 'disabled'}>清一档错词${batch ? `（${batch}）` : ''}</button>`
+      : (dueNow
+        ? `<button type="button" class="btn-primary" id="rc-today-main">先复习到期和逾期（${Math.min(20, dueNow)}）</button>`
+        : '')
+    // 说明/统计/空态文案已按需求撤掉（数字仍看下方四层循环看板）；
+    // 没考试提醒也没有可清动作时整卡不渲染
+    if (!examText && !action) {
+      host.innerHTML = ''
+      return
+    }
     host.innerHTML = `
       <section class="rc-today">
-        <h3>${sunday ? '周日 · 清错词' : '今天的背词'}</h3>
-        <p>${lead}${capText ? ` ${escapeHtml(capText)}` : ''}</p>
-        <div class="rc-today-layers">
-          <span>${escapeHtml(levelText)}</span>
-          <span>${escapeHtml(weekText)}${planLvText ? ` · ${escapeHtml(planLvText)}` : ''}</span>
-          <span>错词曲线 ${inCycle} · 到期 ${due} · 逾期 ${over}</span>
-          <span>已攻克 ${conquered}</span>
-        </div>
-        <p class="reading-hint">掌握是练对累计达标，用来算本周新词。攻克是六个节点走完，才离开错词本。${examText ? ` ${escapeHtml(examText)}` : ''}</p>
-        <div class="chip-row" style="margin-top:8px">
-          ${sunday
-            ? `<button type="button" class="btn-primary" id="rc-today-main" ${batch ? '' : 'disabled'}>清一档错词${batch ? `（${batch}）` : ''}</button>`
-            : (dueNow
-              ? `<button type="button" class="btn-primary" id="rc-today-main">先复习到期和逾期（${Math.min(20, dueNow)}）</button>`
-              : '<span class="muted">到期和逾期已经清完。</span>')}
-        </div>
+        ${examText ? `<p class="reading-hint">${escapeHtml(examText)}</p>` : ''}
+        ${action ? `<div class="chip-row" style="margin-top:8px">${action}</div>` : ''}
       </section>`
     const main = host.querySelector('#rc-today-main')
     if (main && s) {
