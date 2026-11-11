@@ -64,7 +64,7 @@ function renderNce2List(el, lessons, role) {
       <div class="reading-card nce2-card ${l.week ? 'rd-week' : ''}" data-lid="${l.id}" role="button">
         <span class="reading-card-title">🎧 Lesson ${l.id} · ${escapeHtml(l.title || '')}</span>
         <span class="reading-card-meta">
-          ${l.week ? '<b class="rd-week-tag">📌 本周任务</b>' : ''}
+          ${l.week ? `<b class="rd-week-tag">📌 本周任务${l.nce2_mode === 'listen' ? ' · 精听' : ' · 跟读'}</b>` : ''}
           <span class="tag" style="--cat-color:#4a6fa5">${l.n_sentences ?? '—'} 句 · ${l.n_words ?? '—'} 词</span>
           ${l.has_audio === false ? '<span class="tag" style="--cat-color:#b42318">音频未就位</span>' : ''}
           ${badge}
@@ -254,9 +254,9 @@ async function renderNce2Detail(el, lid, role) {
 /**
  * 动作区决策（后端契约字段）：
  *  - 有跟读提交 → 状态卡（待批改 / 分数+评语，≥7 过关），均可再录刷新
- *  - listen_today=true → 今日精听已完成态
- *  - planned=true（今日计划=精听且未打卡）→「✓ 我听完了」
- *  - 其余（无计划行=自由练习）→ 跟读录音器
+ *  - listen_today=true → 今日精听已完成态（附自愿跟读录音器）
+ *  - planned 且 nce2_mode='listen'（本周精听行且未打卡）→「✓ 我听完了」
+ *  - 其余（shadow 任务行 / 无计划行=自由练习）→ 跟读录音器（文案区分）
  * 提交/重录后只重绘动作区，不打断播放。
  */
 function renderActionArea(el, l, role, focusTracker) {
@@ -320,7 +320,7 @@ function renderActionArea(el, l, role, focusTracker) {
     setupShadowRecorder(el, host, l, focusTracker)
     return
   }
-  if (l.planned) {
+  if (l.planned && l.nce2_mode === 'listen') {
     host.innerHTML = `
       <div class="nce2-action-card">
         <span class="reading-pick-info">听懂这课了吗？听完后点下面的按钮打卡。</span>
@@ -344,12 +344,15 @@ function renderActionArea(el, l, role, focusTracker) {
     })
     return
   }
-  // 自由练习：直接给录音器
+  // 跟读：本周 shadow 任务行或自由练习，都给录音器（文案区分任务/自愿）
+  const isTask = !!l.planned
   host.innerHTML = `
     <div class="reading-toolbar" id="nce2-toolbar">
       <div class="reading-tool-row">
-        <span class="reading-tool-label">🎙 自由跟读</span>
-        <span class="reading-pick-info">这课不在今日计划里，可自愿跟读整课一遍（≤ ${Math.round(MAX_RECORD_SEC / 60)} 分钟），提交后老师批改</span>
+        <span class="reading-tool-label">🎙 ${isTask ? '本周跟读任务' : '自由跟读'}</span>
+        <span class="reading-pick-info">${isTask
+          ? `这课在本周计划里：整课跟读一遍（≤ ${Math.round(MAX_RECORD_SEC / 60)} 分钟），提交后老师批改`
+          : `这课不在今日计划里，可自愿跟读整课一遍（≤ ${Math.round(MAX_RECORD_SEC / 60)} 分钟），提交后老师批改`}</span>
       </div>
       <div class="reading-tool-row">
         <button class="reading-btn primary" id="nce2-record">开始录音</button>

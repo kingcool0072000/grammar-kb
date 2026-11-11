@@ -26,27 +26,34 @@ def register_nce2(app, ctx):
     nce2 = ctx.nce2
     plan = ctx.plan
 
-    # ---- 学生课文宇宙：安排并集 + 本周集合 ----
+    # ---- 学生课文宇宙：安排并集 + 本周集合 + 本周完成方式 ----
 
-    def _scope(user: str) -> tuple[set, set]:
+    def _scope(user: str) -> tuple[set, set, dict]:
         assigned: set = set()
         week: set = set()
+        modes: dict = {}  # 本周课次 → task_mode（listen=打卡 / shadow=跟读）
         try:
             cur = current_monday().isoformat()
             for w in plan.list_weeks(user=user) or []:
+                tasks = w.get("tasks") or {}
+                # 本周组的完成方式供学生端动作区分支（跟读录音 vs 精听打卡）
+                if w.get("week_start") == cur:
+                    for u in plan._nce2_units(tasks):
+                        for lid in u["lessons"]:
+                            modes[int(lid)] = u.get("task_mode") or "shadow"
                 # 与排程同口径：课次由计划表车道的 _plan_lessons 解出
                 # （tasks 里 NCE2 周计划 → 课次 id 列表，去重保序）
-                for lid in plan._plan_lessons(w.get("tasks") or {}):
+                for lid in plan._plan_lessons(tasks):
                     if lid:
                         assigned.add(int(lid))
                         if w.get("week_start") == cur:
                             week.add(int(lid))
         except Exception:  # noqa: BLE001  计划表异常时退化为「只看做过的」
             pass
-        return assigned, week
+        return assigned, week, modes
 
     def _student_can_access(user: str, lid: int) -> bool:
-        assigned, _ = _scope(user)
+        assigned, _, _ = _scope(user)
         return lid in assigned or lid in nce2.lessons_status(user)
 
     def _with_title(rows: list[dict]) -> list[dict]:
@@ -65,7 +72,9 @@ def register_nce2(app, ctx):
         ?with_sentences=1 时每课附 manifest 原样的逐句双语时间轴
         ``sentences``（[{t, en, zh}]，单课播放/跟读页用）；默认不带——
         列表页只要元信息，控制响应体积。学生范围规则不变（仍限宇宙内）。
-        listen_today=今天已存在 listen 提交（完成态，非「今天排了听」）。
+        listen_today=今天已存在 listen 提交（完成态，非「今天排了听」）；
+        nce2_mode=本周计划行对该课的完成方式（listen/shadow，不在本周为
+        null——学生端动作区按它分支，历史课回听一律按自由跟读）。
         """
         all_lessons = nce2_study.lessons()
         with_sents = request.query_params.get("with_sentences") == "1"
@@ -78,7 +87,7 @@ def register_nce2(app, ctx):
 
         if getattr(request.state, "role", "") == "teacher":
             return _ok([_row(les) for les in all_lessons])
-        assigned, week = _scope(request.state.user)
+        assigned, week, modes = _scope(request.state.user)
         status = nce2.lessons_status(request.state.user)
         items = []
         for les in all_lessons:
@@ -91,6 +100,7 @@ def register_nce2(app, ctx):
                 les,
                 week=lid in week,
                 planned=lid in assigned,
+                nce2_mode=modes.get(lid),
                 listen_today=bool(st and st["listen_today"]),
                 listen_done_ever=bool(st and st["listen_done_ever"]),
                 shadow=st["shadow"] if st else None,

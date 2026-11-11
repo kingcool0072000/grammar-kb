@@ -72,12 +72,15 @@ def _fake_audio() -> str:
     return base64.b64encode(b"\x1a\x45\xdf\xa3" + b"0" * 1024).decode()
 
 
-def _assign(c, t, lids):
+def _assign(c, t, lids, task_mode=None):
     """教师给 malin 排本周 NCE2 课（真接口 + 计划车道钉死的 nce2_units 键）。"""
     from grammar_kb.clock import current_monday
     ws = current_monday().isoformat()
+    unit = {"lessons": lids, "mode": "daily"}
+    if task_mode:
+        unit["task_mode"] = task_mode
     r = c.put(f"/plan/weeks/{ws}", headers=t, json={
-        "tasks": {"nce2_units": [{"lessons": lids, "mode": "daily"}]},
+        "tasks": {"nce2_units": [unit]},
         "notes": "", "user": "malin"})
     assert r.status_code == 200, r.text
 
@@ -101,11 +104,16 @@ def test_listen_idempotent_and_shadow_flow(nce2_env):
     c = _client(nce2_env)
     t, s = _login(c, "teacher"), _login(c, "malin")
     _assign(c, t, [1])
-    # 学生清单：只见课 1，初始未听
+    # 学生清单：只见课 1，初始未听；未显式配 task_mode 时 nce2_mode 缺省 shadow
     d = c.get("/nce2/lessons", headers=s).json()["data"]
     assert [x["id"] for x in d] == [1]
     assert d[0]["planned"] and d[0]["week"]
+    assert d[0]["nce2_mode"] == "shadow"
     assert not d[0]["listen_today"] and d[0]["shadow"] is None
+    # 显式 listen 组 → nce2_mode='listen'（学生端动作区按它出打卡按钮）
+    _assign(c, t, [1], task_mode="listen")
+    d = c.get("/nce2/lessons", headers=s).json()["data"]
+    assert d[0]["nce2_mode"] == "listen"
     # 听力打点 → done；再打点 → 同一行（幂等）
     r = c.post("/nce2/submissions", headers=s, json={"lesson_id": 1, "kind": "listen"})
     assert r.status_code == 200
