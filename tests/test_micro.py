@@ -71,6 +71,10 @@ def env(tmp_path, monkeypatch):
     (tmp_path / "data").mkdir()
     monkeypatch.setenv("GRAMMAR_KB_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("GRAMMAR_KB_DB", str(tmp_path / "data" / "grammar.db"))
+    # CI 会把 GRAMMAR_KB_FCE_DB 指到一个全程共用的库，优先级高于 DATA_DIR。
+    # patterns / boost 都走这条路径。不覆盖的话，前面用例写下的
+    # memory:t1:n1 会按 item_ref 排在本次 retell 前面，历史断言对不上。
+    monkeypatch.setenv("GRAMMAR_KB_FCE_DB", str(fce))
     return {"fce": str(fce), "grammar": str(gram), "exam": str(exam)}
 
 
@@ -573,4 +577,6 @@ def test_patterns_update_and_delete(env, client):
     assert not patterns.list_all(31)
     assert client.delete(f"/patterns-admin/{pid}", headers=ht).status_code == 404
     from grammar_kb.plan import boost as _b
-    assert _b.history("malin", 10)[0]["item_ref"] == f"retell:{pid}"
+    # 流水按日期倒序、item_ref 正序，不保证刚写入的 retell 排在第一条。
+    rows = _b.history("malin", 10)
+    assert any(r["item_ref"] == f"retell:{pid}" for r in rows)
