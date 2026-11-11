@@ -107,7 +107,15 @@ class CompletionMixin:
                 return {"done": True, "why": "session_match"}
             return {"done": False, "why": "not_read"}
         if task.get("type") == "vocab" and task.get("quota"):
-            met = acts.get("vocab_n", 0) >= int(task["quota"])
-            return {"done": met, "why": "quota_met" if met else "below_quota"}
+            # 和周目标同一个数：当天新掌握，不是当天会话里练过的词数。
+            lv = task.get("vocab_lv")
+            try:
+                level = None if lv is None or lv == "" else int(lv)
+            except (TypeError, ValueError):
+                level = None
+            gained = self._vocab_mastered_on(user, day, level)
+            met = gained >= int(task["quota"])
+            return {"done": met, "why": "quota_met" if met else "below_quota",
+                    "gained": gained}
         on = bool(auto.get(key, False))
         return {"done": on, "why": "signal" if on else "no_signal"}

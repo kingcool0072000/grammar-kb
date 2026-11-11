@@ -280,7 +280,8 @@ export const api = {
   },
   vocabPaperSave: (paper) =>
     reqJson('/vocab-papers/save', 'POST', paper),
-  vocabPaperGrading: () => req('/vocab-papers/grading'),
+  vocabPaperGrading: ({ user } = {}) =>
+    req('/vocab-papers/grading', { searchParams: user ? { user } : {} }),
   vocabPaperDelete: (paperId) =>
     reqJson(`/vocab-papers/${encodeURIComponent(paperId)}`, 'DELETE'),
   vocabPaperPreview: (paperId) =>

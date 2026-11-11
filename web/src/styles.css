@@ -1177,6 +1177,32 @@ main {
 .rc-loop-card.due b { color: #b3541e; }
 .rc-loop-card.over b { color: #b42318; }
 .rc-loop-card.cq b { color: #2e7d4f; }
+.rc-today {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  padding: 14px 16px;
+  margin: 0 0 10px;
+}
+.rc-today h3 { margin: 0 0 6px; font-size: 16px; }
+.rc-today p { margin: 0 0 8px; }
+.rc-today-layers { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.rc-today-layers span {
+  font-size: 12.5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--bg-soft, #f8fafc);
+  border: 1px solid var(--line);
+}
+.pp-vocab-board {
+  margin: 8px 0 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card, #fff);
+}
+.pp-vocab-board h3 { margin: 0 0 6px; font-size: 15px; }
+.pp-vocab-board p { margin: 0 0 4px; font-size: 13.5px; }
 .rc-loop-sub {
   margin: 0 0 14px;
   font-size: 12.5px;

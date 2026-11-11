@@ -10,7 +10,10 @@ from typing import Optional
 from ..clock import cn_dt, monday_of, today_cn, week_bounds
 from . import boost
 from .ctx import WeekCtx
-from .util import _short, _task_key, add_days, completion_percent, task_public
+from .util import (
+    _short, _task_key, add_days, completion_percent, task_public,
+    vocab_progress_detail,
+)
 
 
 def _cn_bound(value: str) -> str:
@@ -134,9 +137,11 @@ class ScheduleMixin:
             vg = t.get("vocab_goal")
             if vg and wd_left:
                 rem = self._vocab_week_remaining(t, lo, upto, user, ctx=ctx)
+                lv = t.get("vocab_lv")
+                gained_today = self._vocab_gained_today(
+                    t, ref, upto, user, ctx=ctx)
                 if rem > 0:
                     n = -(-rem // wd_left)
-                    lv = t.get("vocab_lv")
                     detail = (
                         f"本周这一级还要新掌握 {rem} 词 · 摊 {wd_left} 个工作日"
                         if lv is not None
@@ -144,8 +149,17 @@ class ScheduleMixin:
                     )
                     tasks.append({
                         "type": "vocab", "key": "vocabday", "quota": n,
+                        "vocab_lv": lv,
                         "text": f"背词 {n} 词",
                         "detail": detail,
+                    })
+                elif gained_today > 0:
+                    # 今天把本周剩余新掌握做完了：行还在，用来打勾，不再消失。
+                    tasks.append({
+                        "type": "vocab", "key": "vocabday", "quota": gained_today,
+                        "vocab_lv": lv,
+                        "text": f"背词 {gained_today} 词",
+                        "detail": "本周要新掌握的词，今天已经够了",
                     })
             for book_key, pct in (t.get("reading") or {}).items():
                 tasks.append(self._reading_task(book_key, pct, user, days_left,
@@ -217,7 +231,10 @@ class ScheduleMixin:
                 tasks.append({
                     "type": "wrong_words", "key": "wrong_words",
                     "text": f"错词再练 {n} 词",
-                    "detail": f"云端错题本共 {wrong_words} 词，周日清一档",
+                    "detail": (
+                        f"错词曲线里还在周期 {wrong_words} 词，"
+                        f"周日集中清一档（最多 {n} 个），不是新词"
+                    ),
                 })
             for pid in (t.get("vocab_papers") or []):
                 plv = ctx.paper_level(pid)
@@ -305,6 +322,19 @@ class ScheduleMixin:
         gained = (self._vocab_actuals(lo, upto, user, words) if ctx is None
                   else ctx.vocab_actuals(lo, upto, words))
         return max(0, (vg - base) - gained)
+
+    def _vocab_gained_today(self, t: dict, day: str, upto: str, user: str,
+                            ctx: Optional[WeekCtx] = None) -> int:
+        """当天新掌握词数，级别过滤与周进度一致。"""
+        lv = t.get("vocab_lv")
+        if ctx is None:
+            try:
+                level = None if lv is None or lv == "" else int(lv)
+            except (TypeError, ValueError):
+                level = None
+            return self._vocab_mastered_on(user, day, level)
+        words = None if lv is None else ctx.level_words(lv)
+        return ctx.vocab_actuals(day, upto, words)
 
     # ---- 计划分组契约（精读 article_units 优先、旧 articles 平铺回退；
     #      视频 video_units 唯一来源，旧 videos 键由一次性脚本转换）----
@@ -742,8 +772,9 @@ class ScheduleMixin:
             t2["why"] = info["why"]
             # 展示用的补充文案不是完成规则，留在清单出口。
             # 历史回填只认快照，不改写 detail。
-            if historical is None and t.get("type") == "vocab" and t.get("quota") and t2["done"]:
-                t2["detail"] = f"已背 {acts_out.get('vocab_n', 0)} 词 ✓"
+            if historical is None and t.get("type") == "vocab" and t.get("quota"):
+                t2["detail"] = vocab_progress_detail(
+                    t2["done"], info.get("gained") or 0, t2.get("detail"))
             if historical is None and t.get("type") == "speak" and t2["done"]:
                 names = []
                 for aid in acts_out.get("all_speak_articles", []):

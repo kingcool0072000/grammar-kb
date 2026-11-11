@@ -158,17 +158,29 @@ export function retellLoadState({ patternId, list, error } = {}) {
   return { pattern, error: '' }
 }
 
+/** 把一个绝对时刻的年月日时分按北京时间读出，不跟机器本地时区走。 */
+function beijingWall(d) {
+  const cn = new Date(d.getTime() + 8 * 60 * 60 * 1000)
+  const p = (n) => String(n).padStart(2, '0')
+  return {
+    year: cn.getUTCFullYear(),
+    md: `${p(cn.getUTCMonth() + 1)}-${p(cn.getUTCDate())}`,
+    hm: `${p(cn.getUTCHours())}:${p(cn.getUTCMinutes())}`,
+  }
+}
+
 /** ISO 时间（UTC 带 Z / 本地串）→ 北京时间「MM-DD HH:mm」。
- *  created_at 由后端存 UTC，直接 slice 会早 8 小时——必须经 Date 转换
- *  （与批改中心 grading/shared.js fmtCnTime 同规则）。
+ *  created_at 由后端存 UTC，直接 slice 会早 8 小时。
+ *  解析之后必须按东八区读钟面：用本地 getHours() 时，
+ *  人在中国是对的，CI 在 UTC 上会少 8 小时。
  *  无 Z 后缀的裸串（历史数据）按已是中国时间直解。 */
 export function retellTimeCn(iso) {
   if (!iso) return '—'
   const raw = String(iso)
   const d = new Date(/[Z+]/.test(raw.slice(-6)) ? raw : raw + '+08:00')
   if (isNaN(d.getTime())) return raw.slice(0, 16).replace('T', ' ')
-  const p = (n) => String(n).padStart(2, '0')
-  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+  const wall = beijingWall(d)
+  return `${wall.md} ${wall.hm}`
 }
 
 /** 句型复述「我的提交记录」区：从 videoRetells() 结果筛出该句型的提交，

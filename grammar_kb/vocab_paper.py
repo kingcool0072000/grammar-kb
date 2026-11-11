@@ -1054,6 +1054,52 @@ class VocabPaperStore:
                         "created_at": r["created_at"]})
         return out
 
+    def list_for_grading(self, level: int | None = None) -> list[dict]:
+        """打分列表：全部未登记的存档卷，再加最近 40 份已登记卷。
+
+        未打分不按「最近 N 份」截断，避免早先存档的卷被窗口漏掉。
+        每条带 scope / user（混合卷绑定的学生）。
+        """
+        cols = "id, paper_id, level, words, created_at, scope, user"
+        where = ""
+        args: tuple = ()
+        if level is not None:
+            where = " WHERE level = ?"
+            args = (int(level),)
+        with dbreg_connect(self.db_path) as conn:
+            tabs = {r[0] for r in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'")}
+            graded_ids: set[str] = set()
+            if "vocab_exams" in tabs:
+                graded_ids = {
+                    str(r[0]) for r in conn.execute(
+                        "SELECT DISTINCT paper_id FROM vocab_exams"
+                        " WHERE paper_id IS NOT NULL AND paper_id != ''"
+                    ) if r[0]
+                }
+            rows = conn.execute(
+                f"SELECT {cols} FROM vocab_paper_history{where} ORDER BY id",
+                args,
+            ).fetchall()
+        parsed = []
+        for r in rows:
+            try:
+                ws = json.loads(r["words"] or "[]")
+            except (ValueError, TypeError):
+                ws = []
+            if not isinstance(ws, list):
+                ws = []
+            parsed.append({
+                "paper_id": r["paper_id"], "level": r["level"],
+                "words": ws, "count": len(ws),
+                "created_at": r["created_at"],
+                "scope": r["scope"] or "",
+                "user": r["user"] or "",
+            })
+        ungraded = [p for p in parsed if p["paper_id"] not in graded_ids]
+        graded = [p for p in reversed(parsed) if p["paper_id"] in graded_ids][:40]
+        return ungraded + graded
+
     def _hist_words(self, scope: str, level: int | None) -> set[str]:
         """历史去重词集：learned 只看先前混合卷（level<0）；level 只看本级。"""
         if scope == "learned":

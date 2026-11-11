@@ -9,6 +9,7 @@ from ..clock import monday_of, today_cn
 from .ctx import WeekCtx
 from .util import (
     _short, _task_key, add_days, completion_percent, task_public,
+    vocab_progress_detail,
 )
 
 _COMPLETION_NOTE = (
@@ -417,7 +418,6 @@ class ViewsMixin:
                 continue
             comp = self.day_completion(
                 user, d, derived, historical=historical is not None, ctx=ctx)
-            acts = comp["acts"]
             out = []
             for row in derived:
                 key = _task_key(row)
@@ -427,8 +427,9 @@ class ViewsMixin:
                 t2["done"] = bool(info["done"])
                 t2["why"] = info["why"]
                 if (historical is None and t2.get("type") == "vocab"
-                        and t2.get("quota") and t2["done"]):
-                    t2["detail"] = f"已背 {acts.get('vocab_n', 0)} 词 ✓"
+                        and t2.get("quota")):
+                    t2["detail"] = vocab_progress_detail(
+                        t2["done"], info.get("gained") or 0, t2.get("detail"))
                 out.append(t2)
             done_n = sum(1 for x in out if x["done"])
             days.append({

@@ -284,7 +284,7 @@ export function completionLine(type, { topicCounts = true, mode = '', count = 0 
   }
   if (type === 'focus_kp') return '攻坚标注：不参与完成判定，供周验收对照，微练习优先出这些讲的题。'
   if (type === 'vocab') {
-    return '怎么算完成：本周在这一级新掌握的词达到这个个数。周初已经会的不算进这周。'
+    return '怎么算完成：本周在这一级新掌握的词达到这个个数。周初已经会的不算进这周。工作日「背词 n 词」也按当天新掌握打勾，不按练过多少词。这里选的级别只决定新词记到哪一级，不管学生能不能看见那一级。'
   }
   if (type === 'fce') return '怎么算完成：本周交了这一道 FCE。'
   if (type === 'article') {

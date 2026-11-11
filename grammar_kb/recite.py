@@ -207,6 +207,11 @@ class ReciteStore:
             conn.execute(
                 "ALTER TABLE recite_word_progress ADD COLUMN first_seen TEXT"
             )
+        # 复习会话里答过「当时已到期/逾期」的词，记下北京日。
+        # 周日「错词再练」只认这一天或当天攻克，不认普通背词会话。
+        rr = {r[1] for r in conn.execute("PRAGMA table_info(recite_review)")}
+        if rr and "due_touch" not in rr:
+            conn.execute("ALTER TABLE recite_review ADD COLUMN due_touch TEXT")
 
     def _recent_submit(self, user: str, now_iso: str) -> bool:
         """防重窗口内该用户是否刚提交过会话。缺表容错返回 False。"""
@@ -430,9 +435,16 @@ class ReciteStore:
         stats = {"entered": 0, "advanced": 0, "conquered": 0, "due_now": 0}
         for w, correct in clean.items():
             row = conn.execute(
-                "SELECT wrong_count, stage, conquered_at FROM recite_review"
-                " WHERE user = ? AND word = ?", (user, w),
+                "SELECT wrong_count, stage, conquered_at, next_review"
+                " FROM recite_review WHERE user = ? AND word = ?",
+                (user, w),
             ).fetchone()
+            # 复习会话里碰到的到期/逾期词。答对推进或答错回炉都算复习过；
+            # 普通背词答错只是进曲线，不算清曲线。
+            was_due = bool(
+                is_review and row and not row["conquered_at"]
+                and row["next_review"] and row["next_review"] <= today
+            )
             if not correct:
                 # 答错：进周期（或攻克后回炉，stage 清零重计）
                 wc = (row["wrong_count"] + 1) if row else 1
@@ -466,6 +478,12 @@ class ReciteStore:
                         (stage, _add_days(today, EB_STAGES[stage]), today, user, w),
                     )
                     stats["advanced"] += 1
+            if was_due:
+                conn.execute(
+                    "UPDATE recite_review SET due_touch = ?"
+                    " WHERE user = ? AND word = ?",
+                    (today, user, w),
+                )
         stats["due_now"] = conn.execute(
             "SELECT COUNT(*) FROM recite_review WHERE user=? AND conquered_at IS NULL"
             " AND next_review IS NOT NULL AND next_review <= ?",

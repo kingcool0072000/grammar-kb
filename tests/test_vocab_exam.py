@@ -50,6 +50,28 @@ def _login(c, user, password):
     return {"Authorization": f"Bearer {r.json()['data']['token']}"}
 
 
+def _archive_paper(env, paper_id, level=0, user=""):
+    """往 fce.db 放一份已存档卷，供登记成绩引用。"""
+    con = sqlite3.connect(env / "fce.db")
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS vocab_paper_history ("
+        " id INTEGER PRIMARY KEY AUTOINCREMENT, level INTEGER NOT NULL,"
+        " paper_id TEXT NOT NULL UNIQUE, words TEXT NOT NULL, created_at TEXT)")
+    cols = {r[1] for r in con.execute("PRAGMA table_info(vocab_paper_history)")}
+    if "user" not in cols:
+        con.execute("ALTER TABLE vocab_paper_history ADD COLUMN user TEXT DEFAULT ''")
+    if "scope" not in cols:
+        con.execute("ALTER TABLE vocab_paper_history ADD COLUMN scope TEXT")
+    con.execute(
+        "INSERT OR REPLACE INTO vocab_paper_history"
+        " (level, paper_id, words, created_at, user, scope)"
+        " VALUES (?,?,?,?,?,?)",
+        (int(level), paper_id, '["w"]', "2026-10-01T00:00:00+00:00", user,
+         "learned" if int(level) < 0 else "level"))
+    con.commit()
+    con.close()
+
+
 def _require_level_words(monkeypatch):
     """考卷/词级统计依赖仓库 data/grammar.db 的 vocab_word。
 
@@ -85,16 +107,20 @@ def test_exam_unlock_flow(vex_env, monkeypatch):
     assert d["unlocked_level"] == 0 and d["passed_levels"] == []
     lv = c.get("/vocab-levels?max_level=5", headers=hs).json()["data"]
     assert lv["unlocked"] == 0
-    # 登记 82 分（≥80 通过）
+    # 登记 82 分（≥80 通过）。必须指向已存档试卷。
+    _archive_paper(vex_env, "L0-unlock", 0)
     r = c.post("/vocab-exams", headers=ht, json={
-        "user": "malin", "level": 0, "score": 82, "exam_date": "2026-10-11"})
+        "user": "malin", "level": 0, "score": 82, "exam_date": "2026-10-11",
+        "paper_id": "L0-unlock"})
     assert r.status_code == 200 and r.json()["data"]["passed"] is True
     assert r.json()["data"]["unlocked_level"] == 1
     lv = c.get("/vocab-levels?max_level=5", headers=hs).json()["data"]
     assert lv["unlocked"] == 1 and "1" in lv["counts"]
     # 不及格不解锁
+    _archive_paper(vex_env, "L1-unlock", 1)
     c.post("/vocab-exams", headers=ht, json={
-        "user": "malin", "level": 1, "score": 79, "exam_date": "2026-10-12"})
+        "user": "malin", "level": 1, "score": 79, "exam_date": "2026-10-12",
+        "paper_id": "L1-unlock"})
     d = c.get("/vocab-exams", headers=hs).json()["data"]
     assert d["unlocked_level"] == 1 and 1 not in d["passed_levels"]
     # 教师不受限
@@ -335,8 +361,10 @@ def test_wrong_words_flow_into_review_queue(vex_env):
     c = _client(vex_env)
     ht = _login(c, "teacher", "123456")
     tomorrow = (today_cn() + timedelta(days=1)).isoformat()
+    _archive_paper(vex_env, "L0-flow", 0)
     r = c.post("/vocab-exams", headers=ht, json={
         "user": "malin", "level": 0, "score": 66, "exam_date": "2026-10-11",
+        "paper_id": "L0-flow",
         "wrong_words": ["W1", "w2 ", "w1"],
     })
     assert r.status_code == 200, r.text
@@ -639,6 +667,7 @@ def test_exam_record_crud(vex_env):
     hs = _login(c, "malin", "123456")
     hm = _login(c, "mxy", "mxy123")
     ht = _login(c, "teacher", "123456")
+    _archive_paper(vex_env, "L0-paper", 0)
     created = c.post("/vocab-exams", headers=ht, json={
         "user": "malin", "level": 0, "score": 90, "exam_date": "2026-10-11",
         "note": "第一次", "paper_id": "L0-paper",
@@ -728,12 +757,13 @@ def test_word_level_config_independent_of_score(vex_env):
     assert c.put("/vocab-exams/unlock", headers=ht, json={
         "user": "malin", "level": True}).status_code == 422
     # 不及格、以及之后的高分，都不改写已经设定的级别
+    _archive_paper(vex_env, "L0-lock", 0)
     assert c.post("/vocab-exams", headers=ht, json={
         "user": "malin", "level": 0, "score": 50,
-        "exam_date": "2026-10-11"}).status_code == 200
+        "exam_date": "2026-10-11", "paper_id": "L0-lock"}).status_code == 200
     assert c.post("/vocab-exams", headers=ht, json={
         "user": "malin", "level": 0, "score": 96,
-        "exam_date": "2026-10-12"}).json()["data"]["unlocked_level"] == 3
+        "exam_date": "2026-10-12", "paper_id": "L0-lock"}).json()["data"]["unlocked_level"] == 3
     # 教师可以把级别改到比考试推算更低（96 分本来会解锁 L1）
     low = c.put("/vocab-exams/unlock", headers=ht, json={"user": "malin", "level": 0})
     assert low.json()["data"]["unlocked"] == 0
@@ -752,9 +782,65 @@ def test_word_level_config_independent_of_score(vex_env):
     # 从未设定过的学生：考试 ≥80 仍解锁下一级
     assert c.post("/vocab-exams", headers=ht, json={
         "user": "mxy", "level": 0, "score": 82,
-        "exam_date": "2026-10-13"}).json()["data"]["unlocked_level"] == 1
+        "exam_date": "2026-10-13", "paper_id": "L0-lock"}).json()["data"]["unlocked_level"] == 1
     mxy = c.get("/vocab-exams", headers=hm).json()["data"]
     assert mxy["unlocked_level"] == 1 and mxy["level_configured"] is False
     # 单词级别设定是教师专属：学生 PUT 直接 403
     assert c.put("/vocab-exams/unlock", headers=hs,
                  json={"user": "malin", "level": 1}).status_code == 403
+
+
+def test_score_requires_archived_paper(vex_env):
+    """不绑卷、或编号不在存档里，都不能登记。"""
+    c = _client(vex_env)
+    ht = _login(c, "teacher", "123456")
+    missing = c.post("/vocab-exams", headers=ht, json={
+        "user": "malin", "level": 0, "score": 80, "exam_date": "2026-10-11"})
+    assert missing.status_code == 422
+    assert "存档" in missing.json()["message"]
+    unknown = c.post("/vocab-exams", headers=ht, json={
+        "user": "malin", "level": 0, "score": 80, "exam_date": "2026-10-11",
+        "paper_id": "L0-not-saved"})
+    assert unknown.status_code == 422
+    _archive_paper(vex_env, "L0-saved", 0)
+    ok = c.post("/vocab-exams", headers=ht, json={
+        "user": "malin", "level": 0, "score": 80, "exam_date": "2026-10-11",
+        "paper_id": "L0-saved"})
+    assert ok.status_code == 200, ok.text
+
+
+def test_grading_keeps_old_ungraded_and_mix_user(vex_env):
+    """待打分不因最近 50 份漏掉早的未打分卷；混合卷带出绑定的学生。"""
+    c = _client(vex_env)
+    ht = _login(c, "teacher", "123456")
+    con = sqlite3.connect(vex_env / "fce.db")
+    for i in range(55):
+        con.execute(
+            "INSERT INTO vocab_paper_history"
+            " (level, paper_id, words, created_at, user, scope)"
+            " VALUES (0, ?, '[\"a\"]', '2026-01-01', '', 'level')",
+            (f"L0-old-{i:03d}",))
+    con.execute(
+        "INSERT INTO vocab_paper_history"
+        " (level, paper_id, words, created_at, user, scope)"
+        " VALUES (-1, 'MIX-bound', '[\"b\"]', '2026-01-02', 'mxy', 'learned')")
+    for i in range(5, 55):
+        con.execute(
+            "INSERT INTO vocab_exams (user, level, score, exam_date, paper_id)"
+            " VALUES ('malin', 0, 90, '2026-10-01', ?)",
+            (f"L0-old-{i:03d}",))
+    con.commit()
+    con.close()
+    papers = c.get("/vocab-papers/grading", headers=ht).json()["data"]["papers"]
+    ids = [p["paper_id"] for p in papers]
+    assert "L0-old-000" in ids
+    mix = next(p for p in papers if p["paper_id"] == "MIX-bound")
+    assert mix["user"] == "mxy"
+    malin = c.get("/vocab-papers/grading", headers=ht,
+                  params={"user": "malin"}).json()["data"]["papers"]
+    malin_ids = [p["paper_id"] for p in malin]
+    assert "L0-old-000" in malin_ids
+    assert "MIX-bound" not in malin_ids
+    mxy = c.get("/vocab-papers/grading", headers=ht,
+                params={"user": "mxy"}).json()["data"]["papers"]
+    assert any(p["paper_id"] == "MIX-bound" and p["user"] == "mxy" for p in mxy)

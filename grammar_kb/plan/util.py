@@ -32,6 +32,18 @@ def completion_percent(done: int, total: int) -> Optional[int]:
     return round(int(done or 0) / total_n * 100)
 
 
+def vocab_progress_detail(done: bool, gained: int, detail: Optional[str]) -> str:
+    """工作日背词行的说明：打卡和文案都跟「今日新掌握」。"""
+    n = int(gained or 0)
+    if done:
+        return f"今日新掌握 {n} 词 ✓"
+    extra = f"今日已新掌握 {n}"
+    text = detail or ""
+    if extra in text:
+        return text
+    return f"{text} · {extra}" if text else extra
+
+
 def task_public(t: dict, *, future: bool = False) -> dict:
     """周历 / 周清单对外的一条任务（带完成原因，方便界面说明为什么亮或不亮）。
 

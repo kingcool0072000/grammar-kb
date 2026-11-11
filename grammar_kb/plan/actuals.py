@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Optional
 
 from .. import dbreg
+from datetime import date
+
 from ..clock import cn_date, cn_dt, today_cn, week_bounds
 from ..paths import data_path
 from .util import _chapter_at_words, _paper_short, add_days
@@ -308,6 +310,27 @@ class ActualsMixin:
                 self._mastered_day_rows(user), None, day, words)
         except sqlite3.Error:
             return 0
+
+    def _vocab_mastered_on(self, user: str, day: str,
+                           level: Optional[int] = None) -> int:
+        """某一北京日新掌握的词数。
+
+        与周进度同一口径：mastered_at 落在这一天。标了级别时只数该级词库
+        里的词；没标级别时数全部新掌握（旧周）。
+        """
+        day_iso = str(day)[:10]
+        try:
+            date.fromisoformat(day_iso)
+        except ValueError:
+            return 0
+        nxt = add_days(day_iso, 1)
+        words = None
+        if level is not None:
+            try:
+                words = self._vocab_level_words(int(level))
+            except (TypeError, ValueError):
+                words = None
+        return self._vocab_actuals(day_iso, nxt, user, words)
 
 
     def _fce_actuals(self, lo: str, hi: str, user: str) -> list[str]:

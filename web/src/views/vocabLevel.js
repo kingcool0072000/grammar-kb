@@ -105,7 +105,7 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
 
       <!-- 2.3 单词级别：教师直接设定，不看考试是否到 80 分 -->
       <section class="vl-sec card">
-        <header class="vl-head"><h3>🔤 单词级别 <i>直接设定该生能背到哪一级，不要求考试 80 分</i></h3></header>
+        <header class="vl-head"><h3>🔤 单词级别 <i>决定学生能看见哪几级。周计划里的级别只决定本周新词记到哪，不改这里</i></h3></header>
         <div class="vl-unlock-rows">
           ${studs.map((u) => {
             const st = levelState[u.user] || {}
@@ -113,8 +113,10 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
             const configured = !!st.level_configured
             const passed = st.passed_levels || []
             const how = configured
-              ? '已单独设定，与考试分数无关'
-              : (passed.length ? '尚未单独设定，暂按考试及格推算' : '尚未单独设定，点选即可指定')
+              ? '手动锁定：以这里的设定为准，之后考试分数不再改级别'
+              : (passed.length
+                ? '考试自动解锁：还没手动设过，某一级满 80 分才开下一级'
+                : '考试自动解锁：还没手动设过，L0 默认开放，某一级满 80 分才开下一级')
             return `
             <div class="vl-unlock-row" data-stu="${escapeHtml(u.user)}">
               <b>🎒 ${escapeHtml(u.user)}</b>

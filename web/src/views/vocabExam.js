@@ -11,7 +11,7 @@ export async function mountVocabExam(el) {
   el.innerHTML = `
     <div class="view-head">
       <h1>词汇考试</h1>
-      <p>登记、修改、删除线下考试记录（仅教师）。及格线 <b id="ve-pass">80</b> 分。学生的单词级别在背单词级别页单独设置；还没单独设置过的学生，及格仍会解锁下一级。</p>
+      <p>线下考完再登记。新成绩必须选一份已经存档的试卷，按试卷编号记分和错词。还没存档的卷不能记。及格线 <b id="ve-pass">80</b> 分。单词级别若已手动锁定，分数不再改级别；没锁定过的，满 80 分才开下一级。</p>
     </div>
     <div id="ve-body"><p class="muted">加载中…</p></div>
   `
@@ -29,6 +29,11 @@ export async function mountVocabExam(el) {
   let filter = ''
   let editing = null
   let vex = { exams: [] }
+  let papers = []
+  try {
+    const hist = await api.vocabPaperHistory(-1, { limit: 200 })
+    papers = hist.papers || []
+  } catch { papers = [] }
   // 及格线：优先读 GET /vocab-exams 响应里的 pass_score，取不到回退 80
   let passScore = 80
 
@@ -48,6 +53,17 @@ export async function mountVocabExam(el) {
       </div>
       <p class="plan-vex-state" id="ve-state"></p>
       <div class="plan-vex-row">
+        <label>试卷
+          <select id="pv-paper">
+            <option value="">选择已存档的卷</option>
+            ${papers.map((p) => {
+              const mix = Number(p.level) < 0
+              const head = mix ? '混合卷' : `L${p.level}`
+              const who = p.user ? ` · ${p.user}` : ''
+              return `<option value="${escapeHtml(p.paper_id)}" data-lv="${p.level}">${head} ${escapeHtml(p.paper_id)}${escapeHtml(who)}</option>`
+            }).join('')}
+          </select>
+        </label>
         <label>学生
           <select id="pv-user">${studentOpts || '<option value="">（无学生）</option>'}</select>
         </label>
@@ -72,6 +88,8 @@ export async function mountVocabExam(el) {
     body.querySelector('#pv-score').value = ''
     body.querySelector('#pv-note').value = ''
     body.querySelector('#pv-date').value = today
+    const paperSel = body.querySelector('#pv-paper')
+    if (paperSel) paperSel.value = ''
   }
 
   function paintState() {
@@ -136,6 +154,12 @@ export async function mountVocabExam(el) {
     const score = Number(body.querySelector('#pv-score').value)
     const exam_date = body.querySelector('#pv-date').value
     const note = body.querySelector('#pv-note').value.trim()
+    let paper_id = body.querySelector('#pv-paper').value
+    if (editing) paper_id = paper_id || editing.paper_id || ''
+    if (!editing && !paper_id) {
+      alert('先选择已存档的试卷。还没存档的卷不能登记。')
+      return null
+    }
     if (!user) {
       alert('请先在学生管理里添加学生')
       return null
@@ -148,8 +172,14 @@ export async function mountVocabExam(el) {
       alert('级别须为 L0–L7')
       return null
     }
-    return { user, level, score, exam_date, note }
+    return { user, level, score, exam_date, note, paper_id }
   }
+
+  body.querySelector('#pv-paper').addEventListener('change', (e) => {
+    const opt = e.target.selectedOptions && e.target.selectedOptions[0]
+    const lv = Number(opt && opt.dataset.lv)
+    if (Number.isFinite(lv) && lv >= 0) body.querySelector('#pv-level').value = String(lv)
+  })
 
   body.querySelector('#ve-filter').addEventListener('change', async (e) => {
     filter = e.target.value
@@ -198,6 +228,14 @@ export async function mountVocabExam(el) {
         userSel.append(opt)
       }
       userSel.value = exam.user
+      const paperSel = body.querySelector('#pv-paper')
+      if (exam.paper_id && ![...paperSel.options].some((o) => o.value === exam.paper_id)) {
+        const opt = document.createElement('option')
+        opt.value = exam.paper_id
+        opt.textContent = exam.paper_id
+        paperSel.append(opt)
+      }
+      paperSel.value = exam.paper_id || ''
       body.querySelector('#pv-level').value = String(exam.level)
       body.querySelector('#pv-date').value = exam.exam_date || today
       body.querySelector('#pv-score').value = exam.score

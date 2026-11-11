@@ -23,6 +23,19 @@ def _clean_wrong_words(raw) -> list[str]:
     return out
 
 
+def _require_archived_paper(vocab_paper, paper_id: str, *, required: bool) -> str:
+    """登记必须指向一份已经存档的试卷。空编号在新建时拒绝，修改旧记录时保留。"""
+    pid = str(paper_id or "").strip()[:64]
+    if not pid:
+        if required:
+            raise HTTPException(
+                status_code=422, detail="须先存档试卷，再按试卷编号登记")
+        return ""
+    if vocab_paper.get_paper(pid) is None:
+        raise HTTPException(status_code=422, detail="试卷未存档，不能登记分数")
+    return pid
+
+
 def _wrong_words_from_answers(answers) -> list[str]:
     """错词明细行 → 词表。只计答错行，保序去重，与入库口径一致（小写、截 60）。"""
     out: list[str] = []
@@ -212,7 +225,7 @@ def register_vocab(app, ctx):
 
         该生若已由教师单独设定单词级别，成绩只作记录，不改写级别。
         尚未单独设定时，≥及格分仍会解锁下一级。
-        paper_id 可选：从批改中心考试打分卡登记时带上，关联具体试卷。
+        paper_id 必填，且必须是已经存档的试卷。未存档不能登记。
         wrong_words 可选：勾选的错词词表——落明细（vocab_exam_answers）
         并回流进该生的背词艾宾浩斯复习队列。
         """
@@ -233,6 +246,7 @@ def register_vocab(app, ctx):
         if raw_wrong is not None and not isinstance(raw_wrong, list):
             raise HTTPException(status_code=422, detail="wrong_words 须为字符串数组")
         wrong_words = _clean_wrong_words(raw_wrong)
+        paper_id = _require_archived_paper(vocab_paper, paper_id, required=True)
         try:
             rec = vocab_exam.record(user, level, score, exam_date, note, paper_id,
                                     wrong_words=wrong_words if raw_wrong is not None else None)
@@ -295,6 +309,7 @@ def register_vocab(app, ctx):
         if raw_wrong is not None and not isinstance(raw_wrong, list):
             raise HTTPException(status_code=422, detail="wrong_words 须为字符串数组")
         wrong_words = None if raw_wrong is None else _clean_wrong_words(raw_wrong)
+        paper_id = _require_archived_paper(vocab_paper, paper_id, required=False)
         # 先读旧行再重写。enter_review 每次调用都 +1 并清 stage，
         # 所以只能把「这次才变成错」的词送进去。
         prev_wrong = (
@@ -333,14 +348,16 @@ def register_vocab(app, ctx):
         return _ok(out)
 
     @app.get("/vocab-papers/grading")
-    def vocab_papers_grading(request: "fastapi.Request", level: int = -1):
-        """批改中心·考试打分：已存档试卷 + 每卷已登记成绩（教师专属）。
+    def vocab_papers_grading(request: "fastapi.Request", level: int = -1,
+                             user: str = ""):
+        """批改中心·考试打分：全部未打分存档卷 + 最近已登记卷（教师专属）。
 
-        已登记的成绩顺带 wrong_words（按 exam 批量一次查，防 N+1），
-        供打分卡勾选错词时回显上次登记的明细。
+        ``user`` 有值时：混合卷只留绑定该生的；已登记卷只留该生的成绩。
+        已登记的成绩顺带 wrong_words（按 exam 批量一次查，防 N+1）。
         """
         _require_teacher(request)
-        papers = vocab_paper.list_history(None if level < 0 else level, limit=50)
+        who = str(user or "").strip()[:60]
+        papers = vocab_paper.list_for_grading(None if level < 0 else level)
         by_paper = vocab_exam.exams_for_papers(
             [p.get("paper_id") for p in papers if p.get("paper_id")])
         exam_ids = [e["id"] for rows in by_paper.values() for e in rows]
@@ -349,8 +366,17 @@ def register_vocab(app, ctx):
         for p in papers:
             exams = [{**e, "wrong_words": wrong_map.get(e["id"], [])}
                      for e in by_paper.get(p.get("paper_id") or "", [])]
-            out.append({**p, "exams": exams})
-        return _ok({"papers": out, "pass_score": PASS_SCORE})
+            bound = str(p.get("user") or "").strip()
+            if who:
+                if bound and bound != who:
+                    continue
+                mine = [e for e in exams if e.get("user") == who]
+                if exams and not mine:
+                    continue
+                exams = mine
+            out.append({**p, "user": bound, "scope": p.get("scope") or "",
+                        "exams": exams})
+        return _ok({"papers": out, "pass_score": PASS_SCORE, "user": who})
 
     @app.delete("/vocab-exams/{exam_id}")
     def vocab_exam_del(exam_id: int, request: "fastapi.Request"):

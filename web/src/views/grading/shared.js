@@ -72,18 +72,29 @@ export function focusRow(s) {
     </div>`
 }
 
+/** 把一个绝对时刻的年月日时分按北京时间读出，不跟机器本地时区走。 */
+function beijingWall(d) {
+  const cn = new Date(d.getTime() + 8 * 60 * 60 * 1000)
+  const p = (n) => String(n).padStart(2, '0')
+  return {
+    year: cn.getUTCFullYear(),
+    md: `${p(cn.getUTCMonth() + 1)}-${p(cn.getUTCDate())}`,
+    hm: `${p(cn.getUTCHours())}:${p(cn.getUTCMinutes())}`,
+  }
+}
+
 /** ISO 时间（UTC 带 Z / 本地串）→ 北京时间「MM-DD HH:mm」。
- *  采集端 isoSec() 生成 UTC 字符串，直接 slice 会早 8 小时——必须经 Date 转换。
+ *  采集端 isoSec() 生成 UTC 字符串，直接 slice 会早 8 小时。
+ *  钟面固定东八区，与句型复述 retellTimeCn 同一规则，不看运行环境时区。
  *  无 Z 后缀的裸串（历史数据/本地时钟）按已是中国时间直解。 */
 export function fmtCnTime(iso, withDate = true) {
   if (!iso) return '—'
   const raw = String(iso)
   const d = new Date(/[Z+]/.test(raw.slice(-6)) ? raw : raw + '+08:00')
   if (isNaN(d.getTime())) return raw.slice(0, 16).replace('T', ' ')
-  const p = (n) => String(n).padStart(2, '0')
-  const hm = `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
-  if (!withDate) return hm.slice(6)
+  const wall = beijingWall(d)
+  if (!withDate) return wall.hm
   // 非当年补年份：跨年日志混排时「09-03」排「10-06」上面会像排序坏了
-  const yr = d.getFullYear() !== new Date().getFullYear() ? `${d.getFullYear()}-` : ''
-  return yr + hm
+  const yr = wall.year !== beijingWall(new Date()).year ? `${wall.year}-` : ''
+  return yr + `${wall.md} ${wall.hm}`
 }
