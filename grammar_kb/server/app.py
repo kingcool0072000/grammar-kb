@@ -22,6 +22,7 @@ from .routes_analytics import register_analytics
 from .routes_atlas import register_atlas
 from .routes_library import register_library
 from .routes_micro import register_micro
+from .routes_nce2 import register_nce2
 from .routes_plan import register_plan
 from .routes_practice import register_practice
 from .routes_query import register_query
@@ -71,6 +72,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     from ..focus import FocusStore
     from ..topics import TopicStore
     from ..video_study import VideoStore
+    from ..nce2_study import Nce2Store
     from ..plan import PlanStore
     from ..vocab_exam import VocabExamStore
     from ..vocab_paper import VocabPaperStore
@@ -91,6 +93,9 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     topics = TopicStore(fce_db_path)
     # 视频学习（看视频 + 复述录音批改）：fce.db 同库
     video_study = VideoStore(fce_db_path)
+    # NCE2 听力跟读（listen 打点 + shadow 跟读录音批改）：fce.db 同库，
+    # 课文清单/mp3 为静态文件（路径解析在 nce2_study 顶部）
+    nce2_study = Nce2Store(fce_db_path)
     # 计划表（教师周计划）：fce.db 同库存 tasks/notes，完成度实时聚合多库
     plan = PlanStore(fce_db_path, exam_db_path=exam_db_path,
                    grammar_db_path=db_path)
@@ -230,6 +235,13 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         ("POST", "/video-study/retells"),
         ("GET", "/video-study/retells"),
         ("GET", "/video-study/retells/"),
+        # NCE2 听力跟读（GET /nce2/submissions 端点内分流：教师=批改队列、
+        # 学生=自己；/nce2/submissions/ 含 /{id}/audio，端点内校验本人或教师）
+        ("GET", "/nce2/lessons"),
+        ("GET", "/nce2/lessons/"),
+        ("POST", "/nce2/submissions"),
+        ("GET", "/nce2/submissions"),
+        ("GET", "/nce2/submissions/"),
         # 句型清单（v3 提升档「句型跟读复述」素材，只读；导入走教师专属
         # /patterns-admin/import，不在此列）
         ("GET", "/patterns"),
@@ -347,6 +359,7 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
         fce_submissions=fce_submissions, reading=reading,
         recite=recite, focus=focus, topics=topics,
         videos=video_study,
+        nce2=nce2_study,
         plan=plan, homework_admin=homework_admin, vocab_exam=vocab_exam,
         vocab_paper=vocab_paper, micro=micro,
         library=library, audio_dir=audio_dir,
@@ -359,6 +372,8 @@ def create_app(db_path: Optional[str] = None, exam_db_path: Optional[str] = None
     register_study(app, ctx)
     register_plan(app, ctx)
     register_video(app, ctx)
+    # NCE2 听力跟读（课文清单/打点/跟读批改；置于 video 之后，无路径重叠）
+    register_nce2(app, ctx)
     register_library(app, ctx)
     # 学情月报（教师端聚合，dbreg 四库只读 + 300s TTL 缓存）
     register_analytics(app, ctx)

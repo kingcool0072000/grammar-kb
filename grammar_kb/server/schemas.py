@@ -8,6 +8,8 @@ from __future__ import annotations
 import re
 from typing import Optional
 
+from ..audioutil import MAX_AUDIO_B64
+
 try:
     from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -199,6 +201,39 @@ try:
         score: int = Field(ge=0, le=10)
         comment: str = Field(default="", max_length=2000)
 
+    class Nce2SubmitIn(BaseModel):
+        """学生提交 NCE2 听力打点/跟读录音（模块级定义，同上）。
+
+        kind=listen：纯打点，不带音频，同日同课幂等；kind=shadow：必带
+        audio_b64（base64，webm 自动转 m4a，同视频复述链路）。
+        """
+
+        lesson_id: int = Field(ge=1)
+        kind: str = Field(default="listen", max_length=16)
+        audio_b64: Optional[str] = Field(
+            default=None, max_length=MAX_AUDIO_B64)  # 12MB，同 reading/视频复述
+        mime: Optional[str] = Field(default=None, max_length=40)
+        duration_sec: float = Field(default=0.0, ge=0, le=600)
+
+        @field_validator("kind")
+        @classmethod
+        def _kind_ok(cls, v):
+            if v not in ("listen", "shadow"):
+                raise ValueError("kind 须为 listen/shadow")
+            return v
+
+        @model_validator(mode="after")
+        def _shadow_needs_audio(self):
+            if self.kind == "shadow" and not (self.audio_b64 or "").strip():
+                raise ValueError("kind=shadow 须带 audio_b64 录音数据")
+            return self
+
+    class Nce2GradeIn(BaseModel):
+        """教师批改 NCE2 跟读录音（10 分制；越界不拒、由 Store 夹取）。"""
+
+        teacher_score: float
+        teacher_comment: str = Field(default="", max_length=2000)
+
     class MicroAnswerIn(BaseModel):
         """微练习单题作答。"""
 
@@ -250,6 +285,8 @@ except ImportError:  # 未装 fastapi/pydantic 时仍可 import 本模块
     VideoItemIn = None
     VideoRetellIn = None
     VideoGradeIn = None
+    Nce2SubmitIn = None
+    Nce2GradeIn = None
     PatternsImportIn = None
     MicroAnswerIn = None
     MicroSubmitIn = None

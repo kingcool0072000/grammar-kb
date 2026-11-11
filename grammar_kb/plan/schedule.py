@@ -285,6 +285,9 @@ class ScheduleMixin:
         self._append_boost_tasks(tasks, t, user, week_start, ref, dow)
         self._append_video_tasks(tasks, t, user, lo, ref, upto, dow, wd_left,
                                  ctx=ctx)
+        # NCE2 听力跟读（daily 组每天队首 1 课欠账滚动；weekend 组周末集中）
+        self._append_nce2_tasks(tasks, t, user, lo, ref, upto, dow, wd_left,
+                                ctx=ctx)
         return tasks
 
     def _vocab_week_remaining(self, t: dict, lo: str, upto: str, user: str,
@@ -532,6 +535,142 @@ class ScheduleMixin:
             "detail": detail,
         }
 
+    # ---- NCE2 听力跟读（nce2_units 是唯一来源，无旧键兜底）----
+
+    def _nce2_units(self, t: dict) -> list[dict]:
+        """周计划 NCE2 听力分组。``nce2_units`` 是唯一来源（无旧键兜底，
+        不像精读/视频有旧平铺回退——NCE2 是新接入模块，没有存量数据）。
+
+        每组 ``{"lessons":[1,2], "mode":"daily"|"weekend",
+        "task_mode":"listen"|"shadow"}``：lessons 去重保序转 int；mode 不在
+        daily/weekend 的组整组跳过；task_mode 缺省/非法 → shadow（跟读）。
+        """
+        units: list[dict] = []
+        for u in (t.get("nce2_units") or []):
+            if not isinstance(u, dict):
+                continue
+            mode = u.get("mode")
+            if mode not in ("daily", "weekend"):
+                continue
+            tm = u.get("task_mode")
+            if tm not in ("listen", "shadow"):
+                tm = "shadow"
+            lids: list[int] = []
+            for v in (u.get("lessons") or []):
+                try:
+                    lid = int(v)
+                except (TypeError, ValueError):
+                    continue
+                if lid not in lids:
+                    lids.append(lid)
+            if lids:
+                units.append({"lessons": lids, "mode": mode,
+                              "task_mode": tm, "labeled": True})
+        return units
+
+    def _plan_lessons(self, t: dict) -> list[int]:
+        """计划内全部 NCE2 课号（去重平铺，与排程同一读法）。
+
+        routes_nce2 的学生宇宙、「今天已提交 ✓」补行与 week_view 周计数
+        都用这份清单——函数名与签名钉死，别改。
+        """
+        out: list[int] = []
+        for u in self._nce2_units(t):
+            for lid in u["lessons"]:
+                if lid not in out:
+                    out.append(lid)
+        return out
+
+    def _nce2_task(self, lid: int, *, task_mode: str, detail: str,
+                   ctx: Optional[WeekCtx] = None) -> Optional[dict]:
+        """NCE2 计划行。标题来自 manifest；课程不在 manifest（或无标题）
+        → None 不出行，与视频「已下架不出行」同语义。"""
+        title = (ctx.nce2_title(lid) if ctx is not None
+                 else self._nce2_lesson_title_map().get(int(lid)))
+        if not title:
+            return None
+        head = "精听" if task_mode == "listen" else "听力跟读"
+        return {
+            "type": "nce2", "lesson_id": int(lid), "key": f"nce2:{lid}",
+            "nce2_mode": task_mode,
+            "text": f"{head}《{_short(title, 14)}》",
+            "detail": detail,
+        }
+
+    def _append_nce2_tasks(self, tasks: list[dict], t: dict, user: str,
+                           lo: str, ref: str, upto: str, dow: int,
+                           wd_left: int,
+                           ctx: Optional[WeekCtx] = None) -> None:
+        """NCE2 听力分组摊派（完全镜像 _append_video_tasks）。
+
+        daily 组合并队列每天出队首未完成 1 课：欠账滚动、同日不堆；
+        weekend 组周六集中未完成前 2 课、周日兜底清剩余，工作日不排。
+        当天已提交的课补 ✓ 行。完成判定分两档（行级口径在摊派层，
+        当日信号只表「有提交」）：
+        - shadow 行：当天有 kind=shadow 提交才算该课完成；
+        - listen 行：有 listen 或 shadow 提交都算（跟读覆盖精听）。
+        """
+        if ctx is None:
+            ctx = WeekCtx(self, user, monday_of(date.fromisoformat(ref)).isoformat())
+        units = self._nce2_units(t)
+        if not units:
+            return
+        shadow_done = ctx.nce2_shadow_done(lo, upto)
+        listened = ctx.nce2_listened(lo, upto)
+
+        def done_for(task_mode: str) -> set[int]:
+            # 完成该行 task_mode 的课集合：shadow 行只认跟读提交
+            return (set(shadow_done) if task_mode == "shadow"
+                    else set(shadow_done) | set(listened))
+
+        # daily 组合并队列（组序、组内原序）：队首未完成 1 课
+        daily_rest: list[tuple[int, str]] = []
+        for u in units:
+            if u["mode"] != "daily":
+                continue
+            dset = done_for(u["task_mode"])
+            daily_rest.extend((lid, u["task_mode"]) for lid in u["lessons"]
+                              if lid not in dset)
+        # 欠账滚到后面的天，不在同一天堆多条（与视频同一节奏）。
+        if daily_rest and (dow >= 5 or wd_left):
+            lid, tm = daily_rest[0]
+            detail = (
+                f"本周听力剩 {len(daily_rest)} 课 · 周末补上" if dow >= 5
+                else f"本周听力剩 {len(daily_rest)} 课 · 工作日每天 1 课")
+            row = self._nce2_task(lid, task_mode=tm, detail=detail, ctx=ctx)
+            if row:
+                tasks.append(row)
+        # weekend 组：周六集中未完成前 2 课；周日兜底清剩余
+        if dow >= 5:
+            for gi, u in enumerate(units, 1):
+                if u["mode"] != "weekend":
+                    continue
+                dset = done_for(u["task_mode"])
+                undone = [lid for lid in u["lessons"] if lid not in dset]
+                if not undone:
+                    continue
+                detail = (
+                    f"听力{_cn_group(gi)}组 · 周六集中 2 课 · 本组剩 {len(undone)} 课"
+                    if dow == 5 else
+                    f"听力{_cn_group(gi)}组 · 周日兜底 · 本组剩 {len(undone)} 课")
+                for lid in undone[:2] if dow == 5 else undone:
+                    row = self._nce2_task(lid, task_mode=u["task_mode"],
+                                          detail=detail, ctx=ctx)
+                    if row:
+                        tasks.append(row)
+        # 当天已提交的课补 ✓ 行（提交了却因 done 集合口径不在摊派里的，
+        # 完成也要看得见——与视频「今天已提交复述 ✓」同修）
+        have = {x.get("key") for x in tasks}
+        today_any = (ctx.nce2_shadow_done(ref, upto)
+                     | ctx.nce2_listened(ref, upto))
+        mode_of = {lid: u["task_mode"] for u in units for lid in u["lessons"]}
+        for lid in self._plan_lessons(t):
+            if lid in today_any and f"nce2:{lid}" not in have:
+                row = self._nce2_task(lid, task_mode=mode_of.get(lid, "shadow"),
+                                      detail="今天已提交 ✓", ctx=ctx)
+                if row:
+                    tasks.append(row)
+
     # ---- 提升档（v3.0.0 闭环版）：boost_days 当日派生 boost_items 行 ----
 
     def _append_boost_tasks(self, tasks: list[dict], t: dict, user: str,
@@ -678,6 +817,59 @@ class ScheduleMixin:
                     (user, _cn_bound(lo), _cn_bound(hi)),
                 ).fetchall()
                 return {r["vid"] for r in rows if r["vid"]}
+        except sqlite3.Error:
+            return set()
+
+    def _nce2_lesson_title_map(self) -> dict[int, str]:
+        """NCE2 manifest 全部课标题（lid → title）。
+
+        延迟 import nce2_study（NCE2 模块属并行车道，可能未部署）；
+        模块缺失/manifest 缺文件/坏结构一律空表——计划行随之不出，
+        计划页不因素材缺失 500。
+        """
+        try:
+            from ..nce2_study import load_manifest
+            manifest = load_manifest()
+        except Exception:
+            return {}
+        out: dict[int, str] = {}
+        for l in (manifest or {}).get("lessons") or []:
+            if not isinstance(l, dict):
+                continue
+            try:
+                lid = int(l.get("id"))
+            except (TypeError, ValueError):
+                continue
+            title = str(l.get("title") or "").strip()
+            if title:
+                out[lid] = title
+        return out
+
+    def _nce2_kind_ids(self, lo: str, hi: str, user: str,
+                       kind: str) -> set[int]:
+        """[lo, hi) 内该生 kind 类 NCE2 提交的课号（ctx 越界回退路径）。
+
+        nce2_submission 由 NCE2 模块建（fce.db，date 即北京当日 ISO），
+        这里只读：缺表/坏行容错空集。
+        """
+        try:
+            with self._connect() as conn:
+                names = {r[0] for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'")}
+                if "nce2_submission" not in names:
+                    return set()
+                rows = conn.execute(
+                    "SELECT DISTINCT lesson_id FROM nce2_submission"
+                    " WHERE user = ? AND kind = ? AND date >= ? AND date < ?",
+                    (user, kind, lo, hi),
+                ).fetchall()
+                out: set[int] = set()
+                for r in rows:
+                    try:
+                        out.add(int(r["lesson_id"]))
+                    except (TypeError, ValueError):
+                        continue
+                return out
         except sqlite3.Error:
             return set()
 
@@ -906,6 +1098,8 @@ class ScheduleMixin:
                 # 读契约同款：与排程同一读法（video_units 唯一来源，
                 # 旧 videos 键由一次性脚本转换后消失）
                 "videos": self._plan_videos(t),
+                # NCE2 听力跟读维度（nce2_units 唯一来源，无旧键兜底）
+                "nce2": self._plan_lessons(t),
             },
             "days": days,
             "done": done_n,

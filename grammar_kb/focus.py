@@ -304,7 +304,7 @@ class FocusStore:
             "percent_end": _clamp_float(percent_end, 0, 100),
             "fast_scroll_flags": _clamp_int(fast_scroll_flags, 0, 9999),
         }
-        module = module if module in ("library", "reading", "topics") else "library"
+        module = module if module in ("library", "reading", "topics", "nce2") else "library"
         lw = _clean_words(lookup_words)
         sw = _clean_words(speak_words)
         selw = _clean_words(selected_words)

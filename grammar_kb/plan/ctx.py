@@ -53,12 +53,14 @@ class WeekCtx:
         self._fce_rows: list | None = None       # (label, cn_dt)
         self._article_rows: list | None = None   # (article_id, created_at)
         self._video_rows: list | None = None     # (vid, cn_dt)
+        self._nce2_rows: list | None = None      # (date, lesson_id, kind)
         self._mastered_rows: list | None = None  # (word, cn_day)
         self._level_words: dict = {}
         self._week_row: dict | None = None
         self._history: dict | None = None
         self._article_titles: dict = {}
         self._video_titles: dict = {}
+        self._nce2_titles: dict | None = None    # NCE2 manifest 标题表
         self._paper_levels: dict | None = None
         self._wrong_words: int | None = None
         self._match_book: dict = {}
@@ -258,6 +260,64 @@ class WeekCtx:
         blo, bhi = _cn_bound(lo), _cn_bound(hi)
         return {vid for vid, d in self._video_all_rows()
                 if vid and blo <= d < bhi}
+
+    # ---- NCE2 听力跟读（nce2_submission 由 NCE2 模块建，date 即北京当日） ----
+
+    def _nce2_all_rows(self) -> list:
+        """周窗口内该生 nce2_submission 行 (date, lesson_id, kind)。
+
+        表由 NCE2 听力模块建（fce.db 同库），这里只读：缺表/坏行容错空。
+        date 列本身就是北京当日 ISO，窗口用裸串比较（无需 cn_dt 时区换算）。
+        """
+        if self._nce2_rows is None:
+            self._nce2_rows = []
+            try:
+                with self.store._connect() as conn:
+                    names = {r[0] for r in conn.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table'")}
+                    if "nce2_submission" not in names:
+                        return self._nce2_rows
+                    self._nce2_rows = [
+                        (r["date"], int(r["lesson_id"]), r["kind"] or "")
+                        for r in conn.execute(
+                            "SELECT date, lesson_id, kind FROM nce2_submission"
+                            " WHERE user = ? AND date >= ? AND date < ?",
+                            (self.user, self.week_start, self.week_hi),
+                        ).fetchall()
+                    ]
+            except (sqlite3.Error, TypeError, ValueError):
+                self._nce2_rows = []
+        return self._nce2_rows
+
+    def nce2_shadow_done(self, lo: str, hi: str) -> set[int]:
+        """[lo, hi) 有跟读（kind=shadow）提交的课号（date 裸串窗口）。"""
+        if not (self.week_start <= _sql_date(lo) and _sql_date(hi) <= self.week_hi):
+            return self.store._nce2_kind_ids(lo, hi, self.user, "shadow")
+        return {lid for d, lid, kind in self._nce2_all_rows()
+                if kind == "shadow" and lo <= d < hi}
+
+    def nce2_listened(self, lo: str, hi: str) -> set[int]:
+        """[lo, hi) 有精听（kind=listen）提交的课号（date 裸串窗口）。
+
+        只有 listen 提交 ≠ 当天完成跟读：shadow 行的摊派 done 集合只认
+        nce2_shadow_done；listen 行认 shadow_done ∪ listened（跟读覆盖精听）。
+        """
+        if not (self.week_start <= _sql_date(lo) and _sql_date(hi) <= self.week_hi):
+            return self.store._nce2_kind_ids(lo, hi, self.user, "listen")
+        return {lid for d, lid, kind in self._nce2_all_rows()
+                if kind == "listen" and lo <= d < hi}
+
+    def nce2_titles(self) -> dict[int, str]:
+        """NCE2 manifest 标题表 lid → title（请求内 memo）。
+
+        nce2_study 模块未部署 / manifest 缺文件时为空表（计划行不出）。
+        """
+        if self._nce2_titles is None:
+            self._nce2_titles = self.store._nce2_lesson_title_map()
+        return self._nce2_titles
+
+    def nce2_title(self, lid) -> str | None:
+        return self.nce2_titles().get(int(lid))
 
     # ---- 词汇（mastered 行一次拉回，集合成员计数同 word IN 口径） ----
 

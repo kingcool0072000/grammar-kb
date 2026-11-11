@@ -349,6 +349,17 @@ export const api = {
   videoRetellGrade: (id, rec) =>
     reqJson(`/video-study/retells/${id}`, 'PUT', rec),
   videoRetellDelete: (id) => reqJson(`/video-study/retells/${id}`, 'DELETE'),
+  // NCE2 听力跟读：课程清单（with_sentences=1 时每课带 sentences:[{t,en,zh}]
+  // 逐句表，学生仍限宇宙内、教师全量）+ 提交（kind=listen 打卡 / shadow
+  // 跟读录音）+ 提交队列与批改（教师=全部，学生=自己的）
+  nce2Lessons: ({ withSentences = false } = {}) =>
+    req('/nce2/lessons', { searchParams: withSentences ? { with_sentences: 1 } : {} }),
+  nce2Submit: (rec) => reqJson('/nce2/submissions', 'POST', rec),
+  nce2Queue: (status) => req('/nce2/submissions', { searchParams: { status } }),
+  nce2Grade: (id, score, comment) =>
+    reqJson(`/nce2/submissions/${id}`, 'PUT',
+      { teacher_score: score, teacher_comment: comment }),
+  nce2Delete: (id) => reqJson(`/nce2/submissions/${id}`, 'DELETE'),
   // 微练习（学生每日 3 题）：今日题目/提交作答（幂等可重复提交）/做题记录
   microToday: (day) => req('/micro/today', { searchParams: day ? { day } : {} }),
   microHistory: (limit = 14) =>

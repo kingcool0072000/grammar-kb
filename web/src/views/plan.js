@@ -358,7 +358,7 @@ export async function mountPlan(el) {
     function dayCell(d, i, dayNames) {
       const dd = Number(d.date.slice(8))
       const isToday = d.date === today
-      const icon = { micro_drill: '✏️', wrong_words: '🔤', lecture: '📚', fce: '🎧', reading: '📖', speak: '🎤', article: '📄', paper: '📝', vocab: '🔤', hw_paper: '🗒', video: '🎬' }
+      const icon = { micro_drill: '✏️', wrong_words: '🔤', lecture: '📚', fce: '🎧', reading: '📖', speak: '🎤', article: '📄', paper: '📝', vocab: '🔤', hw_paper: '🗒', video: '🎬', nce2: '🎧' }
       // 已到的日子列出全部计划项，并带上完成原因。完成率来自学习信号，
       // 没有计划项时不显示 0%（避免被理解成「还没打卡」）。
       const taskRow = (x, ok) => {
@@ -489,6 +489,17 @@ export async function mountPlan(el) {
         })
         chips.push(`🎬 视频 ${names.join('、')}`)
       }
+      // NCE2 听力按组统计：组数/课数 + 课名（与视频 chip 同款，从 ed.nce2 池取课名）
+      const nce2Units = t.nce2_units || []
+      const nce2N = nce2Units.reduce((n, u) => n + (u.lessons?.length || 0), 0)
+      if (nce2N) {
+        const pool = ed?.nce2 || []
+        const names = nce2Units.flatMap((u) => u.lessons || []).map((no) => {
+          const row = pool.find((x) => Number(x.id) === Number(no))
+          return `第${no}课${row?.title ? ` ${String(row.title).slice(0, 8)}` : ''}`
+        })
+        chips.push(`🎧 NCE2 听力 ${nce2Units.length} 组 ${nce2N} 课（${names.join('、')}）`)
+      }
       if (t.vocab_papers?.length) chips.push(`📝 试卷 ${t.vocab_papers.length} 卷`)
       return chips
     }
@@ -603,7 +614,7 @@ export async function mountPlan(el) {
           }))
         } catch {
           editorDataCache.set(key, {
-            lectures: [], fce_parts: [], books: [], vocab_mastered: 0, videos: [],
+            lectures: [], fce_parts: [], books: [], vocab_mastered: 0, videos: [], nce2: [],
           })
         }
       }

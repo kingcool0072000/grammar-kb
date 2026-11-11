@@ -78,6 +78,11 @@ export function mountView(route, container, { role, state, ctx, pointsById }) {
     return import('../views/videoStudy.js').then(({ mountVideoStudy }) =>
       mountVideoStudy(container, { role }))
   }
+  // NCE2 听力跟读（学生任务制页；教师打开为只读预览）
+  if (route === 'nce2') {
+    return import('../views/nce2Study.js').then(({ mountNce2Study }) =>
+      mountNce2Study(container, { role }))
+  }
   if (route === 'library') return mountLibraryShelf(container, { role })
   if (route === 'libraryReader') {
     return mountLibraryReader(container, { role, bookId: Number(routeSegs()[1]) })

@@ -75,6 +75,13 @@ RULES: list[dict] = [
 #   "video_units":   [{"vids": ["abc", "def"], "mode": "daily" | "weekend"}],
 #                                   # 视频分组：daily 组=现状每天 1 个；weekend 组
 #                                   # 周六集中 2 个、周日兜底清剩余
+#   "nce2_units":    [{"lessons": [1, 2], "mode": "daily" | "weekend",
+#                     "task_mode": "listen" | "shadow"}],
+#                                   # NCE2 听力跟读分组（nce2_units 是唯一来源，
+#                                   # 无旧键兜底）：daily 组每天队首 1 课、欠账
+#                                   # 滚动同日不堆；weekend 组周六集中 2 课、
+#                                   # 周日兜底清剩余。task_mode 缺省 shadow
+#                                   # （跟读行）；listen=精听行
 #   "micro": 1                      # 微练习开关：不排计划行、不进完成率分母；
 #                                   # 周视图据此带 micro_enabled、周目标出微练习维度
 #   "boost_days": [2, 4],           # 提升档日（数字=周几，1=周一；每周 2 天）。

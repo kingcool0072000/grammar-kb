@@ -248,4 +248,9 @@ class SignalsMixin:
         # 视频复述：当天提交过录音即点亮 video:{vid}（待批也算完成）
         for vid in ctx.retold_video_ids(day, nxt):
             out[f"video:{vid}"] = True
+        # NCE2 听力跟读：当天该课有任何提交（精听或跟读）即点亮 nce2:{lid}。
+        # key 必须与计划行 key 完全一致。行级口径差异（shadow 行只认跟读
+        # 提交）在 schedule 摊派层的 done 集合处理，信号不重复判。
+        for lid in ctx.nce2_shadow_done(day, nxt) | ctx.nce2_listened(day, nxt):
+            out[f"nce2:{lid}"] = True
         return out, read_titles, acts

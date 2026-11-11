@@ -3690,3 +3690,103 @@ button.tt-task {
   .bday-banner-inner { padding: 10px 14px; align-items: flex-start; }
   .bday-banner-copy b { font-size: 15px; }
 }
+
+/* ================= NCE2 听力跟读（nce2Study / nce2Review / 批改队列） ================= */
+/* 播放器区：mp3 直连 <audio> + ±5s / 隐藏中文小工具条 */
+.nce2-player-wrap {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 0 0 14px;
+}
+.nce2-audio { width: 100%; height: 40px; display: block; }
+.nce2-player-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* 逐句列表：双语对照，timeupdate 驱动当前句高亮 + 点句 seek */
+.nce2-sents {
+  /* lookup 层约定容器 position:relative（浮层自身 position:fixed 锚视口） */
+  position: relative;
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.nce2-sent {
+  display: flex;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.nce2-sent:last-child { border-bottom: 0; }
+.nce2-sent:hover { background: color-mix(in srgb, var(--brand) 5%, white); }
+.nce2-sent.current {
+  background: color-mix(in srgb, var(--brand) 10%, white);
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+.nce2-sent-idx {
+  flex: 0 0 26px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  padding-top: 3px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.nce2-sent.current .nce2-sent-idx { color: var(--brand); }
+.nce2-sent-body { flex: 1; min-width: 0; }
+.nce2-en {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.nce2-zh {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+/* 自测模式：隐藏中文只看英文（localStorage 记住） */
+.nce2-sents.hide-zh .nce2-zh { display: none; }
+
+/* 底部动作区：精听打卡 / 跟读提交状态卡 */
+.nce2-action-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin: 0 0 14px;
+}
+.nce2-action-card.pass {
+  border-color: color-mix(in srgb, #1a7f37 30%, white);
+  background: color-mix(in srgb, #1a7f37 6%, white);
+}
+.nce2-pass-tag {
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #e3f4e8;
+  color: #1a7f37;
+}
+
+/* 批改行的类型徽标（跟读录音 / 精听打卡） */
+.vr-kind-shadow { --cat-color: #7a5ba6; }
+.vr-kind-listen { --cat-color: #4a6fa5; }
+/* 学习日志/聚合行的「精听」模块徽标 */
+.gd-focus-mod.nce2 { background: #e8f0fb; color: #2b5aa7; }

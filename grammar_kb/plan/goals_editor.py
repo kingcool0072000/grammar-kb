@@ -170,6 +170,25 @@ class GoalsEditorMixin:
                 ]
         except sqlite3.Error:
             pass
+        # NCE2 听力课池（nce2_study.load_manifest 读 GRAMMAR_KB_NCE2_BOOK；
+        # 延迟 import：NCE2 模块属并行车道可能未部署，manifest 素材文件也
+        # 可能还没导入——模块缺失/缺文件/坏结构一律兜底空池，编辑器不崩）。
+        # 原样给 id/title/n_sentences/n_words 四个字段，不做音频有无过滤。
+        nce2 = []
+        try:
+            from ..nce2_study import load_manifest
+            manifest = load_manifest()
+            for l in (manifest or {}).get("lessons") or []:
+                if not isinstance(l, dict):
+                    continue
+                nce2.append({
+                    "id": int(l.get("id")),
+                    "title": str(l.get("title") or "")[:60],
+                    "n_sentences": int(l.get("n_sentences") or 0),
+                    "n_words": int(l.get("n_words") or 0),
+                })
+        except (ImportError, TypeError, ValueError):
+            nce2 = []
         # ---- 目标管理选项源（六类，全部关联备课资产） ----
         goal_assets = self.goal_assets(lectures, fce_parts, books, articles,
                                        user=user)
@@ -179,7 +198,7 @@ class GoalsEditorMixin:
         done = self._completion_status(user)
         return {"lectures": lectures, "fce_parts": fce_parts, "books": books,
                 "articles": articles, "vocab_mastered": mastered,
-                "videos": videos,
+                "videos": videos, "nce2": nce2,
                 "goal_assets": goal_assets, "goals": goals, "done": done,
                 "vocab_week": self.vocab_week_stats(user, week_start)}
 

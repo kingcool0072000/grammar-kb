@@ -84,6 +84,8 @@ class ViewsMixin:
             drill_types.add("FCE 真题")
         if self._plan_videos(t):
             drill_types.add("视频复述")
+        if self._plan_lessons(t):
+            drill_types.add("听力跟读")
         breakdown = {
             "reading_books": len(reading_items),
             "reading_items": reading_items,
@@ -94,6 +96,7 @@ class ViewsMixin:
             "hw_paper_count": len(t.get("hw_papers") or []),
             "fce_count": len(t.get("fce") or []),
             "video_count": len(self._plan_videos(t)),
+            "nce2_count": len(self._plan_lessons(t)),
         }
 
         # ---- 逐日矩阵 ----
@@ -148,6 +151,11 @@ class ViewsMixin:
             "video_titles": [
                 {"vid": v, "title": self._video_title_any(v)}
                 for v in self._plan_videos(t)
+            ],
+            # NCE2 听力任务补标题（manifest 缺课/缺文件为 null，不阻塞周视图）
+            "nce2_titles": [
+                {"lesson_id": lid, "title": ctx.nce2_title(lid)}
+                for lid in self._plan_lessons(t)
             ],
             "goal_progress": self._week_goal_progress(t, days, user, week_start,
                                                       ctx=ctx),
@@ -350,6 +358,21 @@ class ViewsMixin:
                                                user))
             dim("🎬", "视频复述", len(set(videos) & done_ids), len(videos))
 
+        # NCE2 听力跟读：计划课数 vs 周内有提交（精听或跟读）的课数。
+        # 周目标维度只表「动过了」，行级 listen/shadow 满足差异不在这判。
+        lessons = self._plan_lessons(t)
+        if lessons:
+            if ctx is not None:
+                done_lids = (ctx.nce2_shadow_done(week_start, add_days(week_start, 7))
+                             | ctx.nce2_listened(week_start, add_days(week_start, 7)))
+            else:
+                done_lids = (
+                    self._nce2_kind_ids(week_start, add_days(week_start, 7),
+                                        user, "shadow")
+                    | self._nce2_kind_ids(week_start, add_days(week_start, 7),
+                                          user, "listen"))
+            dim("🗣", "听力跟读", len(set(lessons) & done_lids), len(lessons))
+
         # 微练习维度：周任务开了 micro（tasks["micro"]）才出现——微练习
         # 本就不排计划行、不进日清单分母，这里以「周内做完的天数」计量：
         # done=该周 7 天里 micro_daily 整组做完（done=1）的天数，分母恒 7。
@@ -462,7 +485,8 @@ class ViewsMixin:
                             or t.get("hw_papers") or t.get("vocab_goal")
                             or t.get("fce") or t.get("reading")
                             or t.get("videos") or t.get("article_units")
-                            or t.get("video_units") or t.get("micro"))
+                            or t.get("video_units") or t.get("micro")
+                            or t.get("nce2_units"))
             done = total = 0
             bases: set[str] = set()
             if ws <= cur:  # 已开始的周才聚合完成度（未来周无信号）
@@ -496,6 +520,8 @@ class ViewsMixin:
                 "reading": t.get("reading") or {},
                 # 读契约同款：units 优先、旧 videos 平铺回退
                 "videos": self._plan_videos(t),
+                # NCE2 听力跟读（nce2_units 唯一来源，无旧键兜底）
+                "nce2": self._plan_lessons(t),
                 "notes": w.get("notes") or "",
                 "done": done, "total": total,
                 "percent": completion_percent(done, total) if ws <= cur else None,

@@ -151,6 +151,23 @@ async function mountContent(el) {
         <div class="prep-queue" data-q="retell"><p class="muted">加载中…</p></div>
       </section>
 
+      <!-- ================= 4b · NCE2 听力跟读（学生页预览 + 待批听力队列） ================= -->
+      <section class="gd-section">
+        <header class="gd-section-head">
+          <h2>🎧 听力跟读（NCE2） <span class="prep-qbadge" data-qbadge="nce2" hidden></span></h2>
+        </header>
+        <div class="gd-subgroup">
+          <h3>📻 新概念二 · 96 课精听 + 跟读</h3>
+          <div class="prep-cards">
+            <button class="prep-card" data-go="nce2">
+              <b>96 课</b><span>听力跟读 · 学生视角预览</span>
+            </button>
+          </div>
+          <p class="reading-hint">学生精听打卡与跟读录音的批改在本区下方队列（与视频批改并排）；点卡片可打开学生视角的课程清单（教师为只读预览）。计划表里给某天排 NCE2 任务后，学生课程表行点击直达对应课。</p>
+        </div>
+        <div class="prep-queue" data-q="nce2"><p class="muted">加载中…</p></div>
+      </section>
+
       <!-- ================= 5 · FCE 听说读写（真题听力 + 待批作文队列） ================= -->
       <section class="gd-section">
         <header class="gd-section-head">
@@ -379,6 +396,8 @@ async function mountContent(el) {
         queues.mountRetellQueue(h, { ...base, onCount: (n) => setBadge('video', n) }))
       mountOne('essay', (h) =>
         queues.mountEssayQueue(h, { ...base, onCount: (n) => setBadge('fce', n) }))
+      mountOne('nce2', (h) =>
+        queues.mountNce2Queue(h, { ...base, onCount: (n) => setBadge('nce2', n) }))
       // 最近已批（录音/复述/作文 前3条）：非待办，不驱动待批角标
       mountOne('recentGraded', (h) =>
         queues.mountRecentGraded(h, { ...base, onCount: () => {} }))

@@ -3,6 +3,7 @@ import { escapeHtml } from '../../render.js'
 import { fmtDur } from '../../fmt.js'
 import { renderReadingReview } from '../readingReview.js'
 import { renderVideoReview, videoRetellRow } from '../videoReview.js'
+import { renderNce2Review, nce2SubRow } from '../nce2Review.js'
 import { mountEssayReviewInline } from '../fcePapers/teacher.js'
 
 // 备课中心 · 待批队列模块（自原批改看板视图拆出，可独立挂进各学科分区）。
@@ -226,7 +227,65 @@ export async function mountEssayQueue(host, ctx) {
   await run()
 }
 
-// ---- 已批折叠区（紧凑版）：已批录音 / 已批复述 / 已阅作文各近 3 条。
+// ---- 4 · 待批听力跟读队列（NCE2 分区）：跟读录音 + 精听打卡（listen
+// 行无音频，批改视图里以「打卡」卡呈现），批改内嵌 renderNce2Review ----
+
+export async function mountNce2Queue(host, ctx) {
+  const { state, snapshots, onCount } = ctx || {}
+  const student = state && state.student
+  const key = `nce2:${student}`
+  const pick = (subs) => (student ? subs.filter((r) => r.user === student) : subs)
+  const load = async () => {
+    let subs = snapshots && snapshots.get(key)
+    if (!subs) {
+      subs = await timed(api.nce2Queue('all'))
+      subs = Array.isArray(subs) ? subs : []
+      if (snapshots) snapshots.set(key, subs)
+    }
+    return subs
+  }
+  const openReview = async () => {
+    const view = document.createElement('div')
+    host.replaceChildren(view)
+    view.innerHTML = '<p class="muted">加载听力批改…</p>'
+    try {
+      const subs = pick(await api.nce2Queue('all'))
+      await renderNce2Review(view, subs, {
+        onBack: () => {
+          if (snapshots) snapshots.delete(key) // 批改后作废快照，重挂拉新
+          run()
+          return true
+        },
+      })
+    } catch (e) {
+      view.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
+    }
+  }
+  const run = async () => {
+    host.innerHTML = '<p class="muted">加载中…</p>'
+    const subs = pick(await load())
+    const pend = subs.filter((r) => r.status === 'pending')
+    host.innerHTML = queueBlock(
+      'nce2',
+      '待批听力',
+      pend.length,
+      pend.map((r) => nce2SubRow(r)).join(''),
+      '没有待批的听力提交',
+      pend.length ? `<button class="gcard-more" data-open-review>去批改听力（${pend.length}）→</button>` : '',
+    )
+    host.querySelector('[data-open-review]')?.addEventListener('click', openReview)
+    const list = host.querySelector('.gcard-list')
+    if (list) list.addEventListener('click', (e) => {
+      if (e.target.closest('audio,a')) return
+      if (!e.target.closest('.fce-his-row')) return
+      openReview()
+    })
+    onCount?.(pend.length)
+  }
+  await run()
+}
+
+// ---- 已批折叠区（紧凑版）：已批录音 / 已批复述 / 已阅作文 / 已批听力各近 3 条。
 // 只读共享快照（超时兜底的空数组不写回，避免污染同键队列的数据）。
 // 哈一成绩归哈一语法分区、正常专注归学情日志页，都不在这里。 ----
 
@@ -242,18 +301,21 @@ export async function mountRecentGraded(host, ctx) {
     }
     return v
   }
-  const [recs, vretells, fceSubs] = await Promise.all([
+  const [recs, vretells, fceSubs, nce2Subs] = await Promise.all([
     grab(`rec:${student}`, () => api.readingRecordings({ limit: 200, user: student || undefined })),
     grab(`vretell:${student}`, () => api.videoRetells({ limit: 200, user: student || undefined })),
     grab(`essay:${student}`, () => api.fceSubmissions({ limit: 200, user: student || undefined })),
+    grab(`nce2:${student}`, () => api.nce2Queue('all')),
   ])
+  const pickUser = (list) => (student ? list.filter((r) => r.user === student) : list)
   const doneRec = recs.filter((r) => r.status !== 'pending')
   const doneVR = vretells.filter((r) => r.status !== 'pending')
   const doneEssay = fceSubs.filter((s) => s.status !== 'pending')
-  const handledN = doneRec.length + doneVR.length + doneEssay.length
+  const doneNce2 = pickUser(Array.isArray(nce2Subs) ? nce2Subs : []).filter((r) => r.status !== 'pending')
+  const handledN = doneRec.length + doneVR.length + doneEssay.length + doneNce2.length
   host.innerHTML = `
     <details class="g-handled">
-      <summary>已处理（${handledN}）<i>已批录音 · 已批复述 · 已阅作文（各近 3 条）</i></summary>
+      <summary>已处理（${handledN}）<i>已批录音 · 已批复述 · 已阅作文 · 已批听力（各近 3 条）</i></summary>
       <div class="g-handled-grid">
         <section class="gcard" data-card="recording-done">
           <header class="gcard-head"><h2>已批录音</h2><b class="gcard-n">${doneRec.length}</b></header>
@@ -266,6 +328,10 @@ export async function mountRecentGraded(host, ctx) {
         <section class="gcard">
           <header class="gcard-head"><h2>已阅作文与练习</h2><b class="gcard-n">${doneEssay.length}</b></header>
           <div class="gcard-list">${doneEssay.slice(0, 3).map((s) => fceRow(s)).join('') || '<p class="reading-hint">暂无</p>'}</div>
+        </section>
+        <section class="gcard">
+          <header class="gcard-head"><h2>已批听力</h2><b class="gcard-n">${doneNce2.length}</b></header>
+          <div class="gcard-list">${doneNce2.slice(0, 3).map((r) => nce2SubRow(r)).join('') || '<p class="reading-hint">暂无</p>'}</div>
         </section>
       </div>
     </details>`

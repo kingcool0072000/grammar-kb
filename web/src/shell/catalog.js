@@ -15,6 +15,7 @@ export const STUDENT_TABS = [
   { key: 'topics', label: '专题学习' },
   { key: 'library', label: '泛读馆' },
   { key: 'videoStudy', label: '视频学习' },
+  { key: 'nce2', label: '听力跟读' },
   { key: 'fcePapers', label: 'FCE真题' },
 ]
 
@@ -32,6 +33,8 @@ const TEACHER_ALLOWED = new Set([
   // 师生都能开的隐藏页（教师从卡片进专题、泛读馆）
   'topics', 'library', 'libraryReader', 'fcePapers', 'config', 'conquered',
   'videoStudy',
+  // NCE2 听力跟读：教师打开 = 全 96 课只读预览（同 videoStudy 模式）
+  'nce2',
 ])
 
 const STUDENT_ALLOWED = new Set([

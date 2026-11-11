@@ -54,12 +54,14 @@ export async function mountLog(el, { state }) {
     const focusWeek = focus.filter((s) => inWeek(s.started_at || s.created_at))
     const libW = focus.filter((s) => s.module === 'library' && inWeek(s.started_at || s.created_at))
     const rdW = focus.filter((s) => s.module === 'reading' && inWeek(s.started_at || s.created_at))
+    const nce2W = focus.filter((s) => s.module === 'nce2' && inWeek(s.started_at || s.created_at))
     const rmW = rm.filter((s) => inWeek(s.started_at))
     const vocabW = recite.filter((s) => inWeek(s.created_at))
     const scores = focusWeek.filter((s) => typeof s.score === 'number')
     const parts = []
     if (libW.length) parts.push(`📖 泛读 ${Math.round(libW.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)} 分钟`)
     if (rdW.length) parts.push(`📄 精读 ${Math.round(rdW.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)} 分钟`)
+    if (nce2W.length) parts.push(`🎧 精听 ${Math.round(nce2W.reduce((a, s) => a + (s.active_sec || 0), 0) / 60)} 分钟`)
     if (rmW.length) parts.push(`📰 杂志 ${Math.round(rmW.reduce((a, s) => a + (s.engaged_sec || 0), 0) / 60)} 分钟`)
     if (vocabW.length) parts.push(`🔤 背词 ${vocabW.reduce((a, s) => a + (s.total || 0), 0)} 词 · ${Math.round(vocabW.reduce((a, s) => a + (s.duration_sec || 0), 0) / 60)} 分钟`)
     if (scores.length) parts.push(`👁 专注 ${Math.round(scores.reduce((a, s) => a + s.score, 0) / scores.length)} 分`)
@@ -93,7 +95,9 @@ export async function mountLog(el, { state }) {
         mods.get(mod).push(row)
       }
       for (const s of focus) {
-        const mod = s.module === 'reading' ? '精读' : s.module === 'topics' ? '专题' : '泛读'
+        const mod = s.module === 'reading' ? '精读'
+          : s.module === 'topics' ? '专题'
+            : s.module === 'nce2' ? '精听' : '泛读'
         push(s.started_at || s.created_at, mod, s)
       }
       for (const r of rm) push(r.started_at, '杂志', r)
@@ -116,7 +120,8 @@ export async function mountLog(el, { state }) {
             <span>${list.length} 组 · ${words} 词 · 正确率 <b class="fce-his-score ${acc >= 80 ? 'ok' : acc >= 60 ? '' : 'bad'}">${acc}%</b></span></div>`)
         } else {
           const modCls = mod === '精读' ? 'gd-focus-mod reading'
-            : mod === '杂志' ? 'gd-focus-mod rm' : 'gd-focus-mod'
+            : mod === '杂志' ? 'gd-focus-mod rm'
+              : mod === '精听' ? 'gd-focus-mod nce2' : 'gd-focus-mod'
           const sec = list.reduce((a, x) => a + (x.active_sec || 0), 0)
           const min = Math.round(sec / 60)
           const words = list.reduce((a, x) => a + ((x.rw && x.rw.words) || 0), 0)

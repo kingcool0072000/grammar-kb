@@ -63,6 +63,12 @@ def task_public(t: dict, *, future: bool = False) -> dict:
     vid = t.get("video_id") or t.get("vid")
     if vid:
         out["video_id"] = str(vid)
+    # NCE2 听力行透传 lesson_id / nce2_mode（学生端跳听力课页靠它）
+    lid = t.get("lesson_id")
+    if lid:
+        out["lesson_id"] = int(lid)
+    if t.get("nce2_mode"):
+        out["nce2_mode"] = t["nce2_mode"]
     if not future and t.get("boost"):
         out["boost"] = t["boost"]
     return out

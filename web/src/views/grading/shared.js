@@ -4,11 +4,12 @@ import { fmtDur } from '../../fmt.js'
 // 批改中心多子 Tab 共用的帮助函数与行渲染：看板/学习日志/专注详情弹窗都引用，
 // 只放纯函数，不绑定单个子 Tab。
 
-// 专注会话标题：泛读 = 「泛读-书名-章节」；精读/专题=内容名（后端已按
+// 专注会话标题：泛读 = 「泛读-书名-章节」；精读/专题/精听=内容名（后端已按
 // book_id 补书名，章节用 range_label）
 export function focusTitle(s) {
   if (s.module === 'reading') return `精读-${s.book_title || ''}`
   if (s.module === 'topics') return `专题-${s.book_title || ''}`
+  if (s.module === 'nce2') return `精听-${s.book_title || ''}`
   const title = (s.book_title || '').trim() || (s.book_id != null ? `#${s.book_id}` : '')
   const label = (s.range_label || '').trim()
   if (title && label) return `泛读-${title}-${label}`
@@ -37,8 +38,11 @@ export function posRangeText(rw) {
 export function focusRow(s) {
   const score = typeof s.score === 'number' ? Math.round(s.score) : null
   const scoreCls = score === null ? 'pend' : score >= 80 ? 'ok' : score >= 60 ? '' : 'bad'
-  const mod = s.module === 'reading' ? '精读' : s.module === 'topics' ? '专题' : '泛读'
-  const modCls = s.module === 'reading' ? 'gd-focus-mod reading' : 'gd-focus-mod'
+  const mod = s.module === 'reading' ? '精读'
+    : s.module === 'topics' ? '专题'
+      : s.module === 'nce2' ? '精听' : '泛读'
+  const modCls = s.module === 'reading' ? 'gd-focus-mod reading'
+    : s.module === 'nce2' ? 'gd-focus-mod nce2' : 'gd-focus-mod'
   const rw = s.rw
   const linkChip = rw
     ? (rw.link === 'next' ? '<i class="gd-focus-chip ok">↪ 衔接</i>'

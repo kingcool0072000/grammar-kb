@@ -164,7 +164,7 @@ class PlanStore(
             row: dict = {}
             for k in ("type", "key", "text", "detail", "article_id",
                       "lecture", "quota", "book", "video_id", "vid", "why",
-                      "boost"):
+                      "boost", "lesson_id", "nce2_mode"):
                 if t.get(k) is not None:
                     row[k] = t.get(k)
             for k in ("video_id", "vid"):
