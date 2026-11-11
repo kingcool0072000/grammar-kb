@@ -19,7 +19,8 @@ export const escAttr = (s) => escapeHtml(s).replace(/"/g, '&#34;').replace(/'/g,
 
 /** 秒 → m:ss（分钟不补零，如 5:07）。列表/历史记录里最常用的钟表格式。 */
 export function fmtDur(sec) {
-  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
+  const s = Math.floor(Number(sec) || 0)
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 
 /** 秒 → mm:ss（分钟补零，如 05:07）。练习结果页需要定宽展示。 */

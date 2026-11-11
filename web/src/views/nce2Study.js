@@ -83,12 +83,13 @@ function renderNce2List(el, lessons, role) {
     bodyHtml = section(`🎧 NCE2 全 96 课（教师预览 · 只读）`,
       lessons.slice().sort((a, b) => a.id - b.id))
   } else {
-    const week = lessons.filter((l) => l.week && !isDone(l))
+    const weekAll = lessons.filter((l) => l.week)
+    const week = weekAll.filter((l) => !isDone(l) && !isPending(l))
     const pend = lessons.filter(isPending)
     const done = lessons.filter(isDone)
     const extra = lessons.filter((l) => !l.week && !isDone(l) && !isPending(l))
     bodyHtml = `
-      ${section(`📌 本周安排 · 已完成 ${lessons.filter((l) => l.week && isDone(l)).length}/${lessons.filter((l) => l.week).length}`, week)}
+      ${section(`📌 本周安排 · 已完成 ${weekAll.filter((l) => isDone(l) || isPending(l)).length}/${weekAll.length}`, week)}
       ${pend.length ? section('🎙 待批改（跟读录音等老师批）', pend) : ''}
       ${section('', done, true)}
       ${extra.length ? `
@@ -140,23 +141,25 @@ async function renderNce2Detail(el, lid, role) {
       .sort((a, b) => ((a.created_at || '') < (b.created_at || '') ? 1 : -1))
     if (mine.length) l.shadow = { status: mine[0].status, teacher_score: mine[0].teacher_score, teacher_comment: mine[0].teacher_comment }
   }
-  const stateTxt = isGraded(l)
-    ? `跟读 ${l.shadow.teacher_score}/10${l.shadow.teacher_score >= 7 ? ' · 过关' : ''}`
-    : isPending(l) ? '跟读待批改'
-      : l.listen_today ? '今日精听已完成'
-        : l.listen_done_ever ? '精听过' : ''
+  // 状态做成首屏可见的醒目徽标（评分/完成态原来只是副标题里的灰字，
+  // 沉在两屏句子列表下方的状态卡孩子第一眼看不到——评审 P1）
+  const stateBadge = isGraded(l)
+    ? `<b class="fce-his-score ${l.shadow.teacher_score >= 7 ? 'ok' : ''}">跟读 ${l.shadow.teacher_score}/10${l.shadow.teacher_score >= 7 ? ' · 过关' : ''}</b>`
+    : isPending(l) ? '<b class="fce-his-score pend">🎙 跟读待批改</b>'
+      : l.listen_today ? '<b class="fce-his-score ok">✅ 今日精听已完成</b>'
+        : l.listen_done_ever ? '<b class="fce-his-score ok">精听过</b>' : ''
   const hideZh = loadHideZh()
   el.innerHTML = `
     <div class="view-head">
       <button class="fce-back-btn" id="nce2-back">← 返回列表</button>
       <h1>🎧 Lesson ${l.id} · ${escapeHtml(l.title || '')}</h1>
-      <p>${l.n_sentences ?? '—'} 句 · ${l.n_words ?? '—'} 词${stateTxt ? ` · ${stateTxt}` : ''}${role === 'teacher' ? ' · 教师只读预览' : ''}</p>
+      <p>${l.n_sentences ?? '—'} 句 · ${l.n_words ?? '—'} 词${stateBadge ? ` ${stateBadge}` : ''}${role === 'teacher' ? ' · 教师只读预览' : ''}</p>
     </div>
     <div class="nce2-player-wrap">
       <audio controls preload="metadata" class="nce2-audio" id="nce2-audio"></audio>
       <div class="nce2-player-bar">
-        <button class="reading-btn small" id="nce2-rew" title="后退 5 秒重听这句">↺ 5s</button>
-        <button class="reading-btn small" id="nce2-fwd" title="前进 5 秒">↻ 5s</button>
+        <button class="reading-btn small" id="nce2-rew" title="后退 5 秒重听这句">↺ −5s</button>
+        <button class="reading-btn small" id="nce2-fwd" title="前进 5 秒">↻ +5s</button>
         <button class="reading-btn small ${hideZh ? 'primary' : ''}" id="nce2-hidezh" title="隐藏中文：只看英文自测听懂没有">中文：${hideZh ? '隐藏中' : '显示'}</button>
         <span class="reading-pick-info">点句子跳到那句；拖选/双击英文可查词</span>
       </div>
