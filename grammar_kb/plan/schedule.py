@@ -9,7 +9,7 @@ from typing import Optional
 
 from ..clock import cn_dt, monday_of, today_cn, week_bounds
 from . import boost
-from .ctx import WeekCtx
+from .ctx import WeekCtx, _sql_date
 from .util import (
     _short, _task_key, add_days, completion_percent, task_public,
     vocab_progress_detail,
@@ -850,8 +850,10 @@ class ScheduleMixin:
         """[lo, hi) 内该生 kind 类 NCE2 提交的课号（ctx 越界回退路径）。
 
         nce2_submission 由 NCE2 模块建（fce.db，date 即北京当日 ISO），
-        这里只读：缺表/坏行容错空集。
+        这里只读：缺表/坏行容错空集。lo/hi 归一成裸日期再进 SQL（调用方
+        的 lo 可能带 00:00:00，裸日期串对它做 >= 会丢掉周一）。
         """
+        lo, hi = _sql_date(lo), _sql_date(hi)
         try:
             with self._connect() as conn:
                 names = {r[0] for r in conn.execute(

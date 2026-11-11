@@ -254,6 +254,26 @@ def test_shadow_row_not_advanced_by_listen_only(env):
     assert [x["lesson_id"] for x in _nce2_rows(store, "malin", WED)] == [21]
 
 
+def test_monday_submission_counts_into_week_window(env):
+    """周一的提交必须进周窗口 done 集合（回归：week_bounds 的 lo 带
+    00:00:00，裸日期串 date 对它做 >= 会把周一整 exclusion——周二起
+    周一完成的课被当假欠账重出）。"""
+    store = _store(env)
+    store.put_week(MON, {"nce2_units": [{"lessons": [1, 2], "mode": "daily",
+                                         "task_mode": "shadow"}]}, "", "malin")
+    _submit(env, "malin", 1, MON, "shadow")
+    # 周一当天：✓ 行
+    rows = {x["lesson_id"]: x for x in _nce2_rows(store, "malin", MON)}
+    assert rows[1]["done"] is True
+    # 周二：队首前进到第 2 课，第 1 课不再重现（假欠账）
+    assert [x["lesson_id"] for x in _nce2_rows(store, "malin", TUE)] == [2]
+    # ctx 切片与越界回退两条路径口径一致（周一命中）
+    from grammar_kb.plan.ctx import WeekCtx
+    ctx = WeekCtx(store, "malin", MON)
+    assert ctx.nce2_shadow_done(MON + " 00:00:00", TUE) == {1}
+    assert store._nce2_kind_ids(MON + " 00:00:00", TUE, "malin", "shadow") == {1}
+
+
 # ---- weekend 组：周六集中 2 课、周日兜底清尾、工作日不排 ----
 
 def test_weekend_group_sat_two_sun_sweep(env):

@@ -41,14 +41,16 @@ export async function renderNce2Review(el, subs, opts) {
         <span class="fce-his-date">${fmtDur(r.duration_sec || 0)} · ${(r.created_at || '').slice(0, 16).replace('T', ' ')}</span>
       </div>
       ${r.kind === 'listen'
-        ? '<p class="reading-hint">👂 精听打卡（无录音）——听没听孩子自己报的，打个分或删掉均可。</p>'
+        ? '<p class="reading-hint">👂 精听打卡（无录音）——打卡本身无需批改，只可删除。</p>'
         : '<audio controls preload="metadata" style="width:100%;margin:8px 0"></audio>'}
-      <div class="reading-review-grade">
+      ${r.kind === 'listen'
+        ? `<button class="reading-btn danger" data-del title="删除这条提交">删除</button>`
+        : `<div class="reading-review-grade">
         <label>分数 <input type="number" min="0" max="10" value="${r.teacher_score ?? 8}" style="width:56px" data-score></label>
         <input placeholder="评语（听懂程度/发音/语调建议）" value="${escAttr(r.teacher_comment || '')}" data-comment style="flex:1" />
         <button class="reading-btn primary" data-grade>提交批改</button>
         <button class="reading-btn danger" data-del title="删除这条提交">删除</button>
-      </div>
+      </div>`}
       <div class="reading-review-msg"></div>
     `
     const audio = row.querySelector('audio')
@@ -56,7 +58,8 @@ export async function renderNce2Review(el, subs, opts) {
       const token = getAuth()?.token
       if (token) audio.src = `/api/nce2/submissions/${r.id}/audio?token=${encodeURIComponent(token)}`
     }
-    row.querySelector('[data-grade]').addEventListener('click', async () => {
+    const gradeBtn = row.querySelector('[data-grade]')
+    if (gradeBtn) gradeBtn.addEventListener('click', async () => {
       const score = Number(row.querySelector('[data-score]').value)
       const comment = row.querySelector('[data-comment]').value
       if (!(score >= 0 && score <= 10)) {

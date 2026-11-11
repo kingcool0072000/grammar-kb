@@ -259,6 +259,10 @@ class Nce2Store:
         except (TypeError, ValueError):
             dur = 0.0
         audio_b64, mime = transcode_for_safari(audio_b64, mime or "audio/webm")
+        # 转码后再查一次上限：低码率超长 webm 输入合规，转出的 m4a 可能
+        # 反超 12MB（不设二道闸会把超大 blob 静默存进库）。
+        if len(audio_b64) > MAX_AUDIO_B64:
+            raise ValueError("录音过大（转码后超过 12MB），请缩短录音时长")
         with self._connect() as conn:
             cur = conn.execute(
                 "INSERT INTO nce2_submission"

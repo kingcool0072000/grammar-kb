@@ -290,11 +290,16 @@ class WeekCtx:
         return self._nce2_rows
 
     def nce2_shadow_done(self, lo: str, hi: str) -> set[int]:
-        """[lo, hi) 有跟读（kind=shadow）提交的课号（date 裸串窗口）。"""
-        if not (self.week_start <= _sql_date(lo) and _sql_date(hi) <= self.week_hi):
+        """[lo, hi) 有跟读（kind=shadow）提交的课号（date 裸串窗口）。
+
+        lo/hi 先归一成裸日期：调用方的 lo 可能来自 week_bounds（带
+        00:00:00），裸日期串与它做 >= 会把周一的提交整 exclusion。
+        """
+        lo_d, hi_d = _sql_date(lo), _sql_date(hi)
+        if not (self.week_start <= lo_d and hi_d <= self.week_hi):
             return self.store._nce2_kind_ids(lo, hi, self.user, "shadow")
         return {lid for d, lid, kind in self._nce2_all_rows()
-                if kind == "shadow" and lo <= d < hi}
+                if kind == "shadow" and lo_d <= d < hi_d}
 
     def nce2_listened(self, lo: str, hi: str) -> set[int]:
         """[lo, hi) 有精听（kind=listen）提交的课号（date 裸串窗口）。
@@ -302,10 +307,11 @@ class WeekCtx:
         只有 listen 提交 ≠ 当天完成跟读：shadow 行的摊派 done 集合只认
         nce2_shadow_done；listen 行认 shadow_done ∪ listened（跟读覆盖精听）。
         """
-        if not (self.week_start <= _sql_date(lo) and _sql_date(hi) <= self.week_hi):
+        lo_d, hi_d = _sql_date(lo), _sql_date(hi)
+        if not (self.week_start <= lo_d and hi_d <= self.week_hi):
             return self.store._nce2_kind_ids(lo, hi, self.user, "listen")
         return {lid for d, lid, kind in self._nce2_all_rows()
-                if kind == "listen" and lo <= d < hi}
+                if kind == "listen" and lo_d <= d < hi_d}
 
     def nce2_titles(self) -> dict[int, str]:
         """NCE2 manifest 标题表 lid → title（请求内 memo）。
