@@ -21,7 +21,7 @@ function subSourceHtml(r) {
 export async function renderNce2Review(el, subs, opts) {
   const onBack = (opts || {}).onBack
   const pending = subs.filter((r) => r.status === 'pending')
-  const list = pending.length ? pending : subs
+  const done = subs.filter((r) => r.status !== 'pending') // 已批跟读 + 精听打卡（listen 恒 done）
   el.innerHTML = `
     <div class="view-head">
       <button class="fce-back-btn" id="nce2r-back">← 返回批改中心</button>
@@ -29,10 +29,11 @@ export async function renderNce2Review(el, subs, opts) {
       <p>听学生的跟读录音（NCE2），10 分制打分 + 评语；≥7 分显示「过关」。</p>
     </div>
     <div id="nce2r-list"></div>
+    <details class="rd-done-fold"><summary>已处理（${done.length}）<i>已批跟读与精听打卡 · 点开可回听录音、改分或删除</i></summary><div id="nce2r-done"></div></details>
   `
-  const box = el.querySelector('#nce2r-list')
-  const slice = list.slice(0, 30)
-  for (const r of slice) {
+  // 单行卡片构造（待批区/已处理区共用）：shadow 行带 audio + 分数/评语 +
+  // 提交批改 + 删除；listen 行只有提示文案 + 删除按钮
+  const buildCard = (r) => {
     const row = document.createElement('div')
     row.className = 'reading-review-card'
     row.innerHTML = `
@@ -84,9 +85,18 @@ export async function renderNce2Review(el, subs, opts) {
         row.querySelector('.reading-review-msg').textContent = `删除失败：${e.message}`
       }
     })
-    box.append(row)
+    return row
   }
-  if (!slice.length) box.innerHTML = '<p class="reading-hint">暂无 NCE2 听力提交</p>'
+  // 待批区：pending 逐行渲染；已处理折叠区：已批/打卡行共用同一卡片
+  const box = el.querySelector('#nce2r-list')
+  for (const r of pending.slice(0, 30)) box.append(buildCard(r))
+  const doneBox = el.querySelector('#nce2r-done')
+  for (const r of done.slice(0, 50)) doneBox.append(buildCard(r))
+  if (!pending.length) {
+    box.innerHTML = done.length
+      ? '<p class="reading-hint">没有待批的提交 🎉</p>'
+      : '<p class="reading-hint">暂无 NCE2 听力提交</p>'
+  }
   el.querySelector('#nce2r-back').addEventListener('click', () => {
     try {
       if (onBack) {
@@ -101,9 +111,12 @@ export async function renderNce2Review(el, subs, opts) {
 // 队列/已批折叠区共用行：学生名 + 课标题 + 类型 + 状态/分数 + 时长日期
 export function nce2SubRow(r) {
   const graded = r.status === 'graded'
-  const score = graded
-    ? `<b class="fce-his-score ${r.teacher_score >= 7 ? 'ok' : ''}">${r.teacher_score}/10${r.teacher_score >= 7 ? ' 过关' : ''}</b>`
-    : '<b class="fce-his-score pend">待批改</b>'
+  // listen 行 status 恒 'done'，打卡本身无需批改，直接标「已打卡」
+  const score = r.kind === 'listen'
+    ? '<b class="fce-his-score ok">✅ 已打卡</b>'
+    : graded
+      ? `<b class="fce-his-score ${r.teacher_score >= 7 ? 'ok' : ''}">${r.teacher_score}/10${r.teacher_score >= 7 ? ' 过关' : ''}</b>`
+      : '<b class="fce-his-score pend">待批改</b>'
   return `
     <div class="fce-his-row" data-nce2="${r.id}">
       <span class="fce-his-what">${escapeHtml(r.user)} · ${subSourceHtml(r)}</span>

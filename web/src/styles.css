@@ -3692,13 +3692,17 @@ button.tt-task {
 }
 
 /* ================= NCE2 听力跟读（nce2Study / nce2Review / 批改队列） ================= */
-/* 播放器区：mp3 直连 <audio> + ±5s / 隐藏中文小工具条 */
+/* 播放器区：mp3 直连 <audio> + ±5s / 隐藏中文小工具条；吸顶（长句列表滚动时保持可见） */
 .nce2-player-wrap {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 14px 16px;
   margin: 0 0 14px;
+  position: sticky;
+  top: var(--nce2-top, 64px);
+  z-index: 15;
+  box-shadow: 0 6px 16px rgba(0,0,0,.08);
 }
 .nce2-audio { width: 100%; height: 40px; display: block; }
 .nce2-player-bar {
@@ -3727,6 +3731,9 @@ button.tt-task {
   padding: 10px 16px;
   border-bottom: 1px solid var(--line);
   cursor: pointer;
+  /* timeupdate 高亮 scrollIntoView 时，当前句不被吸顶播放器/吸底录音条盖住 */
+  scroll-margin-top: calc(var(--nce2-top, 64px) + 120px);
+  scroll-margin-bottom: 90px;
 }
 .nce2-sent:last-child { border-bottom: 0; }
 .nce2-sent:hover { background: color-mix(in srgb, var(--brand) 5%, white); }
@@ -3790,3 +3797,34 @@ button.tt-task {
 .vr-kind-listen { --cat-color: #4a6fa5; }
 /* 学习日志/聚合行的「精听」模块徽标 */
 .gd-focus-mod.nce2 { background: #e8f0fb; color: #2b5aa7; }
+
+/* 吸底录音工具条：整页滚动时挂在视口底部（sticky 依赖父元素高度，
+   所以 #nce2-dock 是详情容器直接子元素，空态保持 innerHTML='' 不显底色） */
+.nce2-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 15;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 6px 16px 10px;
+  margin: 4px 0 14px;
+  box-shadow: 0 -6px 16px rgba(0,0,0,.08);
+}
+/* 工具条自带卡片边框/底色，避免与 dock 双层 */
+.nce2-dock .reading-toolbar { border: 0; background: none; padding: 0; margin: 0; }
+/* 兜底：类残留但内容为空时不露卡片底色 */
+.nce2-dock:empty { display: none; }
+
+/* 「历次跟读」折叠区：最新一次在状态卡，这里回听历史录音、看分数评语 */
+.nce2-his { margin-top: 10px; }
+.nce2-his-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.nce2-his-row audio { height: 32px; width: 220px; }
+.nce2-his-comment { font-size: 13px; color: var(--ink-soft); flex-basis: 100%; }

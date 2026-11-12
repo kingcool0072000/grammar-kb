@@ -135,12 +135,16 @@ async function renderNce2Detail(el, lid, role) {
     return
   }
   const sents = Array.isArray(l.sentences) ? l.sentences : []
+  // 自己在本课的跟读提交（新→旧）：既做 lessons 行 shadow 的兜底数据源，
+  // 也做「历次跟读」折叠区的数据源
+  const mine = subs.filter((s) => s.lesson_id === lid && s.kind === 'shadow')
+    .sort((a, b) => (b.id || 0) - (a.id || 0))  // 按 id 排（同秒提交 created_at 相等，字符串比较序不稳定）
   // 提交兜底：lessons 行的 shadow 万一缺分数明细，从自己的提交列表里找
   if (!isGraded(l) && !isPending(l)) {
-    const mine = subs.filter((s) => s.lesson_id === lid && s.kind === 'shadow')
-      .sort((a, b) => ((a.created_at || '') < (b.created_at || '') ? 1 : -1))
     if (mine.length) l.shadow = { status: mine[0].status, teacher_score: mine[0].teacher_score, teacher_comment: mine[0].teacher_comment }
   }
+  // 历次跟读：最新一次已由状态卡展示，历史里排除它
+  const history = l.shadow ? mine.slice(1) : mine
   // 状态做成首屏可见的醒目徽标（评分/完成态原来只是副标题里的灰字，
   // 沉在两屏句子列表下方的状态卡孩子第一眼看不到——评审 P1）
   const stateBadge = isGraded(l)
@@ -175,8 +179,12 @@ async function renderNce2Detail(el, lid, role) {
         </li>`).join('') : '<p class="reading-hint">本课暂无逐句字幕。</p>'}
     </ol>
     <div id="nce2-action"></div>
+    <div id="nce2-dock"></div>
   `
   el.querySelector('#nce2-back').addEventListener('click', () => mountNce2Study(el, { role }))
+  // 量一次真实顶栏高度写入 CSS 变量：播放器吸顶 top、逐句 scroll-margin 都用它
+  const hd = document.querySelector('.app-header')
+  if (hd) el.style.setProperty('--nce2-top', `${hd.offsetHeight + 6}px`)
 
   // ---- 播放器：逐句高亮 + 自动滚动 + 点句 seek + ±5s ----
   const audio = el.querySelector('#nce2-audio')
@@ -250,23 +258,60 @@ async function renderNce2Detail(el, lid, role) {
     }).catch(() => {})
   }
 
-  // ---- 底部动作区：精听打卡 / 跟读录音 / 批改结果 ----
-  renderActionArea(el, l, role, focusTracker)
+  // ---- 底部动作区：精听打卡 / 跟读录音 / 批改结果（+ 历次跟读折叠区） ----
+  renderActionArea(el, l, role, focusTracker, history)
 }
 
 /**
- * 动作区决策（后端契约字段）：
- *  - 有跟读提交 → 状态卡（待批改 / 分数+评语，≥7 过关），均可再录刷新
+ * 动作区决策（后端契约字段）：状态卡/打卡卡写 #nce2-action（随内容沉底），
+ * 录音工具条写 #nce2-dock（吸底，整页滚动时始终可见）。
+ *  - 有跟读提交 → 状态卡（待批改 / 分数+评语，≥7 过关）+ 历次跟读折叠区，均可再录刷新
  *  - listen_today=true → 今日精听已完成态（附自愿跟读录音器）
  *  - planned 且 nce2_mode='listen'（本周精听行且未打卡）→「✓ 我听完了」
  *  - 其余（shadow 任务行 / 无计划行=自由练习）→ 跟读录音器（文案区分）
  * 提交/重录后只重绘动作区，不打断播放。
  */
-function renderActionArea(el, l, role, focusTracker) {
+function renderActionArea(el, l, role, focusTracker, history = []) {
   const host = el.querySelector('#nce2-action')
+  const dock = el.querySelector('#nce2-dock')
   if (!host) return
+  // 录音工具条模板（写进吸底 dock；host 查询 #nce2-record 等都在里面）。
+  // sticky 类必须落在 #nce2-dock 宿主本身（el 的直接子元素）——约束盒是
+  // 父元素，套一层内层 div 会把吸附范围锁死在工具条自身高度里。
+  const dockToolbar = (label, tip) => `
+    <div class="reading-toolbar" id="nce2-toolbar">
+      <div class="reading-tool-row">
+        <span class="reading-tool-label">🎙 ${label}</span>
+        <span class="reading-pick-info">${tip}</span>
+      </div>
+      <div class="reading-tool-row">
+        <button class="reading-btn primary" id="nce2-record">开始录音</button>
+        <span class="reading-pick-info" id="nce2-rectime"></span>
+        <span class="reading-level-wrap" title="录音音量：说话时绿色条应跳动；不动=麦克风没声音">
+          <span class="reading-level-bar"><i id="nce2-level"></i></span>
+        </span>
+        <span class="reading-pick-info" id="nce2-recmsg"></span>
+      </div>
+    </div>
+  `
+  // 写/清 dock 的统一出口：有内容才挂 sticky 卡片类，避免空 div 露底色
+  const setDock = (html) => {
+    if (!dock) return
+    dock.classList.toggle('nce2-dock', !!html)
+    dock.innerHTML = html || ''
+  }
+  const historyRow = (r) => `
+    <div class="nce2-his-row">
+      <span class="fce-his-date">${(r.created_at || '').slice(0, 10)}</span>
+      ${r.status === 'graded'
+        ? `<b class="fce-his-score ${Number(r.teacher_score) >= 7 ? 'ok' : ''}">${Number(r.teacher_score)}/10</b>`
+        : '<b class="fce-his-score pend">待批改</b>'}
+      <audio controls preload="none" src="/api/nce2/submissions/${r.id}/audio?token=${encodeURIComponent(getAuth()?.token || '')}"></audio>
+      ${r.teacher_comment ? `<span class="nce2-his-comment">💬 ${escapeHtml(r.teacher_comment)}</span>` : ''}
+    </div>`
   if (role === 'teacher') {
     host.innerHTML = '<p class="reading-hint">教师账号打开为预览：打卡与录音提交请用学生账号。</p>'
+    setDock('')
     return
   }
   const sh = l.shadow || null
@@ -281,22 +326,18 @@ function renderActionArea(el, l, role, focusTracker) {
              ${sh.teacher_comment ? `<div class="reading-graded-comment">💬 ${escapeHtml(sh.teacher_comment)}</div>` : ''}`
           : '<b class="fce-his-score pend">🎙 跟读已提交 · 待批改</b>'}
       </div>
-      <div class="reading-toolbar" id="nce2-toolbar">
-        <div class="reading-tool-row">
-          <span class="reading-tool-label">🎙 ${graded ? '再录一次（刷新成绩）' : '再录一遍'}</span>
-          <span class="reading-pick-info">整课跟读一遍，≤ ${Math.round(MAX_RECORD_SEC / 60)} 分钟</span>
-        </div>
-        <div class="reading-tool-row">
-          <button class="reading-btn primary" id="nce2-record">开始录音</button>
-          <span class="reading-pick-info" id="nce2-rectime"></span>
-          <span class="reading-level-wrap" title="录音音量：说话时绿色条应跳动；不动=麦克风没声音">
-            <span class="reading-level-bar"><i id="nce2-level"></i></span>
-          </span>
-          <span class="reading-pick-info" id="nce2-recmsg"></span>
-        </div>
-      </div>
+      ${history.length ? `
+      <details class="rd-done-fold nce2-his">
+        <summary>历次跟读（${history.length}）<i>回听当时的录音、看分数评语</i></summary>
+        ${history.map(historyRow).join('')}
+      </details>` : ''}
     `
-    setupShadowRecorder(el, host, l, focusTracker)
+    if (dock) {
+      setDock(dockToolbar(
+        graded ? '再录一次（刷新成绩）' : '再录一遍',
+        `整课跟读一遍，≤ ${Math.round(MAX_RECORD_SEC / 60)} 分钟`))
+      setupShadowRecorder(el, dock, l, focusTracker, history)
+    }
     return
   }
   if (l.listen_today) {
@@ -305,25 +346,17 @@ function renderActionArea(el, l, role, focusTracker) {
         <b class="fce-his-score ok">✅ 今日精听已完成</b>
         <span class="reading-pick-info">想加深印象？随时可以再放一遍、跟读模仿。</span>
       </div>
-      <div class="reading-toolbar" id="nce2-toolbar">
-        <div class="reading-tool-row">
-          <span class="reading-tool-label">🎙 自愿跟读（不加任务）</span>
-          <span class="reading-pick-info">整课跟读一遍，≤ ${Math.round(MAX_RECORD_SEC / 60)} 分钟，老师会批改</span>
-        </div>
-        <div class="reading-tool-row">
-          <button class="reading-btn primary" id="nce2-record">开始录音</button>
-          <span class="reading-pick-info" id="nce2-rectime"></span>
-          <span class="reading-level-wrap" title="录音音量：说话时绿色条应跳动；不动=麦克风没声音">
-            <span class="reading-level-bar"><i id="nce2-level"></i></span>
-          </span>
-          <span class="reading-pick-info" id="nce2-recmsg"></span>
-        </div>
-      </div>
     `
-    setupShadowRecorder(el, host, l, focusTracker)
+    if (dock) {
+      setDock(dockToolbar(
+        '自愿跟读（不加任务）',
+        `整课跟读一遍，≤ ${Math.round(MAX_RECORD_SEC / 60)} 分钟，老师会批改`))
+      setupShadowRecorder(el, dock, l, focusTracker, history)
+    }
     return
   }
   if (l.planned && l.nce2_mode === 'listen') {
+    setDock('')
     host.innerHTML = `
       <div class="nce2-action-card">
         <span class="reading-pick-info">听懂这课了吗？听完后点下面的按钮打卡。</span>
@@ -339,7 +372,7 @@ function renderActionArea(el, l, role, focusTracker) {
         await api.nce2Submit({ lesson_id: l.id, kind: 'listen' })
         l.listen_today = true
         l.listen_done_ever = true
-        renderActionArea(el, l, role, focusTracker)
+        renderActionArea(el, l, role, focusTracker, history)
       } catch (err) {
         if (msg) msg.textContent = `打卡失败：${err.message}`
         btn.disabled = false
@@ -349,30 +382,22 @@ function renderActionArea(el, l, role, focusTracker) {
   }
   // 跟读：本周 shadow 任务行或自由练习，都给录音器（文案区分任务/自愿）
   const isTask = !!l.planned
-  host.innerHTML = `
-    <div class="reading-toolbar" id="nce2-toolbar">
-      <div class="reading-tool-row">
-        <span class="reading-tool-label">🎙 ${isTask ? '本周跟读任务' : '自由跟读'}</span>
-        <span class="reading-pick-info">${isTask
-          ? `这课在本周计划里：整课跟读一遍（≤ ${Math.round(MAX_RECORD_SEC / 60)} 分钟），提交后老师批改`
-          : `这课不在今日计划里，可自愿跟读整课一遍（≤ ${Math.round(MAX_RECORD_SEC / 60)} 分钟），提交后老师批改`}</span>
-      </div>
-      <div class="reading-tool-row">
-        <button class="reading-btn primary" id="nce2-record">开始录音</button>
-        <span class="reading-pick-info" id="nce2-rectime"></span>
-        <span class="reading-level-wrap" title="录音音量：说话时绿色条应跳动；不动=麦克风没声音">
-          <span class="reading-level-bar"><i id="nce2-level"></i></span>
-        </span>
-        <span class="reading-pick-info" id="nce2-recmsg"></span>
-      </div>
-    </div>
-  `
-  setupShadowRecorder(el, host, l, focusTracker)
+  host.innerHTML = ''
+  if (dock) {
+    setDock(dockToolbar(
+      isTask ? '本周跟读任务' : '自由跟读',
+      isTask
+        ? `这课在本周计划里：整课跟读一遍（≤ ${Math.round(MAX_RECORD_SEC / 60)} 分钟），提交后老师批改`
+        : `这课不在今日计划里，可自愿跟读整课一遍（≤ ${Math.round(MAX_RECORD_SEC / 60)} 分钟），提交后老师批改`))
+    setupShadowRecorder(el, dock, l, focusTracker, history)
+  }
 }
 
 // ---------- 跟读录音机（克隆 reading.js 全链路：getUserMedia →
 // MediaRecorder → 音量条 → 静音检测 → base64 提交） ----------
-function setupShadowRecorder(el, host, lesson, focusTracker) {
+// host = 吸底 dock 容器（工具条及其 #nce2-record/#nce2-rectime/#nce2-level/
+// #nce2-recmsg 都在里面）；history = 当前「历次跟读」列表，重绘时透传
+function setupShadowRecorder(el, host, lesson, focusTracker, history = []) {
   const btn = host.querySelector('#nce2-record')
   if (!btn) return
   const timeEl = host.querySelector('#nce2-rectime')
@@ -500,9 +525,18 @@ function setupShadowRecorder(el, host, lesson, focusTracker) {
         audio_b64: b64, mime: blob.type || 'audio/webm', duration_sec: duration,
       })
       lesson.shadow = { status: 'pending' }
-      // 动作区换成「待批改」卡（重绘后本录音器随旧节点一起卸掉）
-      if (el.querySelector('#nce2-action')) renderActionArea(el, lesson, 'student', focusTracker)
-      else if (msgEl) msgEl.innerHTML = `✅ 已提交（${fmtDur(duration)}），等待老师批改`
+      // 动作区换成「待批改」卡（重绘后本录音器随旧节点一起卸掉）；
+      // 重拉提交列表再重绘：这次提交成为最新，旧最新成绩滚入「历次跟读」
+      const redraw = (his) => {
+        if (el.querySelector('#nce2-action')) renderActionArea(el, lesson, 'student', focusTracker, his)
+        else if (msgEl) msgEl.innerHTML = `✅ 已提交（${fmtDur(duration)}），等待老师批改`
+      }
+      api.nce2Queue('all').then((d) => {
+        const list = (Array.isArray(d) ? d : (d && d.lessons) || [])
+          .filter((s) => s.lesson_id === lesson.id && s.kind === 'shadow')
+          .sort((a, b) => (b.id || 0) - (a.id || 0))  // 按 id 排（同秒提交 created_at 相等，字符串比较序不稳定）
+        redraw(list.length ? list.slice(1) : history)
+      }).catch(() => redraw(history))
     } catch (e) {
       msgEl.textContent = `提交失败：${e.message}`
     }

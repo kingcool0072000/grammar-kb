@@ -311,7 +311,8 @@ export async function mountRecentGraded(host, ctx) {
   const doneRec = recs.filter((r) => r.status !== 'pending')
   const doneVR = vretells.filter((r) => r.status !== 'pending')
   const doneEssay = fceSubs.filter((s) => s.status !== 'pending')
-  const doneNce2 = pickUser(Array.isArray(nce2Subs) ? nce2Subs : []).filter((r) => r.status !== 'pending')
+  // 只统计已批跟读；listen 打卡恒 'done'，不算「已批听力」
+  const doneNce2 = pickUser(Array.isArray(nce2Subs) ? nce2Subs : []).filter((r) => r.status === 'graded' && r.kind === 'shadow')
   const handledN = doneRec.length + doneVR.length + doneEssay.length + doneNce2.length
   host.innerHTML = `
     <details class="g-handled">
