@@ -128,27 +128,11 @@ export const api = {
   fceGrade: (id, rec) => reqJson(`/fce-submissions/${id}`, 'PUT', rec),
   fceSubmission: (id) => req(`/fce-submissions/${id}`),
   fceDeleteSubmission: (id) => reqJson(`/fce-submissions/${id}`, 'DELETE'),
-  // 阅读训练：列表（默认只返回派生文；教师 kind=base 查原文段）/ 详情 / 录音提交与批改
-  readingArticles: ({ kind } = {}) =>
-    req('/reading/articles', { searchParams: { kind } }),
-  readingArticle: (id) => req(`/reading/articles/${id}`),
-  // 派生文范读 WAV（二进制流，带登录态）
-  readingAudioBlob: (id) => reqBlob(`/reading/audio/${id}`),
-  readingAddDerived: (rec) => reqJson('/reading/articles', 'POST', rec),
-  readingUpdateDerived: (id, rec) => reqJson(`/reading/articles/${id}`, 'PUT', rec),
-  readingDeleteDerived: (id) => reqJson(`/reading/articles/${id}`, 'DELETE'),
-  // 精读难度评价（教师）：三维评分 LX词汇/语法结构/题材
-  readingDifficulty: (ids) =>
-    req('/reading/difficulty', { searchParams: ids ? { ids } : {} }),
-  // 单篇逐词标注（学生精读辅助：句首/连词/动词/词层级）
-  readingTokens: (id) => req(`/reading/articles/${id}/tokens`),
   // 听力预习词表（按 Part 分组的当前学生未掌握词）
   fceListeningVocab: (testId) => req(`/fce-papers/${testId}/listening-vocab`),
+  // 历史精读录音：学习日志旁的「已批录音」只读回看，不再提交或批改。
   readingRecordings: ({ user, status, limit = 100 } = {}) =>
     req('/reading/recordings', { searchParams: { user, status, limit } }),
-  readingSubmitRecording: (rec) => reqJson('/reading/recordings', 'POST', rec),
-  readingGradeRecording: (id, rec) => reqJson(`/reading/recordings/${id}`, 'PUT', rec),
-  readingDeleteRecording: (id) => reqJson(`/reading/recordings/${id}`, 'DELETE'),
   // 背单词成绩上报（学生自动上报；教师批改中心查看）
   reciteSubmit: (rec) => reqJson('/recite/sessions', 'POST', rec),
   reciteSessions: ({ user, limit = 100 } = {}) =>

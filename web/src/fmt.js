@@ -87,3 +87,33 @@ export const FORM_CN_SHORT = { ...FORM_CN, third_singular: '三单' }
 export function vocabPaperHead(level) {
   return Number(level) < 0 ? '已学混合卷' : `L${level}`
 }
+
+const PAPER_ID_RE = /^(MIX|L\d+)-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})-(\d+)$/
+
+/**
+ * 卷号（L3-20261023010101-2222）太长，行里只留级别、月日时刻和尾号。
+ * full 是完整 paper_id，挂在 title 上，点选和悬停都能看到全名。
+ * paper 可以是 id 字符串，或 {paper_id, level}。
+ */
+export function vocabPaperShort(paper, level) {
+  const obj = paper && typeof paper === 'object' ? paper : null
+  const id = String((obj ? obj.paper_id : paper) || '')
+  const lvRaw = obj && obj.level != null && obj.level !== '' ? obj.level : level
+  const lv = lvRaw == null || lvRaw === '' ? null : Number(lvRaw)
+  const m = PAPER_ID_RE.exec(id)
+  const mix = (lv != null && !Number.isNaN(lv) && lv < 0)
+    || id.startsWith('MIX-')
+    || (m && m[1] === 'MIX')
+  let head = '试卷'
+  if (mix) head = '已学混合卷'
+  else if (lv != null && !Number.isNaN(lv)) head = `L${lv}`
+  else if (m && m[1] !== 'MIX') head = m[1]
+  if (!m) {
+    const tail = !id ? '' : (id.length > 14 ? `…${id.slice(-6)}` : id)
+    return { short: [head, tail].filter(Boolean).join(' '), full: id }
+  }
+  return {
+    short: `${head} · ${m[3]}-${m[4]} ${m[5]}:${m[6]} · 尾号${m[8]}`,
+    full: id,
+  }
+}

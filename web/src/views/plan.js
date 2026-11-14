@@ -371,12 +371,9 @@ export async function mountPlan(el) {
           <span title="${escapeHtml(x.text)}">${escapeHtml(x.text)}</span>
           ${whyShort ? `<small class="pw-why">${escapeHtml(whyShort)}</small>` : ''}
           ${ok ? '<em>✓</em>' : ''}`
-        // 精读篇目可点：直达阅读训练详情（教师备课可顺手看正文；
-        // #/reading 学生专属，教师走阅读内容管理页）
-        if (x.type === 'article' && x.article_id)
-          return `<a class="pw-task link ${ok ? 'done' : `plan ${isToday ? 'today' : ''}`}"
-            href="#/readingAdmin"
-            title="${escapeHtml(tip || '阅读内容里查看/管理这篇文章')}">${inner}</a>`
+        // 已完成的旧精读行只作回顾，不再链到已撤下的阅读练习。
+        if (x.type === 'article')
+          return `<div class="pw-task done" title="${escapeHtml(tip || '精读已结束，这篇记录留在学习日志')}">${inner}</div>`
         // 视频任务可点：师生都直达视频学习详情（#/videoStudy?vid= 自动展开）
         if (x.type === 'video' && x.video_id)
           return `<a class="pw-task link ${ok ? 'done' : `plan ${isToday ? 'today' : ''}`}"
@@ -385,8 +382,9 @@ export async function mountPlan(el) {
         return `<div class="pw-task ${ok ? 'done' : `plan ${isToday ? 'today' : ''}`}"
           title="${escapeHtml(tip)}">${inner}</div>`
       }
-      const rows = (d.tasks || []).filter((x) => x.done).map((x) => taskRow(x, true)).join('')
-      const planRows = (d.tasks || []).filter((x) => !x.done).map((x) => taskRow(x, false)).join('')
+      const shown = (d.tasks || []).filter((x) => x.type !== 'article' || x.done)
+      const rows = shown.filter((x) => x.done).map((x) => taskRow(x, true)).join('')
+      const planRows = shown.filter((x) => !x.done).map((x) => taskRow(x, false)).join('')
       const acts = d.acts || {}
       const extraRows = (acts.extra_speaks || []).map((x) => `
         <div class="pw-task done">
@@ -472,13 +470,9 @@ export async function mountPlan(el) {
           chips.push(`📖 泛读 ${(b ? b.title : k).slice(0, 14)} → ${v}%`)
         }
       }
-      // 精读/视频按组统计（units 优先，旧扁平字段兜底）
       const unitCount = (units, legacy) =>
         units?.length ? units.reduce((n, u) => n + (u.ids?.length || u.vids?.length || 0), 0)
           : legacy?.length || 0
-      const artN = unitCount(t.article_units, t.articles)
-      if (artN) chips.push(`📄 精读+朗读 ${artN} 篇`)
-      else if (t.speak) chips.push(`📄 精读+朗读 ${t.speak} 篇`)
       const vidN = unitCount(t.video_units, t.videos)
       if (vidN) {
         const pool = ed?.videos || []

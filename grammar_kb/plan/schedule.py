@@ -35,6 +35,32 @@ def paper_task_detail(level: Optional[int]) -> str:
     return head + " · 线下完成后到词汇考试登记"
 
 
+_PAPER_ID_RE = re.compile(
+    r"^(MIX|L\d+)-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})-(\d+)$")
+
+
+def paper_short_label(paper_id: str, level: Optional[int] = None) -> str:
+    """课表行用的短卷名。完整 paper_id 放进 detail，避免长卷号撑破格子。"""
+    pid = str(paper_id or "")
+    m = _PAPER_ID_RE.match(pid)
+    mix = ((level is not None and int(level) < 0)
+           or pid.startswith("MIX-")
+           or (m is not None and m.group(1) == "MIX"))
+    if mix:
+        head = "已学混合卷"
+    elif level is not None:
+        head = f"L{int(level)}"
+    elif m is not None and m.group(1) != "MIX":
+        head = m.group(1)
+    else:
+        head = "试卷"
+    if m is None:
+        tail = pid if len(pid) <= 14 else f"…{pid[-6:]}"
+        return f"{head} {tail}".strip() if tail else head
+    return (f"{head} · {m.group(3)}-{m.group(4)} {m.group(5)}:{m.group(6)}"
+            f" · 尾号{m.group(8)}")
+
+
 _CN_GROUP_NUM = "一二三四五六七八九十"
 
 
@@ -52,7 +78,8 @@ class ScheduleMixin:
         """周目标 → for_date 当日的任务清单（逐日均摊，外循环第③步）。
 
         均摊节奏按家长 10-04 定的模板：工作日=讲次+背词+泛读，
-        周六=FCE 大题+精读朗读，周日=错词再练+试卷+补泛读。
+        周六=FCE 大题，周日=错词再练+试卷+补泛读。
+        精读不再排进当日清单（历史朗读留在学习日志）。
         剩余量动态重摊：按「周目标 − 截至 for_date 已完成」重算后摊给
         剩余天——错过的日子欠账自动滚入后面的天。纯派生不落库。
         for_date 缺省=今天；不在本周时以本周一为锚（整周预览）。
@@ -164,21 +191,8 @@ class ScheduleMixin:
             for book_key, pct in (t.get("reading") or {}).items():
                 tasks.append(self._reading_task(book_key, pct, user, days_left,
                                                 ctx=ctx))
-            # 精读 daily 组：工作日每天出队首未完成 1 篇（跨组按组序、
-            # 组内按 id 序；欠账=队首原样重现，同日不堆多条）。
-            self._append_daily_article_row(
-                tasks, t, ctx.done_article_ids(lo, upto), "工作日摊开", ctx=ctx)
-            # 周中已提前提交朗读的精读篇目：当天清单补 ✓ 行（否则只进
-            # 「计划外朗读」实录，计划内完成度看不见——孩子提前做完
-            # 反而显示没完成）
-            today_arts = ctx.done_article_ids(ref, upto)
-            for aid in self._plan_articles(t):
-                if aid in today_arts:
-                    row = self._article_row(aid, "今天已提交朗读 ✓", ctx=ctx)
-                    if row:
-                        tasks.append(row)
         elif dow == 5:
-            # ---- 周六：FCE 大题 + 精读朗读（模板：周六整块给输出型任务）----
+            # ---- 周六：FCE 大题（模板：周六整块给输出型任务）----
             fce_rest = [x for x in (t.get("fce") or []) if x not in fce_done]
             per = max(1, -(-len(fce_rest) // max(1, sat_left))) if fce_rest else 0
             for item in fce_rest[:per]:
@@ -187,39 +201,6 @@ class ScheduleMixin:
                     "text": f"FCE {item}",
                     "detail": "周六大题 · 先看预习词表再限时做",
                 })
-            # ---- 精读分组摊派（article_units 优先，旧 articles 平铺回退为
-            # 一个 weekend 组=现状语义）：daily 组周末继续每天清尾 1 篇；
-            # weekend 组周六一次做完，同日最多 2 行。只有 1 篇时只出 1 行，
-            # 不把空位再摊到周日。
-            done_arts = ctx.done_article_ids(lo, upto)
-            self._append_daily_article_row(tasks, t, done_arts, "周末清尾",
-                                           ctx=ctx)
-            for gi, u in enumerate(self._article_units(t), 1):
-                if u["mode"] != "weekend":
-                    continue
-                undone = [a for a in u["ids"] if a not in done_arts]
-                # 1 篇的组 cap=1；2 篇及以上仍是周六最多 2 行（其余下周，不占周日）。
-                cap = 1 if len(u["ids"]) <= 1 else 2
-                if u.get("labeled") and len(u["ids"]) <= 1:
-                    detail = f"精读{_cn_group(gi)}组 · 周末集中 · 1 篇"
-                elif u.get("labeled"):
-                    detail = f"精读{_cn_group(gi)}组 · 周末集中"
-                else:
-                    detail = "阅读训练里读全文 + 提交朗读录音"
-                for aid in undone[:cap]:
-                    row = self._article_row(aid, detail, ctx=ctx)
-                    if row:
-                        tasks.append(row)
-            # 今天刚提交朗读的计划内文章：上面按「周内已朗」滤剩余时把它也
-            # 滤掉了，清单无行 → 计划表看不见 ✓（孩子做完了反而像没做）。
-            # 仿讲次 today_lecs 补行：完成的也要看得见。
-            today_arts = ctx.done_article_ids(ref, upto)
-            have_arts = {x.get("article_id") for x in tasks}
-            for aid in self._plan_articles(t):
-                if aid in today_arts and aid not in have_arts:
-                    row = self._article_row(aid, "今天已提交朗读 ✓", ctx=ctx)
-                    if row:
-                        tasks.append(row)
             # 周六补一段泛读（周中没读完的量周六兜底，量小自然显示小目标）
             for book_key, pct in (t.get("reading") or {}).items():
                 tasks.append(self._reading_task(book_key, pct, user, days_left))
@@ -240,25 +221,12 @@ class ScheduleMixin:
                 plv = ctx.paper_level(pid)
                 tasks.append({
                     "type": "paper", "key": f"paper:{pid}",
-                    "text": f"单词试卷练习（{pid}）",
-                    "detail": paper_task_detail(plv),
+                    "text": f"单词试卷 · {paper_short_label(pid, plv)}",
+                    "detail": f"{paper_task_detail(plv)} · 卷号 {pid}",
                 })
             # 周日泛读兜底：周六前（含周六）仍未读完的剩余量周日一天清
             for book_key, pct in (t.get("reading") or {}).items():
                 tasks.append(self._reading_task(book_key, pct, user, 1, ctx=ctx))
-            # 精读 daily 组周日继续每天清尾 1 篇（weekend 组只在周六集中，
-            # 周日仅补当天已提交的 ✓ 行）
-            self._append_daily_article_row(
-                tasks, t, ctx.done_article_ids(lo, upto), "周末清尾", ctx=ctx)
-            # 今天刚提交朗读的计划内文章也要出 ✓ 行（周日同样：孩子做完了
-            # 反而像没做，与周六分支同修）
-            today_arts = ctx.done_article_ids(ref, upto)
-            have_arts = {x.get("article_id") for x in tasks}
-            for aid in self._plan_articles(t):
-                if aid in today_arts and aid not in have_arts:
-                    row = self._article_row(aid, "今天已提交朗读 ✓", ctx=ctx)
-                    if row:
-                        tasks.append(row)
         # 讲次/FCE 剩余但本日类型无槽位（如 ref 已周六、讲次还没排完）→ 兜底行；
         # 今天考过的讲次/作业卷在周末也要有 ✓ 行（完成即视，不再隐形）
         if dow >= 5:
@@ -339,59 +307,7 @@ class ScheduleMixin:
         words = None if lv is None else ctx.level_words(lv)
         return ctx.vocab_actuals(day, upto, words)
 
-    # ---- 计划分组契约（精读 article_units 优先、旧 articles 平铺回退；
-    #      视频 video_units 唯一来源，旧 videos 键由一次性脚本转换）----
-
-    def _article_units(self, t: dict) -> list[dict]:
-        """周计划精读分组（读兼容：旧 ``articles:[int]`` = 一个 weekend 组，
-        即现状「周六集中 2 篇」语义）。
-
-        新契约：``[{"ids":[58] 或 [58,82], "mode":"daily"|"weekend"}]``——
-        每组 1 或 2 篇。daily 组工作日每天 1 篇轮转、周末每天 1 篇清尾；
-        weekend 组周六一次做完（1 篇只出 1 行，不改派到别的天）。
-        ``labeled`` 标记新分组行（detail 带组号）；旧字段回退组保持现状文案。
-        """
-        units: list[dict] = []
-        for u in (t.get("article_units") or []):
-            if not isinstance(u, dict):
-                continue
-            mode = u.get("mode")
-            if mode not in ("daily", "weekend"):
-                continue
-            ids: list[int] = []
-            for a in (u.get("ids") or []):
-                try:
-                    aid = int(a)
-                except (TypeError, ValueError):
-                    continue
-                if aid not in ids:
-                    ids.append(aid)
-            if ids:
-                units.append({"ids": ids, "mode": mode, "labeled": True})
-        if units:
-            return units
-        old: list[int] = []
-        for a in (t.get("articles") or []):
-            try:
-                aid = int(a)
-            except (TypeError, ValueError):
-                continue
-            if aid not in old:
-                old.append(aid)
-        return [{"ids": old, "mode": "weekend", "labeled": False}] if old else []
-
-    def _plan_articles(self, t: dict) -> list[int]:
-        """计划内全部精读 id（去重保序；units 优先、旧 articles 回退）。
-
-        「今天已提交朗读 ✓」补行、week_view 文章标题与周目标精读维度
-        都用这份清单，保证与排程同一读法。
-        """
-        out: list[int] = []
-        for u in self._article_units(t):
-            for aid in u["ids"]:
-                if aid not in out:
-                    out.append(aid)
-        return out
+    # ---- 计划分组契约（视频 video_units 唯一来源，旧 videos 键由一次性脚本转换）----
 
     def _video_units(self, t: dict) -> list[dict]:
         """周计划视频分组。``video_units`` 是唯一来源（旧平铺 ``videos`` 键
@@ -421,50 +337,6 @@ class ScheduleMixin:
                 if vid not in out:
                     out.append(vid)
         return out
-
-    def _article_row(self, aid: int, detail: str,
-                     ctx: Optional[WeekCtx] = None) -> Optional[dict]:
-        """精读计划行（行结构固定：article_id + key + 文案 + 摊法 detail）。
-
-        标题查不到 = 文章已删除/下架：返回 None 不出行（与学生可见清单一致）。
-        """
-        title = (ctx.article_title(aid) if ctx is not None
-                 else self._article_title(aid))
-        if not title:
-            return None
-        return {
-            "type": "article", "article_id": aid,
-            "key": f"article:{aid}",
-            "text": f"精读+朗读《{_short(title, 14)}》",
-            "detail": detail,
-        }
-
-    def _append_daily_article_row(self, tasks: list[dict], t: dict,
-                                  done_arts: set, phase: str,
-                                  ctx: Optional[WeekCtx] = None) -> None:
-        """精读 daily 组「每天 1 篇」的统一出口（工作日「摊开」、周末「清尾」）。
-
-        跨 daily 组按组序、组内按 id 序合并成一个队列，每天只出队首
-        未完成 1 篇：当天做完次日队列自动前进；欠账=队首原样重现
-        （同日不堆多条）。只有 1 篇的组同样只占 1 天，不拆成两天、
-        也不在同一天重复出行。weekend 组不在此列（周六一次做完）。
-        """
-        for gi, u in enumerate(self._article_units(t), 1):
-            if u["mode"] != "daily":
-                continue
-            sids = sorted(u["ids"])
-            for i, aid in enumerate(sids, 1):
-                if aid in done_arts:
-                    continue
-                if len(sids) <= 1:
-                    detail = f"精读{_cn_group(gi)}组 · 1 篇 · {phase}"
-                else:
-                    detail = f"精读{_cn_group(gi)}组 {i}/{len(sids)} · {phase}"
-                row = self._article_row(aid, detail, ctx=ctx)
-                if row is None:
-                    continue  # 已删除/下架：跳过出下一个
-                tasks.append(row)
-                return  # 每天只 1 篇：合并队列队首已出行
 
     def _append_video_tasks(self, tasks: list[dict], t: dict, user: str,
                             lo: str, ref: str, upto: str, dow: int,
@@ -1012,7 +884,7 @@ class ScheduleMixin:
                 extra_speaks.append({
                     "type": "speak", "done": True,
                     "text": f"朗读《{title[:16]}》" if title else f"朗读提交（文章{aid}）",
-                    "detail": "计划外提交，录音已进批改中心",
+                    "detail": "已提交的朗读，记录留在学习日志",
                 })
         acts_out = {
             "extra_speaks": extra_speaks,

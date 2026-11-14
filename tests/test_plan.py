@@ -5,7 +5,7 @@ import io
 import json
 import sqlite3
 import zipfile
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -21,15 +21,34 @@ MON = monday_of(today_cn()).isoformat()
 PREV = (monday_of(today_cn()) - timedelta(days=7)).isoformat()
 
 
+class _FrozenDateTime(datetime):
+    """周末把背词 mastered_at 也钉在冻结的周三。freeze_clock 只改 now_cn。"""
+
+    _when = None
+
+    @classmethod
+    def now(cls, tz=None):
+        base = cls._when.astimezone(timezone.utc)
+        if tz is None:
+            return base.replace(tzinfo=None)
+        return base.astimezone(tz)
+
+
 @pytest.fixture()
-def weekday_clock():
-    """周六日把「今天」钉在当周周三，工作日排程用例不必整段跳过。"""
+def weekday_clock(monkeypatch):
+    """周六日把「今天」钉在当周周三，工作日排程用例不必整段跳过。
+
+    背词掌握时间走 datetime.now(UTC)，不看 freeze_clock。周末不一起钉的话，
+    「今天新掌握」会落在真实周六，周三清单永远打不了勾。
+    """
     real = datetime.now(CN_TZ)
     if real.weekday() < 5:
         yield
         return
     wed = monday_of(real.date()) + timedelta(days=2)
     when = datetime(wed.year, wed.month, wed.day, 12, 0, tzinfo=CN_TZ)
+    _FrozenDateTime._when = when
+    monkeypatch.setattr("grammar_kb.recite.datetime", _FrozenDateTime)
     with freeze_clock(when):
         yield
 
@@ -511,7 +530,7 @@ def test_daily_spread_future_days_carry_plan(plan_env, weekday_clock):
         assert x["total"] == len(x["tasks"])
         # 未来日任务全部 done=False（灰显计划，不是完成记录）
         assert all(not t["done"] for t in x["tasks"])
-    # 周六未来日应排 FCE（模板：周六=FCE 大题+精读）
+    # 周六未来日应排 FCE（精读不再排进课表）
     sat_all = [x for x in d["days"]
                if x["future"] and date.fromisoformat(x["date"]).weekday() == 5]
     if sat_all:
@@ -636,8 +655,7 @@ def test_topic_completion_lights_lecture(plan_env):
 
 
 def test_weekday_speak_completion_visible(plan_env):
-    """周中提前提交朗读：提交日清单出「今天已提交朗读 ✓」行，
-    且周六排程把它从剩余里剔除（不再重复排未完成）。"""
+    """周中交过的朗读不再排成精读任务，但提交日实录还在。"""
     c = _client(plan_env)
     ht = _login(c, "teacher", "123456")
     hs = _login(c, "malin", "123456")
@@ -666,30 +684,20 @@ def test_weekday_speak_completion_visible(plan_env):
                 (f"{rec_day.isoformat()}T12:00:00+00:00",))
     con.commit()
     con.close()
-    # 提交日是周一或周三，都是工作日模板
     d = c.get("/plan/today", headers=hs,
               params={"day": rec_day.isoformat()}).json()["data"]
-    arts = [t for t in d["tasks"] if t.get("type") == "article"]
-    assert any(t.get("done") for t in arts), \
-        f"周中提交朗读的计划内文章应在提交日显示完成: {d['tasks']}"
-    # 周六排程：已提交的 61 不再出现在周六清单（剩余剔除）
+    assert not any(t.get("type") == "article" for t in d["tasks"]), d["tasks"]
+    speaks = (d.get("acts") or {}).get("extra_speaks") or []
+    assert any("Too Many" in (s.get("text") or "") for s in speaks), speaks
     sat = date.fromisoformat(MON) + timedelta(days=5)
     from grammar_kb.plan import PlanStore
     ps = PlanStore(str(plan_env / "fce.db"))
     sat_tasks = ps.week_daily_tasks(MON, for_date=sat.isoformat(), user="malin")
-    sat_arts = [t for t in sat_tasks
-                if t.get("type") == "article" and not t.get("done")]
-    assert all(61 != t.get("article_id") for t in sat_arts), \
-        f"已提交朗读的文章不应再排周六未完成: {sat_arts}"
+    assert not any(t.get("type") == "article" for t in sat_tasks), sat_tasks
 
 
 def test_saturday_speak_completion_visible(plan_env):
-    """周六当天提交朗读：清单也要出「今天已提交朗读 ✓」行。
-
-    回归背景（11-01 生产）：周六分支按「周内已朗」滤剩余时把当天刚提交
-    的也滤掉——清单无行、计划表看不见 ✓，孩子做完了像没做。信号链本身
-    是通的（completion keys 里 article:done=True），缺的是清单行。
-    """
+    """周六交过的朗读留在当日实录，不再排成精读任务行。"""
     c = _client(plan_env)
     ht = _login(c, "teacher", "123456")
     hs = _login(c, "malin", "123456")
@@ -715,11 +723,9 @@ def test_saturday_speak_completion_visible(plan_env):
     con.close()
     d = c.get("/plan/today", headers=hs,
               params={"day": sat.isoformat()}).json()["data"]
-    arts = [t for t in d["tasks"] if t.get("type") == "article"]
-    assert any(t.get("article_id") == 61 and t.get("done") for t in arts), \
-        f"周六当天提交朗读的计划内文章应显示完成行: {d['tasks']}"
-    done_row = next(t for t in arts if t.get("article_id") == 61)
-    assert "今天已提交朗读" in (done_row.get("detail") or "")
+    assert not any(t.get("type") == "article" for t in d["tasks"]), d["tasks"]
+    speaks = (d.get("acts") or {}).get("extra_speaks") or []
+    assert speaks and all("学习日志" in (s.get("detail") or "") for s in speaks), speaks
 
 
 def test_rules_registry_and_switch(plan_env):
@@ -828,9 +834,8 @@ def test_week_goal_progress_counts_topic(plan_env):
 
 
 def test_editor_data_excludes_base_articles(plan_env):
-    """周计划编辑器文章池只给派生文：base 原文是教师备课素材、
-    学生端阅读练习不可见（detail 403）——混进池会被选上，孩子无处
-    可看也永远完不成（10-14 本周 2 篇精读排了 base id 2/3 的事故）。"""
+    """编辑器数据里的文章池仍只含派生文。产品不再用它布置新精读，
+    历史兼容字段不能把 base 原文混进来。"""
     c = _client(plan_env)
     ht = _login(c, "teacher", "123456")
     con = sqlite3.connect(plan_env / "fce.db")
@@ -853,9 +858,8 @@ def test_editor_data_excludes_base_articles(plan_env):
     assert ids == {52, 53}, f"编辑器文章池应只含派生文: {arts}"
 
 
-def test_saturday_article_rows_carry_id_for_link(plan_env):
-    """周六排程的精读行带 article_id：学生课程表/教师计划卡据此渲染
-    「直达阅读练习」链接（#/reading?art=ID 自动进详情）。"""
+def test_saturday_article_rows_are_not_offered(plan_env):
+    """存着的精读篇目不再排进周六课表，周 JSON 本身不被改写。"""
     con = sqlite3.connect(plan_env / "fce.db")
     con.execute("""CREATE TABLE IF NOT EXISTS reading_article (
         id INTEGER PRIMARY KEY, kind TEXT DEFAULT 'derived',
@@ -870,12 +874,14 @@ def test_saturday_article_rows_carry_id_for_link(plan_env):
     ps = PlanStore(str(plan_env / "fce.db"))
     ps.put_week(MON, {"articles": [58]}, "", user="malin")
     sat = date.fromisoformat(MON) + timedelta(days=5)
-    rows = [t for t in ps.week_daily_tasks(MON, for_date=sat.isoformat(),
-                                           user="malin")
-            if t.get("type") == "article"]
-    assert rows and all(r.get("article_id") for r in rows), rows
-    # 标题在文案里被截到 14 字符（The Secret Sen…），断言截断前缀
-    assert any("Secret Sen" in (r.get("text") or "") for r in rows), rows
+    rows = ps.week_daily_tasks(MON, for_date=sat.isoformat(), user="malin")
+    assert not any(t.get("type") == "article" for t in rows), rows
+    con = sqlite3.connect(plan_env / "fce.db")
+    raw = con.execute(
+        "SELECT tasks FROM plan_weeks WHERE week_start = ? AND user = ?",
+        (MON, "malin")).fetchone()[0]
+    con.close()
+    assert "58" in raw
 
 
 def test_day_completion_is_the_done_exit(plan_env, weekday_clock):
@@ -950,7 +956,11 @@ def test_mix_paper_sunday_copy(plan_env):
     tasks = {t["key"]: t for t in ps.week_daily_tasks(MON, for_date=sun, user="malin")}
     assert tasks[f"paper:{mix_id}"]["detail"].startswith("已学混合卷")
     assert "L-1" not in tasks[f"paper:{mix_id}"]["detail"]
-    assert tasks[f"paper:{mix_id}"]["text"] == f"单词试卷练习（{mix_id}）"
+    assert tasks[f"paper:{mix_id}"]["text"] == "单词试卷 · 已学混合卷 · 10-23 01:01 · 尾号1111"
+    assert mix_id in tasks[f"paper:{mix_id}"]["detail"]
+    assert mix_id not in tasks[f"paper:{mix_id}"]["text"]
+    assert tasks[f"paper:{lvl_id}"]["text"] == "单词试卷 · L3 · 10-23 01:01 · 尾号2222"
+    assert lvl_id in tasks[f"paper:{lvl_id}"]["detail"]
     assert tasks[f"paper:{lvl_id}"]["detail"].startswith("L3 级试卷")
     assert tasks["paper:MIX-missing"]["detail"].startswith("试卷资产")
 
@@ -1067,14 +1077,17 @@ def test_goal_progress_dims_are_per_module(plan_env):
     assert "语法课程" in names
     assert any(n.startswith("词汇") for n in names)
     assert "FCE Part" in names
-    assert "精读朗读" in names
+    assert "精读朗读" not in names
     assert "单词试卷" in names
     assert all(x["total"] > 0 and "done" in x for x in d["dims"])
     assert d["percent"] is not None
     # 各模块独立：一门课没考过时，综合百分比不能被当成唯一进度。
     lec = next(x for x in d["dims"] if x["name"] == "语法课程")
     assert lec["done"] == 0 and lec["total"] == 2
-    assert len(d["dims"]) >= 5
+    assert len(d["dims"]) >= 4
+    # 历史精读目标还在库里，只是不再画成进度条。
+    stored = c.get("/plan/goals?user=malin", headers=ht).json()["data"]
+    assert stored.get("goals", stored).get("articles") == [52] or stored.get("articles") == [52]
 
 
 def test_leveled_vocab_quota_matches_weekly_new(plan_env, weekday_clock):
@@ -1303,159 +1316,31 @@ def _seed_plan_videos(env, *vids):
     con.close()
 
 
-def _scheduled_article_rows(ps, day_iso):
-    """某日派生清单里的精读行（排除「今天已提交 ✓」补行）。"""
-    return [t for t in ps.week_daily_tasks(MON, for_date=day_iso, user="malin")
-            if t.get("type") == "article"
-            and "已提交" not in (t.get("detail") or "")]
+def test_stored_article_units_are_not_scheduled(plan_env):
+    """历史精读分组留在周计划 JSON 里，七天都不再排出精读任务。"""
+    from grammar_kb.plan import PlanStore
+    _seed_plan_articles(plan_env, 82, 81, 61)
+    ps = PlanStore(str(plan_env / "fce.db"))
+    ps.put_week(MON, {"article_units": [
+        {"ids": [82, 81], "mode": "daily"},
+        {"ids": [61], "mode": "weekend"},
+    ]}, "", user="malin")
+    for i in range(7):
+        day = (date.fromisoformat(MON) + timedelta(days=i)).isoformat()
+        rows = ps.week_daily_tasks(MON, for_date=day, user="malin")
+        assert not any(t.get("type") == "article" for t in rows), (day, rows)
+    con = sqlite3.connect(plan_env / "fce.db")
+    raw = con.execute(
+        "SELECT tasks FROM plan_weeks WHERE week_start = ? AND user = ?",
+        (MON, "malin")).fetchone()[0]
+    con.close()
+    assert "81" in raw and "weekend" in raw
 
 
 def _scheduled_video_rows(ps, day_iso):
     return [t for t in ps.week_daily_tasks(MON, for_date=day_iso, user="malin")
             if t.get("type") == "video"
             and "已提交" not in (t.get("detail") or "")]
-
-
-def test_article_daily_units_weekday_rotation(plan_env):
-    """精读 daily 组：跨组按组序、组内按 id 序合并队列，工作日每天出队首
-    未完成 1 篇——当天提交朗读后次日队列前进；没做完则欠账原样重现
-    （同日不堆多条）；队列清空不再出行；周末每天 1 篇清尾。"""
-    from grammar_kb.plan import PlanStore
-    _seed_plan_articles(plan_env, 82, 81, 84, 83)
-    ps = PlanStore(str(plan_env / "fce.db"))
-    days = [(date.fromisoformat(MON) + timedelta(days=i)).isoformat()
-            for i in range(7)]
-
-    def _rec(aid, day_iso):
-        con = sqlite3.connect(plan_env / "fce.db")
-        con.execute(
-            "INSERT INTO reading_recordings (user, article_id, created_at)"
-            " VALUES ('malin', ?, ?)", (aid, f"{day_iso}T12:00:00+00:00"))
-        con.commit()
-        con.close()
-
-    # 两组 daily：一组 ids 乱序写入 [82, 81]（组内按 id 序出 81→82）
-    ps.put_week(MON, {"article_units": [
-        {"ids": [82, 81], "mode": "daily"},
-        {"ids": [84, 83], "mode": "daily"},
-    ]}, "", user="malin")
-    head = [(81, "精读一组 1/2 · 工作日摊开")]
-    # 没做完：队首 81 原样重现（欠账滚动，同日不堆多条）
-    for k in (0, 1, 2):
-        rows = _scheduled_article_rows(ps, days[k])
-        assert [(r["article_id"], r["detail"]) for r in rows] == head, \
-            (days[k], rows)
-        assert "精读+朗读《Article" in rows[0]["text"]
-    # 逐天做完：完成 81 → 周二队首前进 82 → 完成 82 → 周三 83 → …
-    # （完成与派生必须交替，当天的提交会立即从队列里剔除）
-    plan = [(81, days[0], 1, [(82, "精读一组 2/2 · 工作日摊开")]),
-            (82, days[1], 2, [(83, "精读二组 1/2 · 工作日摊开")]),
-            (83, days[2], 3, [(84, "精读二组 2/2 · 工作日摊开")])]
-    for aid, done_day, next_k, want in plan:
-        _rec(aid, done_day)
-        rows = _scheduled_article_rows(ps, days[next_k])
-        assert [(r["article_id"], r["detail"]) for r in rows] == want, \
-            (days[next_k], rows)
-    # 周五队列已清空：不再出行
-    _rec(84, days[3])
-    assert _scheduled_article_rows(ps, days[4]) == []
-    # 周末清尾：另一组 daily 到周六仍有剩余 → 周六/周日继续每天 1 篇
-    _seed_plan_articles(plan_env, 91, 92)
-    ps.put_week(MON, {"article_units": [
-        {"ids": [92, 91], "mode": "daily"}]}, "", user="malin")
-    sat_rows = _scheduled_article_rows(ps, days[5])
-    assert [(r["article_id"], r["detail"]) for r in sat_rows] == \
-        [(91, "精读一组 1/2 · 周末清尾")], sat_rows
-    _rec(91, days[5])
-    sun_rows = _scheduled_article_rows(ps, days[6])
-    assert [(r["article_id"], r["detail"]) for r in sun_rows] == \
-        [(92, "精读一组 2/2 · 周末清尾")], sun_rows
-
-
-def test_article_weekend_group_and_flat_fallback(plan_env):
-    """weekend 组周六集中出未完成前 2 篇（一次两条行）；旧 articles 平铺
-    回退为同一个 weekend 组（现状语义与文案）；周日不重排未完成。"""
-    from grammar_kb.plan import PlanStore
-    _seed_plan_articles(plan_env, 61, 62, 63)
-    ps = PlanStore(str(plan_env / "fce.db"))
-    sat = (date.fromisoformat(MON) + timedelta(days=5)).isoformat()
-    sun = (date.fromisoformat(MON) + timedelta(days=6)).isoformat()
-    # 新 weekend 组：周六只出 61/62 两条行（63 不一次压上）
-    ps.put_week(MON, {"article_units": [
-        {"ids": [61, 62, 63], "mode": "weekend"}]}, "", user="malin")
-    rows = _scheduled_article_rows(ps, sat)
-    assert [(r["article_id"], r["detail"]) for r in rows] == [
-        (61, "精读一组 · 周末集中"), (62, "精读一组 · 周末集中")], rows
-    # 周日：weekend 组不重排未完成（只有当天提交的 ✓ 行）
-    assert _scheduled_article_rows(ps, sun) == []
-    # 旧 articles 平铺 = 一个 weekend 组：周六同样 2 条行、文案维持现状
-    ps.put_week(MON, {"articles": [61, 62, 63]}, "", user="malin")
-    rows_old = _scheduled_article_rows(ps, sat)
-    assert [r["article_id"] for r in rows_old] == [61, 62]
-    assert all(r["detail"] == "阅读训练里读全文 + 提交朗读录音"
-               for r in rows_old), rows_old
-    assert _scheduled_article_rows(ps, sun) == []
-
-
-def test_article_mixed_units_sat_order(plan_env):
-    """daily+weekend 混合：工作日只有 daily 队列；周六先 daily 清尾 1 篇、
-    weekend 组再独立出 2 条行。"""
-    from grammar_kb.plan import PlanStore
-    _seed_plan_articles(plan_env, 71, 72, 61, 62)
-    ps = PlanStore(str(plan_env / "fce.db"))
-    ps.put_week(MON, {"article_units": [
-        {"ids": [71, 72], "mode": "daily"},
-        {"ids": [61, 62], "mode": "weekend"},
-    ]}, "", user="malin")
-    wed = (date.fromisoformat(MON) + timedelta(days=2)).isoformat()
-    sat = (date.fromisoformat(MON) + timedelta(days=5)).isoformat()
-    wed_rows = _scheduled_article_rows(ps, wed)
-    assert [(r["article_id"], r["detail"]) for r in wed_rows] == \
-        [(71, "精读一组 1/2 · 工作日摊开")], wed_rows
-    sat_rows = _scheduled_article_rows(ps, sat)
-    assert [(r["article_id"], r["detail"]) for r in sat_rows] == [
-        (71, "精读一组 1/2 · 周末清尾"),
-        (61, "精读二组 · 周末集中"),
-        (62, "精读二组 · 周末集中"),
-    ], sat_rows
-
-
-def test_article_single_unit_one_day(plan_env):
-    """1 篇的精读组不把排程拆坏：daily 只占 1 个工作日（欠账仍是同一篇、
-    同一天不重复）；做完后下一天不再排。weekend 只在周六出 1 行，
-    工作日和周日都不占位。"""
-    from grammar_kb.plan import PlanStore
-    _seed_plan_articles(plan_env, 41, 42)
-    ps = PlanStore(str(plan_env / "fce.db"))
-    days = [(date.fromisoformat(MON) + timedelta(days=i)).isoformat()
-            for i in range(7)]
-
-    def _ids(day_iso):
-        return [(r["article_id"], r["detail"])
-                for r in _scheduled_article_rows(ps, day_iso)]
-
-    ps.put_week(MON, {"article_units": [
-        {"ids": [41], "mode": "daily"}]}, "", user="malin")
-    assert _ids(days[0]) == [(41, "精读一组 · 1 篇 · 工作日摊开")]
-    # 没做完：周二仍是这一篇，不是第二条、也不是空转后跳天
-    assert _ids(days[1]) == [(41, "精读一组 · 1 篇 · 工作日摊开")]
-    con = sqlite3.connect(plan_env / "fce.db")
-    con.execute(
-        "INSERT INTO reading_recordings (user, article_id, created_at)"
-        " VALUES ('malin', 41, ?)", (f"{days[0]}T12:00:00+00:00",))
-    con.commit()
-    con.close()
-    assert _ids(days[1]) == []
-    # 周末不再为这一篇补出第二天
-    assert _ids(days[5]) == []
-    assert _ids(days[6]) == []
-
-    ps.put_week(MON, {"article_units": [
-        {"ids": [42], "mode": "weekend"}]}, "", user="malin")
-    for i in range(5):
-        assert _ids(days[i]) == [], days[i]
-    assert _ids(days[5]) == [(42, "精读一组 · 周末集中 · 1 篇")]
-    assert _ids(days[6]) == []
 
 
 def test_video_units_weekend_and_daily(plan_env):

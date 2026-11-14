@@ -1,7 +1,6 @@
 import { api } from '../../api.js'
 import { escapeHtml } from '../../render.js'
 import { fmtDur } from '../../fmt.js'
-import { renderReadingReview } from '../readingReview.js'
 import { renderVideoReview, videoRetellRow } from '../videoReview.js'
 import { renderNce2Review, nce2SubRow } from '../nce2Review.js'
 import { mountEssayReviewInline } from '../fcePapers/teacher.js'
@@ -60,68 +59,7 @@ function fceRow(s) {
     </div>`
 }
 
-// ---- 1 · 待批录音队列（精读分区）：行点击 / 按钮内嵌打开录音批改 ----
-
-export async function mountRecordingQueue(host, ctx) {
-  const { state, snapshots, onCount } = ctx || {}
-  const student = state && state.student
-  const key = `rec:${student}`
-  const load = async () => {
-    let recs = snapshots && snapshots.get(key)
-    if (!recs) {
-      recs = await timed(api.readingRecordings({ limit: 200, user: student || undefined }))
-      recs = Array.isArray(recs) ? recs : []
-      if (snapshots) snapshots.set(key, recs)
-    }
-    return recs
-  }
-  const openReview = async () => {
-    const view = document.createElement('div')
-    host.replaceChildren(view)
-    view.innerHTML = '<p class="muted">加载录音批改…</p>'
-    try {
-      const recs = await api.readingRecordings({ limit: 200, user: student || undefined })
-      await renderReadingReview(view, recs, {
-        onBack: () => {
-          if (snapshots) snapshots.delete(key) // 批改后作废快照，重挂拉新
-          run()
-          return true
-        },
-      })
-    } catch (e) {
-      view.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
-    }
-  }
-  const run = async () => {
-    host.innerHTML = '<p class="muted">加载中…</p>'
-    const recs = await load()
-    const pend = recs.filter((r) => r.status === 'pending')
-    host.innerHTML = queueBlock(
-      'recording',
-      '待批录音',
-      pend.length,
-      pend.map((r) => recRow(r)).join(''),
-      '没有待批录音',
-      pend.length ? `<button class="gcard-more" data-open-review>去批改录音（${pend.length}）→</button>` : '',
-    )
-    host.querySelector('[data-open-review]')?.addEventListener('click', openReview)
-    const list = host.querySelector('.gcard-list')
-    if (list) list.addEventListener('click', (e) => {
-      if (e.target.closest('[data-rec-del],[data-rec-edit],audio,a')) return
-      if (!e.target.closest('.fce-his-row')) return
-      openReview()
-    })
-    onCount?.(pend.length)
-    // readingAdmin 等旧入口的联动：sessionStorage 置位时自动内嵌打开批改
-    if (sessionStorage.getItem('gkb-open-review') === '1') {
-      sessionStorage.removeItem('gkb-open-review')
-      openReview()
-    }
-  }
-  await run()
-}
-
-// ---- 2 · 待批复述队列（视频分区）：视频复述 + 句型复述（ref_kind=pattern
+// ---- 待批复述队列（视频分区）：视频复述 + 句型复述（ref_kind=pattern
 // 行由 videoRetellRow 自带「句型复述」标注），批改内嵌 renderVideoReview ----
 
 export async function mountRetellQueue(host, ctx) {

@@ -10,7 +10,6 @@ export const TEACHER_TABS = [
 export const STUDENT_TABS = [
   { key: 'timetable', label: '课程表' },
   { key: 'recite', label: '背单词' },
-  { key: 'reading', label: '阅读练习' },
   { key: 'micro', label: '微练习' },
   { key: 'topics', label: '专题学习' },
   { key: 'library', label: '泛读馆' },
@@ -25,7 +24,7 @@ const TEACHER_ALLOWED = new Set([
   'grading',
   // 备课 / 批改 / 计划跳进来的工具页
   'courses', 'taxonomy', 'fceListen', 'exams', 'vocabLevel', 'vocabExam',
-  'students', 'paperAdmin', 'readingAdmin', 'readingList', 'topicsAdmin',
+  'students', 'paperAdmin', 'topicsAdmin',
   'videoAdmin',
   'librarySettings',
   // 微练习题库管理 + 完成度 + 句型素材（教师专属，不进顶部 Tab）
@@ -72,8 +71,17 @@ export function normalizeKey() {
   return key
 }
 
+// 精读（阅读练习）已结束。旧书签不再打开那个页，教师回备课中心，学生回课程表。
+const RETIRED_INTENSIVE = new Set(['reading', 'readingAdmin', 'readingList'])
+
 export function resolveRoute(role) {
   const key = normalizeKey()
+  if (RETIRED_INTENSIVE.has(key)) {
+    const dest = role === 'teacher' ? 'prep' : 'timetable'
+    const next = `#/${dest}`
+    if (location.hash !== next) location.replace(next)
+    return dest
+  }
   const allowed = role === 'teacher' ? TEACHER_ALLOWED : STUDENT_ALLOWED
   if (!allowed.has(key)) return role === 'teacher' ? 'prep' : 'recite'
   return key

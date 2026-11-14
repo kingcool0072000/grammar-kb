@@ -2,8 +2,6 @@ import { api, fetchAllPoints } from '../api.js'
 import { h } from './dom.js'
 
 const BACK_BASE = {
-  readingAdmin: ['/prep', '← 返回备课中心'],
-  readingList: ['/prep', '← 返回备课中心'],
   students: ['/plan', '← 返回计划表'],
   vocabLevel: ['/prep', '← 返回备课中心'],
   paperAdmin: ['/prep', '← 返回备课中心'],
