@@ -43,9 +43,9 @@ RULES: list[dict] = [
     {"id": "topic_counts_lecture", "name": "专题学完＝讲次完成", "default": 1,
      "desc": "计划讲次若配有自学专题（如「第29讲·被动语态」），专题全部知识点"
              "完成后即视为该讲「学+测」完成，无需等卷面成绩"},
-    {"id": "speak_early_credit", "name": "朗读提前完成即点亮", "default": 1,
-     "desc": "精读朗读默认排在周六；周中任意一天提交录音即算该篇完成，"
-             "当天清单显示 ✓"},
+    {"id": "speak_early_credit", "name": "朗读记录只留在日志", "default": 1,
+     "desc": "精读已结束，课表和计划表不再排新的朗读篇目。以前交过的录音"
+             "仍在学习日志里，不删除。这个开关不再往课表加任务。"},
     {"id": "zombie_filter", "name": "剔除泛读挂机会话", "default": 1,
      "desc": "无轨迹、无交互、无位移的阅读会话（开着书页人不在）不计入"
              "有效学习时长与泛读词数"},
@@ -68,10 +68,8 @@ RULES: list[dict] = [
 #   "videos": ["xxxxxxxxxxx", ...]  # 旧字段：平铺 vid=一个 daily 组（工作日
 #                                   # 每天 1 个看+复述，欠账滚动）
 #   "article_units": [{"ids": [58], "mode": "daily" | "weekend"}],
-#                                   # 精读+朗读分组：每组 1 或 2 篇。daily 组工作日
-#                                   # 每天 1 篇轮转、周末每天 1 篇清尾；weekend 组周六
-#                                   # 一次做完（1 篇出 1 行，2 篇同天出 2 行，不摊到周日）。
-#                                   # 旧 articles 平铺=一个 weekend 组（回填脚本已收敛）
+#                                   # 历史精读分组，只保留不排课（0.3.0 起课表不再出
+#                                   # 精读行）。编辑器不再新增；保存时原样留在 JSON 里。
 #   "video_units":   [{"vids": ["abc", "def"], "mode": "daily" | "weekend"}],
 #                                   # 视频分组：daily 组=现状每天 1 个；weekend 组
 #                                   # 周六集中 2 个、周日兜底清剩余

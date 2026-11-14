@@ -1,6 +1,6 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
-import { FORM_CN } from '../fmt.js'
+import { FORM_CN, vocabPaperShort } from '../fmt.js'
 import { fillAtlasHost } from '../atlas.js'
 import { getWordCard } from '../wordcard.js'
 import { toast } from '../toast.js'
@@ -274,7 +274,7 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
         out.innerHTML = `
           <div class="vl-paper-card">
             <div class="vl-paper-meta">
-              <b>卷号 ${escapeHtml(p.paper_id)}</b>
+              <b title="${escapeHtml(p.paper_id)}">${escapeHtml(vocabPaperShort(p).short)}</b>
               <span>${p.scope === 'learned' ? `已学全部混合卷 · ${escapeHtml(p.user || '')} · ` : ''}${sections.map((s) => `${escapeHtml(s.title)} ${(s.items || []).length}`).join(' · ')} · 与历史重复 ${p.overlap_with_history} 词${p.seed != null && p.seed !== '' ? ` · seed ${escapeHtml(String(p.seed))}` : ''}</span>
               <i class="vl-paper-state">${saved ? '已存档' : '未存档（预览态）'}</i>
             </div>
@@ -337,8 +337,8 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
           <div class="vl-hist">
             <b>📚 已生成 ${items.length} 卷（本级 + 混合）</b>
             ${shown.map((x) => `
-              <span class="vl-hist-item">
-                ${Number(x.level) < 0 ? '🧩 已学混合' : `L${x.level}`} · ${x.count} 词 · ${(x.created_at || '').slice(0, 10)} · ${escapeHtml(x.paper_id)}
+              <span class="vl-hist-item" title="${escapeHtml(x.paper_id)}">
+                <em class="vl-hist-name">${escapeHtml(vocabPaperShort(x).short)} · ${x.count} 词</em>
                 <button class="chip vl-hist-op" data-hprev="${escapeHtml(x.paper_id)}">👁</button>
                 <button class="chip vl-hist-op del" data-hdel="${escapeHtml(x.paper_id)}">🗑</button>
               </span>`).join('')}

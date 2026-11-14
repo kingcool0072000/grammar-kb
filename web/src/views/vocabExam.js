@@ -1,5 +1,6 @@
 import { api } from '../api.js'
-import { escapeHtml, todayIso } from '../render.js'
+import { escapeHtml, escAttr, todayIso } from '../render.js'
+import { vocabPaperShort } from '../fmt.js'
 import { toast } from '../toast.js'
 
 // 教师版 · 词汇考试记录：登记、修改、删除。
@@ -42,39 +43,50 @@ export async function mountVocabExam(el) {
     `<option value="${escapeHtml(u.user)}">${escapeHtml(u.user)}</option>`).join('')
 
   body.innerHTML = `
-    <section class="fce-group plan-vocab-exam">
-      <div class="plan-vex-row">
-        <label>查看
+    <section class="ve-panel">
+      <div class="ve-panel-head">
+        <div>
+          <h2>登记成绩</h2>
+          <p>先选已经存档的卷，再填学生、分数和日期。卷号太长时这里只显示短名，悬停能看到全名。</p>
+        </div>
+        <label class="ve-field ve-filter">查看
           <select id="ve-filter">
             <option value="">全部学生</option>
             ${studentOpts}
           </select>
         </label>
       </div>
-      <p class="plan-vex-state" id="ve-state"></p>
-      <div class="plan-vex-row">
-        <label>试卷
+      <p class="ve-state" id="ve-state"></p>
+      <div class="ve-form">
+        <label class="ve-field paper">试卷
           <select id="pv-paper">
             <option value="">选择已存档的卷</option>
             ${papers.map((p) => {
-              const mix = Number(p.level) < 0
-              const head = mix ? '混合卷' : `L${p.level}`
+              const lab = vocabPaperShort(p)
               const who = p.user ? ` · ${p.user}` : ''
-              return `<option value="${escapeHtml(p.paper_id)}" data-lv="${p.level}">${head} ${escapeHtml(p.paper_id)}${escapeHtml(who)}</option>`
+              return `<option value="${escAttr(p.paper_id)}" data-lv="${p.level}" title="${escAttr(lab.full)}">${escapeHtml(lab.short)}${escapeHtml(who)}</option>`
             }).join('')}
           </select>
         </label>
-        <label>学生
+        <label class="ve-field">学生
           <select id="pv-user">${studentOpts || '<option value="">（无学生）</option>'}</select>
         </label>
-        <label>级别
+        <label class="ve-field">级别
           <select id="pv-level">${levelOpts}</select>
         </label>
-        <label>日期 <input id="pv-date" type="date" value="${today}"/></label>
-        <label>得分 <input id="pv-score" type="number" min="0" max="100" placeholder="0-100" style="width:90px"/></label>
-        <label>备注 <input id="pv-note" type="text" maxlength="200" placeholder="选填" style="width:160px"/></label>
-        <button class="btn-primary" id="pv-save" type="button">登记成绩</button>
-        <button class="chip" id="pv-cancel" type="button" hidden>取消修改</button>
+        <label class="ve-field">日期
+          <input id="pv-date" type="date" value="${today}"/>
+        </label>
+        <label class="ve-field score">得分
+          <input id="pv-score" type="number" min="0" max="100" placeholder="0–100"/>
+        </label>
+        <label class="ve-field note">备注
+          <input id="pv-note" type="text" maxlength="200" placeholder="选填"/>
+        </label>
+        <div class="ve-actions">
+          <button class="btn-primary" id="pv-save" type="button">登记成绩</button>
+          <button class="chip" id="pv-cancel" type="button" hidden>取消修改</button>
+        </div>
       </div>
       <div id="ve-list"></div>
     </section>`
@@ -114,20 +126,25 @@ export async function mountVocabExam(el) {
     }
     listEl.innerHTML = `<div class="ve-list">${items.map((x) => {
       const wn = wrongCountOf(x)
+      const lab = x.paper_id ? vocabPaperShort(x.paper_id, x.level) : null
       return `
-      <div class="ve-row ${x.score >= passScore ? 'ok' : 'fail'}" data-exam="${x.id}">
-        <b>${escapeHtml(x.user)}</b>
-        <span>L${x.level}</span>
-        <span>${x.score} 分</span>
-        <span>${escapeHtml(x.exam_date || '')}</span>
-        ${x.note ? `<span class="ve-note">${escapeHtml(x.note)}</span>` : ''}
-        ${x.paper_id ? `<span class="ve-note">卷 ${escapeHtml(x.paper_id)}</span>` : ''}
-        <span class="ve-ops">
+      <article class="ve-card ${x.score >= passScore ? 'ok' : 'fail'}" data-exam="${x.id}">
+        <div class="ve-card-top">
+          <b>${escapeHtml(x.user)}</b>
+          <span class="ve-level">L${x.level}</span>
+          <b class="ve-score">${x.score}<small>分</small></b>
+        </div>
+        <div class="ve-meta">
+          <span>${escapeHtml(x.exam_date || '')}</span>
+          ${lab ? `<span class="ve-paper" title="${escAttr(lab.full)}">${escapeHtml(lab.short)}</span>` : ''}
+          ${x.note ? `<span class="ve-note">${escapeHtml(x.note)}</span>` : ''}
+        </div>
+        <div class="ve-ops">
           <button type="button" class="chip" data-ww="${x.id}" title="查看这场考试的错词明细">${wn ? `错 ${wn} · 明细` : '明细'}</button>
           <button type="button" class="chip" data-edit="${x.id}">修改</button>
           <button type="button" class="chip" data-del="${x.id}">删除</button>
-        </span>
-      </div>`
+        </div>
+      </article>`
     }).join('')}</div>`
   }
 
@@ -231,8 +248,10 @@ export async function mountVocabExam(el) {
       const paperSel = body.querySelector('#pv-paper')
       if (exam.paper_id && ![...paperSel.options].some((o) => o.value === exam.paper_id)) {
         const opt = document.createElement('option')
+        const lab = vocabPaperShort(exam.paper_id, exam.level)
         opt.value = exam.paper_id
-        opt.textContent = exam.paper_id
+        opt.textContent = lab.short
+        opt.title = lab.full
         paperSel.append(opt)
       }
       paperSel.value = exam.paper_id || ''
@@ -260,7 +279,7 @@ export async function mountVocabExam(el) {
     }
     // 点在行内非按钮区域 → 打开错词明细（等于整行可点）
     if (e.target.closest('button')) return
-    const row = e.target.closest('.ve-row')
+    const row = e.target.closest('.ve-card')
     if (row && row.dataset.exam) openExamWrong(row.dataset.exam)
   })
 
@@ -332,7 +351,7 @@ async function openExamWrong(examId) {
       <div class="gd-focus-detail-head">
         <div class="gd-focus-detail-title">
           <b>错词明细</b>
-          <span>${escapeHtml(exam.user || '')} · L${escapeHtml(exam.level ?? '-')} · ${escapeHtml(exam.score ?? '-')} 分 · ${escapeHtml(exam.exam_date || '')}${exam.paper_id ? ` · 卷 ${escapeHtml(exam.paper_id)}` : ''}</span>
+          <span title="${exam.paper_id ? escAttr(exam.paper_id) : ''}">${escapeHtml(exam.user || '')} · L${escapeHtml(exam.level ?? '-')} · ${escapeHtml(exam.score ?? '-')} 分 · ${escapeHtml(exam.exam_date || '')}${exam.paper_id ? ` · ${escapeHtml(vocabPaperShort(exam.paper_id, exam.level).short)}` : ''}</span>
         </div>
         <button class="reading-btn small" data-close>关闭</button>
       </div>

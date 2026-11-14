@@ -4,9 +4,6 @@ import { mountRecite } from '../views/recite.js'
 import { mountTaxonomy } from '../views/taxonomy.js'
 import { mountExams } from '../views/exams.js'
 import { mountFcePapers } from '../views/fcePapers.js'
-import { mountReading } from '../views/reading.js'
-import { mountReadingAdmin } from '../views/readingAdmin.js'
-import { mountReadingList } from '../views/readingList.js'
 import { mountFceListen } from '../views/fceListen.js'
 import { mountTimetable } from '../views/timetable.js'
 import { mountConquered } from '../views/conquered.js'
@@ -67,9 +64,6 @@ export function mountView(route, container, { role, state, ctx, pointsById }) {
   }
   if (route === 'fcePapers') return mountFcePapers(container, { role })
   if (route === 'fceListen') return mountFceListen(container)
-  if (route === 'readingList') return mountReadingList(container)
-  if (route === 'readingAdmin') return mountReadingAdmin(container)
-  if (route === 'reading') return mountReading(container, { role })
   if (route === 'videoAdmin') {
     return import('../views/videoAdmin.js').then(({ mountVideoAdmin }) =>
       mountVideoAdmin(container))

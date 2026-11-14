@@ -1,6 +1,6 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
-import { vocabPaperHead } from '../fmt.js'
+import { vocabPaperShort } from '../fmt.js'
 import { toast } from '../toast.js'
 
 // 教师版 · 学生管理：增删学生账号 + 给每个学生配置学习总目标。
@@ -35,7 +35,6 @@ export async function mountStudents(el, { bare = false } = {}) {
     if (g?.lectures?.length) parts.push(`📚 ${g.lectures.length} 讲`)
     if (g?.vocab_target) parts.push(`🔤 +${g.vocab_target} 词`)
     if (g?.fce_parts?.length) parts.push(`🎧 ${g.fce_parts.length} Part`)
-    if (g?.articles?.length) parts.push(`📖 ${g.articles.length} 篇`)
     if (g?.reading?.length) parts.push(`📚 ${g.reading.length} 书`)
     if (g?.vocab_papers?.length) parts.push(`📝 ${g.vocab_papers.length} 卷`)
     if (g?.deadline) parts.push(`⏰ ${g.deadline}`)
@@ -129,7 +128,6 @@ export async function mountStudents(el, { bare = false } = {}) {
     const lecOpts = ga.lectures || []
     const vocabLv = ga.vocab_levels || []
     const fceParts = ga.fce_parts || []
-    const arts = (ga.articles || []).filter((a) => a.kind === 'derived')
     const books = ga.books || []
     const papers = ga.vocab_papers || []
     // 回填：一个学生同一时段只有一个总目标（plan_goals 一人一行），
@@ -175,11 +173,6 @@ export async function mountStudents(el, { bare = false } = {}) {
           }).join('') || '<p class="muted">FCE 题库不可用</p>'}
         </div>
 
-        <div class="pe-sec"><h4>📖 精读文章<button type="button" class="chip sg-all" data-all="art">全选</button></h4>
-          <div class="pe-fce-parts" style="max-height:120px;overflow-y:auto">${arts.map((a) => `
-            <button type="button" class="pe-part" data-sg-art="${a.id}">${escapeHtml(a.title.slice(0, 20))}<i>${a.words}</i></button>`).join('') || '<p class="muted">暂无派生文章</p>'}</div>
-        </div>
-
         <div class="pe-sec"><h4>📚 泛读书-章节目标 <i>按章勾选；点书名展开/收起章节</i><button type="button" class="chip sg-all" data-all="bk">全选书</button></h4>
           ${books.map((b) => `
             <div class="sg-book-row" data-sg-bkrow="${b.id}">
@@ -197,7 +190,7 @@ export async function mountStudents(el, { bare = false } = {}) {
 
         <div class="pe-sec"><h4>📝 单词考试试卷 <i>关联已生成的试卷资产</i><button type="button" class="chip sg-all" data-all="paper">全选</button></h4>
           <div class="pe-fce-parts">${papers.map((x) => `
-            <button type="button" class="pe-part" data-sg-paper="${escapeHtml(x.paper_id)}">${vocabPaperHead(x.level)} · ${x.paper_id.slice(-8)}<i>${(x.created_at || '').slice(5, 10)}</i></button>`).join('') || '<p class="muted">尚未生成试卷（备课中心-背单词）</p>'}</div>
+            <button type="button" class="pe-part" data-sg-paper="${escapeHtml(x.paper_id)}" title="${escapeHtml(x.paper_id)}">${escapeHtml(vocabPaperShort(x).short)}</button>`).join('') || '<p class="muted">尚未生成试卷（备课中心-背单词）</p>'}</div>
         </div>
 
         <label class="plan-field">冲刺截止日期
@@ -216,7 +209,7 @@ export async function mountStudents(el, { bare = false } = {}) {
 
     const sel = {
       lectures: new Set(), vocab_levels: new Set(), fce_parts: new Set(),
-      articles: new Set(), books: new Set(), vocab_papers: new Set(),
+      books: new Set(), vocab_papers: new Set(),
       reading_chapters: new Map(), // bookId(str) -> Set(章idx)
     }
     // ---- 回填当前配置（按钮 on / checkbox checked 与 sel 同步）----
@@ -234,11 +227,6 @@ export async function mountStudents(el, { bare = false } = {}) {
       for (const label of cur.fce_parts || []) {
         sel.fce_parts.add(label)
         const b = dlg.querySelector(`[data-sg-fce="${CSS.escape(label)}"]`)
-        if (b) b.classList.add('on')
-      }
-      for (const id of cur.articles || []) {
-        sel.articles.add(String(id))
-        const b = dlg.querySelector(`[data-sg-art="${id}"]`)
         if (b) b.classList.add('on')
       }
       for (const id of cur.reading || []) {
@@ -274,13 +262,12 @@ export async function mountStudents(el, { bare = false } = {}) {
       }))
     bindToggle('sg-lec', sel.lectures)
     bindToggle('sg-fce', sel.fce_parts)
-    bindToggle('sg-art', sel.articles)
     bindToggle('sg-paper', sel.vocab_papers)
     // 全选/全不选（再点一次取消全部）
     const selMap = { lec: sel.lectures, vlv: sel.vocab_levels,
-                     fce: sel.fce_parts, art: sel.articles,
+                     fce: sel.fce_parts,
                      bk: sel.books, paper: sel.vocab_papers }
-    const attrMap = { lec: 'sg-lec', fce: 'sg-fce', art: 'sg-art',
+    const attrMap = { lec: 'sg-lec', fce: 'sg-fce',
                       paper: 'sg-paper' }
     dlg.querySelectorAll('.sg-all').forEach((b) =>
       b.addEventListener('click', (e) => {
@@ -351,7 +338,9 @@ export async function mountStudents(el, { bare = false } = {}) {
       const vn = Number(dlg.querySelector('#sg-vocab-n').value)
       if (vn > 0) ng.vocab_target = vn
       if (sel.fce_parts.size) ng.fce_parts = [...sel.fce_parts]
-      if (sel.articles.size) ng.articles = [...sel.articles].map(Number)
+      if (Array.isArray(cur.articles) && cur.articles.length) {
+        ng.articles = cur.articles.map(Number)
+      }
       if (sel.books.size) ng.reading = [...sel.books].map(Number)
       // 章选目标（新口径）：{bookId: [章idx...]}；勾了书但没细选章的书
       // 不写章表（总目标泛读按整书词数计）

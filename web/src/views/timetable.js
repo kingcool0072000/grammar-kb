@@ -50,14 +50,6 @@ export async function mountTimetable(el) {
     summary.push(`🔤 本周新掌握 L${tasks.vocab_lv} 词 ${tasks.vocab_new} 个`)
   } else if (tasks.vocab_goal) summary.push(`🔤 词汇目标 ${tasks.vocab_goal} 词`)
   if (tasks.fce?.length) summary.push(`🎧 FCE真题 ${tasks.fce.length} 项`)
-  // 精读：显示文章名（比「N 篇」信息量大；完成态在维度条里看）
-  const artTitles = (d.article_titles || []).filter((a) => a.title)
-  if (artTitles.length) {
-    const names = artTitles.map((a) => a.title.slice(0, 16)).join('、')
-    summary.push(`📄 精读+朗读 ${names}`)
-  } else if (tasks.articles?.length) {
-    summary.push(`📄 精读+朗读 ${tasks.articles.length} 篇`)
-  }
   const vidTitles = (d.video_titles || []).filter((v) => v.title)
   if (vidTitles.length) {
     summary.push(`🎬 视频 ${vidTitles.map((v) => escapeHtml(v.title.slice(0, 16))).join('、')}`)
@@ -96,7 +88,6 @@ export async function mountTimetable(el) {
       const why = taskWhy(t.why)
       const whyShort = day.future ? '' : taskWhyShort(t.why)
       const tip = [t.detail, why].filter(Boolean).join(' · ')
-        || (t.type === 'article' ? '去阅读练习读全文 + 提交朗读' : '')
       // 提升档行（task_key 前缀 boost:）：未配置=灰字；其余点直达
       // （口诀卡→专题页 / 句型复述→复述面板）
       if (t.boost) {
@@ -117,8 +108,7 @@ export async function mountTimetable(el) {
         ${whyShort ? `<small class="tt-why">${escapeHtml(whyShort)}</small>` : ''}
         ${ok ? '<span class="tt-task-check">✓</span>' : ''}`
       if (t.type === 'article')
-        return `<a class="tt-task link ${ok ? 'ok' : 'plan'}" href="#/reading"
-          title="${escapeHtml(tip)}">${inner}</a>`
+        return `<div class="tt-task ok" title="${escapeHtml(tip || '精读已结束，这篇记录留在学习日志')}">${inner}</div>`
       if (t.type === 'video' && t.video_id)
         return `<a class="tt-task link ${ok ? 'ok' : 'plan'}" href="#/videoStudy?vid=${encodeURIComponent(t.video_id)}"
           title="${escapeHtml(tip || '看视频并复述')}">${inner}</a>`
@@ -126,10 +116,11 @@ export async function mountTimetable(el) {
     }
     // 已完成的学习（课程表=学习记录视角）：完成计划任务 +
     // 计划外朗读 + 泛读/背单词实录统计（与教师计划看板日卡同口径）
-    const doneTasks = (day.tasks || []).filter((t) => t.done)
+    const shown = (day.tasks || []).filter((t) => t.type !== 'article' || t.done)
+    const doneTasks = shown.filter((t) => t.done)
     const items = doneTasks.map((t) => ttTask(t, true)).join('')
     // 未完成项也列出，并带上原因（无记录 / 未达配额），避免 0% 被看成没打卡。
-    const planItems = (day.tasks || []).filter((t) => !t.done).map((t) => ttTask(t, false)).join('')
+    const planItems = shown.filter((t) => !t.done).map((t) => ttTask(t, false)).join('')
     const acts = day.acts || {}
     const extraRows = (acts.extra_speaks || []).map((x) => `
       <div class="tt-task ok">

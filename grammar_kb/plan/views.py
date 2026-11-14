@@ -141,12 +141,6 @@ class ViewsMixin:
             # 开关透出，前端据此显示/隐藏微练习入口
             "micro_enabled": bool(t.get("micro")),
             "breakdown": breakdown, "days": days, "current_week": in_week,
-            # 精读任务补标题（学生课程表摘要显示文章名，不止「N 篇」；
-            # 与排程同一读法：article_units 优先、旧 articles 回退）
-            "article_titles": [
-                {"id": aid, "title": ctx.article_title(aid)}
-                for aid in self._plan_articles(t)
-            ],
             # 视频任务补标题（学生课程表/计划卡显示片名；已删除的为 null）
             "video_titles": [
                 {"vid": v, "title": self._video_title_any(v)}
@@ -179,7 +173,6 @@ class ViewsMixin:
         - 词汇：本周新掌握 = vocab_goal − 周初该级已会；分子是周内该级新 mastered_at
         - FCE：计划 Part 数 vs 周内提交覆盖数
         - 泛读：按各书周目标%（词数口径）vs 周内已读词数（实录汇总）
-        - 精读：计划文章数 vs 已提交录音数
         - 试卷：计划卷数 vs 登记考试数
         - 视频复述：计划 vid 数 vs 周内提交复述数
         - 微练习：tasks.micro 开着才有；该周 7 天里整组做完的天数 / 7
@@ -315,32 +308,6 @@ class ViewsMixin:
             if goal_ch_count:
                 done100 = done_pct / goal_ch_count * 100
                 dim("📖", "泛读", round(min(done100, 999), 1), 100)
-
-        arts = self._plan_articles(t)
-        # 周内全部朗读提交（含计划外）：精读朗读 = 提交过录音才算完成。
-        # 完成行的 article_id 可能缺字段（快照/占位行只有 key="article:N"），
-        # 从 key 解析兜底。
-        week_recorded = []
-        for d in days:
-            for x in (d.get("tasks") or []):
-                if x.get("type") == "article" and x.get("done"):
-                    aid = x.get("article_id")
-                    if aid is None:
-                        k = str(x.get("key") or "")
-                        if k.startswith("article:") and k[8:].isdigit():
-                            aid = int(k[8:])
-                    if aid is not None:
-                        week_recorded.append(aid)
-            for x in (d.get("acts") or {}).get("extra_speaks", []):
-                week_recorded.append(-1)  # 计划外朗读（无任务行）
-        if arts:
-            done_a = sum(1 for a in arts if a in week_recorded)
-            extra_n = sum(1 for x in week_recorded if x == -1)
-            dim("🎤", "精读朗读", done_a, len(arts),
-                extra=f"计划外另朗 {extra_n} 篇" if extra_n else "")
-        elif week_recorded:
-            dim("🎤", "精读朗读", len(week_recorded), len(week_recorded),
-                extra="均为计划外朗读")
 
         papers = t.get("vocab_papers") or []
         if papers:

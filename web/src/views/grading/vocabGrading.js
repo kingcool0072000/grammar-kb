@@ -1,5 +1,6 @@
 import { api } from '../../api.js'
 import { escapeHtml, escAttr, todayIso } from '../../render.js'
+import { vocabPaperShort } from '../../fmt.js'
 import { toast } from '../../toast.js'
 
 // 背单词 · 考试打分卡（自原批改看板视图整体平移，挂进备课中心背单词分区）。
@@ -129,7 +130,7 @@ async function openVocabWrongOverlay(examId) {
       <div class="gd-focus-detail-head">
         <div class="gd-focus-detail-title">
           <b>错词明细</b>
-          <span>${escapeHtml(exam.user || '')} · L${escapeHtml(exam.level ?? '-')} · ${escapeHtml(exam.score ?? '-')} 分 · ${escapeHtml(exam.exam_date || '')}${exam.paper_id ? ` · 卷 ${escapeHtml(exam.paper_id)}` : ''}</span>
+          <span title="${exam.paper_id ? escAttr(exam.paper_id) : ''}">${escapeHtml(exam.user || '')} · L${escapeHtml(exam.level ?? '-')} · ${escapeHtml(exam.score ?? '-')} 分 · ${escapeHtml(exam.exam_date || '')}${exam.paper_id ? ` · ${escapeHtml(vocabPaperShort(exam.paper_id, exam.level).short)}` : ''}</span>
         </div>
         <button class="reading-btn small" data-close>关闭</button>
       </div>
@@ -225,40 +226,49 @@ export async function mountExamGrading(host, { state, students, student, refresh
     const bound = String(p.user || '').trim()
     const picked = studs.includes(bound) ? bound : (filterUser && studs.includes(filterUser) ? filterUser : studs[0])
     const defaultLv = registerLevel(picked)
+    const lab = vocabPaperShort(p)
     return `
     <div class="geg-row ${graded.length ? 'graded' : ''}" data-pid="${escapeHtml(p.paper_id)}">
-      <div class="geg-info">
-        <b>${isMix ? '🧩 已学混合卷' : `L${p.level} 卷`} ${escapeHtml(p.paper_id)}</b>
-        <span>${p.count} 词 · ${escapeHtml((p.created_at || '').slice(0, 10))}${bound ? ` · 绑定 ${escapeHtml(bound)}` : ''}</span>
-      </div>
-      <div class="geg-grades">
-        ${graded.length
-          ? graded.map((e) => {
-              const wn = wrongCountOf(e)
-              const unmarked = !wn && Number(e.score) < 100
-              return `<span class="geg-chip ${e.score >= passScore ? 'ok' : ''}">${escapeHtml(e.user)} L${e.level} ${e.score} 分
-              ${wn ? `<button type="button" class="geg-wbadge" data-gwrong-view="${e.id}" title="错词已回流曲线">错 ${wn} · 已回流</button>` : ''}
-              ${unmarked ? '<i class="geg-wbadge">未标错词</i>' : ''}
-              ${!wn && Number(e.score) >= 100 ? '<i class="geg-wbadge" style="background:#f0f9f0;border-color:#bfe5bf;color:#2e7d32">满分</i>' : ''}
-              <button type="button" class="geg-op" data-gedit="${e.id}" data-user="${escapeHtml(e.user)}" data-level="${e.level}" data-score="${e.score}" data-date="${escapeHtml(e.exam_date || '')}" data-gwords="${escAttr(wrongWordsKey(e))}" data-gwn="${wn}">修改</button>
-              <button type="button" class="geg-op" data-gdel="${e.id}">删除</button>
-            </span>`
-            }).join('')
-          : '<span class="geg-chip none">未登记</span>'}
+      <div class="geg-head">
+        <div class="geg-info" title="${escAttr(lab.full)}">
+          <b>${escapeHtml(lab.short)}</b>
+          <span>${p.count} 词 · ${escapeHtml((p.created_at || '').slice(0, 10))}${bound ? ` · 绑定 ${escapeHtml(bound)}` : ''}</span>
+        </div>
+        <div class="geg-grades">
+          ${graded.length
+            ? graded.map((e) => {
+                const wn = wrongCountOf(e)
+                const unmarked = !wn && Number(e.score) < 100
+                return `<span class="geg-chip ${e.score >= passScore ? 'ok' : ''}">${escapeHtml(e.user)} L${e.level} ${e.score} 分
+                ${wn ? `<button type="button" class="geg-wbadge" data-gwrong-view="${e.id}" title="错词已回流曲线">错 ${wn} · 已回流</button>` : ''}
+                ${unmarked ? '<i class="geg-wbadge">未标错词</i>' : ''}
+                ${!wn && Number(e.score) >= 100 ? '<i class="geg-wbadge" style="background:#f0f9f0;border-color:#bfe5bf;color:#2e7d32">满分</i>' : ''}
+                <button type="button" class="geg-op" data-gedit="${e.id}" data-user="${escapeHtml(e.user)}" data-level="${e.level}" data-score="${e.score}" data-date="${escapeHtml(e.exam_date || '')}" data-gwords="${escAttr(wrongWordsKey(e))}" data-gwn="${wn}">修改</button>
+                <button type="button" class="geg-op" data-gdel="${e.id}">删除</button>
+              </span>`
+              }).join('')
+            : '<span class="geg-chip none">未登记</span>'}
+        </div>
       </div>
       <div class="geg-form">
-        <select class="geg-user" data-pid="${escapeHtml(p.paper_id)}">
-          ${studs.map((s) => `<option value="${escapeHtml(s)}" ${s === picked ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}
-        </select>
+        <label class="geg-field student">学生
+          <select class="geg-user" data-pid="${escapeHtml(p.paper_id)}">
+            ${studs.map((s) => `<option value="${escapeHtml(s)}" ${s === picked ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}
+          </select>
+        </label>
         ${isMix ? `
-        <label class="geg-lv-wrap">登记到
+        <label class="geg-field level">登记到
           <select class="geg-lv" data-pid="${escapeHtml(p.paper_id)}" title="混合卷跨级别。成绩记在所选级别上；单词级别是否变化取决于该生有没有被单独设定">
             ${levelOpts(defaultLv)}
           </select>
         </label>` : ''}
-        <input class="geg-score" type="number" min="0" max="100" placeholder="分数" data-pid="${escapeHtml(p.paper_id)}">
-        <input class="geg-date" type="date" value="${today}" data-pid="${escapeHtml(p.paper_id)}">
-        <button class="reading-btn small primary" data-geg="${escapeHtml(p.paper_id)}" data-lv="${p.level}">登记</button>
+        <label class="geg-field score">分数
+          <input class="geg-score" type="number" min="0" max="100" placeholder="0–100" data-pid="${escapeHtml(p.paper_id)}">
+        </label>
+        <label class="geg-field date">日期
+          <input class="geg-date" type="date" value="${today}" data-pid="${escapeHtml(p.paper_id)}">
+        </label>
+        <button class="btn-primary geg-save" data-geg="${escapeHtml(p.paper_id)}" data-lv="${p.level}">登记</button>
       </div>
       <details class="geg-wrong">
         <summary>标记错词 <i class="geg-wn">未选</i><i class="geg-whint">点选=错词。不是满分就标出，不要空着当成全对</i></summary>

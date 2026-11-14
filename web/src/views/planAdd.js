@@ -1,11 +1,11 @@
 /**
  * 周计划清单的增删。tasks 仍是 plan_weeks 那份 JSON。
- * 精读+朗读按组存：article_units（每组 1–2 篇，带摊法 mode）。朗读不另开一项，
- * 课文勾上就含朗读。视频按组存 video_units（每组 2 个）。
+ * 视频按组存 video_units（每组 2 个）。
  * NCE2 听力按组存 nce2_units（每组 1–5 课，带摊法 mode 和完成方式 task_mode：
  * shadow=听力跟读（缺省）、listen=仅精听）。
  * 微练习用 tasks.micro = 1 表示本周启用；旧扁平键 articles/videos 不再写。
- * 旧的 tasks.speak（单独「朗读篇数」）保存时丢掉，课表只跟课文走。
+ * 历史精读 article_units 保存时原样留下，编辑器不再新增。
+ * 旧的 tasks.speak（单独「朗读篇数」）保存时丢掉。
  */
 
 function copyTasks(tasks) {
@@ -48,7 +48,7 @@ export { copyTasks }
 
 /**
  * 旧周数据兼容：只有扁平 articles/videos 的老周，先转成 *_units
- * （精读一组 mode=weekend 周末集中、视频一组 mode=daily 工作日摊开，带 legacy 小标），
+ * （旧精读一组 mode=weekend 周末集中、视频一组 mode=daily 工作日摊开，带 legacy 小标），
  * 旧键就地删掉，之后编辑与保存都只见新结构。不改入参。
  */
 export function migrateLegacyUnits(tasks) {
@@ -73,7 +73,7 @@ export function migrateLegacyUnits(tasks) {
 }
 
 /** 保存/预览用的形状：只留契约字段，编辑期的 legacy 小标不落库。
- *  朗读已并进精读课文，不再单独落 speak。 */
+ *  历史 article_units 原样保留（不再排课）。不再单独落 speak。 */
 export function tasksForSave(tasks) {
   const t = copyTasks(tasks)
   if (Array.isArray(t.article_units)) {
@@ -127,22 +127,10 @@ function dropStr(t, key, value) {
   if (!t[key].length) delete t[key]
 }
 
-// ---- 精读/视频组（*_units）与微练习（micro）----
+// ---- 视频组（video_units）与微练习（micro）----
 
 function normMode(mode) {
   return mode === 'weekend' ? 'weekend' : 'daily'
-}
-
-/** 本周所有组里的精读篇目 id（扫全部组，供「已在本周」判断）。 */
-export function articleUnitIds(tasks) {
-  const out = []
-  for (const u of (tasks || {}).article_units || []) {
-    for (const id of u?.ids || []) {
-      const n = Number(id)
-      if (!out.includes(n)) out.push(n)
-    }
-  }
-  return out
 }
 
 /** 本周所有组里的视频 vid（扫全部组）。 */
@@ -169,21 +157,7 @@ export function nce2UnitLessons(tasks) {
   return out
 }
 
-/** 精读+朗读加一组：1 篇或 2 篇都可以；0 篇、超过 2 篇、或与本周重复的篇目整组不加。 */
-export function appendArticleUnit(tasks, ids, mode) {
-  const t = copyTasks(tasks)
-  const list = [...new Set((ids || []).map(Number).filter((n) => Number.isFinite(n)))]
-  if (list.length < 1 || list.length > 2) return t
-  const taken = articleUnitIds(t)
-  if (list.some((id) => taken.includes(id))) return t
-  t.article_units = [
-    ...(t.article_units || []),
-    { ids: [...list].sort((a, b) => a - b), mode: normMode(mode) },
-  ]
-  return t
-}
-
-/** 视频加一组：vids 必须正好 2 个；防重同精读组。 */
+/** 视频加一组：vids 必须正好 2 个；组内和本周已有的不重复。 */
 export function appendVideoUnit(tasks, vids, mode) {
   const t = copyTasks(tasks)
   const list = [...new Set((vids || []).map(String))]
@@ -206,16 +180,6 @@ export function appendNce2Unit(tasks, lessonIds, mode, taskMode) {
     ...(t.nce2_units || []),
     { lessons: list, mode: normMode(mode), task_mode: taskMode === 'listen' ? 'listen' : 'shadow' },
   ]
-  return t
-}
-
-/** 按下标删整组精读。 */
-export function removeArticleUnit(tasks, idx) {
-  const t = copyTasks(tasks)
-  const arr = [...(t.article_units || [])]
-  arr.splice(Number(idx), 1)
-  if (arr.length) t.article_units = arr
-  else delete t.article_units
   return t
 }
 
@@ -256,16 +220,7 @@ function unitTitle(titles, key) {
   return v == null ? '' : String(v)
 }
 
-/** 清单行文案：主行「📄 精读+朗读 · 1 篇 · 工作日摊开」，小字行是组内文章名（legacy 组加「旧格式」）。 */
-export function articleUnitLine(unit, titles) {
-  const u = unit || {}
-  const ids = (u.ids || []).map(Number)
-  const names = ids.map((id) => (unitTitle(titles, id) || `#${id}`).slice(0, 20))
-  const head = ['📄 精读+朗读', `${ids.length} 篇`, MODE_TEXT[normMode(u.mode)]].join(' · ')
-  return { head, sub: capSub((u.legacy ? '旧格式 · ' : '') + names.join('、')) }
-}
-
-/** 同上，视频版：「🎬 视频一组 · 2 个 · 摊法」。 */
+/** 清单行文案：「🎬 视频一组 · 2 个 · 摊法」。 */
 export function videoUnitLine(unit, titles) {
   const u = unit || {}
   const vids = (u.vids || []).map(String)
@@ -356,17 +311,6 @@ export function completionLine(type, { topicCounts = true, mode = '', count = 0,
     return '怎么算完成：本周在这一级新掌握的词达到这个个数。周初已经会的不算进这周。工作日「背词 n 词」也按当天新掌握打勾，不按练过多少词。这里选的级别只决定新词记到哪一级，不管学生能不能看见那一级。'
   }
   if (type === 'fce') return '怎么算完成：本周交了这一道 FCE。'
-  if (type === 'article') {
-    const one = Number(count) === 1
-    if (mode === 'weekend') {
-      return one
-        ? '怎么算完成：这一篇交了朗读录音。周六精读+朗读 1 篇。'
-        : '怎么算完成：本组每篇都交了朗读录音。周六一起精读+朗读。'
-    }
-    return one
-      ? '怎么算完成：这一篇交了朗读录音。工作日精读+朗读 1 篇。'
-      : '怎么算完成：每篇交了朗读录音。工作日每天精读+朗读 1 篇。'
-  }
   if (type === 'video') {
     return mode === 'weekend'
       ? '怎么算完成：看完并交了复述录音。周六一次看 2 个。'
@@ -465,7 +409,6 @@ export function appendPlanItem(tasks, item) {
       break
     }
     default:
-      // 精读/视频走 appendArticleUnit / appendVideoUnit（2 篇/个一组），不再走单项。
       throw new Error(`未知计划项：${item.type}`)
   }
   return t
@@ -506,7 +449,6 @@ export function removePlanItem(tasks, item) {
       delete t.speak
       break
     default:
-      // 精读/视频组走 removeArticleUnit / removeVideoUnit（整组删）。
       throw new Error(`未知计划项：${item.type}`)
   }
   return t
@@ -520,7 +462,6 @@ export const PLAN_ADD_TYPES = [
   { id: 'nce2', label: '🎧 NCE2 听力', hint: '1–5 课一组，选摊法与跟读/精听' },
   { id: 'reading', label: '泛读书目', hint: '按章加入' },
   { id: 'fce', label: 'FCE 大题', hint: '周六做' },
-  { id: 'article', label: '精读+朗读', hint: '1–2 篇一组，勾上就含朗读；工作日摊开或周末集中' },
   { id: 'paper', label: '单词试卷', hint: '周日做卷' },
   { id: 'micro', label: '微练习', hint: '一组=本周每日 3 题，不做不扣分' },
   { id: 'focus_kp', label: '攻坚讲次', hint: '标注本周攻坚讲次：周验收对照，微练习优先出这些讲的题' },

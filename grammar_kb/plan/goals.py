@@ -38,11 +38,12 @@ class GoalsMixin:
         return goals
 
     def goal_progress(self, user: str) -> dict:
-        """总目标进度：六维度 done/goal 覆盖 + 总百分比。
+        """总目标进度：各维度 done/goal 覆盖 + 总百分比。
 
         维度完成口径（与 _completion_status 一致）：讲次=考过；FCE Part=提交过；
-        精读=有录音；泛读=所有时间实录词数总和/目标书目词数总和（会话级）；
+        泛读=所有时间实录词数总和/目标书目词数总和（会话级）；
         试卷=其级别考试 ≥80；词汇=已掌握词数/vocab_target。
+        历史精读目标仍留在 goals.articles 里，不再画成进度条。
         """
         g = self.get_goals(user)
         done = self._completion_status(user)
@@ -79,12 +80,6 @@ class GoalsMixin:
         if gf:
             d = len(set(gf) & set(done["fce_parts"]))
             dim("🎧", "FCE Part", d, len(gf))
-
-        ga_ = g.get("articles") or []
-        if ga_:
-            # 精读与朗读合并：完成判定=有录音（done["articles"] 本就以录音为准）
-            d = len(set(ga_) & set(done["articles"]))
-            dim("🎤", "精读朗读", d, len(ga_))
 
         gr = g.get("reading") or []
         gr_ch = g.get("reading_chapters") or {}

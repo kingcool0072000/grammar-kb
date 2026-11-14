@@ -1,13 +1,14 @@
 import { api } from '../api.js'
 import { escapeHtml, escAttr } from '../render.js'
+import { vocabPaperShort } from '../fmt.js'
 import {
   PLAN_ADD_TYPES, appendPlanItem, removePlanItem, applyVocabTarget,
   vocabRowTitle, hwMismatchWarning, completionLine, copyTasks,
-  migrateLegacyUnits, tasksForSave, appendArticleUnit, appendVideoUnit,
-  appendNce2Unit, removeArticleUnit, removeVideoUnit, removeNce2Unit,
+  migrateLegacyUnits, tasksForSave, appendVideoUnit,
+  appendNce2Unit, removeVideoUnit, removeNce2Unit,
   toggleMicroGroup,
-  articleUnitLine, videoUnitLine, nce2UnitLine,
-  articleUnitIds, videoUnitVids, nce2UnitLessons,
+  videoUnitLine, nce2UnitLine,
+  videoUnitVids, nce2UnitLessons,
   boostDetailsToggle, boostReady,
 } from './planAdd.js'
 
@@ -17,7 +18,7 @@ function hasPlanItems(tasks) {
   const t = tasks || {}
   return Boolean(
     (t.lectures || []).length || (t.hw_papers || []).length || (t.focus_kps || []).length
-    || (t.article_units || []).length || (t.video_units || []).length
+    || (t.video_units || []).length
     || (t.nce2_units || []).length || t.micro != null
     || (t.fce || []).length || (t.vocab_papers || []).length
     || t.vocab_goal != null
@@ -39,19 +40,15 @@ export async function openWeekEditor({
     if (row) topicOn = Boolean(row.value)
   } catch { /* 读不到规则时按默认：专题学完算这讲完成 */ }
 
-  // 装载转换：旧周的扁平 articles/videos 先转成一组 *_units（精读=周末集中、视频=工作日摊开，
-  // 带 legacy 小标），编辑器里统一只操作 *_units，保存时自然不再有旧键。
+  // 装载转换：旧周的扁平 articles/videos 先转成一组 *_units（历史精读仍留在 JSON，
+  // 视频=工作日摊开，带 legacy 小标）。编辑器不再列出、也不再新增精读。
   let tasks = copyTasks(migrateLegacyUnits(week?.tasks || {}))
-  // 朗读并进精读：旧的单独篇数不再占一行。没课文时留一句说明，保存不再写 speak。
-  const droppedSpeak = tasks.speak ? (Number(tasks.speak) || 0) : 0
   delete tasks.speak
   let openKey = null
   let addOpen = !hasPlanItems(tasks)
   let addType = ''
   let showAll = false
   let videoPick = []
-  let articlePick = []
-  let artMode = 'daily'
   let vidMode = 'daily'
   let nce2Pick = []
   let nce2Mode = 'daily'
@@ -75,10 +72,8 @@ export async function openWeekEditor({
 
   const books = ed.books || []
   const lectures = ed.lectures || []
-  const articles = ed.articles || []
   const videos = ed.videos || []
   const nce2Lessons = ed.nce2 || []
-  const articleTitles = new Map(articles.map((a) => [String(a.id), a.title || ('#' + a.id)]))
   const videoTitles = new Map(videos.map((v) => [String(v.vid), String(v.title || v.vid)]))
   const nce2Titles = new Map(nce2Lessons.map((l) => [String(l.id), l.title || ('#' + l.id)]))
   const fceParts = ed.fce_parts || []
@@ -209,18 +204,13 @@ export async function openWeekEditor({
     for (const label of tasks.fce || []) {
       out.push({ key: `fce:${label}`, type: 'fce', label, title: `FCE · ${label}` })
     }
-    const articleUnits = tasks.article_units || []
-    articleUnits.forEach((u, idx) => {
-      const line = articleUnitLine(u, articleTitles)
-      out.push({
-        key: `article-unit:${idx}`, type: 'article', unitIdx: idx, mode: u.mode,
-        title: line.head, sub: line.sub, count: (u.ids || []).length,
-      })
-    })
     for (const id of tasks.vocab_papers || []) {
       const p = papers.find((x) => x.paper_id === id)
-      const head = p && Number(p.level) < 0 ? `已学混合卷 ${id}` : `单词试卷 ${id}`
-      out.push({ key: `paper:${id}`, type: 'paper', paper_id: id, title: head })
+      const lab = vocabPaperShort(id, p && p.level)
+      out.push({
+        key: `paper:${id}`, type: 'paper', paper_id: id,
+        title: `单词试卷 · ${lab.short}`, full: lab.full,
+      })
     }
     return out
   }
@@ -233,7 +223,6 @@ export async function openWeekEditor({
     if (type === 'fce') {
       return (goals.fce_parts || []).includes(id) && !(done.fce_parts || []).includes(id)
     }
-    if (type === 'article') return !includesNum(done.articles, id)
     if (type === 'paper') return (goals.vocab_papers || []).includes(id)
     if (type === 'reading') {
       return includesNum(goals.reading, id) && !includesNum(done.books, id)
@@ -245,8 +234,6 @@ export async function openWeekEditor({
     if (type === 'lecture') return includesNum(tasks.lectures, value)
     if (type === 'hw_paper') return includesNum(tasks.hw_papers, value)
     if (type === 'focus_kp') return includesNum(tasks.focus_kps, value)
-    // 已在本周按单篇 id 判断：扫全部组的 ids/vids
-    if (type === 'article') return articleUnitIds(tasks).includes(Number(value))
     if (type === 'fce') return (tasks.fce || []).includes(value)
     if (type === 'paper') return (tasks.vocab_papers || []).includes(value)
     if (type === 'video') return videoUnitVids(tasks).includes(String(value))
@@ -286,13 +273,17 @@ export async function openWeekEditor({
       }))
     }
     if (type === 'paper') {
-      return papers.map((p) => ({
-        value: p.paper_id,
-        label: Number(p.level) < 0 ? `已学混合卷 ${p.paper_id}` : `${p.paper_id}`,
-        taken: takenOf(type, p.paper_id),
-        goalish: goalish(type, p.paper_id),
-        mark: '',
-      }))
+      return papers.map((p) => {
+        const lab = vocabPaperShort(p.paper_id, p.level)
+        return {
+          value: p.paper_id,
+          label: lab.short,
+          title: lab.full,
+          taken: takenOf(type, p.paper_id),
+          goalish: goalish(type, p.paper_id),
+          mark: '',
+        }
+      })
     }
     return []
   }
@@ -426,9 +417,6 @@ export async function openWeekEditor({
                 ? list.map(rowHtml).join('')
                 : '<p class="muted pe-empty">这周还没有安排。点下面的「添加」，把语法课、作业卷、本周要新掌握的词放进来。</p>'}
             </div>
-            ${droppedSpeak && !(tasks.article_units || []).length
-              ? `<p class="pe-wiz-hint">这周以前单独记了朗读 ${droppedSpeak} 篇。精读和朗读已经并成一项：在「添加」里勾课文，朗读跟着课文走。</p>`
-              : ''}
             ${addOpen
               ? addPanelHtml()
               : '<button class="chip" id="pe-add-open" type="button">＋ 添加</button>'}
@@ -444,7 +432,7 @@ export async function openWeekEditor({
           </div>
           <aside class="pe-preview-card">
             <b>学生课表预览</b>
-            <p class="pe-lead">按正式课表的办法摊到每一天：词汇个数分到工作日，精读+朗读和视频按各组的摊法排（工作日摊开或周末集中）。</p>
+            <p class="pe-lead">按正式课表的办法摊到每一天：词汇个数分到工作日，视频和听力按各组的摊法排（工作日摊开或周末集中）。</p>
             <div id="pe-preview-body"><p class="muted">正在按课表摊开…</p></div>
           </aside>
         </div>
@@ -459,7 +447,7 @@ export async function openWeekEditor({
     const open = openKey === r.key
     return `<div class="pe-row ${open ? 'open' : ''}" data-row="${escAttr(r.key)}">
       <div class="pe-row-main">
-        <div class="pe-row-title">${escapeHtml(r.title)}</div>
+        <div class="pe-row-title" title="${escAttr(r.full || r.title)}">${escapeHtml(r.title)}</div>
         ${r.sub ? `<span class="pe-done-line">${escapeHtml(r.sub)}</span>` : ''}
         <span class="pe-done-line">${escapeHtml(completionLine(r.type, { topicCounts: topicOn, mode: r.mode, count: r.count, taskMode: r.taskMode }))}</span>
         ${open ? `<div class="pe-edit" data-stop>${editHtml(r)}</div>` : ''}
@@ -474,10 +462,6 @@ export async function openWeekEditor({
       return `<label class="pe-speak">改成 <select id="pe-swap-lec">${lecOptions(r)}</select></label>`
     }
     if (r.type === 'reading') return readingEditHtml(r)
-    // 精读/视频组与微练习：没有单项换绑，换内容 = 删整组重加
-    if (r.type === 'article') {
-      return '<p class="pe-wiz-hint">一组是 1–2 篇精读+朗读。要换课文就点「去掉」删整组，再重新加。</p>'
-    }
     if (r.type === 'video') {
       return '<p class="pe-wiz-hint">现在是 2 个一组：要换内容就点「去掉」删整组，再重新加一组。</p>'
     }
@@ -517,8 +501,8 @@ export async function openWeekEditor({
   function paperOptions(cur) {
     return papers.map((p) => {
       const taken = takenOf('paper', p.paper_id) && p.paper_id !== cur
-      const label = Number(p.level) < 0 ? `已学混合卷 ${p.paper_id}` : p.paper_id
-      return `<option value="${escAttr(p.paper_id)}" ${p.paper_id === cur ? 'selected' : ''} ${taken ? 'disabled' : ''}>${escapeHtml(label)}</option>`
+      const lab = vocabPaperShort(p.paper_id, p.level)
+      return `<option value="${escAttr(p.paper_id)}" title="${escAttr(lab.full)}" ${p.paper_id === cur ? 'selected' : ''} ${taken ? 'disabled' : ''}>${escapeHtml(lab.short)}</option>`
     }).join('')
   }
 
@@ -582,7 +566,6 @@ export async function openWeekEditor({
     if (addType === 'reading') return readingAddHtml()
     if (addType === 'video') return videoAddHtml()
     if (addType === 'nce2') return nce2AddHtml()
-    if (addType === 'article') return articleAddHtml()
     if (addType === 'micro') return microAddHtml()
     const items = pickItems(addType)
     const filtered = showAll ? items : items.filter((it) => it.goalish)
@@ -593,7 +576,7 @@ export async function openWeekEditor({
     return `${note}
       <label class="pe-speak"><input type="checkbox" id="pe-show-all" ${showAll ? 'checked' : ''}/> 显示全部（含已完成、总目标以外）</label>
       <div class="pe-wiz-picks">${use.map((it) =>
-        `<button type="button" class="pe-pick ${it.taken ? 'taken' : ''}" data-pick="${escAttr(it.value)}" ${it.taken ? 'disabled' : ''}>${escapeHtml(it.label)}${it.taken ? ' · 已在本周' : ''}${it.mark ? ` · ${escapeHtml(it.mark)}` : ''}</button>`).join('')}</div>`
+        `<button type="button" class="pe-pick ${it.taken ? 'taken' : ''}" data-pick="${escAttr(it.value)}" title="${escAttr(it.title || it.label)}" ${it.taken ? 'disabled' : ''}>${escapeHtml(it.label)}${it.taken ? ' · 已在本周' : ''}${it.mark ? ` · ${escapeHtml(it.mark)}` : ''}</button>`).join('')}</div>`
   }
 
   function readingAddHtml() {
@@ -645,33 +628,6 @@ export async function openWeekEditor({
       <div><button class="btn-primary" id="pe-nce2-add" type="button" ${nce2Pick.length >= 1 && nce2Pick.length <= 5 ? '' : 'disabled'}>放入清单（一组，已勾 ${nce2Pick.length}/5 课）</button></div>`
   }
 
-  /** 精读+朗读：勾 1 或 2 篇 + 摊法，就能放入。朗读跟着课文，不再单独填篇数。 */
-  function articleAddHtml() {
-    if (!articles.length) return '<p class="muted">没有可选项。先到备课里准备内容。</p>'
-    const pool = articles.map((a) => ({
-      id: a.id,
-      label: a.title || ('#' + a.id),
-      taken: takenOf('article', a.id),
-      goalish: goalish('article', a.id),
-      mark: includesNum(done.articles, a.id) ? '已朗读' : '',
-    }))
-    const filtered = showAll ? pool : pool.filter((it) => !it.taken && it.goalish)
-    const use = filtered.length || showAll ? filtered : pool
-    const note = !showAll && !filtered.length
-      ? '<p class="pe-wiz-hint">总目标里没有还没完成的，下面先列出全部。</p>' : ''
-    return `${note}
-      <label class="pe-speak"><input type="checkbox" id="pe-show-all" ${showAll ? 'checked' : ''}/> 显示全部（含已完成、总目标以外）</label>
-      <p class="pe-wiz-hint">勾 1–2 篇为一组（含朗读）再放：工作日摊开 = 每天 1 篇；周末集中 = 周六一次做完（1 篇当天，2 篇同天）。</p>
-      ${pickNote ? `<p class="pe-wiz-hint">${escapeHtml(pickNote)}</p>` : ''}
-      <div class="pe-wiz-picks">${use.map((it) => {
-        const on = articlePick.includes(Number(it.id))
-        return `<button type="button" class="pe-pick ${on ? 'on' : ''} ${it.taken ? 'taken' : ''}" data-art-pick="${it.id}" ${it.taken ? 'disabled' : ''}>${escapeHtml(it.label)}${it.taken ? ' · 已在本周' : ''}${it.mark ? ` · ${escapeHtml(it.mark)}` : ''}</button>`
-      }).join('')}</div>
-      <label class="pe-speak"><input type="radio" name="pe-art-mode" value="daily" ${artMode === 'daily' ? 'checked' : ''}/> 工作日摊开（每天 1 篇）</label>
-      <label class="pe-speak"><input type="radio" name="pe-art-mode" value="weekend" ${artMode === 'weekend' ? 'checked' : ''}/> 周末集中（周六一次做完）</label>
-      <div><button class="btn-primary" id="pe-art-add" type="button" ${articlePick.length >= 1 && articlePick.length <= 2 ? '' : 'disabled'}>放入清单（一组，已勾 ${articlePick.length} 篇）</button></div>`
-  }
-
   function microAddHtml() {
     const on = tasks.micro != null
     return `<p class="pe-wiz-hint">一组微练习 = 本周每个工作日 3 题，不做不扣分。</p>
@@ -719,8 +675,6 @@ export async function openWeekEditor({
         addType = btn.dataset.type
         showAll = false
         videoPick = []
-        articlePick = []
-        artMode = 'daily'
         vidMode = 'daily'
         nce2Pick = []
         nce2Mode = 'daily'
@@ -831,32 +785,6 @@ export async function openWeekEditor({
       addOpen = false
       paint()
     })
-    dlg.querySelectorAll('[data-art-pick]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = Number(btn.dataset.artPick)
-        const i = articlePick.indexOf(id)
-        if (i >= 0) {
-          articlePick.splice(i, 1)
-          pickNote = ''
-        } else if (articlePick.length >= 2) {
-          pickNote = '一组最多勾 2 篇：先取消一篇勾选再换。'
-        } else {
-          articlePick.push(id)
-          pickNote = ''
-        }
-        paint()
-      })
-    })
-    const artAdd = dlg.querySelector('#pe-art-add')
-    if (artAdd) artAdd.addEventListener('click', () => {
-      if (articlePick.length < 1 || articlePick.length > 2) return
-      tasks = appendArticleUnit(tasks, articlePick, artMode)
-      openKey = `article-unit:${(tasks.article_units || []).length - 1}`
-      articlePick = []
-      pickNote = ''
-      addOpen = false
-      paint()
-    })
     const microBtn = dlg.querySelector('#pe-micro-toggle')
     if (microBtn && !microBtn.disabled) {
       microBtn.addEventListener('click', () => {
@@ -866,9 +794,6 @@ export async function openWeekEditor({
         paint()
       })
     }
-    dlg.querySelectorAll('input[name="pe-art-mode"]').forEach((r) => {
-      r.addEventListener('change', () => { artMode = r.value })
-    })
     dlg.querySelectorAll('input[name="pe-vid-mode"]').forEach((r) => {
       r.addEventListener('change', () => { vidMode = r.value })
     })
@@ -1018,13 +943,11 @@ export async function openWeekEditor({
       paint()
       return
     }
-    const um = /^(article-unit|video-unit|nce2-unit):(\d+)$/.exec(key)
+    const um = /^(video-unit|nce2-unit):(\d+)$/.exec(key)
     if (um) {
-      tasks = um[1] === 'article-unit'
-        ? removeArticleUnit(tasks, Number(um[2]))
-        : um[1] === 'video-unit'
-          ? removeVideoUnit(tasks, Number(um[2]))
-          : removeNce2Unit(tasks, Number(um[2]))
+      tasks = um[1] === 'video-unit'
+        ? removeVideoUnit(tasks, Number(um[2]))
+        : removeNce2Unit(tasks, Number(um[2]))
       if (openKey === key) openKey = null
       paint()
       return
@@ -1058,7 +981,6 @@ export async function openWeekEditor({
       tasks = appendPlanItem(tasks, { type: 'paper', paper_id: value })
       openKey = `paper:${value}`
     }
-    // 精读/视频组不换绑：换内容 = 删整组重加
     paint()
   }
 

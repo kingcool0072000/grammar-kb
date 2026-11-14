@@ -16,12 +16,10 @@ async function mountContent(el) {
   // 已上架专题数（topics-admin/list；失败显示 — 不阻塞备课中心）
   let topicCount = '—'
   try { topicCount = (await api.topicsAdminList()).length } catch { /* 忽略 */ }
-  let papers = null, bases = null, derived = null, lib = null, vlevels = null, topicsProg = null
+  let papers = null, lib = null, vlevels = null, topicsProg = null
   try {
-    ;[papers, bases, derived, lib, vlevels, topicsProg] = await Promise.all([
+    ;[papers, lib, vlevels, topicsProg] = await Promise.all([
       api.fcePapers().catch(() => null),
-      api.readingArticles({ kind: 'base' }).catch(() => null),
-      api.readingArticles().catch(() => null),
       api.libraryBooks().catch(() => null),
       api.vocabLevels({ maxLevel: 7, countsOnly: true }).catch(() => null),
       api.topicsProgress().catch(() => null),
@@ -33,8 +31,6 @@ async function mountContent(el) {
   const lecCount = stats ? stats.lectures : '—'
   const kpCount = stats ? stats.knowledge_points : '—'
   const fceTotal = papers?.reduce((s, t) => s + Object.values(t.papers).flat().reduce((x, p) => x + p.questions, 0), 0) || 0
-  const derivedCount = derived?.length || 0
-  const baseCount = bases?.length || 0
   // 专题手册数（上方动态 import 已取）+ 已完成进度
   const topicsDone = (topicsProg || []).filter((r) => r.done).length
 
@@ -114,24 +110,6 @@ async function mountContent(el) {
         </div>
         <div id="pp-vocab-board"></div>
         <div class="prep-queue" data-q="vocabGrading"><p class="muted">加载中…</p></div>
-      </section>
-
-      <!-- ================= 3 · 精读（派生文章 + 待批录音队列） ================= -->
-      <section class="gd-section">
-        <header class="gd-section-head">
-          <h2>📖 精读 <span class="prep-qbadge" data-qbadge="reading" hidden></span></h2>
-        </header>
-        <div class="gd-subgroup">
-          <h3>✍️ 派生阅读文章</h3>
-          <div class="prep-cards">
-            <button class="prep-card" data-go="readingList">
-              <b>${derivedCount}</b><span>派生精读文章 · 列表与编辑</span>
-            </button>
-          </div>
-          <p class="reading-hint">派生精读文章列表（新增/编辑/删除）；原文段落管理在 FCE 板块；学生的录音提交与评分在本区下方队列。</p>
-        </div>
-        <div class="prep-queue" data-q="recording"><p class="muted">加载中…</p></div>
-        <div class="prep-queue" data-q="recentGraded"><p class="muted">加载中…</p></div>
       </section>
 
       <!-- ================= 4 · 视频学习（清单 + 待批复述队列） ================= -->
@@ -263,8 +241,9 @@ async function mountContent(el) {
               <b>📚 学习日志</b><span>打卡记录 · 学习明细</span>
             </button>
           </div>
-          <p class="reading-hint">跨学科的长期趋势与全量日志在独立页查看，这里只放入口；日常待批在上方各学科分区完成。</p>
+          <p class="reading-hint">跨学科的长期趋势与全量日志在独立页查看，这里只放入口；日常待批在上方各学科分区完成。以前的精读录音还在学习日志里，课表不再排新的精读。</p>
         </div>
+        <div class="prep-queue" data-q="recentGraded"><p class="muted">加载中…</p></div>
       </section>
     </div>
   `
@@ -358,10 +337,7 @@ async function mountContent(el) {
     }
     // 与批改中心 go() 同映射：队列内「去批改」跳独立批改页（sessionStorage 联动自动展开对应视图）
     const go = (target) => {
-      if (target === 'recording') {
-        sessionStorage.setItem('gkb-open-review', '1')
-        location.hash = '#/readingAdmin'
-      } else if (target === 'essay') {
+      if (target === 'essay') {
         sessionStorage.setItem('gkb-open-essay', '1')
         location.hash = '#/fcePapers'
       } else if (target === 'fce-subs') {
@@ -390,8 +366,6 @@ async function mountContent(el) {
           else if (r && typeof r.catch === 'function') r.catch(fail)
         } catch (e) { fail(e) }
       }
-      mountOne('recording', (h) =>
-        queues.mountRecordingQueue(h, { ...base, onCount: (n) => setBadge('reading', n) }))
       mountOne('retell', (h) =>
         queues.mountRetellQueue(h, { ...base, onCount: (n) => setBadge('video', n) }))
       mountOne('essay', (h) =>
