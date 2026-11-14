@@ -79,6 +79,8 @@ class ScheduleMixin:
 
         均摊节奏按家长 10-04 定的模板：工作日=讲次+背词+泛读，
         周六=FCE 大题，周日=错词再练+试卷+补泛读。
+        这些按天摊开只是建议。除微练习外，完成认整周（见 week_credit），
+        不因为做的那天和格子上的星期几不一样就不算。
         精读不再排进当日清单（历史朗读留在学习日志）。
         剩余量动态重摊：按「周目标 − 截至 for_date 已完成」重算后摊给
         剩余天——错过的日子欠账自动滚入后面的天。纯派生不落库。
@@ -839,8 +841,13 @@ class ScheduleMixin:
             # 展示用的补充文案不是完成规则，留在清单出口。
             # 历史回填只认快照，不改写 detail。
             if historical is None and t.get("type") == "vocab" and t.get("quota"):
-                t2["detail"] = vocab_progress_detail(
-                    t2["done"], info.get("gained") or 0, t2.get("detail"))
+                if t2.get("why") == "week_credit":
+                    wg = info.get("week_gained")
+                    wt = info.get("week_target")
+                    t2["detail"] = f"本周新掌握 {wg}/{wt}，哪一天背都算 ✓"
+                else:
+                    t2["detail"] = vocab_progress_detail(
+                        t2["done"], info.get("gained") or 0, t2.get("detail"))
             if historical is None and t.get("type") == "speak" and t2["done"]:
                 names = []
                 for aid in acts_out.get("all_speak_articles", []):
@@ -981,6 +988,7 @@ class ScheduleMixin:
             "percent": completion_percent(done_n, total_n),
             "completion_note": (
                 "完成率按学习信号自动计算，不看手动打卡。"
+                "除微练习外按周计完成；微练习要在北京时间当天打卡，过期不能补。"
                 "plan_history_days 只在教师冻结过的日期替代信号，不是每日流水。"
             ),
         }

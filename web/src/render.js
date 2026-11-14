@@ -38,6 +38,7 @@ const TASK_WHY = {
   signal: '学习信号已记上',
   no_signal: '还没有对应的学习信号',
   scheduled: '还没到这一天',
+  week_credit: '本周内完成了，不限原来排在哪一天',
 }
 
 const TASK_WHY_SHORT = {
@@ -50,6 +51,7 @@ const TASK_WHY_SHORT = {
   signal: '有记录',
   no_signal: '无记录',
   scheduled: '未到',
+  week_credit: '本周算完成',
 }
 
 export function taskWhy(code) {

@@ -222,8 +222,9 @@ def test_wrong_unturned_first_and_memory_guarantee(env):
     r1 = store.submit("malin", TODAY, answers)
     assert r1["done"] is True and r1["correct_n"] == DAILY_N - 1
     next_day = (today_cn() + timedelta(days=1)).isoformat()
-    day2 = store.today("malin", next_day)
-    assert day2["questions"][0]["id"] == wrong_q   # 最近一次非 correct → 最优先
+    # 未来日不在打卡接口里抽题；优先级用抽题函数本身验证。
+    picked = store._pick_daily("malin", next_day)
+    assert picked[0] == wrong_q   # 最近一次非 correct → 最优先
 
 
 def test_recent_wrong_recycle(env):
@@ -339,6 +340,40 @@ def test_grading_normalization_and_no_double_log(env):
     assert len(_log_rows(env)) == 2
     st = store.day_status("malin", TODAY)
     assert st == {"done": True, "n": 2, "total": 2}
+
+
+def test_checkin_rejects_expired_and_keeps_history(env):
+    """过了北京日不能打卡；已经做完的历史日仍能读，不能再交。"""
+    store = _store(env)
+    qid = _add_q(store, "grammar", stem="打卡题")
+    today = store.today("malin", TODAY)
+    assert today["can_check_in"] is True
+    assert today["date"] == TODAY
+    past = store.today("malin", YESTERDAY)
+    assert past["closed"] is True and past["can_check_in"] is False
+    assert past["questions"] == []
+    con = sqlite3.connect(env["fce"])
+    n = con.execute(
+        "SELECT COUNT(*) FROM micro_daily WHERE user='malin' AND date=?",
+        (YESTERDAY,)).fetchone()[0]
+    con.close()
+    assert n == 0
+    with pytest.raises(ValueError, match="不能补打卡"):
+        store.submit("malin", YESTERDAY, [{"id": qid, "choice": "A"}])
+    # 历史完成记录还在，只读
+    con = sqlite3.connect(env["fce"])
+    con.execute(
+        "INSERT INTO micro_daily (user, date, qids_json, answered_json, done)"
+        " VALUES ('malin', ?, ?, ?, 1)",
+        (YESTERDAY, json.dumps([qid]), json.dumps({str(qid): "A"})))
+    con.commit()
+    con.close()
+    again = store.today("malin", YESTERDAY)
+    assert again["done"] is True and again["closed"] is True
+    assert again["can_check_in"] is False
+    assert again["questions"] and again["questions"][0]["id"] == qid
+    with pytest.raises(ValueError, match="不能补打卡"):
+        store.submit("malin", YESTERDAY, [{"id": qid, "choice": "B"}])
 
 
 def test_day_status_tolerates_missing_table(env):

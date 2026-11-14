@@ -22,8 +22,8 @@ export async function mountMicro(el, { role } = {}) {
   // 顶栏 Tab 页（原课程表入口卡进隐藏页）：今日题 + 做题记录 + 提升回顾
   el.innerHTML = `
     <div class="view-head">
-      <h1>✏️ 微练习</h1>
-      <p id="mc-date">加载中… · 每天 3 题，完成当天点亮</p>
+      <h1>今日打卡</h1>
+      <p id="mc-date">加载中… · 周一到周五各打一次，过了当天不能补</p>
     </div>
     <div id="mc-body"><p class="muted">加载中…</p></div>`
 
@@ -48,7 +48,12 @@ export async function mountMicro(el, { role } = {}) {
   const questions = Array.isArray(data.questions) ? data.questions : []
   done = !!data.done
   const dateEl = el.querySelector('#mc-date')
-  if (dateEl && data.date) dateEl.innerHTML = `${escapeHtml(data.date)} · 每天 3 题，完成当天点亮`
+  if (dateEl && data.date) {
+    const tail = data.slot === false
+      ? '今天不是打卡日（周一到周五）。做了会留下记录，但不能补上漏掉的工作日。'
+      : '做完这 3 题即完成今日打卡。过了今天不能补。'
+    dateEl.innerHTML = `${escapeHtml(data.date)} · ${tail}`
+  }
 
   // 中断续答：answered 里已有记录 → 重放一次提交取回对错/解析（幂等，不重复计分）
   const known = Object.entries(data.answered || {})
@@ -81,9 +86,19 @@ export async function mountMicro(el, { role } = {}) {
 
   function render() {
     // 空池：今天没题可做
+    if (data.closed && !questions.length) {
+      body.innerHTML = `
+        <div class="mc-card mc-empty">这一天的打卡已经结束，不能补打。漏打会留在本周进度里。</div>`
+      return
+    }
+    if (data.slot === false && !data.done && !questions.length) {
+      body.innerHTML = `
+        <div class="mc-card mc-empty">今天不用打卡。打卡是周一到周五，漏掉的日子不能补。</div>`
+      return
+    }
     if (!questions.length) {
       body.innerHTML = `
-        <div class="mc-card mc-empty">题池准备中，明天再来看看</div>`
+        <div class="mc-card mc-empty">题池准备中，下一个打卡日再来</div>`
       return
     }
 
@@ -151,11 +166,11 @@ export async function mountMicro(el, { role } = {}) {
   function doneCardHtml(total) {
     const scoreLine = correctN != null
       ? `<p class="mc-done-sub">答对 ${correctN}/${total}，错题记得看解析</p>`
-      : '<p class="mc-done-sub">明天还有 3 题等你</p>'
+      : '<p class="mc-done-sub">下一个工作日继续打卡</p>'
     const bday = finishBlessing('micro')
     return `
       <div class="mc-card mc-done-card">
-        <b>今日微练习已完成 ✓</b>
+        <b>今日打卡已完成 ✓</b>
         ${scoreLine}
         ${bday ? `<p class="bday-finish">${escapeHtml(bday)}</p>` : ''}
       </div>`

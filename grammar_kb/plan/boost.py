@@ -135,53 +135,62 @@ def day_done(user: str, date: str, item_refs: list[str]) -> bool:
 
 
 def today_items(user: str, date: str) -> list[dict]:
-    """date（北京日）当日的提升档任务清单（该日所属周 plan_weeks.tasks）。
+    """这一天可以提交的提升档任务。
 
-    供 retell 提交等入口校验「今天确实排了这件事」。教师没配 boost_items
-    时不派生任务——即使该日落在默认提升日（周二/周四）也返回空列表。
-    周六兜底与派生口径一致（schedule._append_boost_tasks）：排定提升日
-    全在周六前时兜底行照出，提交不应被拒。
+    提升档按周计，不再卡在 boost_days 那几天：该日所属周只要配了
+    boost_items，周内任意一天都能交。更早的计划周里还没过关的项也
+    带上，方便过周后补做（提交日记在当天，进度认回那一周）。
+    教师没配 items 时返回空列表。
     """
     day = (date or "").strip()[:10]
     try:
         ws = monday_of(_date.fromisoformat(day)).isoformat()
     except ValueError:
         return []
+    who = (user or "").strip()[:60]
+    weeks = _plan_weeks_upto(who, ws)
+    out: list[dict] = []
+    seen: set[str] = set()
+    for week_start, tasks in weeks:
+        items = [x for x in (tasks.get("boost_items") or [])
+                 if isinstance(x, dict) and item_ref_of(x)]
+        if not items:
+            continue
+        states = {} if week_start == ws else pass_state_map(
+            who, week_start, "9999-12-31")
+        for item in items:
+            ref = item_ref_of(item)
+            if not ref or ref in seen:
+                continue
+            if week_start != ws:
+                state = (states.get(ref) or {}).get("state")
+                if state == "passed":
+                    continue
+            out.append(item)
+            seen.add(ref)
+    return out
+
+
+def _plan_weeks_upto(user: str, week_start: str) -> list[tuple[str, dict]]:
+    """week_start 及更早的计划周，新的在前。缺表容错空列表。"""
     try:
         with _connect() as conn:
             conn.executescript(SCHEMA)
-            row = conn.execute(
-                "SELECT tasks FROM plan_weeks WHERE user = ? AND week_start = ?",
-                ((user or "").strip()[:60], ws),
-            ).fetchone()
-    except (sqlite3.Error, ValueError):
+            rows = conn.execute(
+                "SELECT week_start, tasks FROM plan_weeks"
+                " WHERE user = ? AND week_start <= ?"
+                " ORDER BY week_start DESC",
+                (user, week_start),
+            ).fetchall()
+    except sqlite3.Error:
         return []
-    tasks = loads_dict(row["tasks"]) if row else {}
-    if not isinstance(tasks, dict):
-        tasks = {}
-    items = [x for x in (tasks.get("boost_items") or [])
-             if isinstance(x, dict) and item_ref_of(x)]
-    if not items:
-        return []
-    days = boost_days_of(tasks, items)
-    if day not in _boost_day_dates(ws, days):
-        try:
-            wn = _date.fromisoformat(day).isoweekday()
-        except ValueError:
-            return []
-        if not (wn == 6 and days and max(days) < 6):
-            return []
-    return items
-
-
-def _boost_day_dates(week_start: str, days: list[int]) -> set[str]:
-    """周内提升日的日期集合（days 为周几数字，1=周一）。"""
-    try:
-        ws = _date.fromisoformat(week_start)
-    except ValueError:
-        return set()
-    return {(ws + timedelta(days=n - 1)).isoformat() for n in days
-            if 1 <= n <= 7}
+    out: list[tuple[str, dict]] = []
+    for r in rows:
+        tasks = loads_dict(r["tasks"]) if r["tasks"] else {}
+        if not isinstance(tasks, dict):
+            tasks = {}
+        out.append((str(r["week_start"]), tasks))
+    return out
 
 
 # ---- 周窗口 / 讲次归属（rules / ctx / schedule 消费） ----

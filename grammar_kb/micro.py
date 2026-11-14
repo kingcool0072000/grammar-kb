@@ -185,15 +185,26 @@ class MicroStore:
     # ---- 学生端：今日 3 题 ----
 
     def today(self, user: str, day: str) -> dict:
-        """当日练习。首次调用抽 3 题落 micro_daily，之后幂等直接返回。
+        """当日练习。只有北京时间的今天会抽题落库；过期日只读已有记录。
 
-        返回 {"date", "questions": [{id,category,topic,stem,options}],
-        "answered": {qid: choice}, "done"}。options 不含答案。
+        返回 {"date", "questions", "answered", "done", "can_check_in",
+        "closed", "slot", "status"}。options 不含答案。
+        slot=工作日（计划内打卡日）。周末仍可做「今天」的题，但不占
+        周一到周五的打卡名额。已过期的日期不能新开一组。
         """
         user = (user or "").strip()[:60]
         day = self._valid_day(day)
+        today_iso = today_cn().isoformat()
+        if day > today_iso:
+            # 不抽题、不落库。查询接口保持 200，提交接口才拒绝提前打卡。
+            return {
+                "date": day, "questions": [], "answered": {}, "done": False,
+                **self._checkin_flags(day, today_iso, False, False),
+            }
         with self._connect() as conn:
             row = self._daily_row(conn, user, day)
+        if row is None and day < today_iso:
+            return self._closed_payload(day, today_iso, None)
         if row is None:
             self._sync_pool(user)
             qids = self._pick_daily(user, day)
@@ -228,11 +239,45 @@ class MicroStore:
                 answered[int(k)] = v
             except (TypeError, ValueError):
                 continue
+        done = bool(row["done"]) if row else False
         return {
             "date": day,
             "questions": [qmap[q] for q in qids if q in qmap],
             "answered": answered,
-            "done": bool(row["done"]) if row else False,
+            "done": done,
+            **self._checkin_flags(day, today_iso, done, bool(row)),
+        }
+
+    def _closed_payload(self, day: str, today_iso: str, row) -> dict:
+        """过期且没有打卡记录：不抽题、不落库。"""
+        return {
+            "date": day,
+            "questions": [],
+            "answered": {},
+            "done": False,
+            **self._checkin_flags(day, today_iso, False, False),
+        }
+
+    @staticmethod
+    def _checkin_flags(day: str, today_iso: str, done: bool,
+                       has_row: bool) -> dict:
+        wd = date.fromisoformat(day).weekday()
+        slot = wd < 5
+        closed = day < today_iso
+        if done:
+            status = "done"
+        elif closed:
+            status = "missed" if slot else "closed"
+        elif day == today_iso:
+            status = "open" if slot else "off"
+        else:
+            status = "upcoming"
+        return {
+            "can_check_in": day == today_iso and not done,
+            "closed": closed,
+            "slot": slot,
+            "status": status,
+            "has_row": has_row,
         }
 
     def wrong_open_qids(self, user: str, day: str) -> list[int]:
@@ -363,11 +408,16 @@ class MicroStore:
         """
         user = (user or "").strip()[:60]
         day = self._valid_day(day)
+        today_iso = today_cn().isoformat()
+        if day < today_iso:
+            raise ValueError("这一天的打卡已经结束，不能补打卡")
+        if day > today_iso:
+            raise ValueError("还没到这一天，不能提前打卡")
         with self._connect() as conn:
             row = self._daily_row(conn, user, day)
         if row is None:
-            # 当天还没拉过题：当日现场生成（历史日期没有记录则拒绝）
-            if day != today_cn().isoformat():
+            # 当天还没拉过题：当日现场生成
+            if day != today_iso:
                 raise ValueError(f"{day} 没有微练习记录，请先获取当日题目")
             self.today(user, day)
             with self._connect() as conn:

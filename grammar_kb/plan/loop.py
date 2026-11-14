@@ -6,7 +6,7 @@
   ``new_words`` 看工作日「背词 n 词」是否按新掌握达标。今天不排新词时
   new_words.done 为真，不拿复习清零冒充新词完成。
   连击里的背词格 = 复习清完 且 新词格达标。
-- 微练习：``micro.day_status`` 的 done（micro_daily 整组做完）；
+- 微练习：工作日打卡 ``micro.day_status`` 的 done；周末不要求打卡；
 - 泛读：当日有效泛读词数 vs week_daily_tasks 泛读行当日摊派（books.py
   「今日 +N 词」同一公式）；拿不到目标（没配书/全部已达成）时
   target_words=None，ok=当日有有效泛读会话（或已全部达成）；
@@ -73,9 +73,10 @@ def loop_status(user: str, day: str, *, store=None, recite=None,
     review_clear = due + overdue == 0
     new_words = _new_word_day(store, user, day_iso)
 
-    # ---- 微练习 ----
+    # ---- 微练习：工作日才是打卡日；周末不挡连击 ----
     st = micro.day_status(user, day_iso)
     micro_done = bool(st.get("done"))
+    micro_slot = d.weekday() < 5
 
     # ---- 泛读：当日词数 vs 当日摊派额度 ----
     words, has_reading = _day_readings(store, user, day_iso, nxt)
@@ -88,7 +89,7 @@ def loop_status(user: str, day: str, *, store=None, recite=None,
     else:
         reading_ok = words >= target
 
-    # ---- 提升档：当日派生清单里的 boost 行（与课程表同一来源）----
+    # ---- 提升档：本周任务哪天都能做（课表上的提升日只是建议）----
     derived = store.week_daily_tasks(ws, for_date=day_iso, user=user)
     boost_out: dict | None = None
     boost_rows = [r for r in derived if r.get("type") == "boost"]
@@ -97,46 +98,52 @@ def loop_status(user: str, day: str, *, store=None, recite=None,
                 for r in boost_rows]
         refs = [x for x in refs if x]
         label = str(boost_rows[0].get("text") or "⭐ 提升任务")
+        configured = bool((boost_rows[0].get("boost") or {}).get("configured", True))
         if not refs:
-            # 「本周未配置」说明行：无可做任务，不拦闭环
             boost_out = {"scheduled": True, "done": True, "label": label,
                          "configured": False}
         else:
-            # 两态口径（完成 ≠ 过关）：done=已提交/已打卡（当日闭环判定）；
-            # state=过关进度——memory 打卡即 passed，retell 看教师分
-            # （≥7 passed / 未批 pending / <7 graded_low 建议再练）
-            states = [plan_boost.pass_state(user, day_iso, r) for r in refs]
-            if states and all(s == "passed" for s in states):
-                state = "passed"
-            elif "graded_low" in states:
-                state = "graded_low"
-            elif "pending" in states:
-                state = "pending"
-            else:
-                state = "todo"
+            done, state = _boost_week_state(user, ws, refs)
             boost_out = {
-                "scheduled": True,
-                "done": plan_boost.day_done(user, day_iso, refs),
-                "state": state,
+                "scheduled": True, "done": done, "state": state,
+                "passed": state == "passed", "label": label,
+                "configured": configured,
+            }
+    else:
+        # 非建议日也要能做：本周（以及更早未过关的）提升项从 today_items 来。
+        items = plan_boost.today_items(user, day_iso) or []
+        refs = [r for r in (plan_boost.item_ref_of(it) for it in items
+                            if isinstance(it, dict)) if r]
+        if refs:
+            done, state = _boost_week_state(user, ws, refs)
+            boost_out = {
+                "scheduled": True, "done": done, "state": state,
                 "passed": state == "passed",
-                "label": label,
-                "configured": bool((boost_rows[0].get("boost") or {})
-                                   .get("configured", True)),
+                "label": "⭐ 提升任务",
+                "configured": True,
             }
 
     # ---- 连击：从今天往前回溯连续全绿天数（boost 不计入）----
     # 复习清了不等于今天的新词也做完。两格都达标，连击才把背词算绿。
+    # 周末不是打卡日：没做微练习不打断连击。工作日没打卡仍然打断。
+    streak_micro = micro_done or not micro_slot
     streak = _streak(store, recite, micro, user, d,
                      today_green=(review_clear and new_words["done"]
-                                  and micro_done and reading_ok))
+                                  and streak_micro and reading_ok))
 
     return {
         "recite": {
             "clear": review_clear, "due": due, "overdue": overdue,
             "new_words": new_words,
         },
-        "micro": {"done": micro_done, "answered": int(st.get("n") or 0),
-                  "total": int(st.get("total") or 0) or 3},
+        "micro": {
+            "done": micro_done,
+            "answered": int(st.get("n") or 0),
+            "total": int(st.get("total") or 0) or (3 if micro_slot else 0),
+            "slot": micro_slot,
+            "status": ("done" if micro_done else "open") if micro_slot else (
+                "done" if micro_done else "off"),
+        },
         "reading": {"ok": reading_ok, "today_words": words,
                     "target_words": target},
         "boost": boost_out,
@@ -146,6 +153,24 @@ def loop_status(user: str, day: str, *, store=None, recite=None,
             "micro_questions": _micro_wrong_open(micro, user, day_iso),
         },
     }
+
+
+def _boost_week_state(user: str, week_start: str,
+                      refs: list[str]) -> tuple[bool, str]:
+    """本周周一及之后的提升档状态。done=都交过（含待批、低分）；过关看 passed。"""
+    smap = plan_boost.pass_state_map(user, week_start, "9999-12-31")
+    states = [(smap.get(r) or {}).get("state", "todo") for r in refs]
+    if states and all(s == "passed" for s in states):
+        state = "passed"
+    elif "graded_low" in states:
+        state = "graded_low"
+    elif "pending" in states:
+        state = "pending"
+    else:
+        state = "todo"
+    done = bool(refs) and all(
+        s in ("passed", "pending", "graded_low") for s in states)
+    return done, state
 
 
 # ---- 背词（recite_review 直算；与 review_summary 同一「在周期」口径） ----
@@ -352,6 +377,11 @@ def _new_word_day(store, user: str, day_iso: str) -> dict:
         "gained": 0, "quota": 0,
         "week_gained": week_gained, "week_target": week_target,
     }
+    if week_target > 0 and week_gained >= week_target:
+        # 本周新掌握已经够：不因为没落在某个工作日就还显示没做完。
+        out["done"] = True
+        out["scheduled"] = d.weekday() < 5
+        return out
     if d.weekday() >= 5:
         return out
     upto = (d + timedelta(days=1)).isoformat()
@@ -371,7 +401,7 @@ def _new_word_day(store, user: str, day_iso: str) -> dict:
         "scheduled": True,
         "quota": quota,
         "gained": gained,
-        "done": gained >= quota,
+        "done": gained >= quota or (week_target > 0 and week_gained >= week_target),
     })
     return out
 
@@ -383,7 +413,7 @@ def _streak(store, recite, micro, user: str, day: date, *,
     查询日当格用上面算好的三项真值（today_green）；更早的日子回看口径：
     - 背词：当前在周期 backlog（conquered_at 为空、next_review ≤ 当日为空
       ——已攻克词退出 backlog，历史「当天清没清」按现状回看，无落库近似；
-    - 微练习：micro_daily done=1；
+    - 微练习：工作日 micro_daily done=1；周末不要求；
     - 泛读：当日有有效（非僵尸）泛读会话。
     """
     day_iso = day.isoformat()
@@ -400,7 +430,8 @@ def _streak(store, recite, micro, user: str, day: date, *,
         else:
             clear = not any(x <= di for x in backlog)
             new_ok = _new_word_day(store, user, di)["done"]
-            green = (clear and new_ok and di in micro_days and di in reading_days)
+            micro_ok = di in micro_days or cur.weekday() >= 5
+            green = (clear and new_ok and micro_ok and di in reading_days)
         if not green:
             break
         streak += 1
