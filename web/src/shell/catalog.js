@@ -74,16 +74,48 @@ export function normalizeKey() {
 // 精读（阅读练习）已结束。旧书签不再打开那个页，教师回备课中心，学生回课程表。
 const RETIRED_INTENSIVE = new Set(['reading', 'readingAdmin', 'readingList'])
 
+// 旧书签：仍是学生主动打开的页，登录后不要改写成课程表。
+const STUDENT_DEEP_ALIASES = new Set(['today', 'ttsconf', 'readconf'])
+
+/** 无深链时的首页。教师备课中心，学生课程表。 */
+export function homeRoute(role) {
+  return role === 'teacher' ? 'prep' : 'timetable'
+}
+
+function hashKey(hash) {
+  return String(hash || '').replace(/^#\/?/, '').split('?')[0].split('/').filter(Boolean)[0] || ''
+}
+
+/** 学生地址是不是指定页面（#/recite、#/topics/… 等）。空 hash 和登录页不是。 */
+export function isStudentDeepLink(hash) {
+  const key = hashKey(hash)
+  return STUDENT_ALLOWED.has(key) || STUDENT_DEEP_ALIASES.has(key)
+}
+
+/**
+ * 登录成功后留在哪个 hash。
+ * 教师原样保留（默认仍由 resolveRoute 进备课中心）。
+ * 学生没有深链时去 #/timetable；打开了具体页就还去那一页。
+ */
+export function hashAfterLogin(role, hash) {
+  const current = hash == null ? '' : String(hash)
+  if (role === 'teacher') return current
+  if (isStudentDeepLink(current)) return current
+  return '#/timetable'
+}
+
 export function resolveRoute(role) {
   const key = normalizeKey()
   if (RETIRED_INTENSIVE.has(key)) {
-    const dest = role === 'teacher' ? 'prep' : 'timetable'
+    const dest = homeRoute(role)
     const next = `#/${dest}`
     if (location.hash !== next) location.replace(next)
     return dest
   }
   const allowed = role === 'teacher' ? TEACHER_ALLOWED : STUDENT_ALLOWED
-  if (!allowed.has(key)) return role === 'teacher' ? 'prep' : 'recite'
+  // 空 hash、登录页、角色打不开的地址：回到该角色首页。
+  // 学生显式深链（#/recite 等）在上面已经命中 allowed，不会进这里。
+  if (!allowed.has(key)) return homeRoute(role)
   return key
 }
 

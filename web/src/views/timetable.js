@@ -191,8 +191,8 @@ export async function mountTimetable(el) {
     <div class="tt-grid">
       ${days.map(dayCell).join('')}
     </div>
-    ${(d.notes || '').trim() ? `<section class="tt-notes card"><h3>📌 老师的话</h3><p>${escapeHtml(d.notes).replace(/\n/g, '<br>')}</p></section>` : ''}
   `
+  // 周计划 notes 仍由接口返回、教师保存时原样写回。学生课程表不再画这一块。
   if (loop) bindLoopCard(el, loop, boostRows)
   bindBoostRows(el, boostRows)
   renderReviewStrip(el.querySelector('#tt-loop'))

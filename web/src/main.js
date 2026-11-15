@@ -3,7 +3,7 @@ import { api, getAuth, setAuth } from './api.js'
 import { mountLogin } from './views/login.js'
 import { createDrawer } from './components/drawer.js'
 import { h, swapView } from './shell/dom.js'
-import { resolveRoute, tabsFor } from './shell/catalog.js'
+import { hashAfterLogin, resolveRoute, tabsFor } from './shell/catalog.js'
 import { prepareTeacher, attachTeacherBack } from './shell/teacher.js'
 import { prepareStudent } from './shell/student.js'
 import { mountView } from './shell/mountView.js'
@@ -25,7 +25,14 @@ async function bootstrap() {
     app.innerHTML = ''
     const loginEl = h('div')
     app.append(loginEl)
-    mountLogin(loginEl, { onLogin: () => restartApp() })
+    mountLogin(loginEl, {
+      onLogin: (session) => {
+        // 学生无深链时先把地址写成课程表，再整页重进。教师 hash 不动。
+        const next = hashAfterLogin(session && session.role, location.hash)
+        if (next !== location.hash) location.hash = next
+        restartApp()
+      },
+    })
     return
   }
 
