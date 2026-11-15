@@ -11,9 +11,14 @@ from .util import (
     _short, _task_key, add_days, completion_percent, task_public,
     vocab_progress_detail,
 )
+from .week_credit import (
+    OPEN_HI, build_week_pool, checkin_progress, micro_checkins,
+)
 
 _COMPLETION_NOTE = (
     "完成率按学习信号自动计算，不看手动打卡。"
+    "除微练习外，作业按周计：这一周任何一天做完都算，过了本周再补上，这一周的进度也会加上。"
+    "微练习是当天打卡（周一到周五各一次），过了北京时间当天不能补。"
     "仅教师冻结过的日期改用 plan_history_days 快照，那不是每日流水。"
 )
 class ViewsMixin:
@@ -153,6 +158,10 @@ class ViewsMixin:
             ],
             "goal_progress": self._week_goal_progress(t, days, user, week_start,
                                                       ctx=ctx),
+            # 本周作业每项一次（不按星期几锁完成）。日格子仍是建议节奏。
+            "week_pool": build_week_pool(self, user, week_start),
+            "micro_checkins": micro_checkins(
+                self, user, week_start, bool(t.get("micro"))),
             "completion": {
                 "done": done_n, "total": total_n,
                 "percent": completion_percent(done_n, total_n),
@@ -175,7 +184,7 @@ class ViewsMixin:
         - 泛读：按各书周目标%（词数口径）vs 周内已读词数（实录汇总）
         - 试卷：计划卷数 vs 登记考试数
         - 视频复述：计划 vid 数 vs 周内提交复述数
-        - 微练习：tasks.micro 开着才有；该周 7 天里整组做完的天数 / 7
+        - 微练习：tasks.micro 开着才有；周一到周五打卡天数 / 5（漏打留在分母里）
         """
         dims = []
 
@@ -186,20 +195,14 @@ class ViewsMixin:
 
         lecs = t.get("lectures") or []
         if lecs:
-            done_lec = len(set(lecs) & (
-                ctx.lecture_done(week_start, add_days(week_start, 7), "lecture")
-                if ctx is not None else
-                self.lecture_done(week_start, add_days(week_start, 7),
-                                  user, "lecture")))
+            done_lec = len(set(lecs) & self.lecture_done(
+                week_start, None, user, "lecture"))
             dim("📚", "语法课程", done_lec, len(lecs))
 
         hw_papers = t.get("hw_papers") or []
         if hw_papers:
-            done_hw = len(set(hw_papers) & (
-                ctx.lecture_done(week_start, add_days(week_start, 7), "hw")
-                if ctx is not None else
-                self.lecture_done(week_start, add_days(week_start, 7),
-                                  user, "hw")))
+            done_hw = len(set(hw_papers) & self.lecture_done(
+                week_start, None, user, "hw"))
             dim("📝", "作业卷", done_hw, len(hw_papers))
 
         # 词汇差额口径（级别内增量）：分母 = 目标词数 − 周初该级别已掌握
@@ -234,10 +237,7 @@ class ViewsMixin:
         fce = t.get("fce") or []
         if fce:
             # 与 actuals._fce_actuals 同一窗口与标签构造（ctx 有预取则切片）
-            got = set(
-                ctx.fce_actuals(week_start, add_days(week_start, 7))
-                if ctx is not None else
-                self._fce_actuals(week_start, add_days(week_start, 7), user))
+            got = set(self._fce_actuals(week_start, OPEN_HI, user))
             done_fce = sum(1 for x in fce if x in got)
             dim("🎧", "FCE真题", done_fce, len(fce))
 
@@ -311,42 +311,43 @@ class ViewsMixin:
 
         papers = t.get("vocab_papers") or []
         if papers:
-            done_p = sum(
-                1 for d in days
-                for x in (d.get("tasks") or [])
-                if x.get("type") == "paper" and x.get("done"))
+            # 登记日落在本周周一及之后都算（不限周日，过周补登也算）。
+            from .week_credit import WeekCredit
+            done_ids = WeekCredit(self, user, week_start).papers()
+            done_p = sum(1 for pid in papers if str(pid) in done_ids)
             dim("📝", "试卷", done_p, len(papers))
 
         videos = self._plan_videos(t)
         if videos:
-            done_ids = (ctx.retold_video_ids(week_start, add_days(week_start, 7))
-                        if ctx is not None else
-                        self._retold_video_ids(week_start, add_days(week_start, 7),
-                                               user))
+            done_ids = self._retold_video_ids(week_start, OPEN_HI, user)
             dim("🎬", "视频复述", len(set(videos) & done_ids), len(videos))
 
         # NCE2 听力跟读：计划课数 vs 周内有提交（精听或跟读）的课数。
         # 周目标维度只表「动过了」，行级 listen/shadow 满足差异不在这判。
         lessons = self._plan_lessons(t)
         if lessons:
-            if ctx is not None:
-                done_lids = (ctx.nce2_shadow_done(week_start, add_days(week_start, 7))
-                             | ctx.nce2_listened(week_start, add_days(week_start, 7)))
-            else:
-                done_lids = (
-                    self._nce2_kind_ids(week_start, add_days(week_start, 7),
-                                        user, "shadow")
-                    | self._nce2_kind_ids(week_start, add_days(week_start, 7),
-                                          user, "listen"))
+            done_lids = (
+                self._nce2_kind_ids(week_start, OPEN_HI, user, "shadow")
+                | self._nce2_kind_ids(week_start, OPEN_HI, user, "listen"))
             dim("🗣", "听力跟读", len(set(lessons) & done_lids), len(lessons))
 
-        # 微练习维度：周任务开了 micro（tasks["micro"]）才出现——微练习
-        # 本就不排计划行、不进日清单分母，这里以「周内做完的天数」计量：
-        # done=该周 7 天里 micro_daily 整组做完（done=1）的天数，分母恒 7。
+        from . import boost as plan_boost
+        boost_refs = [plan_boost.item_ref_of(x) for x in (t.get("boost_items") or [])
+                      if isinstance(x, dict)]
+        boost_refs = [r for r in boost_refs if r]
+        if boost_refs:
+            states = plan_boost.pass_state_map(user, week_start, OPEN_HI)
+            done_b = sum(
+                1 for r in boost_refs
+                if (states.get(r) or {}).get("state") in ("passed", "pending", "graded_low"))
+            dim("⭐", "提升档", done_b, len(boost_refs), extra="哪天做都算")
+
+        # 微练习：周一到周五各一次打卡。分母 5；过了当天没打的算漏打，不能补。
         if t.get("micro"):
-            done_days = self._micro_done_days(user, week_start,
-                                              add_days(week_start, 7))
-            dim("✏️", "微练习", done_days, 7)
+            rows = micro_checkins(self, user, week_start, True)
+            done_days, missed, total_days = checkin_progress(rows)
+            dim("✏️", "微练习", done_days, total_days or 5,
+                extra=f"已打卡 {done_days} · 漏打 {missed}")
 
         total_items = sum(d["total"] for d in dims)
         # 泛读维度按实际计数（可超 100%）；其余维度封顶（完成即满）
@@ -418,8 +419,13 @@ class ViewsMixin:
                 t2["why"] = info["why"]
                 if (historical is None and t2.get("type") == "vocab"
                         and t2.get("quota")):
-                    t2["detail"] = vocab_progress_detail(
-                        t2["done"], info.get("gained") or 0, t2.get("detail"))
+                    if t2.get("why") == "week_credit":
+                        t2["detail"] = (
+                            f"本周新掌握 {info.get('week_gained')}/{info.get('week_target')}"
+                            "，哪一天背都算 ✓")
+                    else:
+                        t2["detail"] = vocab_progress_detail(
+                            t2["done"], info.get("gained") or 0, t2.get("detail"))
                 out.append(t2)
             done_n = sum(1 for x in out if x["done"])
             days.append({

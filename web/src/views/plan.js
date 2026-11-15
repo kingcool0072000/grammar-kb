@@ -339,6 +339,9 @@ export async function mountPlan(el) {
             <button class="chip" data-edit="${wv.week_start}">✏️ 编辑本周</button>
             ${isCur ? '' : '<button class="chip" data-wk="cur">回到本周</button>'}
           </header>
+          ${checkinStripHtml(wv.micro_checkins)}
+          ${weekPoolHtml(wv.week_pool)}
+          ${(wv.week_pool || []).length ? '<p class="tt-hint">下面按天是建议节奏，完成不限哪一天。</p>' : ''}
           <div class="pw-grid">
             ${(wv.days || []).map((d, i) => dayCell(d, i, dayNames)).join('')}
           </div>
@@ -395,7 +398,7 @@ export async function mountPlan(el) {
         // 微练习是独立线上功能：不占计划行、不进 done/total 分母，
         // 当天 3 题做完在这里点亮
         + (acts.micro_done && acts.micro_done.done
-          ? `<div class="pw-task done"><i>✏️</i><span>微练习 3 题</span><em>✓</em></div>`
+          ? `<div class="pw-task done"><i>✏️</i><span>微练习打卡</span><em>✓</em></div>`
           : '')
       const statRows = []
       for (const r of acts.readings || []) {
@@ -438,9 +441,38 @@ export async function mountPlan(el) {
       return `${pct}%`
     }
 
+    function checkinStripHtml(rows) {
+      if (!Array.isArray(rows) || !rows.length) return ''
+      const label = { done: '已打卡', missed: '漏打', open: '今天打卡', upcoming: '未到', record: '有记录' }
+      const cells = rows.map((r) => `
+        <div class="tt-checkin ${escapeHtml(r.status || '')}${r.required === false ? ' extra' : ''}">
+          <b>${escapeHtml(r.label || '')}</b>
+          <span>${escapeHtml(label[r.status] || '')}</span>
+        </div>`).join('')
+      return `
+        <section class="tt-checkins card">
+          <h3>微练习打卡 <small>周一到周五各一次，过了当天不能补</small></h3>
+          <div class="tt-checkin-row">${cells}</div>
+        </section>`
+    }
+
+    function weekPoolHtml(pool) {
+      if (!Array.isArray(pool) || !pool.length) return ''
+      const rows = pool.map((t) => `
+        <div class="tt-pool-item ${t.done ? 'ok' : ''}">
+          <span>${escapeHtml(t.text || '')}</span>
+          ${t.done ? '<b>✓</b>' : '<b class="wait">未完成</b>'}
+        </div>`).join('')
+      return `
+        <section class="tt-pool card">
+          <h3>本周作业 <small>哪一天做完都算；过了本周再补上，这一周也会算</small></h3>
+          <div class="tt-pool-list">${rows}</div>
+        </section>`
+    }
+
     function weekRateText(comp) {
       if (!comp || !comp.total) return '已到的日子还没有计划项 · 完成率按学习信号计算，不需要打卡'
-      return `完成率 ${comp.percent}%（${comp.done}/${comp.total}）· 按学习信号自动计算，不需要打卡`
+      return `完成率 ${comp.percent}%（${comp.done}/${comp.total}）· 作业按周算，微练习要当天打卡`
     }
 
     // 周目标 chips（周历「本周目标」区与全览行共用，口径一致）

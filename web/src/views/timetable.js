@@ -38,7 +38,12 @@ export async function mountTimetable(el) {
   // 「去完成」跟闭环同一天（服务端北京日期）。只用浏览器本地今天时，
   // 时区对不上会找不到行，点击像没反应。
   const loopDate = (d.today && d.today.date) || today
-  const boostRows = boostTasksForDate(days, loopDate)
+  let boostRows = boostTasksForDate(days, loopDate)
+  if (!boostRows.length) {
+    const poolBoost = (d.week_pool || []).filter((t) => t && t.boost)
+    boostRows = poolBoost.filter((t) => !t.done)
+    if (!boostRows.length) boostRows = poolBoost
+  }
 
   // 周拆解摘要（与教师看板同口径）。泛读按书显示章区间
   // （reading_items 由后端带 title/chapter_range——「读完第6–7章」
@@ -168,18 +173,21 @@ export async function mountTimetable(el) {
   el.innerHTML = `
     <div class="view-head">
       <h1>课程表</h1>
-      <p>本周（${d.week_start || ''} 起）${studentWeekRate(d.completion)} · 按学习信号自动计算，不用打卡</p>
+      <p>本周（${d.week_start || ''} 起）${studentWeekRate(d.completion)} · 作业按周算，哪天做完都算；微练习要当天打卡</p>
     </div>
     ${loop ? loopCardHtml(loop) : ''}
     <div id="tt-micro"></div>
     <div id="tt-loop"></div>
     ${summary.length ? `<div class="tt-summary">${summary.map((s) => `<span>${s}</span>`).join('')}</div>` : ''}
+    ${checkinStripHtml(d.micro_checkins)}
+    ${weekPoolHtml(d.week_pool)}
     ${dims.length ? `
       <section class="tt-goalcard card">
         <h3>🎯 本周目标进度</h3>
         ${gp.percent == null ? '' : `<p class="tt-goal-sum">综合 ${gp.percent}% · 以各模块为准</p>`}
         ${dims.map(dimRow).join('')}
       </section>` : ''}
+    ${(d.week_pool || []).length ? '<p class="tt-hint">下面按天是建议节奏。做完了就会在上面的本周作业里打勾，不限哪一天。</p>' : ''}
     <div class="tt-grid">
       ${days.map(dayCell).join('')}
     </div>
@@ -188,7 +196,7 @@ export async function mountTimetable(el) {
   if (loop) bindLoopCard(el, loop, boostRows)
   bindBoostRows(el, boostRows)
   renderReviewStrip(el.querySelector('#tt-loop'))
-  renderMicroCard(el.querySelector('#tt-micro'), d.micro_enabled)
+  renderMicroCard(el.querySelector('#tt-micro'), d.micro_enabled, d.micro_checkins)
 }
 
 // ---------- 今日闭环卡（v3 日闭环：到期背词/微练习/泛读/提升档） ----------
@@ -209,23 +217,34 @@ function loopCardHtml(loop) {
       })
   const fresh = recite.new_words
   if (fresh && fresh.scheduled) {
+    const weekBit = Number(fresh.week_target) > 0
+      ? `本周 ${Number(fresh.week_gained) || 0}/${Number(fresh.week_target)}`
+      : `新掌握 ${Number(fresh.gained) || 0}/${Number(fresh.quota) || 0}`
     cells.push(fresh.done
-      ? { name: '🆕 今日新词', done: true, state: `新掌握 ${Number(fresh.gained) || 0}/${Number(fresh.quota) || 0}` }
+      ? { name: '🆕 本周新词', done: true, state: weekBit }
       : {
-          name: '🆕 今日新词',
-          state: `新掌握 ${Number(fresh.gained) || 0}/${Number(fresh.quota) || 0}`,
+          name: '🆕 本周新词',
+          state: weekBit,
           go: 'recite-new', goText: '去背新词',
         })
   } else if (fresh) {
-    cells.push({ name: '🆕 今日新词', state: '今天不排新词', na: true })
+    cells.push({ name: '🆕 本周新词', state: '本周新掌握已在进度里，今天不必按天摊', na: true })
   }
-  cells.push(micro.done
-    ? { name: '📝 微练习', done: true }
-    : {
-        name: '📝 微练习',
-        state: `${Number(micro.answered) || 0}/${Number(micro.total) || 3}`,
-        go: 'micro', goText: '去做题',
-      })
+  if (micro.slot === false) {
+    cells.push(micro.done
+      ? { name: '📝 微练习', done: true, state: '今天不是打卡日，这组成绩已留下' }
+      : { name: '📝 微练习', state: '今天不用打卡', na: true })
+  } else {
+    cells.push(micro.done
+      ? { name: '📝 今日打卡', done: true }
+      : micro.status === 'missed'
+        ? { name: '📝 今日打卡', state: '今天已过，不能补', na: true }
+        : {
+            name: '📝 今日打卡',
+            state: `${Number(micro.answered) || 0}/${Number(micro.total) || 3}`,
+            go: 'micro', goText: '去打卡',
+          })
+  }
   cells.push(reading.ok
     ? { name: '📖 泛读', done: true }
     : {
@@ -365,9 +384,15 @@ function markBoostDone(el) {
 // 微练习入口卡：未做 → 去做题；已做 → 点开回看。
 // 本周计划未启用微练习（my-week 的 micro_enabled === false）时不渲染卡；
 // undefined（旧后端）/true 照常显示。接口失败或今天没题也静默隐藏。
-async function renderMicroCard(host, microEnabled) {
+async function renderMicroCard(host, microEnabled, checkins) {
   if (!host) return
   if (microEnabled === false) { host.innerHTML = ''; return }
+  const rows = Array.isArray(checkins) ? checkins : []
+  const open = rows.find((x) => x && x.status === 'open' && x.required !== false)
+  if (rows.length && !open) {
+    host.innerHTML = `<div class="tt-micro-card off"><span class="tt-micro-main">今天不用打卡</span><small>周一到周五各一次，过了当天不能补</small></div>`
+    return
+  }
   let d
   try {
     d = await api.microToday()
@@ -392,9 +417,11 @@ async function renderMicroCard(host, microEnabled) {
         }
       } catch { /* 拿不到对错就只报完成 */ }
     }
-    inner = `<span class="tt-micro-main">✏️ 微练习已完成 ✓${score}</span><small>点开回看</small>`
+    inner = `<span class="tt-micro-main">今日打卡已完成 ✓${score}</span><small>点开回看</small>`
+  } else if (d.slot === false) {
+    inner = `<span class="tt-micro-main">今天不用打卡</span><small>周一到周五各一次</small>`
   } else {
-    inner = `<span class="tt-micro-main">✏️ 今日微练习 ${qs} 题</span><small>现在做 →</small>`
+    inner = `<span class="tt-micro-main">今日打卡 · ${qs} 题</span><small>现在打卡 →</small>`
   }
   host.innerHTML = `<button type="button" class="tt-micro-card ${d.done ? 'done' : ''}">${inner}</button>`
   host.querySelector('.tt-micro-card').addEventListener('click', () => {
@@ -438,6 +465,38 @@ async function renderReviewStrip(host) {
   host.querySelectorAll('[data-go]').forEach((btn) => {
     btn.addEventListener('click', () => go(btn.dataset.go))
   })
+}
+
+const CHECKIN_LABEL = {
+  done: '已打卡', missed: '漏打', open: '今天打卡', upcoming: '未到', record: '有记录', off: '不用打卡',
+}
+
+function checkinStripHtml(rows) {
+  if (!Array.isArray(rows) || !rows.length) return ''
+  const cells = rows.map((r) => `
+    <div class="tt-checkin ${escapeHtml(r.status || '')}${r.required === false ? ' extra' : ''}">
+      <b>${escapeHtml(r.label || '')}</b>
+      <span>${escapeHtml(CHECKIN_LABEL[r.status] || r.status || '')}</span>
+    </div>`).join('')
+  return `
+    <section class="tt-checkins card">
+      <h3>微练习打卡 <small>周一到周五各一次，过了当天不能补</small></h3>
+      <div class="tt-checkin-row">${cells}</div>
+    </section>`
+}
+
+function weekPoolHtml(pool) {
+  if (!Array.isArray(pool) || !pool.length) return ''
+  const rows = pool.map((t) => `
+    <div class="tt-pool-item ${t.done ? 'ok' : ''}">
+      <span>${escapeHtml(t.text || t.key || '')}</span>
+      ${t.done ? '<b>✓</b>' : '<b class="wait">未完成</b>'}
+    </div>`).join('')
+  return `
+    <section class="tt-pool card">
+      <h3>本周作业 <small>哪一天做完都算；过了本周再补上，这一周也会算</small></h3>
+      <div class="tt-pool-list">${rows}</div>
+    </section>`
 }
 
 function round1(n) {

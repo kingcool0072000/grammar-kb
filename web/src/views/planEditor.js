@@ -291,12 +291,7 @@ export async function openWeekEditor({
   // ---- ⭐ 提升档编辑（最小版）：周几多选 + 口诀卡/句型复述列表增删 ----
   // 保存走 tasks JSON 的 boost_days / boost_items 字段（整 JSON 覆盖）；
   // 教师没碰过这块时不写这两个键，后端按默认策略（周二/周四）兜底。
-  function boostDaysOf() {
-    return Array.isArray(tasks.boost_days) ? tasks.boost_days.map(Number) : [2, 4]
-  }
-
   function ensureBoost() {
-    if (tasks.boost_days == null) tasks.boost_days = boostDaysOf()
     if (!Array.isArray(tasks.boost_items)) tasks.boost_items = []
   }
 
@@ -320,12 +315,7 @@ export async function openWeekEditor({
   }
 
   function boostBodyHtml() {
-    const days = boostDaysOf()
     const items = tasks.boost_items || []
-    const dayChips = DAY.map((d, i) => `
-      <label class="pe-boost-day" title="每周${d}为提升日">
-        <input type="checkbox" data-boost-day="${i + 1}" ${days.includes(i + 1) ? 'checked' : ''}/>周${d}
-      </label>`).join('')
     const itemLines = items.map((it, idx) => `
       <div class="pe-boost-item">
         <span>⭐ ${escapeHtml(boostItemLabel(it))}</span>
@@ -355,8 +345,7 @@ export async function openWeekEditor({
       ? (boostTopics == null ? '<p class="muted">专题列表加载中…</p>' : '')
       : (boostPatterns == null ? '<p class="muted">句型列表加载中…</p>' : '')
     return `
-      <p class="pe-wiz-hint">提升日当天只做一件难事：背一张口诀卡，或复述一个句型。哪天都没配任务时，提升日显示「本周无提升任务」。</p>
-      <div class="pe-boost-days">${dayChips}</div>
+      <p class="pe-wiz-hint">本周的提升任务：背一张口诀卡，或复述一个句型。学生本周任意一天做完都算，过了本周再补上也记在这一周。课表上仍可能在周二、周四给个建议，那天没做不扣掉。</p>
       <div class="pe-boost-items">${itemLines || '<p class="muted pe-empty">还没配提升任务。</p>'}</div>
       <div class="pe-boost-add">
         <label class="pe-speak"><input type="radio" name="pe-boost-type" value="memory" ${boostType === 'memory' ? 'checked' : ''}/> 口诀卡</label>
@@ -422,7 +411,7 @@ export async function openWeekEditor({
               : '<button class="chip" id="pe-add-open" type="button">＋ 添加</button>'}
             <div class="pe-warn" id="pe-warn" ${warn ? '' : 'hidden'}>${escapeHtml(warn)}</div>
             <details class="pe-boost" id="pe-boost" ${boostOpen ? 'open' : ''}>
-              <summary>⭐ 提升档 <i>每周挑两天，每天只做一件难事（默认周二/周四）</i></summary>
+              <summary>⭐ 提升档 <i>排进本周即可，学生哪天做完都算</i></summary>
               <div class="pe-boost-body">${boostBodyHtml()}</div>
             </details>
             <div class="chip-row">
@@ -432,7 +421,7 @@ export async function openWeekEditor({
           </div>
           <aside class="pe-preview-card">
             <b>学生课表预览</b>
-            <p class="pe-lead">按正式课表的办法摊到每一天：词汇个数分到工作日，视频和听力按各组的摊法排（工作日摊开或周末集中）。</p>
+            <p class="pe-lead">右边是建议节奏（词汇摊在工作日、视频和听力按组示意）。学生哪一天做完都算这一周，不按格子上的星期几卡进度。</p>
             <div id="pe-preview-body"><p class="muted">正在按课表摊开…</p></div>
           </aside>
         </div>
@@ -469,7 +458,7 @@ export async function openWeekEditor({
       return '<p class="pe-wiz-hint">NCE2 听力一组 1–5 课：要换课或换完成方式就点「去掉」删整组，再重新加一组。</p>'
     }
     if (r.type === 'micro') {
-      return '<p class="pe-wiz-hint">本周已启用微练习：每个工作日 3 题，不做不扣分。不要了点「去掉」。</p>'
+      return '<p class="pe-wiz-hint">本周已启用微练习：周一到周五各打一次卡（每天 3 题）。过了当天不能补，漏打留在进度里。不要了点「去掉」。</p>'
     }
     if (r.type === 'fce') return `<label class="pe-speak">改成 <select id="pe-swap-fce">${fceOptions(r.label)}</select></label>`
     if (r.type === 'paper') return `<label class="pe-speak">改成 <select id="pe-swap-paper">${paperOptions(r.paper_id)}</select></label>`
@@ -596,7 +585,7 @@ export async function openWeekEditor({
     if (!videos.length) return '<p class="muted">还没有上架视频。先到备课里添加。</p>'
     const list = showAll ? videos : videos.filter((v) => !takenOf('video', v.vid))
     return `<label class="pe-speak"><input type="checkbox" id="pe-show-all" ${showAll ? 'checked' : ''}/> 连本周已有的视频一起显示</label>
-      <p class="pe-wiz-hint">勾 2 个为一组再放：工作日摊开 = 每天 1 个；周末集中 = 周六一次 2 个。</p>
+      <p class="pe-wiz-hint">勾 2 个为一组再放。工作日摊开或周末集中只是课表上的建议，哪天看完都算这一周。</p>
       ${pickNote ? `<p class="pe-wiz-hint">${escapeHtml(pickNote)}</p>` : ''}
       <div class="pe-wiz-picks">${(list.length ? list : videos).map((v) => {
         const on = videoPick.includes(v.vid)
@@ -613,7 +602,7 @@ export async function openWeekEditor({
     if (!nce2Lessons.length) return '<p class="muted">还没有可布置的 NCE2 听力课（有音频的课才会出现在这里）。</p>'
     const list = showAll ? nce2Lessons : nce2Lessons.filter((l) => !takenOf('nce2', l.id))
     return `<label class="pe-speak"><input type="checkbox" id="pe-show-all" ${showAll ? 'checked' : ''}/> 连本周已有的课一起显示</label>
-      <p class="pe-wiz-hint">勾 1–5 课为一组再放：工作日摊开 = 每天 1 课；周末集中 = 周末一次做完。跟读 = 听一句跟一句读，精听 = 只听不跟读。</p>
+      <p class="pe-wiz-hint">勾 1–5 课为一组再放。摊在工作日或周末只是建议，哪天做完都算这一周。跟读 = 听一句跟一句读，精听 = 只听不跟读。</p>
       ${pickNote ? `<p class="pe-wiz-hint">${escapeHtml(pickNote)}</p>` : ''}
       <div class="pe-wiz-picks">${(list.length ? list : nce2Lessons).map((l) => {
         const on = nce2Pick.includes(Number(l.id))
@@ -630,7 +619,7 @@ export async function openWeekEditor({
 
   function microAddHtml() {
     const on = tasks.micro != null
-    return `<p class="pe-wiz-hint">一组微练习 = 本周每个工作日 3 题，不做不扣分。</p>
+    return `<p class="pe-wiz-hint">一组微练习 = 本周周一到周五各打一次卡（每天 3 题）。过了当天不能补。</p>
       <button type="button" class="chip pe-chchip ${on ? 'primary' : ''}" id="pe-micro-toggle" ${on ? 'disabled' : ''}>${on ? '已在本周' : '放入清单（一组）'}</button>`
   }
 
@@ -815,17 +804,6 @@ export async function openWeekEditor({
         if (action === 'load') loadBoostData()
       })
     }
-    dlg.querySelectorAll('[data-boost-day]').forEach((cb) => {
-      cb.addEventListener('change', () => {
-        ensureBoost()
-        const picked = [...dlg.querySelectorAll('[data-boost-day]')]
-          .filter((x) => x.checked)
-          .map((x) => Number(x.dataset.boostDay))
-          .sort((a, b) => a - b)
-        if (picked.length) tasks.boost_days = picked
-        else delete tasks.boost_days  // 全不勾 = 交回后端默认（周二/周四）
-      })
-    })
     dlg.querySelectorAll('[data-boost-del]').forEach((btn) => {
       btn.addEventListener('click', () => {
         ensureBoost()

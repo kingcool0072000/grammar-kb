@@ -136,17 +136,17 @@ def test_today_items_configured(env):
     store.put_week(MON, {"boost_days": [2, 4], "boost_items": ITEMS}, "", "malin")
     assert boost.today_items("malin", TUE) == ITEMS
     assert boost.today_items("malin", THU) == ITEMS
-    assert boost.today_items("malin", MON) == []   # 非提升日
-    # 周六兜底：排定提升日（周二/周四）全在周六前，兜底行照出、可提交
+    # 提升档按周计：周一也能交，不再卡在周二/周四
+    assert boost.today_items("malin", MON) == ITEMS
     assert boost.today_items("malin", SAT) == ITEMS
 
 
-def test_today_items_sat_fallback_guard(env):
-    """兜底只在「排定提升日全在周六前」时生效；周日是提升日则周六不兜。"""
+def test_today_items_not_locked_to_boost_day(env):
+    """boost_days 只影响课表建议行，不再决定哪天能交。"""
     store = _store(env)
     store.put_week(MON, {"boost_days": [7], "boost_items": ITEMS}, "", "malin")
-    assert boost.today_items("malin", SAT) == []
-    assert boost.today_items("malin", "2026-11-15") == ITEMS   # 周日本身
+    assert boost.today_items("malin", SAT) == ITEMS
+    assert boost.today_items("malin", "2026-11-15") == ITEMS   # 周日也能交
 
 
 def test_week_view_boost_rows_reach_student(env):
@@ -170,11 +170,11 @@ def test_week_view_boost_rows_reach_student(env):
 
 
 def test_today_items_default_days(env):
-    """没配 boost_days 但 items 非空 → 默认 [2,4] 生效。"""
+    """没配 boost_days 时，周内任意一天都能交，不再默认只放周二/周四。"""
     store = _store(env)
     store.put_week(MON, {"boost_items": ITEMS}, "", "malin")
     assert boost.today_items("malin", TUE) == ITEMS
-    assert boost.today_items("malin", MON) == []
+    assert boost.today_items("malin", MON) == ITEMS
 
 
 def test_today_items_unconfigured_empty(env):
@@ -386,3 +386,14 @@ def test_schedule_boost_retell_low_score_rolls(env):
     # 周四重交 9 分：过关，周六兜底不再出
     boost.record("malin", THU, rref, "retell", score=9)
     assert _boost_rows(store, SAT) == []
+
+
+def test_today_items_keeps_unfinished_from_earlier_week(env):
+    """过周后，上一周还没过关的提升项仍能交。"""
+    store = _store(env)
+    store.put_week(MON, {"boost_items": ITEMS}, "", "malin")
+    nxt = "2026-11-16"  # 下周一
+    assert boost.today_items("malin", nxt) == ITEMS
+    boost.record("malin", nxt, MEM_REF, "memory")
+    refs = [boost.item_ref_of(x) for x in boost.today_items("malin", nxt)]
+    assert MEM_REF not in refs and RET_REF in refs

@@ -122,7 +122,10 @@ def test_loop_baseline_boost_day(env):
     assert out["recite"]["due"] == 0 and out["recite"]["overdue"] == 0
     assert out["recite"]["new_words"]["scheduled"] is False
     assert out["recite"]["new_words"]["done"] is True
-    assert out["micro"] == {"done": False, "answered": 0, "total": 3}
+    assert out["micro"]["done"] is False
+    assert out["micro"]["answered"] == 0
+    assert out["micro"]["total"] == 3
+    assert out["micro"]["slot"] is True
     assert out["reading"] == {"ok": False, "today_words": 0,
                               "target_words": None}  # 没配泛读书 → 目标 None
     assert out["boost"]["scheduled"] is True
@@ -139,7 +142,9 @@ def test_loop_non_boost_day(env):
         _put_week(store, {"boost_days": [2, 4], "boost_items": ITEMS})
         out = loop_status("malin", WED, store=store, recite=recite,
                           micro=micro)
-    assert out["boost"] is None  # 非提升日
+    # 非建议日也能做本周提升档，不再因为不是周二/周四就整格消失
+    assert out["boost"]["scheduled"] is True
+    assert out["boost"]["done"] is False
 
 
 def test_loop_boost_unconfigured_day(env):

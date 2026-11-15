@@ -3124,6 +3124,23 @@ li.open .topic-reveal-btn.reopen { display: inline-block; }
 .flm-vocab-slot .fce-vocab { margin: 0; }
 
 /* ===== 学生课程表（教师周计划只读镜像） ===== */
+.tt-hint { margin: 0 0 10px; font-size: 13px; color: var(--ink-soft, #64748b); }
+.tt-checkins, .tt-pool { margin: 0 0 14px; padding: 12px 14px; }
+.tt-checkins h3, .tt-pool h3 { margin: 0 0 8px; font-size: 15px; }
+.tt-checkins h3 small, .tt-pool h3 small { font-weight: 600; color: var(--ink-faint, #94a3b8); margin-left: 6px; }
+.tt-checkin-row, .tt-pool-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.tt-checkin, .tt-pool-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border: 1px solid var(--line, #e2e8f0); border-radius: 10px;
+  background: #fff; font-size: 13px;
+}
+.tt-checkin b, .tt-pool-item b { font-size: 12px; }
+.tt-checkin.done, .tt-pool-item.ok { border-color: #bfe0cc; background: #eef7f1; color: #2e7d4f; }
+.tt-checkin.missed { border-color: #f3c7c3; background: #fdf2f1; color: #b42318; }
+.tt-checkin.open { border-color: var(--brand, #d4a017); background: #fbf6ea; }
+.tt-checkin.upcoming, .tt-checkin.extra { opacity: .72; }
+.tt-pool-item .wait { font-weight: 650; color: var(--ink-faint, #94a3b8); }
+.tt-micro-card.off { border-style: dashed; color: var(--ink-soft, #64748b); }
 .tt-summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
 .tt-summary span {
   font-size: 13px; font-weight: 600; color: var(--ink-soft);

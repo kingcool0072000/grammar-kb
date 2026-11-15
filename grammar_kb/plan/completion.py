@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Optional
 
 from . import boost
 from .util import _task_key
+from .week_credit import week_credit_for
 
 if TYPE_CHECKING:
     from .ctx import WeekCtx
@@ -42,6 +43,7 @@ class CompletionMixin:
         }
         auto, read_titles, acts = self._signals_and_acts(user, day, planned,
                                                          ctx=ctx)
+        credit = None if historical else week_credit_for(self, user, day, ctx)
         keys: dict[str, dict] = {}
         if historical:
             for t in rows:
@@ -56,7 +58,7 @@ class CompletionMixin:
             for t in rows:
                 key = _task_key(t)
                 keys[key] = self._why_done(t, key, auto, read_titles, acts,
-                                           user, day)
+                                           user, day, credit=credit)
             for key, on in auto.items():
                 keys.setdefault(
                     key,
@@ -79,8 +81,32 @@ class CompletionMixin:
         acts: dict,
         user: str = "",
         day: str = "",
+        credit=None,
     ) -> dict:
-        """单条派生任务的完成原因。规则与原先 today_tasks 循环一致。"""
+        """单条派生任务的完成原因。当天信号优先；未完成再按周认账。"""
+        base = self._why_done_day(task, key, auto, read_titles, acts, user, day)
+        if base.get("done") or credit is None:
+            return base
+        extra = credit.covers(task)
+        if extra is None:
+            return base
+        merged = dict(base)
+        merged.update(extra)
+        merged["done"] = True
+        merged["why"] = "week_credit"
+        return merged
+
+    def _why_done_day(
+        self,
+        task: dict,
+        key: str,
+        auto: dict,
+        read_titles: list,
+        acts: dict,
+        user: str = "",
+        day: str = "",
+    ) -> dict:
+        """当天信号下的完成原因（不含跨日认账）。"""
         if task.get("type") == "boost":
             # 提升档行：过关与否看 boost_log 当日记录（缺 user/day 的
             # 调用只可能来自外部兜底，按未完成计）。空 item_ref 是

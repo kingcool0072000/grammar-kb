@@ -308,23 +308,21 @@ export function completionLine(type, { topicCounts = true, mode = '', count = 0,
   }
   if (type === 'focus_kp') return '攻坚标注：不参与完成判定，供周验收对照，微练习优先出这些讲的题。'
   if (type === 'vocab') {
-    return '怎么算完成：本周在这一级新掌握的词达到这个个数。周初已经会的不算进这周。工作日「背词 n 词」也按当天新掌握打勾，不按练过多少词。这里选的级别只决定新词记到哪一级，不管学生能不能看见那一级。'
+    return '怎么算完成：本周在这一级新掌握的词达到这个个数，周内任意一天（含周末）都算。周初已经会的不算进这周，下一周才掌握的词也不挪回来。工作日「背词 n 词」只是建议节奏。这里选的级别只决定新词记到哪一级。'
   }
-  if (type === 'fce') return '怎么算完成：本周交了这一道 FCE。'
+  if (type === 'fce') return '怎么算完成：交了这一道 FCE 就记在这一周，不限周几，过了本周再交也算。'
   if (type === 'video') {
     return mode === 'weekend'
-      ? '怎么算完成：看完并交了复述录音。周六一次看 2 个。'
-      : '怎么算完成：看完并交了复述录音。工作日每天摊 1 个。'
+      ? '怎么算完成：看完并交了复述录音就记在这一周，不限周几。周末集中只是建议。'
+      : '怎么算完成：看完并交了复述录音就记在这一周，不限周几。工作日每天 1 个只是建议。'
   }
   if (type === 'nce2') {
     const how = taskMode === 'listen' ? '交了精听记录' : '交了跟读录音'
-    return mode === 'weekend'
-      ? `怎么算完成：这组每课都${how}，周末一次做完。`
-      : `怎么算完成：这组每课都${how}，工作日每天摊 1 课。`
+    return `怎么算完成：这组每课都${how}就记在这一周，不限周几。按天摊开只是建议。`
   }
-  if (type === 'reading') return '怎么算完成：泛读进度读完选中的章节。'
-  if (type === 'paper') return '怎么算完成：词汇考试里登记了这一卷的成绩。'
-  if (type === 'micro') return '怎么算完成：本周每个工作日做 3 题，不做不扣分。'
+  if (type === 'reading') return '怎么算完成：泛读进度读完选中的章节。哪一天读完都算这一周。'
+  if (type === 'paper') return '怎么算完成：词汇考试里登记了这一卷的成绩。不限周日，过了本周再登记也算这一周。'
+  if (type === 'micro') return '怎么算完成：周一到周五各打一次卡（每天 3 题）。过了北京时间当天不能补，漏打就留着。'
   return ''
 }
 
@@ -455,14 +453,14 @@ export function removePlanItem(tasks, item) {
 }
 
 export const PLAN_ADD_TYPES = [
-  { id: 'lecture', label: '语法课程', hint: '本周要上的讲，工作日摊开' },
+  { id: 'lecture', label: '语法课程', hint: '排进本周，哪天学完都算' },
   { id: 'hw_paper', label: '作业卷', hint: '按讲次，登记作业卷成绩才算完成' },
   { id: 'vocab', label: '词汇目标', hint: '本周在某一级新掌握多少个词' },
-  { id: 'video', label: '视频学习', hint: '2 个一组，选摊法' },
-  { id: 'nce2', label: '🎧 NCE2 听力', hint: '1–5 课一组，选摊法与跟读/精听' },
-  { id: 'reading', label: '泛读书目', hint: '按章加入' },
-  { id: 'fce', label: 'FCE 大题', hint: '周六做' },
-  { id: 'paper', label: '单词试卷', hint: '周日做卷' },
-  { id: 'micro', label: '微练习', hint: '一组=本周每日 3 题，不做不扣分' },
+  { id: 'video', label: '视频学习', hint: '2 个一组；摊法只是建议，哪天做完都算' },
+  { id: 'nce2', label: '🎧 NCE2 听力', hint: '1–5 课一组；摊法只是建议，哪天做完都算' },
+  { id: 'reading', label: '泛读书目', hint: '按章加入，本周读完即可' },
+  { id: 'fce', label: 'FCE 大题', hint: '排进本周，不限周六' },
+  { id: 'paper', label: '单词试卷', hint: '排进本周，不限周日' },
+  { id: 'micro', label: '微练习', hint: '周一到周五各打一次卡，过了当天不能补' },
   { id: 'focus_kp', label: '攻坚讲次', hint: '标注本周攻坚讲次：周验收对照，微练习优先出这些讲的题' },
 ]
