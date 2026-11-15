@@ -5,7 +5,7 @@
   item_ref = ``memory:{topic_id}:{node_key}``；
 - retell：句型跟读复述提交（过关=教师批改 ≥7 分记 score），
   item_ref = ``retell:{pattern_id}``；
-- 预留：周末输出三选一等日粒度选择。
+- 预留：日粒度选择（不再按周末单独分档）。
 
 写入口只有 :func:`record`（INSERT OR REPLACE，同 (user, date, item_ref)
 重交即刷新）。读路径给三处消费：
@@ -41,8 +41,8 @@ CREATE TABLE IF NOT EXISTS boost_log (
 );
 """
 
-# 默认提升日：周二/周四（设计已拍板）。只在 boost_items 非空、教师没配
-# boost_days 时生效——零配置且无任务时不派生任何行。
+# boost_days 是旧字段。排课和完成都不再读它：有 boost_items 就本周每天可做。
+# 常量留下来，避免旧导入炸掉；新代码不要用它决定哪天出题。
 DEFAULT_BOOST_DAYS = [2, 4]
 
 
@@ -73,10 +73,10 @@ def item_ref_of(item: dict) -> str:
 
 
 def boost_days_of(tasks: dict, items: list | None = None) -> list[int]:
-    """周计划 tasks 的提升日（周几数字，1=周一，升序去重）。
+    """旧的提升日列表。排课已不再调用。
 
-    教师配了 boost_days 用配置值；没配且 items 非空 → 默认 [2, 4]；
-    都没有 → 空列表（当日不派生提升行）。
+    教师配了 boost_days 就原样读出；没配且 items 非空 → 默认 [2, 4]。
+    保留是为了不改已保存的 JSON，也不要拿它决定哪天能做。
     """
     days: list[int] = []
     for x in (tasks or {}).get("boost_days") or []:
@@ -137,9 +137,9 @@ def day_done(user: str, date: str, item_refs: list[str]) -> bool:
 def today_items(user: str, date: str) -> list[dict]:
     """这一天可以提交的提升档任务。
 
-    提升档按周计，不再卡在 boost_days 那几天：该日所属周只要配了
-    boost_items，周内任意一天都能交。更早的计划周里还没过关的项也
-    带上，方便过周后补做（提交日记在当天，进度认回那一周）。
+    只看这一天所属的那一周。周内任意一天都能交，不看 boost_days。
+    更早一周没做完的项不再带到这周：过了周日夜里，上一周的进度已经定了，
+    这周再交记在这周自己的计划里（这周没排的，就不算这周作业）。
     教师没配 items 时返回空列表。
     """
     day = (date or "").strip()[:10]
@@ -148,24 +148,17 @@ def today_items(user: str, date: str) -> list[dict]:
     except ValueError:
         return []
     who = (user or "").strip()[:60]
-    weeks = _plan_weeks_upto(who, ws)
     out: list[dict] = []
     seen: set[str] = set()
-    for week_start, tasks in weeks:
-        items = [x for x in (tasks.get("boost_items") or [])
-                 if isinstance(x, dict) and item_ref_of(x)]
-        if not items:
+    for week_start, tasks in _plan_weeks_upto(who, ws):
+        if week_start != ws:
             continue
-        states = {} if week_start == ws else pass_state_map(
-            who, week_start, "9999-12-31")
-        for item in items:
+        for item in (tasks.get("boost_items") or []):
+            if not isinstance(item, dict):
+                continue
             ref = item_ref_of(item)
             if not ref or ref in seen:
                 continue
-            if week_start != ws:
-                state = (states.get(ref) or {}).get("state")
-                if state == "passed":
-                    continue
             out.append(item)
             seen.add(ref)
     return out

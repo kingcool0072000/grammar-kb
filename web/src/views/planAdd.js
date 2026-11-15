@@ -1,12 +1,20 @@
 /**
  * 周计划清单的增删。tasks 仍是 plan_weeks 那份 JSON。
  * 视频按组存 video_units（每组 2 个）。
- * NCE2 听力按组存 nce2_units（每组 1–5 课，带摊法 mode 和完成方式 task_mode：
- * shadow=听力跟读（缺省）、listen=仅精听）。
+ * NCE2 听力按组存 nce2_units（每组 1–5 课，完成方式 task_mode：
+ * shadow=听力跟读（缺省）、listen=仅精听）。旧的 mode 若还在 JSON 里就原样留下，不再用来区分工作日和周末。
  * 微练习用 tasks.micro = 1 表示本周启用；旧扁平键 articles/videos 不再写。
  * 历史精读 article_units 保存时原样留下，编辑器不再新增。
  * 旧的 tasks.speak（单独「朗读篇数」）保存时丢掉。
  */
+
+function keptMode(row, src, keepLegacy = false) {
+  // 旧 JSON 里的 daily/weekend 原样留下，排课不再读。新组不补这个字段。
+  // legacy 小标只在编辑过程里用，保存时丢掉。
+  if (src?.mode === 'weekend' || src?.mode === 'daily') row.mode = src.mode
+  if (keepLegacy && src?.legacy) row.legacy = true
+  return row
+}
 
 function copyTasks(tasks) {
   const t = { ...(tasks || {}) }
@@ -16,25 +24,18 @@ function copyTasks(tasks) {
   if (Array.isArray(t.fce)) t.fce = [...t.fce]
   if (Array.isArray(t.vocab_papers)) t.vocab_papers = [...t.vocab_papers]
   if (Array.isArray(t.article_units)) {
-    t.article_units = t.article_units.map((u) => {
-      const row = { ids: (u?.ids || []).map(Number), mode: u?.mode === 'weekend' ? 'weekend' : 'daily' }
-      if (u?.legacy) row.legacy = true
-      return row
-    })
+    t.article_units = t.article_units.map((u) => keptMode(
+      { ids: (u?.ids || []).map(Number) }, u, true))
   }
   if (Array.isArray(t.video_units)) {
-    t.video_units = t.video_units.map((u) => {
-      const row = { vids: (u?.vids || []).map(String), mode: u?.mode === 'weekend' ? 'weekend' : 'daily' }
-      if (u?.legacy) row.legacy = true
-      return row
-    })
+    t.video_units = t.video_units.map((u) => keptMode(
+      { vids: (u?.vids || []).map(String) }, u, true))
   }
   if (Array.isArray(t.nce2_units)) {
-    t.nce2_units = t.nce2_units.map((u) => ({
+    t.nce2_units = t.nce2_units.map((u) => keptMode({
       lessons: (u?.lessons || []).map(Number),
-      mode: u?.mode === 'weekend' ? 'weekend' : 'daily',
       task_mode: u?.task_mode === 'listen' ? 'listen' : 'shadow',
-    }))
+    }, u, true))
   }
   if (t.micro != null) t.micro = 1
   if (t.reading && typeof t.reading === 'object') t.reading = { ...t.reading }
@@ -48,7 +49,7 @@ export { copyTasks }
 
 /**
  * 旧周数据兼容：只有扁平 articles/videos 的老周，先转成 *_units
- * （旧精读一组 mode=weekend 周末集中、视频一组 mode=daily 工作日摊开，带 legacy 小标），
+ * （旧精读、旧视频先转成一组，带 legacy 小标；mode 只是历史字段），
  * 旧键就地删掉，之后编辑与保存都只见新结构。不改入参。
  */
 export function migrateLegacyUnits(tasks) {
@@ -58,13 +59,13 @@ export function migrateLegacyUnits(tasks) {
   if (arts.length) {
     t.article_units = [
       ...(Array.isArray(t.article_units) ? t.article_units : []),
-      { ids: arts.sort((a, b) => a - b), mode: 'weekend', legacy: true },
+      { ids: arts.sort((a, b) => a - b), legacy: true },
     ]
   }
   if (vids.length) {
     t.video_units = [
       ...(Array.isArray(t.video_units) ? t.video_units : []),
-      { vids, mode: 'daily', legacy: true },
+      { vids, legacy: true },
     ]
   }
   delete t.articles
@@ -77,15 +78,15 @@ export function migrateLegacyUnits(tasks) {
 export function tasksForSave(tasks) {
   const t = copyTasks(tasks)
   if (Array.isArray(t.article_units)) {
-    t.article_units = t.article_units.map((u) => ({ ids: u.ids, mode: u.mode }))
+    t.article_units = t.article_units.map((u) => keptMode({ ids: u.ids }, u))
   }
   if (Array.isArray(t.video_units)) {
-    t.video_units = t.video_units.map((u) => ({ vids: u.vids, mode: u.mode }))
+    t.video_units = t.video_units.map((u) => keptMode({ vids: u.vids }, u))
   }
   if (Array.isArray(t.nce2_units)) {
-    t.nce2_units = t.nce2_units.map((u) => ({
-      lessons: u.lessons, mode: u.mode, task_mode: u.task_mode === 'listen' ? 'listen' : 'shadow',
-    }))
+    t.nce2_units = t.nce2_units.map((u) => keptMode({
+      lessons: u.lessons, task_mode: u.task_mode === 'listen' ? 'listen' : 'shadow',
+    }, u))
   }
   delete t.speak
   return t
@@ -129,10 +130,6 @@ function dropStr(t, key, value) {
 
 // ---- 视频组（video_units）与微练习（micro）----
 
-function normMode(mode) {
-  return mode === 'weekend' ? 'weekend' : 'daily'
-}
-
 /** 本周所有组里的视频 vid（扫全部组）。 */
 export function videoUnitVids(tasks) {
   const out = []
@@ -157,19 +154,19 @@ export function nce2UnitLessons(tasks) {
   return out
 }
 
-/** 视频加一组：vids 必须正好 2 个；组内和本周已有的不重复。 */
-export function appendVideoUnit(tasks, vids, mode) {
+/** 视频加一组：vids 必须正好 2 个；组内和本周已有的不重复。不再写工作日/周末摊法。 */
+export function appendVideoUnit(tasks, vids) {
   const t = copyTasks(tasks)
   const list = [...new Set((vids || []).map(String))]
   if (list.length !== 2) return t
   const taken = videoUnitVids(t)
   if (list.some((v) => taken.includes(v))) return t
-  t.video_units = [...(t.video_units || []), { vids: list, mode: normMode(mode) }]
+  t.video_units = [...(t.video_units || []), { vids: list }]
   return t
 }
 
 /** NCE2 听力加一组：1–5 课；防重跨组同课；lessons 升序；task_mode 缺省 shadow（跟读）。 */
-export function appendNce2Unit(tasks, lessonIds, mode, taskMode) {
+export function appendNce2Unit(tasks, lessonIds, _mode, taskMode) {
   const t = copyTasks(tasks)
   const list = [...new Set((lessonIds || []).map(Number).filter((n) => Number.isFinite(n)))]
     .sort((a, b) => a - b)
@@ -178,7 +175,7 @@ export function appendNce2Unit(tasks, lessonIds, mode, taskMode) {
   if (list.some((n) => taken.includes(n))) return t
   t.nce2_units = [
     ...(t.nce2_units || []),
-    { lessons: list, mode: normMode(mode), task_mode: taskMode === 'listen' ? 'listen' : 'shadow' },
+    { lessons: list, task_mode: taskMode === 'listen' ? 'listen' : 'shadow' },
   ]
   return t
 }
@@ -211,7 +208,6 @@ export function toggleMicroGroup(tasks) {
   return t
 }
 
-const MODE_TEXT = { daily: '工作日摊开', weekend: '周末集中' }
 const NCE2_TASK_TEXT = { shadow: '跟读', listen: '精听' }
 
 function unitTitle(titles, key) {
@@ -220,16 +216,16 @@ function unitTitle(titles, key) {
   return v == null ? '' : String(v)
 }
 
-/** 清单行文案：「🎬 视频一组 · 2 个 · 摊法」。 */
+/** 清单行文案：「🎬 视频一组 · 2 个」。 */
 export function videoUnitLine(unit, titles) {
   const u = unit || {}
   const vids = (u.vids || []).map(String)
   const names = vids.map((v) => (unitTitle(titles, v) || v).slice(0, 20))
-  const head = ['🎬 视频一组', `${vids.length} 个`, MODE_TEXT[normMode(u.mode)]].join(' · ')
+  const head = ['🎬 视频一组', `${vids.length} 个`].join(' · ')
   return { head, sub: capSub((u.legacy ? '旧格式 · ' : '') + names.join('、')) }
 }
 
-/** 同上，NCE2 听力版：「🎧 听力一组 · N 课 · 摊法 · 跟读/精听」，小字=课号+课名。 */
+/** 同上，NCE2 听力版：「🎧 听力一组 · N 课 · 跟读/精听」，小字=课号+课名。 */
 export function nce2UnitLine(unit, titles) {
   const u = unit || {}
   const lessons = (u.lessons || []).map(Number)
@@ -240,7 +236,6 @@ export function nce2UnitLine(unit, titles) {
   const head = [
     '🎧 听力一组',
     `${lessons.length} 课`,
-    MODE_TEXT[normMode(u.mode)],
     NCE2_TASK_TEXT[u.task_mode === 'listen' ? 'listen' : 'shadow'],
   ].join(' · ')
   return { head, sub: capSub(names.join('、')) }
@@ -308,21 +303,19 @@ export function completionLine(type, { topicCounts = true, mode = '', count = 0,
   }
   if (type === 'focus_kp') return '攻坚标注：不参与完成判定，供周验收对照，微练习优先出这些讲的题。'
   if (type === 'vocab') {
-    return '怎么算完成：本周在这一级新掌握的词达到这个个数，周内任意一天（含周末）都算。周初已经会的不算进这周，下一周才掌握的词也不挪回来。工作日「背词 n 词」只是建议节奏。这里选的级别只决定新词记到哪一级。'
+    return '怎么算完成：本周在这一级新掌握的词达到这个个数，周一到周日都算。周初已经会的不算进这周，下一周才掌握的词也不挪回来。过了周日夜里，这一周的个数就定了。这里选的级别只决定新词记到哪一级。'
   }
-  if (type === 'fce') return '怎么算完成：交了这一道 FCE 就记在这一周，不限周几，过了本周再交也算。'
+  if (type === 'fce') return '怎么算完成：这一周里交了这一道 FCE 就记在这一周。过了周日夜里再交，记在下一周。'
   if (type === 'video') {
-    return mode === 'weekend'
-      ? '怎么算完成：看完并交了复述录音就记在这一周，不限周几。周末集中只是建议。'
-      : '怎么算完成：看完并交了复述录音就记在这一周，不限周几。工作日每天 1 个只是建议。'
+    return '怎么算完成：这一周里看完并交了复述录音就记在这一周。过了周日夜里再交，记在下一周。'
   }
   if (type === 'nce2') {
     const how = taskMode === 'listen' ? '交了精听记录' : '交了跟读录音'
-    return `怎么算完成：这组每课都${how}就记在这一周，不限周几。按天摊开只是建议。`
+    return `怎么算完成：这一周里这组每课都${how}就记在这一周。过了周日夜里再交，记在下一周。`
   }
-  if (type === 'reading') return '怎么算完成：泛读进度读完选中的章节。哪一天读完都算这一周。'
-  if (type === 'paper') return '怎么算完成：词汇考试里登记了这一卷的成绩。不限周日，过了本周再登记也算这一周。'
-  if (type === 'micro') return '怎么算完成：周一到周五各打一次卡（每天 3 题）。过了北京时间当天不能补，漏打就留着。'
+  if (type === 'reading') return '怎么算完成：这一周结束前读完选中的章节。之后再读的进度记在后面的周。'
+  if (type === 'paper') return '怎么算完成：这一周里在词汇考试登记了这一卷的成绩。过了周日夜里再登记，记在下一周。'
+  if (type === 'micro') return '怎么算完成：周一到周日各打一次卡（每天 3 题）。过了北京时间当天不能补，漏打就留着。'
   return ''
 }
 
@@ -456,11 +449,11 @@ export const PLAN_ADD_TYPES = [
   { id: 'lecture', label: '语法课程', hint: '排进本周，哪天学完都算' },
   { id: 'hw_paper', label: '作业卷', hint: '按讲次，登记作业卷成绩才算完成' },
   { id: 'vocab', label: '词汇目标', hint: '本周在某一级新掌握多少个词' },
-  { id: 'video', label: '视频学习', hint: '2 个一组；摊法只是建议，哪天做完都算' },
-  { id: 'nce2', label: '🎧 NCE2 听力', hint: '1–5 课一组；摊法只是建议，哪天做完都算' },
-  { id: 'reading', label: '泛读书目', hint: '按章加入，本周读完即可' },
-  { id: 'fce', label: 'FCE 大题', hint: '排进本周，不限周六' },
-  { id: 'paper', label: '单词试卷', hint: '排进本周，不限周日' },
-  { id: 'micro', label: '微练习', hint: '周一到周五各打一次卡，过了当天不能补' },
+  { id: 'video', label: '视频学习', hint: '2 个一组；这一周哪天看完都算' },
+  { id: 'nce2', label: '🎧 NCE2 听力', hint: '1–5 课一组；这一周哪天做完都算' },
+  { id: 'reading', label: '泛读书目', hint: '按章加入，这一周读完即可' },
+  { id: 'fce', label: 'FCE 大题', hint: '排进本周，这一周哪天交都算' },
+  { id: 'paper', label: '单词试卷', hint: '排进本周，这一周哪天登记都算' },
+  { id: 'micro', label: '微练习', hint: '周一到周日各打一次卡，过了当天不能补' },
   { id: 'focus_kp', label: '攻坚讲次', hint: '标注本周攻坚讲次：周验收对照，微练习优先出这些讲的题' },
 ]

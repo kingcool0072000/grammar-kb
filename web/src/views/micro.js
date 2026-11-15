@@ -23,7 +23,7 @@ export async function mountMicro(el, { role } = {}) {
   el.innerHTML = `
     <div class="view-head">
       <h1>今日打卡</h1>
-      <p id="mc-date">加载中… · 周一到周五各打一次，过了当天不能补</p>
+      <p id="mc-date">加载中… · 周一到周日各打一次，过了当天不能补</p>
     </div>
     <div id="mc-body"><p class="muted">加载中…</p></div>`
 
@@ -50,7 +50,7 @@ export async function mountMicro(el, { role } = {}) {
   const dateEl = el.querySelector('#mc-date')
   if (dateEl && data.date) {
     const tail = data.slot === false
-      ? '今天不是打卡日（周一到周五）。做了会留下记录，但不能补上漏掉的工作日。'
+      ? '这周没有排打卡。做了会留下记录，但不能补上漏掉的日子。'
       : '做完这 3 题即完成今日打卡。过了今天不能补。'
     dateEl.innerHTML = `${escapeHtml(data.date)} · ${tail}`
   }
@@ -93,7 +93,7 @@ export async function mountMicro(el, { role } = {}) {
     }
     if (data.slot === false && !data.done && !questions.length) {
       body.innerHTML = `
-        <div class="mc-card mc-empty">今天不用打卡。打卡是周一到周五，漏掉的日子不能补。</div>`
+        <div class="mc-card mc-empty">今天不用打卡。打卡是周一到周日，漏掉的日子不能补。</div>`
       return
     }
     if (!questions.length) {
@@ -166,7 +166,7 @@ export async function mountMicro(el, { role } = {}) {
   function doneCardHtml(total) {
     const scoreLine = correctN != null
       ? `<p class="mc-done-sub">答对 ${correctN}/${total}，错题记得看解析</p>`
-      : '<p class="mc-done-sub">下一个工作日继续打卡</p>'
+      : '<p class="mc-done-sub">明天继续打卡</p>'
     const bday = finishBlessing('micro')
     return `
       <div class="mc-card mc-done-card">

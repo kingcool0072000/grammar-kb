@@ -7,8 +7,25 @@ import sqlite3
 from datetime import datetime, timezone as _tz
 from typing import Optional
 
+from ..clock import CN_TZ
 from ..vocab_exam import PASS_SCORE
 from .util import _paper_short
+
+
+def _cn_stamp(raw) -> str:
+    """UTC 时间戳 → 北京时间 ``YYYY-MM-DD HH:MM:SS``。空或坏串返回空。"""
+    text = str(raw or "").strip()
+    if not text:
+        return ""
+    try:
+        if text.endswith("Z") or "+" in text[10:]:
+            dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        else:
+            dt = datetime.fromisoformat(text.replace("T", " ")[:19]).replace(
+                tzinfo=_tz.utc)
+        return dt.astimezone(CN_TZ).strftime("%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return ""
 
 
 class GoalsMixin:
@@ -164,27 +181,49 @@ class GoalsMixin:
                 pass
         return done
 
-    def _library_sessions_all(self, user: str, book_id: Optional[int] = None) -> list:
-        """该生全部泛读会话（library 模块，不限日期；总目标/章任务词数口径）。"""
+    def _library_sessions_all(self, user: str, book_id: Optional[int] = None,
+                              *, before: Optional[str] = None) -> list:
+        """该生泛读会话（library 模块）。
+
+        ``before`` 给出时只留整段落在该北京时刻之前的会话：跨过边界的
+        不拿来证明「这一周结束前已经读完」（心跳会把后面的进度写进同一行）。
+        不传则是全部会话，总目标词数仍按一辈子累计。
+        """
         try:
             with self._connect() as conn:
                 if book_id is None:
-                    return conn.execute(
+                    rows = conn.execute(
                         "SELECT module, book_title, book_id, active_sec,"
                         " percent_start, percent_end, lookups, plays,"
-                        " scroll_count, chapter_navs, percent_track"
+                        " scroll_count, chapter_navs, percent_track,"
+                        " created_at, ended_at"
                         " FROM focus_sessions"
                         " WHERE user = ? AND module = 'library'"
                         " AND book_id IS NOT NULL", (user,)).fetchall()
-                return conn.execute(
-                    "SELECT module, book_title, book_id, active_sec,"
-                    " percent_start, percent_end, lookups, plays,"
-                    " scroll_count, chapter_navs, percent_track"
-                    " FROM focus_sessions"
-                    " WHERE user = ? AND module = 'library'"
-                    " AND book_id = ?", (user, int(book_id))).fetchall()
+                else:
+                    rows = conn.execute(
+                        "SELECT module, book_title, book_id, active_sec,"
+                        " percent_start, percent_end, lookups, plays,"
+                        " scroll_count, chapter_navs, percent_track,"
+                        " created_at, ended_at"
+                        " FROM focus_sessions"
+                        " WHERE user = ? AND module = 'library'"
+                        " AND book_id = ?", (user, int(book_id))).fetchall()
         except sqlite3.Error:
             return []
+        if not before:
+            return rows
+        bound = f"{str(before)[:10]} 00:00:00"
+        kept = []
+        for r in rows:
+            created = _cn_stamp(r["created_at"] if "created_at" in r.keys() else "")
+            ended = _cn_stamp(r["ended_at"] if "ended_at" in r.keys() else "")
+            if not created or created >= bound:
+                continue
+            if ended and ended >= bound:
+                continue
+            kept.append(r)
+        return kept
 
     def _goal_reading_words(self, book_ids: list) -> int:
         """总目标书目的目标词数总和：必读章配置口径（未配置=全书词数）。"""

@@ -115,7 +115,7 @@ def _micro_daily_done(env, user, day):
 def test_loop_baseline_boost_day(env):
     with freeze_clock(datetime(2026, 11, 10, 12, 0, tzinfo=CN_TZ)):
         store, recite, micro = _stores(env)
-        _put_week(store, {"boost_days": [2, 4], "boost_items": ITEMS})
+        _put_week(store, {"boost_days": [2, 4], "boost_items": ITEMS, "micro": 1})
         out = loop_status("malin", TUE, store=store, recite=recite,
                           micro=micro)
     assert out["recite"]["clear"] is True
@@ -148,15 +148,13 @@ def test_loop_non_boost_day(env):
 
 
 def test_loop_boost_unconfigured_day(env):
-    """boost_days 配了、items 空：说明行 → scheduled 且不拦闭环。"""
+    """只有 boost_days、没有任务：不再出提升格。"""
     with freeze_clock(datetime(2026, 11, 10, 12, 0, tzinfo=CN_TZ)):
         store, recite, micro = _stores(env)
         _put_week(store, {"boost_days": [2, 4]})
         out = loop_status("malin", TUE, store=store, recite=recite,
                           micro=micro)
-    assert out["boost"]["scheduled"] is True
-    assert out["boost"]["done"] is True
-    assert out["boost"]["configured"] is False
+    assert out["boost"] is None
 
 
 def test_loop_boost_done(env):

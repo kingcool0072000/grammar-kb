@@ -10,6 +10,7 @@ from typing import Optional
 from ..clock import cn_dt, monday_of, today_cn, week_bounds
 from . import boost
 from .ctx import WeekCtx, _sql_date
+from .week_credit import archived_paper_ids, wrong_activity
 from .util import (
     _short, _task_key, add_days, completion_percent, task_public,
     vocab_progress_detail,
@@ -25,7 +26,7 @@ def _cn_bound(value: str) -> str:
 
 
 def paper_task_detail(level: Optional[int]) -> str:
-    """周日试卷任务说明。混合卷 level<0 写成「已学混合卷」，避免「L-1 级试卷」。"""
+    """单词卷任务说明。混合卷 level<0 写成「已学混合卷」，避免「L-1 级试卷」。"""
     if level is None:
         head = "试卷资产"
     elif int(level) < 0:
@@ -37,6 +38,13 @@ def paper_task_detail(level: Optional[int]) -> str:
 
 _PAPER_ID_RE = re.compile(
     r"^(MIX|L\d+)-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})-(\d+)$")
+
+
+def _slice_count(n: int, days_left: int) -> int:
+    """剩余 n 项摊到还剩的天数上，今天至少出 1 项（有剩余时）。"""
+    if n <= 0 or days_left <= 0:
+        return 0
+    return max(1, -(-n // days_left))
 
 
 def paper_short_label(paper_id: str, level: Optional[int] = None) -> str:
@@ -61,14 +69,6 @@ def paper_short_label(paper_id: str, level: Optional[int] = None) -> str:
             f" · 尾号{m.group(8)}")
 
 
-_CN_GROUP_NUM = "一二三四五六七八九十"
-
-
-def _cn_group(n: int) -> str:
-    """分组摊派行的组序号 → 中文（一组…十组；超过 10 组用阿拉伯数字）。"""
-    return _CN_GROUP_NUM[n - 1] if 1 <= n <= 10 else str(n)
-
-
 class ScheduleMixin:
 
     def week_daily_tasks(self, week_start: str, user: str,
@@ -77,10 +77,10 @@ class ScheduleMixin:
                          ctx: Optional[WeekCtx] = None) -> list[dict]:
         """周目标 → for_date 当日的任务清单（逐日均摊，外循环第③步）。
 
-        均摊节奏按家长 10-04 定的模板：工作日=讲次+背词+泛读，
-        周六=FCE 大题，周日=错词再练+试卷+补泛读。
-        这些按天摊开只是建议。除微练习外，完成认整周（见 week_credit），
-        不因为做的那天和格子上的星期几不一样就不算。
+        七天用同一套摊法：剩余量 ÷ 本周还剩的日历天数（周一到周日一样）。
+        不把 FCE 固定在周六、错词或试卷固定在周日，也不按工作日/周末分母。
+        格子只是建议。除微练习外，完成认这一周（见 week_credit），
+        而且只认这一周里做完的；过了周日夜里再做，不回写这一周。
         精读不再排进当日清单（历史朗读留在学习日志）。
         剩余量动态重摊：按「周目标 − 截至 for_date 已完成」重算后摊给
         剩余天——错过的日子欠账自动滚入后面的天。纯派生不落库。
@@ -100,12 +100,7 @@ class ScheduleMixin:
             ref = week_start
         rd = date.fromisoformat(ref)
         ws_d = date.fromisoformat(week_start)
-        dow = rd.weekday()  # 0=周一 … 5=周六 6=周日
         days_left = max(1, (ws_d + timedelta(days=6) - rd).days + 1)
-        # ref..周日里剩余的工作日/周六数（均摊分母）
-        rest = [ws_d + timedelta(days=i) for i in range((rd - ws_d).days, 7)]
-        wd_left = sum(1 for x in rest if x.weekday() < 5)
-        sat_left = sum(1 for x in rest if x.weekday() == 5)
 
         # ---- 截至 ref（含）的已完成——欠账重摊的基数 ----
         lo, _ = week_bounds(week_start)
@@ -117,6 +112,7 @@ class ScheduleMixin:
         today_lecs = ctx.lecture_done(ref, upto, "lecture")
         today_hw = ctx.lecture_done(ref, upto, "hw")
         fce_done = set(ctx.fce_actuals(lo, upto))
+        today_fce = set(ctx.fce_actuals(ref, upto))
         tasks: list[dict] = []
 
         def hw_row(lec: int) -> dict:
@@ -127,147 +123,133 @@ class ScheduleMixin:
                 "detail": "线下完成考卷，成绩登记类型选「作业卷」后自动勾",
             }
 
-        if dow < 5:
-            # ---- 工作日：讲次/作业卷 + 背词 + 泛读 ----
-            # 微练习已改为独立线上功能（每天 3 题）：不占计划行、不进
-            # 完成率分母，也不加分（原 +10 规则已废）；完成只在实录
-            # acts.micro_done 点亮。tasks.micro=1 时周视图带 micro_enabled、
-            # 周目标出「微练习」维度。focus_kps 仅保留为攻坚讲次标注
-            # （周验收对照 / 微练习出题优先级），不再驱动排程。
-            # 讲次（课程测验口径）与作业卷（hw 口径）各自按 kind 判剩余，
-            # 剩余量摊给剩余工作日；今天考过的行照常出（自动 ✓）
-            lec_rest = [x for x in (t.get("lectures") or []) if x not in done_lecs]
-            hw_rest = [x for x in (t.get("hw_papers") or []) if x not in done_hw]
-            if lec_rest and wd_left:
-                per = max(1, -(-len(lec_rest) // wd_left))
-                for lec in lec_rest[:per]:
-                    tasks.append({
-                        "type": "lecture", "key": f"lecture:{lec}",
-                        "text": f"第{lec}讲 学+测",
-                        "detail": f"本周讲次剩 {len(lec_rest)} 讲 · 摊 {wd_left} 个工作日",
-                    })
-                for lec in hw_rest:
-                    # 跟讲次排程同行；讲次不在本周课程清单的独立卷也直接出
-                    if (lec in lec_rest[:per]
-                            or lec not in (t.get("lectures") or [])):
-                        tasks.append(hw_row(lec))
-            # 今天已完成但不在新排程里的行补上（含今天考过但已非剩余的）
-            have = {x.get("key") for x in tasks}
-            for lec in sorted(today_lecs):
-                if f"lecture:{lec}" not in have:
-                    tasks.append({
-                        "type": "lecture", "key": f"lecture:{lec}",
-                        "text": f"第{lec}讲 学+测",
-                        "detail": "今天已完成 ✓",
-                    })
-            for lec in sorted(today_hw):
-                if f"hw:{lec}" not in have:
+        # 微练习已改为独立线上功能（每天 3 题）：不占计划行、不进
+        # 完成率分母，也不加分（原 +10 规则已废）；完成只在实录
+        # acts.micro_done 点亮。tasks.micro=1 时周视图带 micro_enabled、
+        # 周目标出「微练习」维度。focus_kps 仅保留为攻坚讲次标注
+        # （周验收对照 / 微练习出题优先级），不再驱动排程。
+        # 讲次、作业卷、FCE、单词卷都按「剩余 ÷ 本周还剩几天」往前摊。
+        lec_rest = [x for x in (t.get("lectures") or []) if x not in done_lecs]
+        hw_rest = [x for x in (t.get("hw_papers") or []) if x not in done_hw]
+        lec_per = _slice_count(len(lec_rest), days_left)
+        if lec_rest and lec_per:
+            for lec in lec_rest[:lec_per]:
+                tasks.append({
+                    "type": "lecture", "key": f"lecture:{lec}",
+                    "text": f"第{lec}讲 学+测",
+                    "detail": f"本周讲次剩 {len(lec_rest)} 讲 · 摊到还剩的 {days_left} 天",
+                })
+            for lec in hw_rest:
+                # 跟讲次排程同行；讲次不在本周课程清单的独立卷也直接出
+                if (lec in lec_rest[:lec_per]
+                        or lec not in (t.get("lectures") or [])):
                     tasks.append(hw_row(lec))
-            vg = t.get("vocab_goal")
-            if vg and wd_left:
-                rem = self._vocab_week_remaining(t, lo, upto, user, ctx=ctx)
-                lv = t.get("vocab_lv")
-                gained_today = self._vocab_gained_today(
-                    t, ref, upto, user, ctx=ctx)
-                if rem > 0:
-                    n = -(-rem // wd_left)
-                    detail = (
-                        f"本周这一级还要新掌握 {rem} 词 · 摊 {wd_left} 个工作日"
-                        if lv is not None
-                        else f"周目标剩 {rem} 词 · 摊 {wd_left} 个工作日"
-                    )
-                    tasks.append({
-                        "type": "vocab", "key": "vocabday", "quota": n,
-                        "vocab_lv": lv,
-                        "text": f"背词 {n} 词",
-                        "detail": detail,
-                    })
-                elif gained_today > 0:
-                    # 今天把本周剩余新掌握做完了：行还在，用来打勾，不再消失。
-                    tasks.append({
-                        "type": "vocab", "key": "vocabday", "quota": gained_today,
-                        "vocab_lv": lv,
-                        "text": f"背词 {gained_today} 词",
-                        "detail": "本周要新掌握的词，今天已经够了",
-                    })
-            for book_key, pct in (t.get("reading") or {}).items():
-                tasks.append(self._reading_task(book_key, pct, user, days_left,
-                                                ctx=ctx))
-        elif dow == 5:
-            # ---- 周六：FCE 大题（模板：周六整块给输出型任务）----
-            fce_rest = [x for x in (t.get("fce") or []) if x not in fce_done]
-            per = max(1, -(-len(fce_rest) // max(1, sat_left))) if fce_rest else 0
-            for item in fce_rest[:per]:
+        have = {x.get("key") for x in tasks}
+        for lec in sorted(today_lecs):
+            if f"lecture:{lec}" not in have:
                 tasks.append({
-                    "type": "fce", "key": "fce",
+                    "type": "lecture", "key": f"lecture:{lec}",
+                    "text": f"第{lec}讲 学+测",
+                    "detail": "今天已完成 ✓",
+                })
+        for lec in sorted(today_hw):
+            if f"hw:{lec}" not in have:
+                tasks.append(hw_row(lec))
+        vg = t.get("vocab_goal")
+        if vg:
+            rem = self._vocab_week_remaining(t, lo, upto, user, ctx=ctx)
+            lv = t.get("vocab_lv")
+            gained_today = self._vocab_gained_today(
+                t, ref, upto, user, ctx=ctx)
+            if rem > 0:
+                n = -(-rem // days_left)
+                detail = (
+                    f"本周这一级还要新掌握 {rem} 词 · 摊到还剩的 {days_left} 天"
+                    if lv is not None
+                    else f"周目标剩 {rem} 词 · 摊到还剩的 {days_left} 天"
+                )
+                tasks.append({
+                    "type": "vocab", "key": "vocabday", "quota": n,
+                    "vocab_lv": lv,
+                    "text": f"背词 {n} 词",
+                    "detail": detail,
+                })
+            elif gained_today > 0:
+                # 今天把本周剩余新掌握做完了：行还在，用来打勾，不再消失。
+                tasks.append({
+                    "type": "vocab", "key": "vocabday", "quota": gained_today,
+                    "vocab_lv": lv,
+                    "text": f"背词 {gained_today} 词",
+                    "detail": "本周要新掌握的词，今天已经够了",
+                })
+        for book_key, pct in (t.get("reading") or {}).items():
+            tasks.append(self._reading_task(
+                book_key, pct, user, days_left, ctx=ctx))
+        fce_rest = [x for x in (t.get("fce") or []) if x not in fce_done]
+        for item in fce_rest[:_slice_count(len(fce_rest), days_left)]:
+            tasks.append({
+                "type": "fce", "key": f"fce:{item}",
+                "text": f"FCE {item}",
+                "detail": (
+                    f"本周 FCE 剩 {len(fce_rest)} 道 · 摊到还剩的 {days_left} 天"
+                    " · 先看预习词表再限时做"
+                ),
+            })
+        have = {x.get("key") for x in tasks}
+        for item in (t.get("fce") or []):
+            if item in today_fce and f"fce:{item}" not in have:
+                tasks.append({
+                    "type": "fce", "key": f"fce:{item}",
                     "text": f"FCE {item}",
-                    "detail": "周六大题 · 先看预习词表再限时做",
+                    "detail": "今天已完成 ✓",
                 })
-            # 周六补一段泛读（周中没读完的量周六兜底，量小自然显示小目标）
-            for book_key, pct in (t.get("reading") or {}).items():
-                tasks.append(self._reading_task(book_key, pct, user, days_left))
-        else:
-            # ---- 周日：错词再练 + 试卷 + 补泛读（周日晚留白复盘）----
-            wrong_words = ctx.wrong_words_count()
-            if wrong_words:
-                n = min(30, wrong_words)
-                tasks.append({
-                    "type": "wrong_words", "key": "wrong_words",
-                    "text": f"错词再练 {n} 词",
-                    "detail": (
-                        f"错词曲线里还在周期 {wrong_words} 词，"
-                        f"周日集中清一档（最多 {n} 个），不是新词"
-                    ),
-                })
-            for pid in (t.get("vocab_papers") or []):
+        paper_ids = [str(pid) for pid in (t.get("vocab_papers") or [])]
+        papers_done = archived_paper_ids(self, user, week_start, upto)
+        papers_today = archived_paper_ids(self, user, ref, upto)
+        paper_rest = [pid for pid in paper_ids if pid not in papers_done]
+        for pid in paper_rest[:_slice_count(len(paper_rest), days_left)]:
+            plv = ctx.paper_level(pid)
+            tasks.append({
+                "type": "paper", "key": f"paper:{pid}",
+                "text": f"单词试卷 · {paper_short_label(pid, plv)}",
+                "detail": (
+                    f"{paper_task_detail(plv)} · 卷号 {pid}"
+                    f" · 本周还剩 {len(paper_rest)} 份，摊到还剩的 {days_left} 天"
+                ),
+            })
+        have = {x.get("key") for x in tasks}
+        for pid in paper_ids:
+            if pid in papers_today and f"paper:{pid}" not in have:
                 plv = ctx.paper_level(pid)
                 tasks.append({
                     "type": "paper", "key": f"paper:{pid}",
                     "text": f"单词试卷 · {paper_short_label(pid, plv)}",
-                    "detail": f"{paper_task_detail(plv)} · 卷号 {pid}",
+                    "detail": "今天已登记 ✓",
                 })
-            # 周日泛读兜底：周六前（含周六）仍未读完的剩余量周日一天清
-            for book_key, pct in (t.get("reading") or {}).items():
-                tasks.append(self._reading_task(book_key, pct, user, 1, ctx=ctx))
-        # 讲次/FCE 剩余但本日类型无槽位（如 ref 已周六、讲次还没排完）→ 兜底行；
-        # 今天考过的讲次/作业卷在周末也要有 ✓ 行（完成即视，不再隐形）
-        if dow >= 5:
-            lec_rest = [x for x in (t.get("lectures") or []) if x not in done_lecs]
-            for lec in lec_rest[:1]:
-                tasks.append({
-                    "type": "lecture", "key": f"lecture:{lec}",
-                    "text": f"第{lec}讲 学+测（补）",
-                    "detail": "本周剩余讲次，周末补上",
-                })
-            have = {x.get("key") for x in tasks}
-            for lec in sorted(today_lecs | today_hw):
-                if f"lecture:{lec}" in have or f"hw:{lec}" in have:
-                    continue
-                if lec in today_lecs:
-                    tasks.append({
-                        "type": "lecture", "key": f"lecture:{lec}",
-                        "text": f"第{lec}讲 学+测",
-                        "detail": "今天已完成 ✓",
-                    })
-                if lec in today_hw:
-                    tasks.append(hw_row(lec))
-        # 提升档行（boost_days 当日派生，欠账滚到下一个 boost_day/周六）
-        self._append_boost_tasks(tasks, t, user, week_start, ref, dow)
-        self._append_video_tasks(tasks, t, user, lo, ref, upto, dow, wd_left,
-                                 ctx=ctx)
-        # NCE2 听力跟读（daily 组每天队首 1 课欠账滚动；weekend 组周末集中）
-        self._append_nce2_tasks(tasks, t, user, lo, ref, upto, dow, wd_left,
-                                ctx=ctx)
+        wrong_words = ctx.wrong_words_count()
+        if wrong_words and not wrong_activity(self, user, week_start, ref):
+            n = min(30, wrong_words)
+            tasks.append({
+                "type": "wrong_words", "key": "wrong_words",
+                "text": f"错词再练 {n} 词",
+                "detail": (
+                    f"错词曲线里还在周期 {wrong_words} 词，"
+                    f"本周任意一天清一档（最多 {n} 个），不是新词"
+                ),
+            })
+        self._append_boost_tasks(tasks, t, user, week_start, ref)
+        self._append_video_tasks(tasks, t, user, lo, ref, upto, ctx=ctx)
+        self._append_nce2_tasks(tasks, t, user, lo, ref, upto, ctx=ctx)
         return tasks
 
     def _vocab_week_remaining(self, t: dict, lo: str, upto: str, user: str,
                               ctx: Optional[WeekCtx] = None) -> int:
-        """本周还要背的词数，摊到剩余工作日。
+        """本周还要背的词数，摊到本周还剩的每一天。
 
         没标级别时，vocab_goal 仍是本周词数预算（旧周、旧测试）。
         标了 vocab_lv 时与周进度同一口径：先算「目标词数 − 周初该级已会」，
         再减去本周该级已经新掌握的。教师填的「本周新掌握 N 个」
-        会摊到工作日，而不是把级别里的累计目标整段摊出去。
+        摊到周一至周日，而不是把级别里的累计目标整段摊出去。
         """
         try:
             vg = int(t.get("vocab_goal") or 0)
@@ -313,14 +295,14 @@ class ScheduleMixin:
 
     def _video_units(self, t: dict) -> list[dict]:
         """周计划视频分组。``video_units`` 是唯一来源（旧平铺 ``videos`` 键
-        由 scripts/oneoff_2026-11_legacy_backfill.py 转成一组 mode=daily，
-        读路径不再兜底）。"""
+        由 scripts/oneoff_2026-11_legacy_backfill.py 转成一组，读路径不再兜底）。
+
+        ``mode``（daily / weekend）还留在 JSON 里，排课不再看它：有视频就进
+        同一条队列，避免旧计划因为标了周末就被丢掉。
+        """
         units: list[dict] = []
         for u in (t.get("video_units") or []):
             if not isinstance(u, dict):
-                continue
-            mode = u.get("mode")
-            if mode not in ("daily", "weekend"):
                 continue
             vids: list[str] = []
             for v in (u.get("vids") or []):
@@ -328,7 +310,7 @@ class ScheduleMixin:
                 if s and s not in vids:
                     vids.append(s)
             if vids:
-                units.append({"vids": vids, "mode": mode, "labeled": True})
+                units.append({"vids": vids, "mode": u.get("mode"), "labeled": True})
         return units
 
     def _plan_videos(self, t: dict) -> list[str]:
@@ -341,15 +323,12 @@ class ScheduleMixin:
         return out
 
     def _append_video_tasks(self, tasks: list[dict], t: dict, user: str,
-                            lo: str, ref: str, upto: str, dow: int,
-                            wd_left: int,
+                            lo: str, ref: str, upto: str,
                             ctx: Optional[WeekCtx] = None) -> None:
-        """视频分组摊派（daily 组现状语义 + weekend 组周末集中）。
+        """视频摊派：全部组合成一条队列，每天队首 1 个，周一到周日一样。
 
-        daily 组（现状语义）：工作日每天 1 个、欠账滚动同日不堆，周末
-        每天至多补 1 个。weekend 组：周六出组内未完成前 2 个（同日两条
-        行），周日兜底清剩余，工作日不排。两类混合先 daily 轮转、weekend
-        组独立成行。当天提交过复述的行保留 ✓。
+        旧的 daily / weekend 只决定以前建议出现在哪天，现在不看。
+        欠账滚到后面的天，不在同一天堆多条。当天提交过复述的行保留 ✓。
         """
         if ctx is None:
             ctx = WeekCtx(self, user, monday_of(date.fromisoformat(ref)).isoformat())
@@ -358,37 +337,14 @@ class ScheduleMixin:
             return
         done_vids = ctx.retold_video_ids(lo, upto)
         today_vids = ctx.retold_video_ids(ref, upto)
-        # daily 组合并队列（组序、组内原序）：队首未完成 1 个
-        daily_rest = [vid for gi, u in enumerate(units, 1)
-                      if u["mode"] == "daily"
-                      for vid in u["vids"] if vid not in done_vids]
-        # 欠账滚到后面的天，不在同一天堆多条（复述任务重）。
-        if daily_rest and (dow >= 5 or wd_left):
-            detail = (
-                f"本周视频剩 {len(daily_rest)} 个 · 周末补上" if dow >= 5
-                else f"本周视频剩 {len(daily_rest)} 个 · 工作日每天 1 个"
-            )
-            for vid in daily_rest:
+        rest = [vid for u in units for vid in u["vids"] if vid not in done_vids]
+        if rest:
+            detail = f"本周视频剩 {len(rest)} 个 · 每天 1 个"
+            for vid in rest:
                 row = self._video_task(vid, detail=detail, ctx=ctx)
                 if row:
                     tasks.append(row)
                     break
-        # weekend 组：周六集中未完成前 2 个；周日兜底清剩余
-        if dow >= 5:
-            for gi, u in enumerate(units, 1):
-                if u["mode"] != "weekend":
-                    continue
-                undone = [v for v in u["vids"] if v not in done_vids]
-                if not undone:
-                    continue
-                detail = (
-                    f"视频{_cn_group(gi)}组 · 周六集中 2 个 · 本组剩 {len(undone)} 个"
-                    if dow == 5 else
-                    f"视频{_cn_group(gi)}组 · 周日兜底 · 本组剩 {len(undone)} 个")
-                for vid in undone[:2] if dow == 5 else undone:
-                    row = self._video_task(vid, detail=detail, ctx=ctx)
-                    if row:
-                        tasks.append(row)
         have = {x.get("key") for x in tasks}
         for vid in self._plan_videos(t):
             if vid in today_vids and f"video:{vid}" not in have:
@@ -415,17 +371,15 @@ class ScheduleMixin:
         """周计划 NCE2 听力分组。``nce2_units`` 是唯一来源（无旧键兜底，
         不像精读/视频有旧平铺回退——NCE2 是新接入模块，没有存量数据）。
 
-        每组 ``{"lessons":[1,2], "mode":"daily"|"weekend",
-        "task_mode":"listen"|"shadow"}``：lessons 去重保序转 int；mode 不在
-        daily/weekend 的组整组跳过；task_mode 缺省/非法 → shadow（跟读）。
+        每组 ``{"lessons":[1,2], "mode":..., "task_mode":"listen"|"shadow"}``：
+        lessons 去重保序转 int。``mode`` 不再决定哪天排课，缺了或写了别的
+        也不丢掉这组课。task_mode 缺省/非法 → shadow（跟读）。
         """
         units: list[dict] = []
         for u in (t.get("nce2_units") or []):
             if not isinstance(u, dict):
                 continue
             mode = u.get("mode")
-            if mode not in ("daily", "weekend"):
-                continue
             tm = u.get("task_mode")
             if tm not in ("listen", "shadow"):
                 tm = "shadow"
@@ -472,13 +426,10 @@ class ScheduleMixin:
         }
 
     def _append_nce2_tasks(self, tasks: list[dict], t: dict, user: str,
-                           lo: str, ref: str, upto: str, dow: int,
-                           wd_left: int,
+                           lo: str, ref: str, upto: str,
                            ctx: Optional[WeekCtx] = None) -> None:
-        """NCE2 听力分组摊派（完全镜像 _append_video_tasks）。
+        """NCE2 听力摊派（与视频同一条队列：每天队首 1 课，七天一样）。
 
-        daily 组合并队列每天出队首未完成 1 课：欠账滚动、同日不堆；
-        weekend 组周六集中未完成前 2 课、周日兜底清剩余，工作日不排。
         当天已提交的课补 ✓ 行。完成判定分两档（行级口径在摊派层，
         当日信号只表「有提交」）：
         - shadow 行：当天有 kind=shadow 提交才算该课完成；
@@ -497,41 +448,17 @@ class ScheduleMixin:
             return (set(shadow_done) if task_mode == "shadow"
                     else set(shadow_done) | set(listened))
 
-        # daily 组合并队列（组序、组内原序）：队首未完成 1 课
-        daily_rest: list[tuple[int, str]] = []
+        rest: list[tuple[int, str]] = []
         for u in units:
-            if u["mode"] != "daily":
-                continue
             dset = done_for(u["task_mode"])
-            daily_rest.extend((lid, u["task_mode"]) for lid in u["lessons"]
-                              if lid not in dset)
-        # 欠账滚到后面的天，不在同一天堆多条（与视频同一节奏）。
-        if daily_rest and (dow >= 5 or wd_left):
-            lid, tm = daily_rest[0]
-            detail = (
-                f"本周听力剩 {len(daily_rest)} 课 · 周末补上" if dow >= 5
-                else f"本周听力剩 {len(daily_rest)} 课 · 工作日每天 1 课")
+            rest.extend((lid, u["task_mode"]) for lid in u["lessons"]
+                        if lid not in dset)
+        if rest:
+            lid, tm = rest[0]
+            detail = f"本周听力剩 {len(rest)} 课 · 每天 1 课"
             row = self._nce2_task(lid, task_mode=tm, detail=detail, ctx=ctx)
             if row:
                 tasks.append(row)
-        # weekend 组：周六集中未完成前 2 课；周日兜底清剩余
-        if dow >= 5:
-            for gi, u in enumerate(units, 1):
-                if u["mode"] != "weekend":
-                    continue
-                dset = done_for(u["task_mode"])
-                undone = [lid for lid in u["lessons"] if lid not in dset]
-                if not undone:
-                    continue
-                detail = (
-                    f"听力{_cn_group(gi)}组 · 周六集中 2 课 · 本组剩 {len(undone)} 课"
-                    if dow == 5 else
-                    f"听力{_cn_group(gi)}组 · 周日兜底 · 本组剩 {len(undone)} 课")
-                for lid in undone[:2] if dow == 5 else undone:
-                    row = self._nce2_task(lid, task_mode=u["task_mode"],
-                                          detail=detail, ctx=ctx)
-                    if row:
-                        tasks.append(row)
         # 当天已提交的课补 ✓ 行（提交了却因 done 集合口径不在摊派里的，
         # 完成也要看得见——与视频「今天已提交复述 ✓」同修）
         have = {x.get("key") for x in tasks}
@@ -548,33 +475,15 @@ class ScheduleMixin:
     # ---- 提升档（v3.0.0 闭环版）：boost_days 当日派生 boost_items 行 ----
 
     def _append_boost_tasks(self, tasks: list[dict], t: dict, user: str,
-                            week_start: str, ref: str, dow: int) -> None:
-        """提升档派生行：boost_days 对应日为每个 boost_item 出一行。
+                            week_start: str, ref: str) -> None:
+        """提升档派生行：配了 boost_items 就本周每天都能看见，直到过关。
 
-        - boost_days 配了、items 空：提升日出「未配置」说明行
-          （configured=False，完成判定恒亮，不占完成率）；
-        - 两者都没配：完全不派生（默认 [2,4] 只在 items 非空时生效，
-          零配置不产生噪音行）；
-        - 欠账滚动：item 本周未过关 → 之后每个 boost_day 原样重现
-          （同「剩余重摊」思路：错过自动滚入后面的天），所有 boost_day
-          都错过 → 周六兜底；本周已过关不再派生（当日过关的 ✓ 行照出，
-          完成态由 completion 走 plan/boost.item_done 点亮）。
+        ``boost_days`` 还留在 JSON 里，不再决定哪天出题、也不再出
+        「未配置」占位行。没配 items 就不出行。本周更早已经过关或待批的，
+        后面的天不再重复派。
         """
         items = [x for x in (t.get("boost_items") or []) if isinstance(x, dict)]
-        days = boost.boost_days_of(t, items)
-        wn = dow + 1  # 周几（1=周一 … 6=周六 7=周日）
         if not items:
-            if days and wn in days:
-                tasks.append({
-                    "type": "boost", "key": "boost:none",
-                    "text": "⭐ 提升日（本周未配置提升任务）",
-                    "detail": "教师还没给本周排提升任务，这天不用做难事",
-                    "boost": {"item_ref": "", "kind": "", "configured": False},
-                })
-            return
-        # 周六兜底：所有排定的 boost_day（都在周六前）都已过、还有欠账
-        sat_fallback = wn == 6 and bool(days) and max(days) < 6
-        if wn not in days and not sat_fallback:
             return
         states = boost.pass_state_map(user, week_start,
                                       add_days(week_start, 7))
@@ -988,7 +897,8 @@ class ScheduleMixin:
             "percent": completion_percent(done_n, total_n),
             "completion_note": (
                 "完成率按学习信号自动计算，不看手动打卡。"
-                "除微练习外按周计完成；微练习要在北京时间当天打卡，过期不能补。"
+                "除微练习外，这一周周一到周日做完都算；过了周日夜里再做，不改这一周。"
+                "微练习要在北京时间当天打卡，周一到周日各一次，过期不能补。"
                 "plan_history_days 只在教师冻结过的日期替代信号，不是每日流水。"
             ),
         }

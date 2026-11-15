@@ -234,8 +234,12 @@ class BooksMixin:
         }
 
 
-    def _read_words_in_chapters(self, user: str, book_id: int, idxs: list) -> int:
-        """该生在某书选章范围内的已读词数（跨会话区段去重 ∩ 选章）。"""
+    def _read_words_in_chapters(self, user: str, book_id: int, idxs: list,
+                                before: Optional[str] = None) -> int:
+        """该生在某书选章范围内的已读词数（跨会话区段去重 ∩ 选章）。
+
+        ``before`` 只数整段落在该时刻之前的会话，用来给已经结束的周定格。
+        """
         lib = self._lib_connect()
         if lib is None or not idxs:
             return 0
@@ -251,7 +255,7 @@ class BooksMixin:
         if total <= 0:
             return 0
         segs: list = []
-        for r in self._library_sessions_all(user, book_id):
+        for r in self._library_sessions_all(user, book_id, before=before):
             if self._reading_session_valid(r):
                 segs.extend(self._row_segs(r, total))
         ch_set = set(idxs)

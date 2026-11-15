@@ -12,13 +12,15 @@ from .util import (
     vocab_progress_detail,
 )
 from .week_credit import (
-    OPEN_HI, build_week_pool, checkin_progress, micro_checkins,
+    build_week_pool, checkin_progress, focus_percent_before, micro_checkins,
+    reading_moved_after,
 )
 
 _COMPLETION_NOTE = (
     "完成率按学习信号自动计算，不看手动打卡。"
-    "除微练习外，作业按周计：这一周任何一天做完都算，过了本周再补上，这一周的进度也会加上。"
-    "微练习是当天打卡（周一到周五各一次），过了北京时间当天不能补。"
+    "除微练习外，作业按周计：这一周周一到周日任何一天做完都算。"
+    "过了周日夜里（北京时间下周一 0 点），这一周的进度就定了，之后再做记在做的那一周。"
+    "微练习是当天打卡（周一到周日各一次），过了北京时间当天不能补。"
     "仅教师冻结过的日期改用 plan_history_days 快照，那不是每日流水。"
 )
 class ViewsMixin:
@@ -158,7 +160,7 @@ class ViewsMixin:
             ],
             "goal_progress": self._week_goal_progress(t, days, user, week_start,
                                                       ctx=ctx),
-            # 本周作业每项一次（不按星期几锁完成）。日格子仍是建议节奏。
+            # 本周作业每项一次。日格子是同一套摊法的建议，不按星期几锁完成。
             "week_pool": build_week_pool(self, user, week_start),
             "micro_checkins": micro_checkins(
                 self, user, week_start, bool(t.get("micro"))),
@@ -184,7 +186,7 @@ class ViewsMixin:
         - 泛读：按各书周目标%（词数口径）vs 周内已读词数（实录汇总）
         - 试卷：计划卷数 vs 登记考试数
         - 视频复述：计划 vid 数 vs 周内提交复述数
-        - 微练习：tasks.micro 开着才有；周一到周五打卡天数 / 5（漏打留在分母里）
+        - 微练习：tasks.micro 开着才有；周一到周日打卡天数 / 7（漏打留在分母里）
         """
         dims = []
 
@@ -193,16 +195,17 @@ class ViewsMixin:
                 dims.append({"icon": icon, "name": name,
                              "done": round(ok, 1), "total": total, "extra": extra})
 
+        week_end = add_days(week_start, 7)
         lecs = t.get("lectures") or []
         if lecs:
             done_lec = len(set(lecs) & self.lecture_done(
-                week_start, None, user, "lecture"))
+                week_start, week_end, user, "lecture"))
             dim("📚", "语法课程", done_lec, len(lecs))
 
         hw_papers = t.get("hw_papers") or []
         if hw_papers:
             done_hw = len(set(hw_papers) & self.lecture_done(
-                week_start, None, user, "hw"))
+                week_start, week_end, user, "hw"))
             dim("📝", "作业卷", done_hw, len(hw_papers))
 
         # 词汇差额口径（级别内增量）：分母 = 目标词数 − 周初该级别已掌握
@@ -237,7 +240,7 @@ class ViewsMixin:
         fce = t.get("fce") or []
         if fce:
             # 与 actuals._fce_actuals 同一窗口与标签构造（ctx 有预取则切片）
-            got = set(self._fce_actuals(week_start, OPEN_HI, user))
+            got = set(self._fce_actuals(week_start, week_end, user))
             done_fce = sum(1 for x in fce if x in got)
             dim("🎧", "FCE真题", done_fce, len(fce))
 
@@ -287,7 +290,11 @@ class ViewsMixin:
                                 "SELECT percent FROM reading_progress"
                                 " WHERE book_id = ? AND user = ?",
                                 (bid, user)).fetchone()
-                            pos = ((prog[0] if prog else 0) or 0) / 100 * total
+                            live_pct = (prog[0] if prog else 0) or 0
+                            if reading_moved_after(self, user, bid, week_end):
+                                live_pct = focus_percent_before(
+                                    self, user, bid, week_end)
+                            pos = live_pct / 100 * total
                             # 当前读位在选章序列内的均摊章进度：
                             # 读完的整章各计 1，当前章按章内比例计
                             prog_ch = 0.0
@@ -311,7 +318,7 @@ class ViewsMixin:
 
         papers = t.get("vocab_papers") or []
         if papers:
-            # 登记日落在本周周一及之后都算（不限周日，过周补登也算）。
+            # 登记日落在本周周一到周日才算。下一周再登记不回写这一周。
             from .week_credit import WeekCredit
             done_ids = WeekCredit(self, user, week_start).papers()
             done_p = sum(1 for pid in papers if str(pid) in done_ids)
@@ -319,7 +326,7 @@ class ViewsMixin:
 
         videos = self._plan_videos(t)
         if videos:
-            done_ids = self._retold_video_ids(week_start, OPEN_HI, user)
+            done_ids = self._retold_video_ids(week_start, week_end, user)
             dim("🎬", "视频复述", len(set(videos) & done_ids), len(videos))
 
         # NCE2 听力跟读：计划课数 vs 周内有提交（精听或跟读）的课数。
@@ -327,8 +334,8 @@ class ViewsMixin:
         lessons = self._plan_lessons(t)
         if lessons:
             done_lids = (
-                self._nce2_kind_ids(week_start, OPEN_HI, user, "shadow")
-                | self._nce2_kind_ids(week_start, OPEN_HI, user, "listen"))
+                self._nce2_kind_ids(week_start, week_end, user, "shadow")
+                | self._nce2_kind_ids(week_start, week_end, user, "listen"))
             dim("🗣", "听力跟读", len(set(lessons) & done_lids), len(lessons))
 
         from . import boost as plan_boost
@@ -336,17 +343,17 @@ class ViewsMixin:
                       if isinstance(x, dict)]
         boost_refs = [r for r in boost_refs if r]
         if boost_refs:
-            states = plan_boost.pass_state_map(user, week_start, OPEN_HI)
+            states = plan_boost.pass_state_map(user, week_start, week_end)
             done_b = sum(
                 1 for r in boost_refs
                 if (states.get(r) or {}).get("state") in ("passed", "pending", "graded_low"))
-            dim("⭐", "提升档", done_b, len(boost_refs), extra="哪天做都算")
+            dim("⭐", "提升档", done_b, len(boost_refs), extra="本周哪天做都算")
 
-        # 微练习：周一到周五各一次打卡。分母 5；过了当天没打的算漏打，不能补。
+        # 微练习：周一到周日各一次打卡。分母 7；过了当天没打的算漏打，不能补。
         if t.get("micro"):
             rows = micro_checkins(self, user, week_start, True)
             done_days, missed, total_days = checkin_progress(rows)
-            dim("✏️", "微练习", done_days, total_days or 5,
+            dim("✏️", "微练习", done_days, total_days or 7,
                 extra=f"已打卡 {done_days} · 漏打 {missed}")
 
         total_items = sum(d["total"] for d in dims)

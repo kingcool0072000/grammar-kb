@@ -408,12 +408,12 @@ export async function mountPlan(el) {
       if (acts.vocab_n) statRows.push(`🔤 背单词 ${acts.vocab_n} 个${acts.vocab_min ? `（${acts.vocab_min} 分钟）` : ''}`)
       const statHtml = statRows.length
         ? `<div class="pw-acts">${statRows.map((s) => `<span>${escapeHtml(s)}</span>`).join('')}</div>` : ''
-      // 每日有效学习时长 vs 目标（周中45/周末90）：泛读+精读+专题专注秒数
+      // 每日有效学习时长 vs 目标：七天同一个分钟数。泛读+专题专注秒数
       // 与背词时长合计，达标绿√
       const goalMin = studyGoalMin(d.date)
       const studyMin = acts.study_min || 0
       const minBadge = d.future ? '' :
-        `<i class="pw-min ${studyMin >= goalMin ? 'ok' : ''}" title="每日目标 ${goalMin} 分钟（周中45/周末90）">${studyMin ? `${studyMin}′` : '0′'}/${goalMin}′${studyMin >= goalMin ? ' ✓' : ''}</i>`
+        `<i class="pw-min ${studyMin >= goalMin ? 'ok' : ''}" title="每日目标 ${goalMin} 分钟">${studyMin ? `${studyMin}′` : '0′'}/${goalMin}′${studyMin >= goalMin ? ' ✓' : ''}</i>`
       const full = !d.future && d.total > 0 && d.done >= d.total
       const rateTitle = d.future
         ? '还没到这一天'
@@ -451,7 +451,7 @@ export async function mountPlan(el) {
         </div>`).join('')
       return `
         <section class="tt-checkins card">
-          <h3>微练习打卡 <small>周一到周五各一次，过了当天不能补</small></h3>
+          <h3>微练习打卡 <small>周一到周日各一次，过了当天不能补</small></h3>
           <div class="tt-checkin-row">${cells}</div>
         </section>`
     }
@@ -465,14 +465,14 @@ export async function mountPlan(el) {
         </div>`).join('')
       return `
         <section class="tt-pool card">
-          <h3>本周作业 <small>哪一天做完都算；过了本周再补上，这一周也会算</small></h3>
+          <h3>本周作业 <small>这一周哪一天做完都算；过了周日夜里，进度就定了</small></h3>
           <div class="tt-pool-list">${rows}</div>
         </section>`
     }
 
     function weekRateText(comp) {
       if (!comp || !comp.total) return '已到的日子还没有计划项 · 完成率按学习信号计算，不需要打卡'
-      return `完成率 ${comp.percent}%（${comp.done}/${comp.total}）· 作业按周算，微练习要当天打卡`
+      return `完成率 ${comp.percent}%（${comp.done}/${comp.total}）· 这一周哪天做完都算，过了周日夜里就定了；微练习要当天打卡`
     }
 
     // 周目标 chips（周历「本周目标」区与全览行共用，口径一致）

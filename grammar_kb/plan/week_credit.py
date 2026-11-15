@@ -1,22 +1,26 @@
-"""周作业计分：非微练习按周认完成，微练习按北京日打卡。
+"""周作业计分：非微练习按当周认完成，微练习按北京日打卡。
 
-日历上的「周一背词 / 周六 FCE / 周日错词 / 提升日」只是建议节奏。
-除微练习外，完成落在该周周一及之后都算进这一周（含过周后补做）。
-词汇「本周新掌握」仍只数 mastered_at 落在本周周一至周日的词，
-不把下一周才掌握的词挪回来（那会改四周计分）。
+一周是周一 00:00 到下周一 00:00（北京时间，周日 24:00 截止）。
+这一周里任何一天做完都算这一周；过了周日夜里再做，记在做的那一周，
+不改上一周的进度。不改已经写下的流水。
+词汇「本周新掌握」只数 mastered_at 落在本周周一至周日的词。
+微练习开着时，周一到周日各打一次卡，过了当天不能补。
 """
 from __future__ import annotations
 
+import contextlib
 import sqlite3
 from datetime import date, timedelta
 
-from ..clock import monday_of, today_cn
+from ..clock import cn_dt, monday_of, today_cn
 from .util import add_days
 
-# 离散作业（讲次、试卷、视频、提升档……）的完成窗口右端：不封周。
-OPEN_HI = "9999-12-31"
-_CHECKIN_DAYS = 5  # 周一至周五
+_CHECKIN_DAYS = 7  # 周一至周日
 _WEEKDAY_CN = ("周一", "周二", "周三", "周四", "周五", "周六", "周日")
+_WEEK_DETAIL = (
+    "归在这一周，周一到周日哪一天完成都算。"
+    "过了周日夜里，这一周的进度就定了，之后再做记在做的那一周。"
+)
 
 
 def week_credit_for(store, user: str, day: str, ctx=None) -> "WeekCredit":
@@ -94,7 +98,7 @@ class WeekCredit:
         slot = self._lectures if kind == "lecture" else self._hw
         if slot is None:
             try:
-                slot = self.store.lecture_done(self.ws, None, self.user, kind)
+                slot = self.store.lecture_done(self.ws, self.we, self.user, kind)
             except (TypeError, ValueError, sqlite3.Error):
                 slot = set()
             if kind == "lecture":
@@ -106,7 +110,7 @@ class WeekCredit:
     def fce(self) -> set[str]:
         if self._fce is None:
             try:
-                self._fce = set(self.store._fce_actuals(self.ws, OPEN_HI, self.user))
+                self._fce = set(self.store._fce_actuals(self.ws, self.we, self.user))
             except (TypeError, ValueError, sqlite3.Error):
                 self._fce = set()
         return self._fce
@@ -114,14 +118,14 @@ class WeekCredit:
     def videos(self) -> set[str]:
         if self._videos is None:
             try:
-                self._videos = self.store._retold_video_ids(self.ws, OPEN_HI, self.user)
+                self._videos = self.store._retold_video_ids(self.ws, self.we, self.user)
             except (TypeError, ValueError, sqlite3.Error):
                 self._videos = set()
         return self._videos
 
     def _nce2(self, kind: str) -> set[int]:
         try:
-            return self.store._nce2_kind_ids(self.ws, OPEN_HI, self.user, kind)
+            return self.store._nce2_kind_ids(self.ws, self.we, self.user, kind)
         except (TypeError, ValueError, sqlite3.Error):
             return set()
 
@@ -136,71 +140,22 @@ class WeekCredit:
         return self._nce2_listen
 
     def papers(self) -> set[str]:
-        """week_start 及之后登记、且试卷仍在存档里的 paper_id。"""
+        """本周 [周一, 下周一) 登记、且试卷仍在存档里的 paper_id。"""
         if self._papers is not None:
             return self._papers
-        out: set[str] = set()
-        try:
-            with self.store._connect() as conn:
-                tabs = {r[0] for r in conn.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table'")}
-                if "vocab_exams" not in tabs:
-                    self._papers = out
-                    return out
-                rows = conn.execute(
-                    "SELECT paper_id FROM vocab_exams"
-                    " WHERE user = ? AND exam_date >= ?"
-                    " AND paper_id IS NOT NULL AND paper_id != ''",
-                    (self.user, self.ws),
-                ).fetchall()
-                pids = [str(r["paper_id"]) for r in rows if r["paper_id"]]
-                archived: set[str] = set()
-                if pids and "vocab_paper_history" in tabs:
-                    marks = ",".join("?" * len(pids))
-                    archived = {
-                        r["paper_id"] for r in conn.execute(
-                            "SELECT paper_id FROM vocab_paper_history"
-                            f" WHERE paper_id IN ({marks})", pids)
-                    }
-                out = {pid for pid in pids if pid in archived}
-        except sqlite3.Error:
-            out = set()
-        self._papers = out
-        return out
+        self._papers = archived_paper_ids(self.store, self.user, self.ws, self.we)
+        return self._papers
 
     def wrong_words_in_week(self) -> bool:
-        """本周（不含过周之后）有过到期复习或攻克。只给周日建议行认账。"""
-        if self._wrong is not None:
-            return self._wrong
-        hit = False
-        try:
-            with self.store._connect() as conn:
-                cols = {r[1] for r in conn.execute(
-                    "PRAGMA table_info(recite_review)")}
-                parts = []
-                args: list = [self.user]
-                if "due_touch" in cols:
-                    parts.append("(due_touch >= ? AND due_touch < ?)")
-                    args.extend((self.ws, self.we))
-                if "conquered_at" in cols:
-                    parts.append("(conquered_at >= ? AND conquered_at < ?)")
-                    args.extend((self.ws, self.we))
-                if parts:
-                    row = conn.execute(
-                        "SELECT 1 FROM recite_review WHERE user = ? AND ("
-                        + " OR ".join(parts) + ") LIMIT 1",
-                        args,
-                    ).fetchone()
-                    hit = row is not None
-        except sqlite3.Error:
-            hit = False
-        self._wrong = hit
-        return hit
+        """本周 [周一, 下周一) 有过到期复习或攻克。过周之后的不算。"""
+        if self._wrong is None:
+            self._wrong = wrong_activity(self.store, self.user, self.ws, self.we)
+        return self._wrong
 
     def boost_states(self) -> dict:
         if self._boost is None:
             from . import boost
-            self._boost = boost.pass_state_map(self.user, self.ws, OPEN_HI)
+            self._boost = boost.pass_state_map(self.user, self.ws, self.we)
         return self._boost
 
     def covers(self, task: dict) -> dict | None:
@@ -283,7 +238,7 @@ def build_week_pool(store, user: str, week_start: str) -> list[dict]:
     pool: list[dict] = []
 
     def add(row: dict) -> None:
-        row.setdefault("detail", "归在这一周，哪一天完成都算；过了本周再补上，这一周也会算上")
+        row.setdefault("detail", _WEEK_DETAIL)
         pool.append(row)
 
     for lec in t.get("lectures") or []:
@@ -319,7 +274,7 @@ def build_week_pool(store, user: str, week_start: str) -> list[dict]:
             text = f"{head} {gained}/{target if target else vg}"
         add({"type": "vocab", "key": "vocab-week", "text": text, "done": met,
              "why": "week_credit" if met else "below_quota",
-             "detail": "本周任意一天（含周末）新掌握都算。下一周才掌握的词记在下一周，不挪回来。"})
+             "detail": "本周周一到周日新掌握的词都算。下一周才掌握的词记在下一周，不挪回来。"})
 
     for item in t.get("fce") or []:
         label = str(item)
@@ -331,8 +286,16 @@ def build_week_pool(store, user: str, week_start: str) -> list[dict]:
         row = store._reading_task(book_key, goal, user, 7)
         text = row.get("text") or f"泛读 {book_key}"
         done = ("已读完" in text) or ("目标已达成" in text)
+        detail = row.get("detail") or "读完这一周的章节即可，不限哪一天"
+        book = store._match_book(book_key, user)
+        if book is not None and reading_moved_after(store, user, book["id"], credit.we):
+            done = reading_met_before(store, user, book["id"], goal, credit.we)
+            if not done:
+                text = (text.replace("已读完 🎉", "这一周还没读完")
+                        .replace("目标已达成 🎉", "这一周还没达成"))
+                detail = "这一周结束前读到的进度。之后再读的记在后面的周。"
         add({"type": "reading", "key": f"reading:{book_key}", "text": text,
-             "detail": row.get("detail") or "读完这一周的章节即可，不限哪一天",
+             "detail": detail,
              "done": done, "why": "goal_reached" if done else "not_read"})
 
     for vid in store._plan_videos(t):
@@ -391,17 +354,14 @@ def build_week_pool(store, user: str, week_start: str) -> list[dict]:
         done = credit.wrong_words_in_week()
         n = min(30, wrong_n)
         add({"type": "wrong_words", "key": "wrong_words",
-             "text": f"错词再练 {n} 词（建议）",
-             "detail": "周日集中练是建议。本周任意一天复习了到期词或攻克了词，都算完成。",
+             "text": f"错词再练 {n} 词",
+             "detail": "本周任意一天复习了到期词或攻克了词，都算完成。过了这周再练，记在下一周。",
              "done": done, "why": "week_credit" if done else "no_signal"})
     return pool
 
 
 def micro_checkins(store, user: str, week_start: str, enabled: bool) -> list[dict]:
-    """微练习打卡：计划开启时周一到周五各一次。
-
-    周末不是应打卡日。若历史上周末有记录，附在末尾展示，不进分母、也不算漏打。
-    """
+    """微练习打卡：计划开启时周一到周日各一次。过了当天没打的算漏打。"""
     if not enabled:
         return []
     today = today_cn().isoformat()
@@ -411,11 +371,6 @@ def micro_checkins(store, user: str, week_start: str, enabled: bool) -> list[dic
         d = (ws + timedelta(days=i)).isoformat()
         st = store._micro_daily_state(user, d)
         out.append(_checkin_row(d, i, st, today, required=True))
-    for i in (5, 6):
-        d = (ws + timedelta(days=i)).isoformat()
-        st = store._micro_daily_state(user, d)
-        if st.get("done") or int(st.get("n") or 0) > 0:
-            out.append(_checkin_row(d, i, st, today, required=False))
     return out
 
 
@@ -445,8 +400,135 @@ def _checkin_row(day: str, index: int, st: dict, today: str, *,
 
 
 def checkin_progress(rows: list[dict]) -> tuple[int, int, int]:
-    """(已打卡, 漏打, 应打卡天数)。只数工作日打卡，不含周末历史记录。"""
+    """(已打卡, 漏打, 应打卡天数)。应打卡是周一到周日。"""
     required = [r for r in rows if r.get("required")]
     done = sum(1 for r in required if r.get("status") == "done")
     missed = sum(1 for r in required if r.get("status") == "missed")
     return done, missed, len(required)
+
+
+def archived_paper_ids(store, user: str, lo: str, hi: str) -> set[str]:
+    """[lo, hi) 内登记、且试卷仍在存档里的 paper_id。"""
+    out: set[str] = set()
+    try:
+        with store._connect() as conn:
+            tabs = {r[0] for r in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'")}
+            if "vocab_exams" not in tabs:
+                return out
+            rows = conn.execute(
+                "SELECT paper_id FROM vocab_exams"
+                " WHERE user = ? AND exam_date >= ? AND exam_date < ?"
+                " AND paper_id IS NOT NULL AND paper_id != ''",
+                (user, str(lo)[:10], str(hi)[:10]),
+            ).fetchall()
+            pids = [str(r["paper_id"]) for r in rows if r["paper_id"]]
+            archived: set[str] = set()
+            if pids and "vocab_paper_history" in tabs:
+                marks = ",".join("?" * len(pids))
+                archived = {
+                    r["paper_id"] for r in conn.execute(
+                        "SELECT paper_id FROM vocab_paper_history"
+                        f" WHERE paper_id IN ({marks})", pids)
+                }
+            out = {pid for pid in pids if pid in archived}
+    except sqlite3.Error:
+        return set()
+    return out
+
+
+def wrong_activity(store, user: str, lo: str, hi: str) -> bool:
+    """[lo, hi) 内有过到期复习或攻克。缺列当没有。"""
+    try:
+        with store._connect() as conn:
+            cols = {r[1] for r in conn.execute("PRAGMA table_info(recite_review)")}
+            parts = []
+            args: list = [user]
+            if "due_touch" in cols:
+                parts.append("(due_touch >= ? AND due_touch < ?)")
+                args.extend((str(lo)[:10], str(hi)[:10]))
+            if "conquered_at" in cols:
+                parts.append("(conquered_at >= ? AND conquered_at < ?)")
+                args.extend((str(lo)[:10], str(hi)[:10]))
+            if not parts:
+                return False
+            row = conn.execute(
+                "SELECT 1 FROM recite_review WHERE user = ? AND ("
+                + " OR ".join(parts) + ") LIMIT 1",
+                args,
+            ).fetchone()
+            return row is not None
+    except sqlite3.Error:
+        return False
+
+
+def reading_moved_after(store, user: str, book_id: int, hi: str) -> bool:
+    """阅读进度行的更新时间不早于 hi：当前水位含这一周之后的阅读。
+
+    没有时间戳时不当成「之后又读过」，沿用当前进度（打开中的这一周就是这样）。
+    """
+    conn = store._lib_connect()
+    if conn is None:
+        return False
+    try:
+        with contextlib.closing(conn):
+            row = conn.execute(
+                f"SELECT {cn_dt('updated_at')} AS d FROM reading_progress"
+                " WHERE book_id = ? AND user = ?",
+                (int(book_id), user),
+            ).fetchone()
+    except sqlite3.Error:
+        return False
+    if not row or not row["d"]:
+        return False
+    return str(row["d"]) >= f"{str(hi)[:10]} 00:00:00"
+
+
+def focus_percent_before(store, user: str, book_id: int, hi: str) -> float:
+    """hi 之前能证明的最高阅读进度（全书百分比）。
+
+    整段会话都落在 hi 之前，用结束进度。会话跨过 hi 的，只用开头进度，
+    避免把下一周接着读的部分算回这一周。
+    """
+    bound = f"{str(hi)[:10]} 00:00:00"
+    try:
+        with store._connect() as conn:
+            rows = conn.execute(
+                "SELECT percent_start, percent_end,"
+                f" {cn_dt('created_at')} AS c, {cn_dt('ended_at')} AS e"
+                " FROM focus_sessions"
+                " WHERE user = ? AND module = 'library' AND book_id = ?",
+                (user, int(book_id)),
+            ).fetchall()
+    except sqlite3.Error:
+        return 0.0
+    best = 0.0
+    for r in rows:
+        created = str(r["c"] or "")
+        ended = str(r["e"] or "")
+        if not created or created >= bound:
+            continue
+        if ended and ended >= bound:
+            val = float(r["percent_start"] or 0)
+        else:
+            val = float(r["percent_end"] or r["percent_start"] or 0)
+        if val > best:
+            best = val
+    return best
+
+
+def reading_met_before(store, user: str, book_id: int, goal, hi: str) -> bool:
+    """这一周结束前，这本书的周目标是否已经达到。"""
+    if isinstance(goal, list):
+        try:
+            goal_words = store._chapters_words_sum({str(int(book_id)): goal})
+            done_w = store._read_words_in_chapters(
+                user, int(book_id), goal, before=hi)
+        except (TypeError, ValueError, sqlite3.Error):
+            return False
+        return goal_words > 0 and done_w >= goal_words
+    try:
+        target = float(goal or 100)
+    except (TypeError, ValueError):
+        target = 100.0
+    return focus_percent_before(store, user, int(book_id), hi) + 0.05 >= target
