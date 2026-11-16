@@ -148,11 +148,11 @@ export async function mountTimetable(el) {
     if (acts.vocab_n) statRows.push(`🔤 背单词 ${acts.vocab_n} 个${acts.vocab_min ? `（${acts.vocab_min} 分钟）` : ''}`)
     const statHtml = statRows.length
       ? `<div class="tt-acts">${statRows.map((s) => `<span>${escapeHtml(s)}</span>`).join('')}</div>` : ''
-    // 每日有效学习时长 vs 目标（周中45/周末90）：与教师计划看板同口径
+    // 每日有效学习时长 vs 目标：七天都是同一个分钟数
     const goalMin = studyGoalMin(day.date)
     const studyMin = acts.study_min || 0
     const minBadge = day.future ? '' :
-      `<i class="tt-min ${studyMin >= goalMin ? 'ok' : ''}" title="每日目标 ${goalMin} 分钟（周中45/周末90）">${studyMin ? `${studyMin}′` : '0′'}/${goalMin}′${studyMin >= goalMin ? ' ✓' : ''}</i>`
+      `<i class="tt-min ${studyMin >= goalMin ? 'ok' : ''}" title="每日目标 ${goalMin} 分钟">${studyMin ? `${studyMin}′` : '0′'}/${goalMin}′${studyMin >= goalMin ? ' ✓' : ''}</i>`
     const live = items || planItems || extraRows || microRow || statRows.length
     return `
       <section class="tt-day ${isToday ? 'today' : ''} ${day.future ? 'future' : ''}">
@@ -173,7 +173,7 @@ export async function mountTimetable(el) {
   el.innerHTML = `
     <div class="view-head">
       <h1>课程表</h1>
-      <p>本周（${d.week_start || ''} 起）${studentWeekRate(d.completion)} · 作业按周算，哪天做完都算；微练习要当天打卡</p>
+      <p>本周（${d.week_start || ''} 起）${studentWeekRate(d.completion)} · 这一周哪天做完都算，过了周日夜里就定了；微练习要当天打卡</p>
     </div>
     ${loop ? loopCardHtml(loop) : ''}
     <div id="tt-micro"></div>
@@ -232,8 +232,8 @@ function loopCardHtml(loop) {
   }
   if (micro.slot === false) {
     cells.push(micro.done
-      ? { name: '📝 微练习', done: true, state: '今天不是打卡日，这组成绩已留下' }
-      : { name: '📝 微练习', state: '今天不用打卡', na: true })
+      ? { name: '📝 微练习', done: true, state: '这周没排打卡，这组成绩已留下' }
+      : { name: '📝 微练习', state: '这周不用打卡', na: true })
   } else {
     cells.push(micro.done
       ? { name: '📝 今日打卡', done: true }
@@ -390,7 +390,7 @@ async function renderMicroCard(host, microEnabled, checkins) {
   const rows = Array.isArray(checkins) ? checkins : []
   const open = rows.find((x) => x && x.status === 'open' && x.required !== false)
   if (rows.length && !open) {
-    host.innerHTML = `<div class="tt-micro-card off"><span class="tt-micro-main">今天不用打卡</span><small>周一到周五各一次，过了当天不能补</small></div>`
+    host.innerHTML = `<div class="tt-micro-card off"><span class="tt-micro-main">今天不用打卡</span><small>周一到周日各一次，过了当天不能补</small></div>`
     return
   }
   let d
@@ -419,7 +419,7 @@ async function renderMicroCard(host, microEnabled, checkins) {
     }
     inner = `<span class="tt-micro-main">今日打卡已完成 ✓${score}</span><small>点开回看</small>`
   } else if (d.slot === false) {
-    inner = `<span class="tt-micro-main">今天不用打卡</span><small>周一到周五各一次</small>`
+    inner = `<span class="tt-micro-main">今天不用打卡</span><small>周一到周日各一次</small>`
   } else {
     inner = `<span class="tt-micro-main">今日打卡 · ${qs} 题</span><small>现在打卡 →</small>`
   }
@@ -480,7 +480,7 @@ function checkinStripHtml(rows) {
     </div>`).join('')
   return `
     <section class="tt-checkins card">
-      <h3>微练习打卡 <small>周一到周五各一次，过了当天不能补</small></h3>
+      <h3>微练习打卡 <small>周一到周日各一次，过了当天不能补</small></h3>
       <div class="tt-checkin-row">${cells}</div>
     </section>`
 }
@@ -494,7 +494,7 @@ function weekPoolHtml(pool) {
     </div>`).join('')
   return `
     <section class="tt-pool card">
-      <h3>本周作业 <small>哪一天做完都算；过了本周再补上，这一周也会算</small></h3>
+      <h3>本周作业 <small>这一周哪一天做完都算；过了周日夜里，进度就定了</small></h3>
       <div class="tt-pool-list">${rows}</div>
     </section>`
 }

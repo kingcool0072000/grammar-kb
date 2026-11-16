@@ -162,19 +162,21 @@ def test_nce2_units_contract(env):
     units = store._nce2_units({"nce2_units": [
         {"lessons": ["2", 1, 2, "x"], "mode": "daily"},
         {"lessons": [3], "mode": "weekend", "task_mode": "listen"},
-        {"lessons": [9], "mode": "bogus"},          # 坏 mode：整组跳过
+        {"lessons": [9], "mode": "bogus"},          # mode 忽略，课不丢
         {"lessons": [], "mode": "daily"},           # 空组跳过
         "junk",
     ]})
     assert [(u["lessons"], u["mode"], u["task_mode"]) for u in units] == [
         ([2, 1], "daily", "shadow"),   # 去重保序转 int；task_mode 缺省 shadow
         ([3], "weekend", "listen"),
+        ([9], "bogus", "shadow"),
     ]
     # 无旧键兜底：旧平铺 nce2 键不读
     assert store._nce2_units({"nce2": [1, 2]}) == []
     assert store._plan_lessons({"nce2_units": [
         {"lessons": [2, 1], "mode": "daily"},
-        {"lessons": [1, 3], "mode": "weekend"}]}) == [2, 1, 3]
+        {"lessons": [1, 3], "mode": "weekend"},
+        {"lessons": [9], "mode": "bogus"}]}) == [2, 1, 3, 9]
 
 
 # ---- daily 组：队首 1 课、完成信号、次日队列前进 ----
@@ -274,23 +276,21 @@ def test_monday_submission_counts_into_week_window(env):
     assert store._nce2_kind_ids(MON + " 00:00:00", TUE, "malin", "shadow") == {1}
 
 
-# ---- weekend 组：周六集中 2 课、周日兜底清尾、工作日不排 ----
+# ---- 旧 weekend 组：不再把课锁在周六日，和 daily 一样每天队首 1 课 ----
 
-def test_weekend_group_sat_two_sun_sweep(env):
+def test_weekend_mode_still_schedules_on_weekdays(env):
     store = _store(env)
     store.put_week(MON, {"nce2_units": [{"lessons": [11, 12, 13],
                                          "mode": "weekend",
                                          "task_mode": "shadow"}]}, "", "malin")
-    assert _nce2_rows(store, "malin", TUE) == []  # 工作日不排 weekend 组
-    assert [x["lesson_id"] for x in _nce2_rows(store, "malin", SAT)] == [11, 12]
+    assert [x["lesson_id"] for x in _nce2_rows(store, "malin", TUE)] == [11]
+    assert [x["lesson_id"] for x in _nce2_rows(store, "malin", SAT)] == [11]
     _submit(env, "malin", 11, SAT, "shadow")
-    _submit(env, "malin", 12, SAT, "shadow")
-    # 周六容量 2 课：交完的 ✓ 行保留，第 3 课顺延（欠账滚动）
+    # 周六交完队首：✓ 行留下，下一课同一天顶上
     by_id = {x["lesson_id"]: x for x in _nce2_rows(store, "malin", SAT)}
-    assert by_id[11]["done"] is True and by_id[12]["done"] is True
-    assert by_id[13]["done"] is False
-    # 周日只剩没做的第 13 课（清尾），做完的不再重现
-    assert [x["lesson_id"] for x in _nce2_rows(store, "malin", SUN)] == [13]
+    assert by_id[11]["done"] is True
+    assert by_id[12]["done"] is False
+    assert [x["lesson_id"] for x in _nce2_rows(store, "malin", SUN)] == [12]
 
 
 # ---- 对外出口：task_public 透传 / 冻结快照白名单 ----

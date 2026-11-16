@@ -499,22 +499,19 @@ def _put_week(c, ht, tasks):
 
 
 def test_daily_spread_weekday_template(plan_env, weekday_clock):
-    """工作日均摊：讲次摊工作日、背词配额=剩余词÷剩余工作日。"""
+    """七天同一套均摊：讲次和背词都按本周还剩的日历天，不再只摊工作日。"""
     c = _client(plan_env)
     hs = _login(c, "malin", "123456")
     ht = _login(c, "teacher", "123456")
     _put_week(c, ht, {"lectures": [25, 26], "vocab_goal": 100})
     d = c.get("/plan/today", headers=hs).json()["data"]
-    # 背词配额行存在且 quota 量化（周一 100/5=20；周五分母只剩 1 天）
     vocab = next((t for t in d["tasks"] if t["type"] == "vocab"), None)
     assert vocab is not None and vocab.get("quota")
-    # 讲次按「剩余讲次 / 剩余工作日」向上取整摊到今天。
-    # 周一 2/5 → 1 讲；周五 2/1 → 两讲都在今天。不能写死「恰好 1 讲」，
-    # 也不能写成 `len==1 and … or "26" in text`（or 优先级会让多讲也误过）。
-    wd_left = 5 - today_cn().weekday()
-    per = max(1, -(-2 // wd_left))  # 与 plan.week_daily_tasks 同一向上取整
+    days_left = 7 - today_cn().weekday()
+    per = max(1, -(-2 // days_left))
     lecs = [t for t in d["tasks"] if t["type"] == "lecture"]
     assert [t["text"] for t in lecs] == [f"第{n}讲 学+测" for n in (25, 26)[:per]]
+    assert vocab["quota"] == -(-100 // days_left)
 
 
 def test_daily_spread_future_days_carry_plan(plan_env, weekday_clock):
@@ -530,16 +527,11 @@ def test_daily_spread_future_days_carry_plan(plan_env, weekday_clock):
         assert x["total"] == len(x["tasks"])
         # 未来日任务全部 done=False（灰显计划，不是完成记录）
         assert all(not t["done"] for t in x["tasks"])
-    # 周六未来日应排 FCE（精读不再排进课表）
-    sat_all = [x for x in d["days"]
-               if x["future"] and date.fromisoformat(x["date"]).weekday() == 5]
-    if sat_all:
-        sat_tasks = sat_all[0]["tasks"]
-        assert any(t["type"] == "fce" for t in sat_tasks)
-    # 工作日未来日应有背词配额
-    wd = [x for x in futures if date.fromisoformat(x["date"]).weekday() < 5]
-    if wd:
-        assert any(t["type"] == "vocab" for t in wd[0]["tasks"])
+    # FCE 和背词七天都摊，不再把 FCE 只放在周六
+    for x in d["days"]:
+        kinds = {t["type"] for t in x["tasks"]}
+        assert "fce" in kinds
+        assert "vocab" in kinds
 
 
 def test_vocab_quota_done_judgement(plan_env, weekday_clock):
@@ -1128,9 +1120,8 @@ def test_leveled_vocab_quota_matches_weekly_new(plan_env, weekday_clock):
     _put_week(c, ht, {"vocab_lv": 1, "vocab_pct": 100, "vocab_goal": 61, "vocab_new": 60})
     d = c.get("/plan/today", headers=hs).json()["data"]
     vocab = next(t for t in d["tasks"] if t["type"] == "vocab")
-    wd_left = 5 - today_cn().weekday()
-    expect = 60 // wd_left
-    assert expect != -(-61 // wd_left)
+    days_left = 7 - today_cn().weekday()
+    expect = -(-60 // days_left)
     assert vocab["quota"] == expect
     assert "新掌握" in (vocab.get("detail") or "")
 
@@ -1166,7 +1157,9 @@ def test_week_preview_spreads_draft_without_saving(plan_env, weekday_clock):
     assert any(t["type"] == "lecture" for t in today["tasks"])
     assert any(t["type"] == "vocab" for t in today["tasks"])
     sat = next(d for d in days if date.fromisoformat(d["date"]).weekday() == 5)
+    mon = next(d for d in days if date.fromisoformat(d["date"]).weekday() == 0)
     assert any(t["type"] == "fce" for t in sat["tasks"])
+    assert any(t["type"] == "fce" for t in mon["tasks"])
     weeks = c.get("/plan/weeks?user=malin", headers=ht).json()["data"]["weeks"]
     assert all(w["week_start"] != MON for w in weeks)
     bad = c.post("/plan/week-preview", headers=ht,
@@ -1343,37 +1336,31 @@ def _scheduled_video_rows(ps, day_iso):
             and "已提交" not in (t.get("detail") or "")]
 
 
-def test_video_units_weekend_and_daily(plan_env):
-    """视频 weekend 组周六出未完成前 2 个、周日兜底清剩余、工作日不排；
-    旧 videos 平铺 = 一个 daily 组（工作日每天 1 个，现状）。"""
+def test_video_units_ignore_weekend_mode(plan_env):
+    """视频不再按 weekend/daily 分摊：旧的 weekend 组周一也排，每天队首 1 个。"""
     from grammar_kb.plan import PlanStore
     _seed_plan_videos(plan_env, "va", "vb", "vc")
     ps = PlanStore(str(plan_env / "fce.db"))
     mon = date.fromisoformat(MON).isoformat()
     sat = (date.fromisoformat(MON) + timedelta(days=5)).isoformat()
     sun = (date.fromisoformat(MON) + timedelta(days=6)).isoformat()
-    # weekend 组：周六 va/vb 两条行（vc 留周日兜底），周一不排
     ps.put_week(MON, {"video_units": [
         {"vids": ["va", "vb", "vc"], "mode": "weekend"}]}, "", user="malin")
-    rows = _scheduled_video_rows(ps, sat)
-    assert [r["vid"] for r in rows] == ["va", "vb"], rows
-    assert all("周六集中" in r["detail"] for r in rows)
-    assert _scheduled_video_rows(ps, mon) == []
-    # 周六做完 va → 周日兜底出剩余 vb/vc
+    assert [r["vid"] for r in _scheduled_video_rows(ps, mon)] == ["va"]
+    assert [r["vid"] for r in _scheduled_video_rows(ps, sat)] == ["va"]
     con = sqlite3.connect(plan_env / "fce.db")
     con.execute("INSERT INTO video_retell (user, vid, audio_b64, created_at)"
                 " VALUES ('malin', 'va', 'x', ?)", (f"{sat}T01:30:00+00:00",))
     con.commit()
     con.close()
     rows_sun = _scheduled_video_rows(ps, sun)
-    assert [r["vid"] for r in rows_sun] == ["vb", "vc"], rows_sun
-    assert all("周日兜底" in r["detail"] for r in rows_sun)
-    # daily 组：工作日每天 1 个（现状文案）
+    assert [r["vid"] for r in rows_sun] == ["vb"], rows_sun
+    assert "每天 1 个" in rows_sun[0]["detail"]
     ps.put_week(MON, {"video_units": [{"vids": ["va", "vb"], "mode": "daily"}]},
                 "", user="malin")
     rows_daily = _scheduled_video_rows(ps, mon)
     assert [r["vid"] for r in rows_daily] == ["va"], rows_daily
-    assert "工作日每天 1 个" in rows_daily[0]["detail"]
+    assert "每天 1 个" in rows_daily[0]["detail"]
 
 
 def test_week_view_micro_enabled_gate(plan_env):
@@ -1396,8 +1383,8 @@ def test_week_view_micro_enabled_gate(plan_env):
 
 
 def test_week_goal_micro_dimension(plan_env):
-    """周目标微练习维度：tasks.micro 开着才出现；done=周一到周五打卡天数
-    （分母 5）；排在「视频复述」维度之后；无 micro 组不加维度。"""
+    """周目标微练习维度：tasks.micro 开着才出现；done=周一到周日打卡天数
+    （分母 7）；排在「视频复述」维度之后；无 micro 组不加维度。"""
     c = _client(plan_env)
     ht = _login(c, "teacher", "123456")
     # 无 micro 组：不出微练习维度（视频复述维度正常在）
@@ -1406,7 +1393,7 @@ def test_week_goal_micro_dimension(plan_env):
               headers=ht).json()["data"]
     names = [x["name"] for x in d["goal_progress"]["dims"]]
     assert "视频复述" in names and "微练习" not in names
-    # 开 micro + 周一~周三各做完一组 → 微练习 3/5，位于视频复述之后
+    # 开 micro + 周一~周三各做完一组 → 微练习 3/7，位于视频复述之后
     _put_week(c, ht, {"lectures": [29], "video_units": [{"vids": ["v1"], "mode": "daily"}], "micro": 1})
     for i in (0, 1, 2):
         _seed_micro_daily(plan_env,
@@ -1416,7 +1403,7 @@ def test_week_goal_micro_dimension(plan_env):
               headers=ht).json()["data"]
     dims = d["goal_progress"]["dims"]
     micro = next(x for x in dims if x["name"] == "微练习")
-    assert micro["done"] == 3 and micro["total"] == 5
+    assert micro["done"] == 3 and micro["total"] == 7
     assert "漏打" in (micro.get("extra") or "")
     names = [x["name"] for x in dims]
     assert names.index("微练习") > names.index("视频复述")
@@ -1591,8 +1578,8 @@ def test_vocab_any_weekday_meets_week_target(plan_env):
         assert pool["done"] is True
 
 
-def test_late_lecture_updates_that_week(plan_env):
-    """过了周再考完，仍记回布置那一周。"""
+def test_late_lecture_does_not_update_closed_week(plan_env):
+    """过了周日夜里再考完，不改上一周的进度。"""
     c = _client(plan_env)
     hs = _login(c, "malin", "123456")
     ht = _login(c, "teacher", "123456")
@@ -1606,11 +1593,11 @@ def test_late_lecture_updates_that_week(plan_env):
                headers=ht).json()["data"]
     mon = next(x for x in wv["days"] if x["date"] == PREV)
     lec = next(t for t in mon["tasks"] if t["key"] == "lecture:29")
-    assert lec["done"] is True and lec["why"] == "week_credit"
+    assert lec["done"] is False
     dim = next(x for x in wv["goal_progress"]["dims"] if x["name"] == "语法课程")
-    assert dim["done"] == 1 and dim["total"] == 1
+    assert dim["done"] == 0 and dim["total"] == 1
     pool = next(x for x in wv["week_pool"] if x["key"] == "lecture:29")
-    assert pool["done"] is True
+    assert pool["done"] is False
 
 
 def test_paper_counts_off_sunday(plan_env, weekday_clock):
@@ -1638,13 +1625,12 @@ def test_paper_counts_off_sunday(plan_env, weekday_clock):
 
 
 def test_wrong_words_credit_any_day_in_week(plan_env):
-    """周日「错词再练」是建议：周中复习了到期词，周日那一行也算完成。"""
+    """错词再练不再只挂在周日：周三复习了，这一周算完成，后面的天不再重复派。"""
     sun = (date.fromisoformat(MON) + timedelta(days=6))
     wed = (date.fromisoformat(MON) + timedelta(days=2)).isoformat()
     when = datetime(sun.year, sun.month, sun.day, 12, 0, tzinfo=CN_TZ)
     with freeze_clock(when):
         c = _client(plan_env)
-        hs = _login(c, "malin", "123456")
         ht = _login(c, "teacher", "123456")
         _put_week(c, ht, {})
         con = sqlite3.connect(plan_env / "fce.db")
@@ -1656,9 +1642,15 @@ def test_wrong_words_credit_any_day_in_week(plan_env):
             " VALUES ('malin', 'duew', 1, ?, ?)", (sun.isoformat(), wed))
         con.commit()
         con.close()
-        d = c.get("/plan/today", headers=hs).json()["data"]
-        row = next(t for t in d["tasks"] if t["type"] == "wrong_words")
-        assert row["done"] is True and row["why"] == "week_credit"
+        wv = c.get(f"/plan/week-view?week_start={MON}&user=malin",
+                   headers=ht).json()["data"]
+        pool = next(t for t in wv["week_pool"] if t["type"] == "wrong_words")
+        assert pool["done"] is True and pool["why"] == "week_credit"
+        wed_day = next(d for d in wv["days"] if d["date"] == wed)
+        row = next(t for t in wed_day["tasks"] if t["type"] == "wrong_words")
+        assert row["done"] is True
+        sun_day = next(d for d in wv["days"] if d["date"] == sun.isoformat())
+        assert not any(t["type"] == "wrong_words" for t in sun_day["tasks"])
 
 
 def test_micro_checkins_missed_stay_missed(plan_env):
@@ -1678,6 +1670,10 @@ def test_micro_checkins_missed_stay_missed(plan_env):
         assert by["周三"]["status"] == "open"
         assert by["周四"]["status"] == "upcoming"
         assert by["周五"]["status"] == "upcoming"
+        assert by["周六"]["status"] == "upcoming"
+        assert by["周日"]["status"] == "upcoming"
+        assert all(r["required"] for r in wv["micro_checkins"])
+        assert len(wv["micro_checkins"]) == 7
         dim = next(x for x in wv["goal_progress"]["dims"] if x["name"] == "微练习")
-        assert dim["done"] == 1 and dim["total"] == 5
+        assert dim["done"] == 1 and dim["total"] == 7
         assert "漏打 1" in (dim.get("extra") or "")

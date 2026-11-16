@@ -189,8 +189,8 @@ class MicroStore:
 
         返回 {"date", "questions", "answered", "done", "can_check_in",
         "closed", "slot", "status"}。options 不含答案。
-        slot=工作日（计划内打卡日）。周末仍可做「今天」的题，但不占
-        周一到周五的打卡名额。已过期的日期不能新开一组。
+        slot=打卡日。周一到周日都是打卡日。已过期的日期不能新开一组，
+        也不能补打；漏掉的日子就留着。
         """
         user = (user or "").strip()[:60]
         day = self._valid_day(day)
@@ -261,15 +261,14 @@ class MicroStore:
     @staticmethod
     def _checkin_flags(day: str, today_iso: str, done: bool,
                        has_row: bool) -> dict:
-        wd = date.fromisoformat(day).weekday()
-        slot = wd < 5
+        slot = True
         closed = day < today_iso
         if done:
             status = "done"
         elif closed:
-            status = "missed" if slot else "closed"
+            status = "missed"
         elif day == today_iso:
-            status = "open" if slot else "off"
+            status = "open"
         else:
             status = "upcoming"
         return {

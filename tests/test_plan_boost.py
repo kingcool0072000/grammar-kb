@@ -163,10 +163,12 @@ def test_week_view_boost_rows_reach_student(env):
     assert tue[0]["boost"] == {"item_ref": MEM_REF, "kind": "memory",
                                "configured": True}
     assert tue[0]["key"] == f"boost:{MEM_REF}"
-    # 周一非提升日无行；未来日灰显且不带 boost（防提前提交被门禁拒）
-    assert [t for t in by[MON]["tasks"] if t["type"] == "boost"] == []
+    # 周一也出提升行（不再只有周二/周四）。未来日不带 boost 载荷，避免提前提交。
+    mon_refs = [t["boost"]["item_ref"] for t in by[MON]["tasks"] if t["type"] == "boost"]
+    assert mon_refs == [MEM_REF, RET_REF]
     for fut in (THU, "2026-11-13", SAT):
         assert all("boost" not in t for t in by[fut]["tasks"])
+        assert any(t["type"] == "boost" for t in by[fut]["tasks"])
 
 
 def test_today_items_default_days(env):
@@ -202,25 +204,23 @@ def test_schedule_boost_rows(env):
                                "configured": True}
     assert "〈被动态语态一览〉" in tue[0]["text"]  # 查到了专题节点标题
     assert tue[1]["text"] == "⭐ 提升任务"          # patterns 未部署 → 兜底文案
-    assert _boost_rows(store, MON) == []           # 周一不是提升日
+    assert [r["key"] for r in _boost_rows(store, MON)] == [
+        f"boost:{MEM_REF}", f"boost:{RET_REF}"]
 
 
 def test_schedule_boost_default_days(env):
-    """没配 boost_days、items 非空：默认周二/周四出，周一不出。"""
+    """没配 boost_days、items 非空：周一到周日都出，不再默认只放周二/周四。"""
     store = _store(env)
     store.put_week(MON, {"boost_items": ITEMS}, "", "malin")
     assert len(_boost_rows(store, TUE)) == 2
-    assert _boost_rows(store, MON) == []
+    assert len(_boost_rows(store, MON)) == 2
 
 
 def test_schedule_boost_days_without_items(env):
-    """boost_days 配了、items 空：提升日出说明行（configured=False）。"""
+    """boost_days 配了、items 空：不再出「未配置」说明行。"""
     store = _store(env)
     store.put_week(MON, {"boost_days": [2, 4]}, "", "malin")
-    tue = _boost_rows(store, TUE)
-    assert len(tue) == 1
-    assert tue[0]["text"] == "⭐ 提升日（本周未配置提升任务）"
-    assert tue[0]["boost"]["configured"] is False
+    assert _boost_rows(store, TUE) == []
     assert _boost_rows(store, MON) == []
 
 
@@ -247,16 +247,15 @@ def test_schedule_boost_retell_label(env):
 
 
 def test_schedule_boost_rolling(env):
-    """欠账滚动：周二过关的项周四不再出；都没做 → 周六兜底两条都在。"""
+    """过关的项后面的天不再出；没过关的每天都还在，不单靠周六兜底。"""
     store = _store(env)
     store.put_week(MON, {"boost_days": [2, 4], "boost_items": ITEMS},
                    "", "malin")
     boost.record("malin", TUE, MEM_REF, "memory")
     thu = {r["key"] for r in _boost_rows(store, THU)}
-    assert thu == {f"boost:{RET_REF}"}          # memory 已过关，只剩 retell
+    assert thu == {f"boost:{RET_REF}"}
     sat = {r["key"] for r in _boost_rows(store, SAT)}
-    assert sat == {f"boost:{RET_REF}"}          # 周六兜底滚入未过关项
-    # 过关当天行照出（✓ 由 completion 点亮）
+    assert sat == {f"boost:{RET_REF}"}
     tue = {r["key"] for r in _boost_rows(store, TUE)}
     assert tue == {f"boost:{MEM_REF}", f"boost:{RET_REF}"}
 
@@ -278,11 +277,14 @@ def test_completion_boost_keys(env):
 
 
 def test_completion_boost_none_row_always_done(env):
-    """说明行无可做任务：恒亮不占完成率。"""
+    """只有 boost_days、没有任务：不再派生说明行。旧快照里的空行仍恒亮。"""
     store = _store(env)
     store.put_week(MON, {"boost_days": [2, 4]}, "", "malin")
     rows = store.week_daily_tasks(MON, for_date=TUE, user="malin")
-    comp = store.day_completion("malin", TUE, rows)
+    assert not any(r.get("type") == "boost" for r in rows)
+    legacy = [{"type": "boost", "key": "boost:none",
+               "boost": {"item_ref": "", "configured": False}}]
+    comp = store.day_completion("malin", TUE, legacy)
     assert comp["keys"]["boost:none"] == {"done": True, "why": "boost_none"}
 
 
@@ -383,17 +385,17 @@ def test_schedule_boost_retell_low_score_rolls(env):
     boost.record("malin", TUE, rref, "retell", score=5)
     thu = _boost_rows(store, THU)
     assert [r["key"] for r in thu] == [f"boost:{rref}"]
-    # 周四重交 9 分：过关，周六兜底不再出
+    # 周四重交 9 分：过关，后面的天不再出
     boost.record("malin", THU, rref, "retell", score=9)
     assert _boost_rows(store, SAT) == []
 
 
-def test_today_items_keeps_unfinished_from_earlier_week(env):
-    """过周后，上一周还没过关的提升项仍能交。"""
+def test_today_items_does_not_carry_last_week(env):
+    """过了周，上一周没做完的提升项不再出现在这周，也不把进度记回上一周。"""
     store = _store(env)
     store.put_week(MON, {"boost_items": ITEMS}, "", "malin")
     nxt = "2026-11-16"  # 下周一
-    assert boost.today_items("malin", nxt) == ITEMS
+    assert boost.today_items("malin", nxt) == []
     boost.record("malin", nxt, MEM_REF, "memory")
-    refs = [boost.item_ref_of(x) for x in boost.today_items("malin", nxt)]
-    assert MEM_REF not in refs and RET_REF in refs
+    states = boost.pass_state_map("malin", MON, "2026-11-16")
+    assert MEM_REF not in states

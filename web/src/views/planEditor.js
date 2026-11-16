@@ -41,7 +41,7 @@ export async function openWeekEditor({
   } catch { /* 读不到规则时按默认：专题学完算这讲完成 */ }
 
   // 装载转换：旧周的扁平 articles/videos 先转成一组 *_units（历史精读仍留在 JSON，
-  // 视频=工作日摊开，带 legacy 小标）。编辑器不再列出、也不再新增精读。
+  // 带 legacy 小标）。编辑器不再列出、也不再新增精读。旧的 mode 原样留在 JSON 里。
   let tasks = copyTasks(migrateLegacyUnits(week?.tasks || {}))
   delete tasks.speak
   let openKey = null
@@ -49,16 +49,14 @@ export async function openWeekEditor({
   let addType = ''
   let showAll = false
   let videoPick = []
-  let vidMode = 'daily'
   let nce2Pick = []
-  let nce2Mode = 'daily'
   let nce2Task = 'shadow'
   let pickNote = ''
   let readBook = ''
   let readChapters = []
   let previewTimer = 0
   let previewSeq = 0
-  // ⭐ 提升档（v3）：boost_days 周几 + boost_items（口诀卡/句型复述）。
+  // ⭐ 提升档：boost_items（口诀卡/句型复述）。旧的 boost_days 保存时原样留下，界面不再让人选周几。
   // 选择态与懒加载的数据都挂本闭包，paint() 重画不丢。
   let boostOpen = false
   let boostType = 'memory'
@@ -288,9 +286,8 @@ export async function openWeekEditor({
     return []
   }
 
-  // ---- ⭐ 提升档编辑（最小版）：周几多选 + 口诀卡/句型复述列表增删 ----
-  // 保存走 tasks JSON 的 boost_days / boost_items 字段（整 JSON 覆盖）；
-  // 教师没碰过这块时不写这两个键，后端按默认策略（周二/周四）兜底。
+  // ---- ⭐ 提升档编辑：口诀卡/句型复述列表增删 ----
+  // 保存走 tasks JSON 的 boost_items。旧的 boost_days 若已在 JSON 里，整份覆盖时仍带着，后端不再读。
   function ensureBoost() {
     if (!Array.isArray(tasks.boost_items)) tasks.boost_items = []
   }
@@ -345,7 +342,7 @@ export async function openWeekEditor({
       ? (boostTopics == null ? '<p class="muted">专题列表加载中…</p>' : '')
       : (boostPatterns == null ? '<p class="muted">句型列表加载中…</p>' : '')
     return `
-      <p class="pe-wiz-hint">本周的提升任务：背一张口诀卡，或复述一个句型。学生本周任意一天做完都算，过了本周再补上也记在这一周。课表上仍可能在周二、周四给个建议，那天没做不扣掉。</p>
+      <p class="pe-wiz-hint">本周的提升任务：背一张口诀卡，或复述一个句型。这一周任意一天做完都算。过了周日夜里再做，记在下一周。</p>
       <div class="pe-boost-items">${itemLines || '<p class="muted pe-empty">还没配提升任务。</p>'}</div>
       <div class="pe-boost-add">
         <label class="pe-speak"><input type="radio" name="pe-boost-type" value="memory" ${boostType === 'memory' ? 'checked' : ''}/> 口诀卡</label>
@@ -421,7 +418,7 @@ export async function openWeekEditor({
           </div>
           <aside class="pe-preview-card">
             <b>学生课表预览</b>
-            <p class="pe-lead">右边是建议节奏（词汇摊在工作日、视频和听力按组示意）。学生哪一天做完都算这一周，不按格子上的星期几卡进度。</p>
+            <p class="pe-lead">右边是建议节奏，周一到周日用同一套摊法。这一周哪一天做完都算；过了周日夜里，这一周的进度就定了。</p>
             <div id="pe-preview-body"><p class="muted">正在按课表摊开…</p></div>
           </aside>
         </div>
@@ -458,7 +455,7 @@ export async function openWeekEditor({
       return '<p class="pe-wiz-hint">NCE2 听力一组 1–5 课：要换课或换完成方式就点「去掉」删整组，再重新加一组。</p>'
     }
     if (r.type === 'micro') {
-      return '<p class="pe-wiz-hint">本周已启用微练习：周一到周五各打一次卡（每天 3 题）。过了当天不能补，漏打留在进度里。不要了点「去掉」。</p>'
+      return '<p class="pe-wiz-hint">本周已启用微练习：周一到周日各打一次卡（每天 3 题）。过了当天不能补，漏打留在进度里。不要了点「去掉」。</p>'
     }
     if (r.type === 'fce') return `<label class="pe-speak">改成 <select id="pe-swap-fce">${fceOptions(r.label)}</select></label>`
     if (r.type === 'paper') return `<label class="pe-speak">改成 <select id="pe-swap-paper">${paperOptions(r.paper_id)}</select></label>`
@@ -585,15 +582,13 @@ export async function openWeekEditor({
     if (!videos.length) return '<p class="muted">还没有上架视频。先到备课里添加。</p>'
     const list = showAll ? videos : videos.filter((v) => !takenOf('video', v.vid))
     return `<label class="pe-speak"><input type="checkbox" id="pe-show-all" ${showAll ? 'checked' : ''}/> 连本周已有的视频一起显示</label>
-      <p class="pe-wiz-hint">勾 2 个为一组再放。工作日摊开或周末集中只是课表上的建议，哪天看完都算这一周。</p>
+      <p class="pe-wiz-hint">勾 2 个为一组再放。这一周哪天看完都算，过了周日夜里再交记在下一周。</p>
       ${pickNote ? `<p class="pe-wiz-hint">${escapeHtml(pickNote)}</p>` : ''}
       <div class="pe-wiz-picks">${(list.length ? list : videos).map((v) => {
         const on = videoPick.includes(v.vid)
         const taken = takenOf('video', v.vid)
         return `<button type="button" class="pe-pick ${on ? 'on' : ''} ${taken ? 'taken' : ''}" data-vid-pick="${escAttr(v.vid)}" ${taken ? 'disabled' : ''}>${escapeHtml(String(v.title || v.vid).slice(0, 42))}${taken ? ' · 已在本周' : ''}</button>`
       }).join('')}</div>
-      <label class="pe-speak"><input type="radio" name="pe-vid-mode" value="daily" ${vidMode === 'daily' ? 'checked' : ''}/> 工作日摊开（每天 1 个）</label>
-      <label class="pe-speak"><input type="radio" name="pe-vid-mode" value="weekend" ${vidMode === 'weekend' ? 'checked' : ''}/> 周末集中（周六 2 个）</label>
       <div><button class="btn-primary" id="pe-vid-add" type="button" ${videoPick.length === 2 ? '' : 'disabled'}>放入清单（一组，已勾 ${videoPick.length}/2 个）</button></div>`
   }
 
@@ -602,7 +597,7 @@ export async function openWeekEditor({
     if (!nce2Lessons.length) return '<p class="muted">还没有可布置的 NCE2 听力课（有音频的课才会出现在这里）。</p>'
     const list = showAll ? nce2Lessons : nce2Lessons.filter((l) => !takenOf('nce2', l.id))
     return `<label class="pe-speak"><input type="checkbox" id="pe-show-all" ${showAll ? 'checked' : ''}/> 连本周已有的课一起显示</label>
-      <p class="pe-wiz-hint">勾 1–5 课为一组再放。摊在工作日或周末只是建议，哪天做完都算这一周。跟读 = 听一句跟一句读，精听 = 只听不跟读。</p>
+      <p class="pe-wiz-hint">勾 1–5 课为一组再放。这一周哪天做完都算。跟读 = 听一句跟一句读，精听 = 只听不跟读。</p>
       ${pickNote ? `<p class="pe-wiz-hint">${escapeHtml(pickNote)}</p>` : ''}
       <div class="pe-wiz-picks">${(list.length ? list : nce2Lessons).map((l) => {
         const on = nce2Pick.includes(Number(l.id))
@@ -610,8 +605,6 @@ export async function openWeekEditor({
         const words = Number(l.n_words) > 0 ? ` · ${Number(l.n_words)} 词` : ''
         return `<button type="button" class="pe-pick ${on ? 'on' : ''} ${taken ? 'taken' : ''}" data-nce2-pick="${Number(l.id)}" ${taken ? 'disabled' : ''}>第${l.id}课 ${escapeHtml(String(l.title || '').slice(0, 30))}${words}${taken ? ' · 已在本周' : ''}</button>`
       }).join('')}</div>
-      <label class="pe-speak"><input type="radio" name="pe-nce2-mode" value="daily" ${nce2Mode === 'daily' ? 'checked' : ''}/> 工作日摊开（每天 1 课）</label>
-      <label class="pe-speak"><input type="radio" name="pe-nce2-mode" value="weekend" ${nce2Mode === 'weekend' ? 'checked' : ''}/> 周末集中（一次做完）</label>
       <label class="pe-speak"><input type="radio" name="pe-nce2-task" value="shadow" ${nce2Task === 'shadow' ? 'checked' : ''}/> 听力跟读（默认）</label>
       <label class="pe-speak"><input type="radio" name="pe-nce2-task" value="listen" ${nce2Task === 'listen' ? 'checked' : ''}/> 仅精听</label>
       <div><button class="btn-primary" id="pe-nce2-add" type="button" ${nce2Pick.length >= 1 && nce2Pick.length <= 5 ? '' : 'disabled'}>放入清单（一组，已勾 ${nce2Pick.length}/5 课）</button></div>`
@@ -619,7 +612,7 @@ export async function openWeekEditor({
 
   function microAddHtml() {
     const on = tasks.micro != null
-    return `<p class="pe-wiz-hint">一组微练习 = 本周周一到周五各打一次卡（每天 3 题）。过了当天不能补。</p>
+    return `<p class="pe-wiz-hint">一组微练习 = 本周周一到周日各打一次卡（每天 3 题）。过了当天不能补。</p>
       <button type="button" class="chip pe-chchip ${on ? 'primary' : ''}" id="pe-micro-toggle" ${on ? 'disabled' : ''}>${on ? '已在本周' : '放入清单（一组）'}</button>`
   }
 
@@ -664,9 +657,7 @@ export async function openWeekEditor({
         addType = btn.dataset.type
         showAll = false
         videoPick = []
-        vidMode = 'daily'
         nce2Pick = []
-        nce2Mode = 'daily'
         nce2Task = 'shadow'
         pickNote = ''
         readBook = ''
@@ -740,7 +731,7 @@ export async function openWeekEditor({
     const vidAdd = dlg.querySelector('#pe-vid-add')
     if (vidAdd) vidAdd.addEventListener('click', () => {
       if (videoPick.length !== 2) return
-      tasks = appendVideoUnit(tasks, videoPick, vidMode)
+      tasks = appendVideoUnit(tasks, videoPick)
       openKey = `video-unit:${(tasks.video_units || []).length - 1}`
       videoPick = []
       pickNote = ''
@@ -767,7 +758,7 @@ export async function openWeekEditor({
     const nce2Add = dlg.querySelector('#pe-nce2-add')
     if (nce2Add) nce2Add.addEventListener('click', () => {
       if (nce2Pick.length < 1 || nce2Pick.length > 5) return
-      tasks = appendNce2Unit(tasks, nce2Pick, nce2Mode, nce2Task)
+      tasks = appendNce2Unit(tasks, nce2Pick, undefined, nce2Task)
       openKey = `nce2-unit:${(tasks.nce2_units || []).length - 1}`
       nce2Pick = []
       pickNote = ''
@@ -783,12 +774,6 @@ export async function openWeekEditor({
         paint()
       })
     }
-    dlg.querySelectorAll('input[name="pe-vid-mode"]').forEach((r) => {
-      r.addEventListener('change', () => { vidMode = r.value })
-    })
-    dlg.querySelectorAll('input[name="pe-nce2-mode"]').forEach((r) => {
-      r.addEventListener('change', () => { nce2Mode = r.value })
-    })
     dlg.querySelectorAll('input[name="pe-nce2-task"]').forEach((r) => {
       r.addEventListener('change', () => { nce2Task = r.value })
     })

@@ -33,7 +33,7 @@ def completion_percent(done: int, total: int) -> Optional[int]:
 
 
 def vocab_progress_detail(done: bool, gained: int, detail: Optional[str]) -> str:
-    """工作日背词行的说明：打卡和文案都跟「今日新掌握」。"""
+    """背词行的说明：打卡和文案都跟「今日新掌握」。"""
     n = int(gained or 0)
     if done:
         return f"今日新掌握 {n} 词 ✓"

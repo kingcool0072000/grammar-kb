@@ -64,27 +64,23 @@ RULES: list[dict] = [
 #   "vocab_new": 40,             # 老师填的「本周新掌握」个数（= 保存时的分母）
 #   "vocab_pct": 14,             # 兼容旧界面的百分比，编辑器不再让人填
 #   "fce": [["Test1","P1"], ...] # 简化为 ["Test1 P1", "Test2 RUE"] 文本即可
-#   "reading": {"波西杰克逊1": 100} # 书名 → 周末目标进度 %
-#   "videos": ["xxxxxxxxxxx", ...]  # 旧字段：平铺 vid=一个 daily 组（工作日
-#                                   # 每天 1 个看+复述，欠账滚动）
+#   "reading": {"波西杰克逊1": 100} # 书名 → 本周目标进度 %
+#   "videos": ["xxxxxxxxxxx", ...]  # 旧字段：平铺 vid，由一次性脚本转成 video_units
 #   "article_units": [{"ids": [58], "mode": "daily" | "weekend"}],
 #                                   # 历史精读分组，只保留不排课（0.3.0 起课表不再出
 #                                   # 精读行）。编辑器不再新增；保存时原样留在 JSON 里。
+#                                   # mode 不再表示周末/工作日。
 #   "video_units":   [{"vids": ["abc", "def"], "mode": "daily" | "weekend"}],
-#                                   # 视频分组：daily 组=现状每天 1 个；weekend 组
-#                                   # 周六集中 2 个、周日兜底清剩余
+#                                   # 视频分组。mode 是旧字段，排课忽略：全部视频
+#                                   # 合成一条队列，每天 1 个，周一到周日一样。
 #   "nce2_units":    [{"lessons": [1, 2], "mode": "daily" | "weekend",
 #                     "task_mode": "listen" | "shadow"}],
-#                                   # NCE2 听力跟读分组（nce2_units 是唯一来源，
-#                                   # 无旧键兜底）：daily 组每天队首 1 课、欠账
-#                                   # 滚动同日不堆；weekend 组周六集中 2 课、
-#                                   # 周日兜底清剩余。task_mode 缺省 shadow
-#                                   # （跟读行）；listen=精听行
-#   "micro": 1                      # 微练习开关：开启后该周周一到周五各一次打卡。
+#                                   # NCE2 听力分组（nce2_units 是唯一来源）。
+#                                   # mode 忽略，不丢课。每天队首 1 课。
+#                                   # task_mode 缺省 shadow（跟读）；listen=精听。
+#   "micro": 1                      # 微练习开关：开启后该周周一到周日各一次打卡。
 #                                   # 不排进其他作业的完成率分母。过了北京日不能补。
-#   "boost_days": [2, 4],           # 旧字段：只影响课表上「建议出现在哪一天」，
-#                                   # 不再限制哪天能做、哪天算完成。缺省且 items
-#                                   # 非空时建议行仍默认周二/周四。
+#   "boost_days": [2, 4],           # 旧字段：保存时原样留下，排课和完成都不再读。
 #   "boost_items": [                # 提升档任务（每天一件难事，v3.0.0 设计 §2.3）：
 #     {"type": "memory",            #   A) 专题节点口诀卡翻面自评
 #      "topic_id": "lecture-30-passive-2", "node_key": "k2"} |

@@ -64,9 +64,9 @@ export function taskWhyShort(code) {
   return TASK_WHY_SHORT[code] || ''
 }
 
-/** 每日有效学习时长目标（分钟）：周中（周一~周五）45，周末（周六/日）90 */
-export function studyGoalMin(dateIso) {
-  if (!dateIso) return 45
-  const dow = new Date(`${dateIso}T00:00:00`).getDay() // 0=周日
-  return dow === 0 || dow === 6 ? 90 : 45
+/** 每日有效学习时长目标（分钟）。七天同一个数，不再按周末加码。 */
+export const DAILY_STUDY_GOAL_MIN = 45
+
+export function studyGoalMin(_dateIso) {
+  return DAILY_STUDY_GOAL_MIN
 }
