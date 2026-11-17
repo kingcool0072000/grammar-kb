@@ -3,7 +3,7 @@
 与 :class:`VideoStore` 同库（data/fce.db，环境变量 GRAMMAR_KB_FCE_DB 优先）：
 - ``nce2_submission``：96 课的提交流水。date=北京钟当日 ISO；kind ∈
   ``{"listen","shadow"}``——listen 是「听完了」的打点（无音频，同日同课
-  幂等，status 恒 'done'）；shadow 是跟读录音（base64，webm 自动转 m4a，
+  幂等，status 恒 'done'）；shadow 是跟读录音（base64，webm 自动转 mp3，
   与视频复述同链路，'pending' → 教师批改后 'graded'，同日同课可重复提交，
   新行历史保留）。
 
@@ -211,7 +211,7 @@ class Nce2Store:
         - lesson 必须在 manifest 里，否则 ValueError（路由转 422）；
         - kind=listen：无音频，同 user+lesson+date 已有行直接返回旧行
           （幂等——前端重试/重复点击不产生第二条）；
-        - kind=shadow：必带 audio_b64，经 audioutil 转 m4a（同视频复述
+        - kind=shadow：必带 audio_b64，经 audioutil 转 mp3（同视频复述
           链路）；同日同课允许再次提交（新行，历史保留给教师回看）。
         """
         user = (user or "").strip()[:32]
@@ -259,7 +259,7 @@ class Nce2Store:
         except (TypeError, ValueError):
             dur = 0.0
         audio_b64, mime = transcode_for_safari(audio_b64, mime or "audio/webm")
-        # 转码后再查一次上限：低码率超长 webm 输入合规，转出的 m4a 可能
+        # 转码后再查一次上限：低码率超长 webm 输入合规，转出的 mp3 可能
         # 反超 12MB（不设二道闸会把超大 blob 静默存进库）。
         if len(audio_b64) > MAX_AUDIO_B64:
             raise ValueError("录音过大（转码后超过 12MB），请缩短录音时长")

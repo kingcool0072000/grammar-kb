@@ -2,7 +2,7 @@
 
 与 :class:`ReadingStore` 同库（data/fce.db，环境变量 GRAMMAR_KB_FCE_DB 优先）：
 - ``video_item``：视频清单（vid=YouTube 11 位 ID；vocab=生僻词 JSON；hints=复述提示）
-- ``video_retell``：学生复述录音（base64，webm 自动转 m4a，与精读录音同链路；
+- ``video_retell``：学生复述录音（base64，webm 自动转 mp3，与精读录音同链路；
   v3 起 ref_kind 区分对象：'video'=视频复述 / 'pattern'=句型跟读复述，
   pattern 行的 vid 语义 = pattern_item.id）
 

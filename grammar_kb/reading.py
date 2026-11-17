@@ -256,7 +256,7 @@ class ReadingStore:
     def export_recordings(self, out_dir: str, user: Optional[str] = None) -> list[Path]:
         """把录音导出为音频文件（附朗读选段文本），返回文件路径列表。
 
-        文件名：rec{id}_{user}_{YYYYMMDD_HHMM}.{m4a|webm}；每条录音旁若
+        文件名：rec{id}_{user}_{YYYYMMDD_HHMM}.{mp3|m4a|webm}；每条录音旁若
         有 selected_text，同目录写 rec{id}_selected_text.txt（给外部工具
         /模型对照原文用）。
         """
@@ -278,7 +278,9 @@ class ReadingStore:
         with self._connect() as conn:
             for r in conn.execute(sql, args).fetchall():
                 mime = (r["mime"] or "").lower()
-                ext = "m4a" if "mp4" in mime else ("webm" if "webm" in mime else "bin")
+                ext = ("mp3" if "mpeg" in mime
+                       else "m4a" if "mp4" in mime
+                       else "webm" if "webm" in mime else "bin")
                 when = _re.sub(r"[-:T]", "", (r["created_at"] or "")[:16])
                 name = f"rec{r['id']}_{r['user']}_{when}.{ext}"
                 p = out / name

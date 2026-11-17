@@ -119,6 +119,7 @@ def test_new_paper_legacy_dict_still_renders():
 def test_transcode_non_webm_passthrough():
     b64 = base64.b64encode(b"audio-bytes").decode()
     assert transcode_for_safari(b64, "audio/mp4") == (b64, "audio/mp4")
+    assert transcode_for_safari(b64, "audio/mpeg") == (b64, "audio/mpeg")
     assert transcode_for_safari(b64, "") == (b64, "")
 
 
