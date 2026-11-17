@@ -59,7 +59,10 @@ def test_micro_checkin_includes_weekend_and_rejects_expired(env):
         assert c.put(f"/plan/weeks/{MON}", headers=ht, json={
             "tasks": {"micro": 1}, "notes": "",
         }).status_code == 200
-        micro = MicroStore(str(env / "fce.db"))
+        # exam.db 也要隔离：缺省会连开发机的生产快照（malin 有成绩），
+        # _sync_pool 灌入真实作业卷题，当日题被顶掉 → submit 永远不 done。
+        micro = MicroStore(str(env / "fce.db"),
+                           exam_db_path=str(env / "exam.db"))
         ids = [micro.add_question(
             category="grammar", stem=f"q{i}", options=["A", "B"],
             answer="A", status="published") for i in range(3)]

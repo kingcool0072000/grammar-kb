@@ -1,0 +1,568 @@
+{
+  "meta": {
+    "topic_id": "lecture-31-modal-1",
+    "title": "第31讲 · 情态动词① 自学",
+    "subtitle": "自学一遍再上课：热身认识情态动词 → 吃透 can/could（能力·许可·推测）→ can vs be able to → can 的黄金搭配 → may/might（许可·可能·祝愿）→ must（必须·禁止·肯定推测·答语规则）→ must vs have to → need 的双重身份 → 综合验收（共 9 关 · 53 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "intro",
+        "title": "① 热身：情态动词是什么",
+        "explain": "<p>情态动词表示说话人对动作或状态的<b>态度</b>——可能、应该、必要。它自己词义不完全，<b>不能独立作谓语</b>，必须和<b>动词原形</b>连用。</p><p>考试判断三大特征，一个都不能少：</p><table><tr><th>特征</th><th>意思</th><th>正误对照</th></tr><tr><td>① 后接动词原形</td><td>没有 to，没有 -ing</td><td>He can <b>swim</b>.（√ He can to swim / swims ✗）</td></tr><tr><td>② 无人称单复数变化</td><td>三单也不加 -s</td><td>He <b>can</b> swim.（√ He cans ✗）</td></tr><tr><td>③ 有的无时态变化</td><td>must / ought to 没有过去式</td><td>昨天必须 → <b>had to</b>（√ musted ✗）</td></tr></table><p>本讲阵容：can / could、may / might、must、need，外加两个「编外队员」be able to 和 have to——它们不是情态动词，却专门补情态动词的短板（时态）。</p><p>自学方法：先读讲解 → 盖住答案做题 → 点「先想再看答案」核对 → 全懂了点「我学完了」进下一关。</p>",
+        "qs_label": "热身自测（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "情态动词表示的是什么？",
+            "options": [
+              "动作发生的时间",
+              "说话人对动作的态度（可能、应该、必要）",
+              "动作的执行者",
+              "动作的承受者"
+            ],
+            "answer": "B. 说话人对动作的态度（可能、应该、必要）",
+            "explain": "情态动词是「态度词」：can 能力、may 许可、must 必须——都在表达说话人怎么看这个动作。"
+          },
+          {
+            "stem": "情态动词后面的动词用什么形式？",
+            "options": [
+              "三单形式",
+              "-ing 形式",
+              "过去分词",
+              "动词原形"
+            ],
+            "answer": "D. 动词原形",
+            "explain": "情态动词 + 动词原形，铁律。He can swim，不能 to swim / swims / swimming。"
+          },
+          {
+            "stem": "下面哪句是对的？",
+            "options": [
+              "He cans swim.",
+              "He can swim.",
+              "He can swims.",
+              "He can to swim."
+            ],
+            "answer": "B. He can swim.",
+            "explain": "A 死于「情态动词无人称变化，不加 -s」；C 死于「后面必须动词原形」；D 死于「没有 to」。三大特征一题全考。"
+          },
+          {
+            "stem": "You must ________ (finish) your homework before dinner.",
+            "answer": "finish",
+            "explain": "must 后接动词原形，finish 不变形。"
+          }
+        ]
+      },
+      {
+        "key": "can",
+        "title": "② can / could：能力 · 许可 · 推测",
+        "explain": "<p>can / could 一肩挑三职，每一职都有坑：</p><table><tr><th>用法</th><th>规则</th><th>例句</th></tr><tr><td><b>能力</b></td><td>can 现在/将来；could 过去</td><td>I can play badminton. / Bob <b>could</b> look after himself when he was home alone.</td></tr><tr><td><b>许可/请求</b></td><td>could 比 can 更委婉；但<b>回答只能用 can</b> / Sure / Of course，不能用 could</td><td>--- Can/Could you help me take out the rubbish? --- Yes, I <b>can</b>. / Sure. / Of course.</td></tr><tr><td><b>推测</b></td><td>can 只用于<b>否定句和疑问句</b>（can't = 不可能）；肯定推测「一定是」用 must</td><td>The boy <b>can't be</b> Jack. Jack is reading in the library. / Can she still be alive?</td></tr></table><p>补充一格：can 在肯定句里还能表示<b>理论上的可能</b>（「有时会」）：Scotland <b>can</b> be very warm in September. 苏格兰九月有时会很暖和——这是说规律，不是对具体某件事的推测。</p><p><b>记法</b>：请求可以委婉（Could you…?），回答必须老实（Yes, I <b>can</b>）——「问得客气，答得直接」。</p>",
+        "qs_label": "课堂练习：can / could 三用法",
+        "general_qs": [
+          {
+            "stem": "Bob ________ look after himself when he was home alone.（用 can 的适当形式填空）",
+            "answer": "could",
+            "explain": "when he was home alone 是过去 → 过去的能力用 could。"
+          },
+          {
+            "stem": "--- Could you pass me the salt?\n--- ________",
+            "options": [
+              "Yes, I could.",
+              "Yes, I can.",
+              "Sure, I could.",
+              "No, I couldn't."
+            ],
+            "answer": "B. Yes, I can.",
+            "explain": "could 只管把问题问得委婉，回答必须回到 can——A / C 死于「答语不用 could」；D 拒绝了还答非所问。"
+          },
+          {
+            "stem": "The boy ________ be Jack. Jack is reading in the library.（不可能，填情态动词）",
+            "answer": "can't",
+            "explain": "杰克正在图书馆看书 → 这个男孩「不可能是」他 → 否定推测 can't。肯定推测「一定是」才用 must。"
+          },
+          {
+            "stem": "肯定句表示「一定是」的推测，用哪个词？",
+            "options": [
+              "can",
+              "must",
+              "may",
+              "need"
+            ],
+            "answer": "B. must",
+            "explain": "推测分工：肯定句 must（一定是），否定句/疑问句 can（不可能/会吗），把握不大用 may。"
+          },
+          {
+            "stem": "Can she still be alive after all these years? 这句话里的 can 表示什么？",
+            "options": [
+              "能力",
+              "请求",
+              "疑问中的推测",
+              "许可"
+            ],
+            "answer": "C. 疑问中的推测",
+            "explain": "这么多年了她还可能活着吗？——can 在疑问句里表推测。「她还活着」是个疑问猜测，不是问她有没有能力活着。"
+          },
+          {
+            "stem": "Scotland can be very warm in September. 这里 can 表示？",
+            "options": [
+              "能力",
+              "理论上的可能（有时会）",
+              "许可",
+              "推测「一定是」"
+            ],
+            "answer": "B. 理论上的可能（有时会）",
+            "explain": "肯定句里的 can 表规律性可能：苏格兰九月「有时会」很暖和。对具体某件事的肯定推测才用 must。"
+          }
+        ],
+        "memory": {
+          "front": "can / could 的三大用法？Could you…? 怎么回答？",
+          "back": "能力：can 现在，could 过去\n许可/请求：could 更委婉，但回答只用 Yes, I can. / Sure / Of course\n推测：肯定句用 must（一定是），否定/疑问用 can't（不可能）\n例：The boy can't be Jack. 他不可能是杰克"
+        }
+      },
+      {
+        "key": "able",
+        "title": "③ can vs be able to：谁补谁的短板",
+        "explain": "<p>can 和 be able to 都表「能够」，分工却不同：</p><table><tr><th></th><th>can</th><th>be able to</th></tr><tr><td><b>能力类型</b></td><td>自身具备的一般能力</td><td>特定场合、经过努力做到的能力</td></tr><tr><td><b>时态</b></td><td>只有现在 can / 过去 could</td><td>各种时态都能变：is/was/will be / have been able to</td></tr><tr><td><b>被动语态</b></td><td>—</td><td>不能用于被动</td></tr><tr><td><b>主语</b></td><td>人或物</td><td>只能是人</td></tr></table><p>两句话看懂分工：</p><p>① I <b>will be able to</b> speak French.（将来——can 没有将来时，只能请 be able to 出场）</p><p>② This is the information that I <b>have been able to</b> get so far.（完成时——can 同样没有完成时）</p><p><b>记法</b>：can 是「会」，be able to 是「办成」；时态一到将来/完成，can 就下班。</p>",
+        "qs_label": "课堂练习：can 与 be able to 换岗",
+        "general_qs": [
+          {
+            "stem": "If you keep practising, you ________ ________ ________ speak French in two years.（用 be able to 的适当形式填空）",
+            "answer": "will be able to",
+            "explain": "in two years 将来时 → will be able to。can 没有将来时，这个坑专门留给 be able to 填。"
+          },
+          {
+            "stem": "She ________ swim since she was five.",
+            "options": [
+              "can",
+              "could",
+              "has been able to",
+              "is able to"
+            ],
+            "answer": "C. has been able to",
+            "explain": "since she was five → 现在完成时。can 没有完成时，A / B 死于时态；D 是现在时，接不住 since。"
+          },
+          {
+            "stem": "The fire was terrible, but everyone ________ get out of the building.",
+            "options": [
+              "could",
+              "was able to",
+              "can",
+              "is able to"
+            ],
+            "answer": "B. was able to",
+            "explain": "特定场合、经过努力成功做到 → 用 was able to（= managed to）。could 表过去的一般能力，不用来说「那次成功办到了」。"
+          },
+          {
+            "stem": "be able to 的主语通常只能是？",
+            "options": [
+              "人",
+              "物",
+              "人或物都可以",
+              "只能是无生命的东西"
+            ],
+            "answer": "A. 人",
+            "explain": "be able to 的主语只能是人——它说的是「某人办成了某事」，这是它和 can 的又一区别。"
+          }
+        ]
+      },
+      {
+        "key": "colloc",
+        "title": "④ can 的黄金搭配：四个短语锁死三个考点",
+        "explain": "<p>can 的搭配不多，但每一个都是考试常客，格式锁死：</p><table><tr><th>搭配</th><th>意思</th><th>格式</th><th>例句</th></tr><tr><td><b>can't help doing</b></td><td>情不自禁</td><td>help + <b>-ing</b></td><td>I can't help <b>crying</b>.</td></tr><tr><td><b>can't wait to do</b></td><td>迫不及待</td><td>wait + <b>to do</b></td><td>I can't wait <b>to see</b> you.</td></tr><tr><td><b>can do nothing but do</b></td><td>只能……</td><td>but + <b>动词原形</b></td><td>We can do nothing but <b>wait</b>.</td></tr><tr><td><b>as … as one can</b></td><td>尽可能……</td><td>= as … as possible</td><td>He runs as fast as he <b>can</b>. = as fast as <b>possible</b>.</td></tr></table><p><b>记法</b>：help 忍不住要 -ing，wait 迫不及待要 to do，but 前面有 do 后面就接原形，as…as one can 和 as…as possible 是一句话的两种说法。</p><p>提醒：as … as one can 里的 can 要跟主句时态走——主句过去时，这里就是 could；as … as possible 则永远不变。</p>",
+        "qs_label": "课堂练习 1：can 的黄金搭配（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "He tried to write ________.",
+            "options": [
+              "as careful as possible",
+              "as careful as he can",
+              "as carefully as possible",
+              "as carefully as he can"
+            ],
+            "answer": "C. as carefully as possible",
+            "explain": "两层筛：① write 是动词，要用副词 carefully 修饰（A / B 死于形容词）；② 主句 tried 是过去时，as … as he can 时态错位，应该 could（D 死于时态）；possible 不随时态变。"
+          },
+          {
+            "stem": "I can't help ________ sorry for the poor man.",
+            "options": [
+              "feel",
+              "felt",
+              "feeling",
+              "to feel"
+            ],
+            "answer": "C. feeling",
+            "explain": "can't help doing 情不自禁 → feeling。help 在这个短语里不接原形也不接 to do。"
+          },
+          {
+            "stem": "He could do nothing but ________ for the bus ________.",
+            "options": [
+              "wait, to come",
+              "to wait, to come",
+              "wait, come",
+              "to wait, come"
+            ],
+            "answer": "A. wait, to come",
+            "explain": "两空两个知识点：① but 前有 do（do nothing），but 后接动词原形 wait（B / D 死于 to wait）；② for the bus to come 是 for sb/sth to do 结构，bus 是 come 的逻辑主语（C 死于 come 光秃秃没有 to，两个动作没了主次）。"
+          },
+          {
+            "stem": "I can't wait ________ some fresh air. Staying home for such a long time is driving me crazy!",
+            "options": [
+              "get",
+              "got",
+              "getting",
+              "to get"
+            ],
+            "answer": "D. to get",
+            "explain": "can't wait to do 迫不及待 → to get。和 can't help doing（-ing）是一对易混搭档。"
+          },
+          {
+            "stem": "You ________ for the weekend if you ________.",
+            "options": [
+              "can stay, like",
+              "will stay, will like",
+              "can stay, will like",
+              "will stay, can like"
+            ],
+            "answer": "A. can stay, like",
+            "explain": "can 后接动词原形 stay；if 条件句用一般现在时 like（主将从现）。B / C 死于条件句里的 will；D 死于 can like。"
+          },
+          {
+            "stem": "Hearing the bad news, the girl couldn't help ________ (cry).",
+            "answer": "crying",
+            "explain": "couldn't help doing 情不自禁 → crying。时态变了（couldn't），格式不变（doing）。"
+          },
+          {
+            "stem": "He ran as fast as he ________.（用 can 的适当形式填空）",
+            "answer": "could",
+            "explain": "主句 ran 是过去时，as … as one can 里的 can 要跟着变 could。对照：as fast as possible 永远不变。"
+          }
+        ],
+        "memory": {
+          "front": "can 的四大黄金搭配，各接什么形式？",
+          "back": "can't help doing　情不自禁（I can't help crying.）\ncan't wait to do　迫不及待（I can't wait to see you.）\ncan do nothing but do　只能（but 后接动词原形）\nas … as one can = as … as possible　尽可能……（possible 不随时态变）"
+        }
+      },
+      {
+        "key": "may",
+        "title": "⑤ may / might：许可 · 可能 · 祝愿",
+        "explain": "<p>may / might 也是一肩三职：</p><table><tr><th>用法</th><th>规则</th><th>例句</th></tr><tr><td><b>许可</b></td><td>may = 可以，might 语气更委婉；但<b>给予许可时只能用 may / can，不能用 might</b></td><td>--- May/Might I borrow your pen? --- Yes, you <b>may/can</b>. / No, you <b>can't/may not</b>.</td></tr><tr><td><b>可能性</b></td><td>也许、可能——把握不大的推测；<b>might 的可能性更小</b></td><td>He may/might be sick. 他可能病了。</td></tr><tr><td><b>祝愿</b></td><td><b>只能用 may</b>，且 may 位于句首：May + 主语 + 动词原形</td><td><b>May</b> you succeed! / <b>May</b> God bless you! / <b>May</b> you have good luck!</td></tr></table><p><b>记法</b>：祝愿专用 may——「May 你成功」；might 只是更客气的 may，轮到「给许可」就没它的份了。</p><p>和 can 家对照着记：can't 回答 may 的疑问句也行（No, you can't.），两家的否定答语是互通的。</p>",
+        "qs_label": "课堂练习 2（上）：may / might 三用法",
+        "general_qs": [
+          {
+            "stem": "________ you succeed!",
+            "options": [
+              "May",
+              "Might",
+              "Must",
+              "Need"
+            ],
+            "answer": "A. May",
+            "explain": "祝愿句只能用 may，且放句首：May you succeed! 祝你成功！B 死于「might 不能表祝愿」。"
+          },
+          {
+            "stem": "--- I wonder if these are Jim's glasses.\n--- They ________ be his. He doesn't wear glasses.",
+            "options": [
+              "could",
+              "must",
+              "can't",
+              "mustn't"
+            ],
+            "answer": "C. can't",
+            "explain": "他都不戴眼镜 → 「不可能」是他的 → can't。B 死于方向反了（must 是「一定是」）；D 的 mustn't 是「禁止」，不用于推测。"
+          },
+          {
+            "stem": "--- May I take this book out of the reading room?\n--- No, you ________.",
+            "options": [
+              "can't",
+              "might not",
+              "needn't",
+              "must"
+            ],
+            "answer": "A. can't",
+            "explain": "May I…? 的否定答语用 can't 或 may not。B 死于「might 不用来给答复」；C 的 needn't（不必）只回答 Must I…?；D 答非所问。"
+          },
+          {
+            "stem": "May you ________ (have) good luck!",
+            "answer": "have",
+            "explain": "may 后接动词原形 → have。祝愿句 May + 主语 + 动词原形。"
+          },
+          {
+            "stem": "He ________ know the answer, but I'm not sure.",
+            "options": [
+              "may",
+              "must",
+              "can't",
+              "need"
+            ],
+            "answer": "A. may",
+            "explain": "but I'm not sure（我不确定）锁定「可能」→ may。B 死于太确定；C 死于方向反了。"
+          },
+          {
+            "stem": "--- Might I use your phone?\n--- Of course you ________.",
+            "options": [
+              "might",
+              "may",
+              "must",
+              "need"
+            ],
+            "answer": "B. may",
+            "explain": "might 只管把请求问得委婉，给予许可要用 may / can——A 死于「might 不能用来给许可」。"
+          },
+          {
+            "stem": "may 和 might 都能表示可能性，谁的可能性更小？",
+            "answer": "might",
+            "explain": "He may be sick. 可能病了；He might be sick. 没准儿病了——might 的把握更小一层。"
+          }
+        ],
+        "memory": {
+          "front": "may / might 三大用法？May I…? 怎么回答？祝愿句怎么构成？",
+          "back": "许可：may = 可以，might 更委婉；答语 Yes, you may/can. / No, you can't/may not.（给许可不用 might）\n可能：may/might 也许，might 可能性更小\n祝愿：只能 may，句首 May + 主语 + 动词原形（May you succeed!）"
+        }
+      },
+      {
+        "key": "must",
+        "title": "⑥ must：必须 · 禁止 · 肯定推测 · 答语规则",
+        "explain": "<p>must 是情态动词里的「重度词」，两个用法都要吃透：</p><table><tr><th>用法</th><th>规则</th><th>例句</th></tr><tr><td><b>必须</b></td><td>语气比 should / ought to 都强；<b>mustn't = 禁止</b>（不许）</td><td>The work must be finished as soon as possible. / People <b>mustn't</b> park here. 禁止停车。</td></tr><tr><td><b>肯定推测</b></td><td>只用于肯定句，「一定是」；否定推测用 can't</td><td>You <b>must be</b> hungry after such a long walk. / You've just had lunch. You <b>can't be</b> hungry now.</td></tr></table><p>本讲最高频考点——<b>Must I…? 的答语</b>：</p><p>--- Must I clean the house now?</p><p>--- 肯定：<b>Yes, you must.</b> / have to.（必须）</p><p>--- 否定：<b>No, you needn't.</b> / don't have to.（不必）</p><p>⚠️ 绝对不能说 No, you mustn't——mustn't 是「禁止」，不是「不必」，一字之差意思全反。</p><p><b>记法</b>：must 问 must 答，否答 needn't；「不必」needn't、「禁止」mustn't，两兄弟长得像、意思反着长。</p>",
+        "qs_label": "课堂练习 2（下）：must 全考点",
+        "general_qs": [
+          {
+            "stem": "--- Must I finish the job this Friday?\n--- No, you ________. You can finish it next Monday.",
+            "options": [
+              "can't",
+              "shouldn't",
+              "needn't",
+              "mustn't"
+            ],
+            "answer": "C. needn't",
+            "explain": "Must I…? 的否定答语固定 needn't / don't have to。D 的 mustn't 是「禁止」，不是「不必」——这是本讲第一大坑。"
+          },
+          {
+            "stem": "According to the traffic law, children under 12 ________ ride bicycles on the road.",
+            "options": [
+              "won't",
+              "wouldn't",
+              "needn't",
+              "mustn't"
+            ],
+            "answer": "D. mustn't",
+            "explain": "交通法规：12 岁以下「禁止」上路骑车 → mustn't。C 死于「needn't 是不必，法律说的可不是可不可以选择」。"
+          },
+          {
+            "stem": "You ________ be hungry after such a long walk.（一定是，填情态动词）",
+            "answer": "must",
+            "explain": "走了这么远的路，你一定饿了 → 肯定推测 must。"
+          },
+          {
+            "stem": "You've just had lunch. You ________ be hungry now.（不可能，填情态动词）",
+            "answer": "can't",
+            "explain": "刚吃过午饭，现在「不可能」饿 → 否定推测 can't。must 的推测只住肯定句，否定句换成 can't 值班。"
+          },
+          {
+            "stem": "--- Must we clean the classroom now?\n--- Yes, you ________.",
+            "options": [
+              "must",
+              "needn't",
+              "can't",
+              "may not"
+            ],
+            "answer": "A. must",
+            "explain": "Must I…? 的肯定答语用 must / have to。和否定答语 needn't 配成一对记。"
+          },
+          {
+            "stem": "People ________ park here.（禁止，用 must 的适当形式填空）",
+            "answer": "mustn't",
+            "explain": "禁止停车 → mustn't park。mustn't = 不允许、禁止，比 don't have to（不必）语气重得多。"
+          },
+          {
+            "stem": "Tomorrow is Saturday. You ________ get up at six.（不必）",
+            "options": [
+              "mustn't",
+              "needn't",
+              "can't",
+              "may not"
+            ],
+            "answer": "B. needn't",
+            "explain": "明天周六，不必六点起 → needn't（= don't have to）。A 死于把「不必」当成了「禁止」。"
+          }
+        ],
+        "memory": {
+          "front": "Must I…? 的肯定/否定回答？mustn't 和 needn't 的区别？",
+          "back": "Must I…? → Yes, you must/have to.\n　　　　　No, you needn't. / don't have to.（✗ No, you mustn't）\nmustn't = 禁止（不许做）\nneedn't = 不必（没必要做）——一字之差，意思相反\n推测：must 一定是 / can't 不可能"
+        }
+      },
+      {
+        "key": "musthave",
+        "title": "⑦ must vs have to：主观 vs 客观",
+        "explain": "<p>must 和 have to 都翻译成「必须」，但谁心里想、谁被逼的，考试就考这一刀：</p><table><tr><th></th><th>must</th><th>have to</th></tr><tr><td><b>视角</b></td><td>主观：说话人自己认为必须</td><td>客观：环境、规定逼着不得不</td></tr><tr><td><b>否定式</b></td><td>mustn't = 禁止</td><td>don't have to = 不必</td></tr><tr><td><b>时态变化</b></td><td>没有过去式、没有将来式</td><td>has to / had to / will have to 随便变</td></tr></table><p>三句话看懂分工：</p><p>① I <b>must</b> go now.（我自己要走——主观）</p><p>② It's a little late and I <b>have to</b> go now.（天晚了，不得不走——客观）</p><p>③ She <b>has to</b> finish her work today.（三单变化，must 可没这个本事）</p><p><b>记法</b>：must 心里想，have to 被逼的；时态一变脸（过去/将来/三单），must 就得让位给 have to。</p>",
+        "qs_label": "课堂练习：must 与 have to 换岗",
+        "general_qs": [
+          {
+            "stem": "The last bus has left, so we ________ walk home tonight.",
+            "options": [
+              "must",
+              "have to",
+              "may",
+              "can"
+            ],
+            "answer": "B. have to",
+            "explain": "末班车走了，不得不走路回家——客观环境逼的 → have to。"
+          },
+          {
+            "stem": "It's a little late and I ________ ________ go now.（不得不，用 have to 填空）",
+            "answer": "have to",
+            "explain": "天晚了不得不走 → 客观 → have to。"
+          },
+          {
+            "stem": "She ________ ________ finish her work before dinner yesterday.（用 have to 的适当形式填空）",
+            "answer": "had to",
+            "explain": "yesterday 过去时 → had to。must 没有过去式，过去的事必须只能靠 had to。"
+          },
+          {
+            "stem": "I ________ work hard — I really want to pass the exam.",
+            "options": [
+              "have to",
+              "must",
+              "can",
+              "may"
+            ],
+            "answer": "B. must",
+            "explain": "我真的想通过考试，所以我「必须」努力——自己下的决心，主观 → must。"
+          },
+          {
+            "stem": "must 和 have to，谁有时态和人称变化？",
+            "options": [
+              "must",
+              "have to",
+              "都有",
+              "都没有"
+            ],
+            "answer": "B. have to",
+            "explain": "have to 能变 has to / had to / will have to；must 永远是 must，谁来做、什么时候做，它都不变形。"
+          }
+        ]
+      },
+      {
+        "key": "need",
+        "title": "⑧ need 的双重身份：情态动词 / 实义动词",
+        "explain": "<p>need 一词两用，先分清身份再动笔：</p><table><tr><th></th><th>情态动词 need</th><th>实义动词 need</th></tr><tr><td><b>接什么</b></td><td>+ 动词原形（Need I go?）</td><td>need <b>to do</b> / need sth</td></tr><tr><td><b>疑问否定</b></td><td>自己变：Need I…? / needn't</td><td>借 do/does/did：Does he need to…?</td></tr><tr><td><b>使用范围</b></td><td>一般不用于肯定句</td><td>肯定句随便用</td></tr></table><p>答语（和 must 一个套路）：</p><p>--- <b>Need</b> I hand in the homework right now?</p><p>--- Yes, you <b>must</b>/have to. / No, you <b>needn't</b>/don't have to.</p><p>⚠️ 王牌考点：<b>need doing = need to be done</b>（主动形式表被动）——</p><p>The plant needs <b>watering</b>. = The plant needs <b>to be watered</b>. 植物需要浇水（水是「被浇」的，但用 -ing 主动形）。</p><p><b>记法</b>：need 身份看有没有 to——Need you go?（情态，光杆原形）vs Do you need to go?（实义，带 to）；东西 need + doing，「被做」不用被动式。</p>",
+        "qs_label": "课堂练习 2（收尾）：need 双身份",
+        "general_qs": [
+          {
+            "stem": "He ________ think it over.",
+            "options": [
+              "doesn't need",
+              "needn't to",
+              "not need to",
+              "doesn't need to"
+            ],
+            "answer": "D. doesn't need to",
+            "explain": "实义动词否定：doesn't need to think。A 死于丢了 to；B 死于情态 needn't 后应接光杆原形（needn't think），不该有 to；C 死于没有助动词。"
+          },
+          {
+            "stem": "--- Need I hand in the homework right now?\n--- No, you ________.（不必）",
+            "answer": "needn't",
+            "explain": "Need I…? 的否定答语 needn't / don't have to——和 Must I…? 的答语是同一套。"
+          },
+          {
+            "stem": "--- Need I hand in the homework right now?\n--- Yes, you ________.（必须）",
+            "answer": "must",
+            "explain": "Need I…? 的肯定答语用 must / have to——注意不是 Yes, you need：need 作情态动词不用于肯定句。"
+          },
+          {
+            "stem": "The plant needs ________ (water).",
+            "answer": "watering",
+            "explain": "王牌考点 need doing：植物需要「被浇」水 → watering。主动形式表被动，千万别写 needs to water 或 is watered。"
+          },
+          {
+            "stem": "同义转换：The plant needs watering. = The plant needs ________ ________ ________.（用 water，3 词）",
+            "answer": "to be watered",
+            "explain": "need doing = need to be done。watering（3 词形式）↔ to be watered（被动不定式），一副意思两身衣服。"
+          },
+          {
+            "stem": "He ________ to think it over before he answers.",
+            "options": [
+              "need",
+              "needs",
+              "must",
+              "can"
+            ],
+            "answer": "B. needs",
+            "explain": "作实义动词时 he 三单 → needs to do。A 死于实义动词必须随人称变；C / D 后面不能接 to。"
+          },
+          {
+            "stem": "My hair is too long. It needs ________.",
+            "options": [
+              "to cut",
+              "cutting",
+              "cut",
+              "to cutting"
+            ],
+            "answer": "B. cutting",
+            "explain": "头发需要「被剪」→ need doing → cutting（= to be cut）。A 死于 to cut 主动方向错——头发不能自己剪自己。"
+          }
+        ],
+        "memory": {
+          "front": "need 的两种身份怎么区分？need doing 是什么意思？",
+          "back": "情态动词：+ 动词原形，否定 needn't；Need I…? → Yes, you must. / No, you needn't.\n实义动词：need to do，借 do/does/did 提问否定（doesn't need to do）\n王牌：need doing = need to be done（主动形式表被动）\nThe plant needs watering. = needs to be watered."
+        }
+      },
+      {
+        "key": "final",
+        "title": "⑨ 综合验收：八关考点一锅端",
+        "explain": "<p>最后一关，不讲新东西——把前面八关的考点混在一起再过一遍。做错哪题，就回哪一关翻口诀卡。</p><p>验收清单：推测三档（must / can't / may）· 答语规则（Must 问 needn't 答）· 祝愿专用 may · can't help doing · need doing · as … as one can。</p>",
+        "qs_label": "综合验收（错哪题回哪关）",
+        "general_qs": [
+          {
+            "stem": "The lights are on and I can hear the TV. Mr Li ________ be at home.",
+            "options": [
+              "can",
+              "must",
+              "may",
+              "need"
+            ],
+            "answer": "B. must",
+            "explain": "灯亮着、电视响着 → 「一定」在家 → 肯定推测 must。C 的 may 太犹豫——证据都摆眼前了。"
+          },
+          {
+            "stem": "--- Must we hand in the report today?\n--- No, you ________. You can hand it in tomorrow.",
+            "options": [
+              "mustn't",
+              "needn't",
+              "can't",
+              "may not"
+            ],
+            "answer": "B. needn't",
+            "explain": "Must I/we…? 否定答语 needn't / don't have to。A 的 mustn't 是「禁止」，老师不会禁止你交报告。"
+          },
+          {
+            "stem": "________ all your dreams come true!",
+            "options": [
+              "May",
+              "Must",
+              "Can",
+              "Should"
+            ],
+            "answer": "A. May",
+            "explain": "祝愿句专用 may，句首 + 主语 + 动词原形：May all your dreams come true! 愿你梦想成真！"
+          },
+          {
+            "stem": "The little girl couldn't help ________ (cry) when she lost her toy.",
+            "answer": "crying",
+            "explain": "couldn't help doing 情不自禁 → crying。玩具丢了，小女孩忍不住哭了。"
+          },
+          {
+            "stem": "My bike is broken. It needs ________ (repair).",
+            "answer": "repairing",
+            "explain": "need doing 主动表被动：自行车需要「被修」→ repairing（= to be repaired）。"
+          },
+          {
+            "stem": "Please read the word as ________ (clear) as you can.",
+            "answer": "clearly",
+            "explain": "两层：① read 是动词，用副词 clearly；② as … as one can 尽可能……。合起来：as clearly as you can = as clearly as possible。"
+          }
+        ]
+      }
+    ]
+  }
+}

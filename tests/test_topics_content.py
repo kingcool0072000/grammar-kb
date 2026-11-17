@@ -163,3 +163,24 @@ def test_legacy_partial_stamp_cleared_full_stamp_kept(tmp_path):
     assert kept["completed_at"] == old_full
     assert cleared["completed_at"] == ""
     assert cleared["done_keys"] == ["what"]
+
+
+def test_import_lecture31_json_and_expand(tmp_path):
+    """第 31 讲（情态动词①）：结构/题量/内容政策与 29 讲同一套守卫。"""
+    data = json.loads((_PROJECT / "data" / "topics"
+                       / "lecture-31-modal-1.json").read_text(encoding="utf-8"))
+    store = _store(tmp_path)
+    got = store.upsert_topic(data["meta"], data["content"])
+    assert got["topic_id"] == "lecture-31-modal-1"
+    assert len(got["nodes"]) == 9
+
+    all_qs = [q for n in got["nodes"] for q in n["wrong_qs"] + n["general_qs"]]
+    # 内容政策：不允许 ref 引用作业卷题库，题目全部自含
+    assert all(q["kind"] != "ref" for q in all_qs)
+    assert all(q["stem"] and q["answer"] for q in all_qs)
+    # 9 关共 53 题；malin 31 讲尚无做题记录 → 无 wrong_qs 区
+    assert len(all_qs) == 53
+    assert all(not n["wrong_qs"] for n in got["nodes"])
+    # 口诀卡：5 张（can/搭配/may/must/need）
+    mem = {n["key"] for n in got["nodes"] if n.get("memory")}
+    assert mem == {"can", "colloc", "may", "must", "need"}
