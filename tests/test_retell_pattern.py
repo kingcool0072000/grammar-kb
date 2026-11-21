@@ -103,16 +103,17 @@ def test_pattern_retell_submit_gate_and_boost(tmp_path, monkeypatch):
             "SELECT kind, passed, score FROM boost_log"
             " WHERE user='malin' AND item_ref=?", (f"retell:{pid}",)).fetchone()
     assert row == ("retell", 1, None)
-    # 批改 9 分（过关）→ status graded + boost_log.score 回写
+    # 批改 8.5 分（1 位小数，过关）+ 多行评语 → status graded + boost_log.score 回写
     rid = data["id"]
     r = c.put(f"/video-study/retells/{rid}", headers=t,
-              json={"score": 9, "comment": "复述完整"})
-    assert r.status_code == 200 and r.json()["data"]["teacher_score"] == 9
+              json={"score": 8.5, "comment": "复述完整\n注意重音"})
+    assert r.status_code == 200 and r.json()["data"]["teacher_score"] == 8.5
+    assert r.json()["data"]["teacher_comment"] == "复述完整\n注意重音"
     with sqlite3.connect(tmp_path / "fce.db") as conn:
         row = conn.execute(
             "SELECT passed, score FROM boost_log WHERE item_ref=?",
             (f"retell:{pid}",)).fetchone()
-    assert row == (1, 9)
+    assert row == (1, 8.5)
     # 重交再批 5 分（不过关）→ 完成打卡保留、分数不被刷掉（0-6 不动 boost_log）
     r = c.post("/video-study/retells", headers=s, json={
         "vid": str(pid), "ref_kind": "pattern", "audio_b64": _fake_audio(),

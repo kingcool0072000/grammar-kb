@@ -145,19 +145,25 @@ def test_listen_idempotent_and_shadow_flow(nce2_env):
     assert len(q) == 1 and q[0]["id"] == sid
     assert q[0]["lesson_title"] == "Lesson 1" and q[0]["user"] == "malin"
     assert "audio_b64" not in q[0]
-    # 批改：越界分数夹取 0-10 → graded
+    # 批改：越界分数夹取 0-10、1 位小数四舍五入 + 多行评语 → graded
     r = c.put(f"/nce2/submissions/{sid}", headers=t,
               json={"teacher_score": 15, "teacher_comment": "发音清楚"})
     assert r.status_code == 200
     data = r.json()["data"]
     assert data["status"] == "graded" and data["teacher_score"] == 10
     assert data["graded_at"]
+    r = c.put(f"/nce2/submissions/{sid}", headers=t,
+              json={"teacher_score": 8.54, "teacher_comment": "发音清楚\n连读再自然些"})
+    assert r.status_code == 200
+    data = r.json()["data"]
+    assert data["teacher_score"] == 8.5
+    assert data["teacher_comment"] == "发音清楚\n连读再自然些"
     assert c.get("/nce2/submissions", headers=t).json()["data"] == []
     q = c.get("/nce2/submissions?status=graded", headers=t).json()["data"]
-    assert len(q) == 1 and q[0]["teacher_comment"] == "发音清楚"
+    assert len(q) == 1 and q[0]["teacher_comment"] == "发音清楚\n连读再自然些"
     # 学生视角：最近一次 shadow 摘要出现在清单里；历史只有自己的行
     d = c.get("/nce2/lessons", headers=s).json()["data"]
-    assert d[0]["shadow"]["id"] == sid and d[0]["shadow"]["teacher_score"] == 10
+    assert d[0]["shadow"]["id"] == sid and d[0]["shadow"]["teacher_score"] == 8.5
     mine = c.get("/nce2/submissions", headers=s).json()["data"]
     assert {x["kind"] for x in mine} == {"listen", "shadow"}
     # listen 打点不能批改（端点 422 / Store ValueError）

@@ -196,9 +196,9 @@ try:
         items: list[PatternItemIn] = Field(min_length=1, max_length=200)
 
     class VideoGradeIn(BaseModel):
-        """教师给复述录音打分（10 分制）。"""
+        """教师给复述录音打分（10 分制，支持 1 位小数）。"""
 
-        score: int = Field(ge=0, le=10)
+        score: float = Field(ge=0, le=10)
         comment: str = Field(default="", max_length=2000)
 
     class Nce2SubmitIn(BaseModel):

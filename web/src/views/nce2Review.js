@@ -1,5 +1,5 @@
 import { api, getAuth } from '../api.js'
-import { escapeHtml, escAttr } from '../render.js'
+import { escapeHtml } from '../render.js'
 import { fmtDur } from '../fmt.js'
 
 // NCE2 听力跟读批改（共享模块，仿 videoReview.js）：试听 + 10 分制打分 +
@@ -47,8 +47,8 @@ export async function renderNce2Review(el, subs, opts) {
       ${r.kind === 'listen'
         ? `<button class="reading-btn danger" data-del title="删除这条提交">删除</button>`
         : `<div class="reading-review-grade">
-        <label>分数 <input type="number" min="0" max="10" value="${r.teacher_score ?? 8}" style="width:56px" data-score></label>
-        <input placeholder="评语（听懂程度/发音/语调建议）" value="${escAttr(r.teacher_comment || '')}" data-comment style="flex:1" />
+        <label>分数 <input type="number" min="0" max="10" step="0.1" value="${r.teacher_score ?? 8}" style="width:68px" data-score></label>
+        <textarea rows="3" placeholder="评语（听懂程度/发音/语调建议）" data-comment>${escapeHtml(r.teacher_comment || '')}</textarea>
         <button class="reading-btn primary" data-grade>提交批改</button>
         <button class="reading-btn danger" data-del title="删除这条提交">删除</button>
       </div>`}
@@ -61,12 +61,14 @@ export async function renderNce2Review(el, subs, opts) {
     }
     const gradeBtn = row.querySelector('[data-grade]')
     if (gradeBtn) gradeBtn.addEventListener('click', async () => {
-      const score = Number(row.querySelector('[data-score]').value)
+      const rawStr = row.querySelector('[data-score]').value.trim()
+      const rawScore = rawStr === '' ? NaN : Number(rawStr)
       const comment = row.querySelector('[data-comment]').value
-      if (!(score >= 0 && score <= 10)) {
+      if (!Number.isFinite(rawScore) || rawScore < 0 || rawScore > 10) {
         row.querySelector('.reading-review-msg').textContent = '分数须为 0-10'
         return
       }
+      const score = Math.round(rawScore * 10) / 10
       try {
         await api.nce2Grade(r.id, score, comment)
         row.querySelector('.reading-review-msg').innerHTML =

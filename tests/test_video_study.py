@@ -146,7 +146,7 @@ def test_retell_submit_grade_and_permissions(assigned_env):
     assert c.put(f"/video-study/retells/{rid}", headers=s,
                  json={"score": 9, "comment": ""}).status_code == 403
     assert c.delete(f"/video-study/retells/{rid}", headers=s).status_code == 403
-    # 教师批改（分数越界 422 → 合法 9 分）
+    # 教师批改（分数越界 422 → 合法 9 分 → 1 位小数 8.5 分与多行评语）
     assert c.put(f"/video-study/retells/{rid}", headers=t,
                  json={"score": 11, "comment": ""}).status_code == 422
     r = c.put(f"/video-study/retells/{rid}", headers=t,
@@ -154,6 +154,12 @@ def test_retell_submit_grade_and_permissions(assigned_env):
     assert r.status_code == 200
     data = r.json()["data"]
     assert data["status"] == "graded" and data["teacher_score"] == 9
+    r = c.put(f"/video-study/retells/{rid}", headers=t,
+              json={"score": 8.54, "comment": "第一行优点\n第二行建议"})
+    assert r.status_code == 200
+    data = r.json()["data"]
+    assert data["teacher_score"] == 8.5
+    assert data["teacher_comment"] == "第一行优点\n第二行建议"
     # 音频二进制端点：学生可听自己的
     token = s["Authorization"][7:]
     r = c.get(f"/video-study/retells/{rid}/audio?token={token}")

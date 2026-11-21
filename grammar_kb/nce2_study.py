@@ -360,6 +360,7 @@ class Nce2Store:
         if not math.isfinite(score):
             raise ValueError("分数无效")
         score = max(0.0, min(10.0, score))
+        score = round(score, 1)
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT kind FROM nce2_submission WHERE id = ?",

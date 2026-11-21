@@ -1501,13 +1501,18 @@ main { --fce-fs: 15px; }
 .reading-review-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 14px; }
 .reading-review-text summary { cursor: pointer; color: var(--ink-soft, #64748b); font-size: 13px; }
 .reading-review-text .reading-article { max-height: 300px; overflow: auto; font-size: 14.5px; }
-.reading-review-grade { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.reading-review-grade label { font-size: 13px; color: var(--ink-soft, #64748b); }
-.reading-review-grade input { padding: 6px 10px; border: 1px solid var(--line, #e2e8f0); border-radius: 8px; }
+.reading-review-grade { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+.reading-review-grade label { font-size: 13px; color: var(--ink-soft, #64748b); display: inline-flex; align-items: center; gap: 6px; }
+.reading-review-grade input { padding: 6px 10px; border: 1px solid var(--line, #e2e8f0); border-radius: 8px; font: inherit; }
+.reading-review-grade textarea {
+  flex: 1 1 260px; min-height: 64px; padding: 8px 10px;
+  border: 1px solid var(--line, #e2e8f0); border-radius: 8px;
+  font: inherit; font-size: 13.5px; line-height: 1.5; resize: vertical;
+}
 .reading-review-msg { font-size: 13px; color: #8a6d3b; min-height: 18px; }
 .reading-review-text .reading-article.picked-view p { background: rgba(138,109,59,.08); border-left: 3px solid #8a6d3b; }
 .reading-graded-row { border-bottom: 1px dashed var(--line, #e2e8f0); padding: 6px 0; }
-.reading-graded-comment { font-size: 13.5px; color: var(--ink-soft, #64748b); line-height: 1.6; margin: 2px 0 4px; }
+.reading-graded-comment { font-size: 13.5px; color: var(--ink-soft, #64748b); line-height: 1.6; margin: 2px 0 4px; white-space: pre-wrap; }
 
 
 /* 批改记录弹窗 */
@@ -3873,4 +3878,4 @@ button.tt-task {
   border-top: 1px solid var(--line);
 }
 .nce2-his-row audio { height: 32px; width: 220px; }
-.nce2-his-comment { font-size: 13px; color: var(--ink-soft); flex-basis: 100%; }
+.nce2-his-comment { font-size: 13px; color: var(--ink-soft); flex-basis: 100%; white-space: pre-wrap; }

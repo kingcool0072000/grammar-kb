@@ -14,6 +14,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import math
 import re
 import sqlite3
 from datetime import datetime, timezone as _tz
@@ -54,7 +55,7 @@ CREATE TABLE IF NOT EXISTS video_retell (
     mime            TEXT DEFAULT 'audio/webm',
     duration_sec    INTEGER DEFAULT 0,
     status          TEXT DEFAULT 'pending',   -- pending / graded
-    teacher_score   INTEGER,
+    teacher_score   REAL,
     teacher_comment TEXT DEFAULT '',
     created_at      TEXT,
     graded_at       TEXT,
@@ -442,9 +443,14 @@ class VideoStore:
                        "last_comment": comments.get(r["vid"], "")}
             for r in rows}
 
-    def grade_retell(self, retell_id: int, score: int, comment: str) -> Optional[dict]:
-        if not 0 <= int(score) <= 10:
+    def grade_retell(self, retell_id: int, score: float, comment: str) -> Optional[dict]:
+        try:
+            score_val = float(score)
+        except (TypeError, ValueError):
+            raise ValueError("分数须为 0-10") from None
+        if not math.isfinite(score_val) or not 0.0 <= score_val <= 10.0:
             raise ValueError("分数须为 0-10")
+        score_val = round(score_val, 1)
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT id, user, vid, ref_kind, created_at FROM video_retell"
@@ -454,17 +460,17 @@ class VideoStore:
             conn.execute(
                 "UPDATE video_retell SET status='graded', teacher_score=?,"
                 " teacher_comment=?, graded_at=? WHERE id = ?",
-                (int(score), (comment or "")[:2000], _now(), retell_id),
+                (score_val, (comment or "")[:2000], _now(), retell_id),
             )
             # 句型复述过关（≥7 分）→ 回写提交当日 boost_log 的 score 列；
-            # 0-6 分不动（完成打卡保留，过关不达成）。表缺失/行缺失只告警，
+            # 0-7 以下不动（完成打卡保留，过关不达成）。表缺失/行缺失只告警，
             # 批改本身不受影响。
-            if (row["ref_kind"] or "video") == "pattern" and int(score) >= 7:
+            if (row["ref_kind"] or "video") == "pattern" and score_val >= 7:
                 try:
                     conn.execute(
                         "UPDATE boost_log SET score = ?"
                         " WHERE user = ? AND date = ? AND item_ref = ?",
-                        (int(score), row["user"], _created_day(row["created_at"]),
+                        (score_val, row["user"], _created_day(row["created_at"]),
                          f"retell:{row['vid']}"),
                     )
                 except sqlite3.Error:
