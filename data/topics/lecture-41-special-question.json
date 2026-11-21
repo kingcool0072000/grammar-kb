@@ -1,0 +1,435 @@
+{
+  "meta": {
+    "topic_id": "lecture-41-special-question",
+    "title": "第41讲 · 特殊疑问句 自学",
+    "subtitle": "自学一遍再上课：热身认识特殊疑问句 → 疑问词选哪个 → how 家族大点兵 → what 的多面手 → 语序三定律 → 易错七对辨真身 → 综合验收（共 7 关 · 50 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "intro",
+        "title": "① 热身：特殊疑问句是什么",
+        "explain": "<p>一般疑问句用 Yes / No 就能打发，特殊疑问句不行——它以<b>特殊疑问词</b>开头，盯住陈述句里的某一块提问，<b>问什么答什么</b>，不能用 yes / no 回答：</p><p>What's your name? → (My name is) Jerry. / How old is he? → (He is) 5 years old. / When do they often watch TV? → (They often watch TV) after supper.</p><p>疑问词分三大家族，先混个脸熟：</p><table><tr><th>家族</th><th>成员</th></tr><tr><td><b>疑问代词</b>（问人、物）</td><td>what 什么 · which 哪一个 · who / whom 谁 · whose 谁的</td></tr><tr><td><b>疑问副词</b>（问时间、地点、方式、原因）</td><td>when 什么时候 · where 在哪里 · how 怎样 · why 为什么</td></tr><tr><td><b>How 词组</b></td><td>how often 多久一次 · how long 多长 · how many / how much 多少 · how soon 多久以后 · how far 多远 · how old 多大年纪 · how many times 多少次</td></tr></table><p>本讲的玩法就一句话：<b>看划线部分是什么身份，就派哪个疑问词上场</b>。身份认得越准，题做得越快。</p><p>自学方法：先读讲解 → 盖住答案做题 → 点「先想再看答案」核对 → 全懂了点「我学完了」进下一关。</p>",
+        "qs_label": "热身自测（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "特殊疑问句和一般疑问句最大的不同是？",
+            "options": [
+              "特殊疑问句句子更长",
+              "特殊疑问句以疑问词开头，不能用 Yes / No 回答，问什么答什么",
+              "一般疑问句没有疑问词",
+              "特殊疑问句不用变语序"
+            ],
+            "answer": "B. 特殊疑问句以疑问词开头，不能用 Yes / No 回答，问什么答什么",
+            "explain": "特殊疑问句盯住句中某一块提问，回答要给实际信息：What's your name? → Jerry。A / C / D 都是拿句子长短、语序说事，没说到点子上。"
+          },
+          {
+            "stem": "下面哪一组全是疑问副词？",
+            "options": [
+              "what, which, who",
+              "when, where, how, why",
+              "how many, how much",
+              "whose, whom"
+            ],
+            "answer": "B. when, where, how, why",
+            "explain": "疑问副词管时间、地点、方式、原因：when / where / how / why。A / D 是疑问代词（问人、物）；C 是 How 词组——三家要分清。"
+          },
+          {
+            "stem": "下面哪一个不是 How 词组？",
+            "options": [
+              "how soon",
+              "how often",
+              "what size",
+              "how far"
+            ],
+            "answer": "C. what size",
+            "explain": "what size（什么尺码）是 what 家族的。How 词组的常用成员：how often / long / many / much / soon / far / old / many times。"
+          },
+          {
+            "stem": "对方回答 (My name is) Jerry. 你应该问：________ ________ your name?",
+            "answer": "What is",
+            "explain": "问姓名用 What：What is your name?（= What's your name?）。回答的是「名字」这个信息，不是 yes / no。"
+          },
+          {
+            "stem": "He is 5 years old. → ________ ________ is he?（对 5 years old 提问）",
+            "answer": "How old",
+            "explain": "对年龄提问用 how old：How old is he? → (He is) 5 years old。"
+          }
+        ]
+      },
+      {
+        "key": "which-word",
+        "title": "② 疑问词选哪个：时间 · 地点 · 人物 · 年龄",
+        "explain": "<p>选疑问词只看一件事：<b>划线部分是什么身份</b>。身份对上号，疑问词就定了：</p><table><tr><th>划的是什么</th><th>用哪个疑问词</th><th>讲义例句</th></tr><tr><td>地点</td><td><b>where</b></td><td>They are studying Chinese in China. → <b>Where</b> are they studying Chinese?</td></tr><tr><td>一般时间（年、月、日子）</td><td><b>when</b></td><td>She came to France in 1990. → <b>When</b> did she come to France?</td></tr><tr><td>钟点（几点几分）</td><td><b>what time</b></td><td>He often goes to bed at ten. → <b>What time</b> does he often go to bed?</td></tr><tr><td>谁</td><td><b>who</b></td><td>They often go home with Tom. → <b>Who</b> do they often go home with?</td></tr><tr><td>谁的</td><td><b>whose</b>（后面跟名词）</td><td>I met my father. → <b>Whose</b> father did you meet?</td></tr><tr><td>年龄</td><td><b>how old</b></td><td>The man over there is sixty. → <b>How old</b> is the man over there?</td></tr><tr><td>哪一个</td><td><b>which</b>（后面跟名词）</td><td>She likes the new skirt. → <b>Which</b> skirt does she like?</td></tr><tr><td>颜色</td><td><b>what colour</b></td><td>Her blouse is white. → <b>What colour</b> is her blouse?</td></tr></table><p><b>记法</b>：in 1990（年份）→ when，at 7:30（钟点）→ what time——「年月日找 when，几点几分找 what time」；whose / which 是「带名词上班」的疑问词，后面必须跟名词：Whose bike / Which skirt。</p>",
+        "qs_label": "课堂练习：基础疑问词选哪个",
+        "general_qs": [
+          {
+            "stem": "They will meet at the park tomorrow. → ________ will they meet tomorrow?（对 at the park 提问）",
+            "answer": "Where",
+            "explain": "at the park 是地点 → where。地点永远派 where 上场，认准「在哪儿」这个意思。"
+          },
+          {
+            "stem": "She usually eats breakfast at 7:30. → ________ does she usually eat breakfast?（对 at 7:30 提问）",
+            "answer": "What time",
+            "explain": "at 7:30 是钟点（几点几分）→ what time。若是 in 1990 / on Monday 这类大块时间，才轮到 when。"
+          },
+          {
+            "stem": "My brother is fifteen years old. → ________ is your brother?（对 fifteen years old 提问）",
+            "answer": "How old",
+            "explain": "对年龄提问 → how old。注意提问后问的对象是 your brother，题干里人称已经换好了。"
+          },
+          {
+            "stem": "Kate's bike was stolen last week. → ________ bike was stolen last week?（对 Kate's 提问）",
+            "answer": "Whose",
+            "explain": "Kate's 表示「凯特的」→ whose（谁的），且后面照常跟名词 bike：Whose bike was stolen last week?"
+          },
+          {
+            "stem": "She likes the new skirt. → ________ skirt does she like?（对 the new 提问）",
+            "options": [
+              "What",
+              "Whose",
+              "Which",
+              "Where"
+            ],
+            "answer": "C. Which",
+            "explain": "「新裙子」是从好几条里挑出「哪一个」→ Which skirt。B 的 whose 问归属（谁的），方向不对；what skirt 不带挑选的意味，问颜色材质才用它。"
+          },
+          {
+            "stem": "Her blouse is white. → ________ ________ is her blouse?（对 white 提问）",
+            "answer": "What colour",
+            "explain": "对颜色提问固定用 what colour：What colour is her blouse? — White."
+          },
+          {
+            "stem": "They often go home with Tom. → ________ do they often go home with?（对 Tom 提问）",
+            "options": [
+              "Who",
+              "Whose",
+              "What",
+              "Which"
+            ],
+            "answer": "A. Who",
+            "explain": "Tom 是「人」→ who：Who do they often go home with? 疑问词作介词 with 的宾语时，介词可以留在句尾。B 的 whose 后面得跟名词。"
+          },
+          {
+            "stem": "She came to France in 1990. 对 in 1990 划线提问，哪句对？",
+            "options": [
+              "What time did she come to France?",
+              "When did she come to France?",
+              "How long did she come to France?",
+              "How soon did she come to France?"
+            ],
+            "answer": "B. When did she come to France?",
+            "explain": "in 1990 是一般时间（年份）→ when。A 的 what time 只管钟点（at 7:30）；C 的 how long 问时间段「持续多久」；D 的 how soon 问「还要多久」，方向全不对。"
+          }
+        ],
+        "memory": {
+          "front": "对地点、时间、谁、谁的、年龄、颜色、哪一个提问，各用哪个疑问词？",
+          "back": "地点→where　一般时间→when　钟点→what time\n谁→who　谁的→whose+名词　年龄→how old\n哪一个→which+名词　颜色→what colour\n口诀：年月日找 when，几点几分找 what time；whose / which 后面必须跟名词\n例：in 1990→When；at 7:30→What time；Kate's bike→Whose bike"
+        }
+      },
+      {
+        "key": "how-family",
+        "title": "③ how 家族大点兵：多久 · 多久一次 · 多少 · 多远",
+        "explain": "<p>how 是疑问副词里的「大户」，自己不带兵，全靠词组扩军。每个词组盯一种身份：</p><table><tr><th>词组</th><th>盯什么</th><th>讲义例句</th></tr><tr><td><b>how long</b></td><td>时间段（for / since）· 物体长度</td><td>We have stayed here <b>for six years</b>. → <b>How long</b> have you stayed here?</td></tr><tr><td><b>how often</b></td><td>频度（once a week）</td><td>She is late for school <b>once a week</b>. → <b>How often</b> is she late for school?</td></tr><tr><td><b>how soon</b></td><td>in + 时间段（还要多久，常配将来时）</td><td>Lucy will be back <b>in four days</b>. → <b>How soon</b> will Lucy be back?</td></tr><tr><td><b>how far</b></td><td>距离</td><td>It's 300 metres <b>from my home to school</b>. → <b>How far</b> is it from your home to school?</td></tr><tr><td><b>how many</b></td><td>可数名词的数量（+ 复数名词）</td><td>There are <b>ten books</b> on the desk. → <b>How many books</b> are there on the desk?</td></tr><tr><td><b>how much</b></td><td>不可数名词的数量 · 钱数价钱</td><td>She spent <b>ten yuan</b> on the book. → <b>How much did</b> she spend on the book?</td></tr><tr><td><b>how many times</b></td><td>次数</td><td>He watched TV <b>twice</b> last week. → <b>How many times did</b> he watch TV last week?</td></tr><tr><td><b>how / how tall / how high / how wide</b></td><td>方式方法 · 身高（人）· 高度（物）· 宽度</td><td>We come to school <b>on foot</b>. → <b>How</b> do you come to school? / The hill is <b>300 metres</b> high. → <b>How high</b> is the hill?</td></tr></table><p><b>记法</b>：how many 接可数、how much 接不可数和钱；「多久以后」how soon 配 in，「多久一次」how often 配 once / twice a week；问人高 how tall、问物高 how high。</p>",
+        "qs_label": "课堂练习：how 家族大点兵",
+        "general_qs": [
+          {
+            "stem": "There are twenty students in the classroom. → ________ students are there in the classroom?（对 twenty 提问）",
+            "answer": "How many",
+            "explain": "students 可数 → how many + 复数名词：How many students are there in the classroom? 不可数的量才用 how much。"
+          },
+          {
+            "stem": "She usually comes to school by bike. → ________ does she usually come to school?（对 by bike 提问）",
+            "answer": "How",
+            "explain": "by bike 是「方式、方法」→ how（怎么来）。how 单独用就管「方式 / 感觉如何」：How do you come to school?"
+          },
+          {
+            "stem": "He visits his grandparents once a week. → ________ does he visit his grandparents?（对 once a week 提问）",
+            "answer": "How often",
+            "explain": "once a week 是频度（多久一次）→ how often。注意别和 how many times（问次数）混：how often 问频率，答语是一周几次这类节奏词。"
+          },
+          {
+            "stem": "He watched TV twice last week. → ________ ________ ________ ________ he watch TV last week?（对 twice 提问，4 词）",
+            "answer": "How many times did",
+            "explain": "twice 是次数 → how many times，再借过去时的助动词 did：How many times did he watch TV last week? 原动词 watched 已交给 did，后面用原形 watch。"
+          },
+          {
+            "stem": "Lucy will be back in four days. → ________ ________ ________ Lucy be back?（对 in four days 提问，3 词）",
+            "answer": "How soon will",
+            "explain": "in + 时间段 = 「多久以后」→ how soon，常配将来时：How soon will Lucy be back? how long 问的是「已持续多久」，接不住将来的 in four days。"
+          },
+          {
+            "stem": "They have some water. → ________ ________ ________ do they have?（对 some water 提问，3 词）",
+            "answer": "How much water",
+            "explain": "water 不可数 → how much + 不可数名词：How much water do they have? some 在疑问句里通常也不再出现。"
+          },
+          {
+            "stem": "She spent ten yuan on the book. → ________ ________ ________ she spend on the book?（对 ten yuan 提问，3 词）",
+            "answer": "How much did",
+            "explain": "对钱数、价钱提问 → how much，spent 是过去式，借 did：How much did she spend on the book? spend 交出过去式，变回原形。"
+          },
+          {
+            "stem": "The hill is 300 metres high. → ________ ________ is the hill?（对 300 metres high 提问）",
+            "options": [
+              "How tall",
+              "How high",
+              "How long",
+              "How far"
+            ],
+            "answer": "B. How high",
+            "explain": "问「物」的高度用 how high（The man is two metres tall. → How tall is the man? 问人的身高才用 how tall）。C 的 how long 问长度、D 的 how far 问距离，都量错了方向。"
+          }
+        ],
+        "memory": {
+          "front": "how long / how often / how soon / how far / how many / how much 各盯什么？",
+          "back": "how long 多长多久（for/since 时间段、物体长度）\nhow often 多久一次（once a week 频度）\nhow soon 多久以后（in four days，常配将来时）\nhow far 多远（距离）\nhow many+可数复数；how much+不可数/价钱\nhow many times 问次数；问人高 how tall，问物高 how high"
+        }
+      },
+      {
+        "key": "what-family",
+        "title": "④ what 的多面手：职业 · There be 主语 · 天气 · 星期日期",
+        "explain": "<p>what 是疑问词里的多面手，除了问「某物」「做某事」，还霸占四个固定句型：</p><table><tr><th>问什么</th><th>句型</th><th>讲义例句</th></tr><tr><td>职业</td><td><b>What is/are + 人?</b> ＝ <b>What do/does + 人 + do?</b></td><td>His mother is a teacher. → <b>What is</b> his mother? / <b>What does</b> his mother <b>do</b>?</td></tr><tr><td>There be 的主语</td><td><b>What is/was + 地点?</b>（原句的东西不再出现）</td><td>There is a book on the desk. → <b>What is</b> on the desk? / There were ten books on the desk. → <b>What was</b> on the desk?</td></tr><tr><td>正在 / 经常做某事</td><td>疑问词用 <b>what</b>，do 的相应形式替换划线部分</td><td>He is watching TV. → <b>What is</b> he <b>doing</b>? / They often read English. → <b>What do</b> they often <b>do</b>?</td></tr><tr><td>天气</td><td><b>What is/was … the weather like?</b></td><td>Today is rainy. → <b>What is the weather like</b> today?</td></tr><tr><td>星期 / 日期</td><td>星期 <b>What day</b>；日期 <b>What is the date</b></td><td>Today is Friday. → <b>What day</b> is today? / Yesterday was July 1, 1995. → <b>What was the date</b> yesterday?</td></tr></table><p><b>记法</b>：There be 的主语被提问后，后面的名词要「隐身」、be 一律用单数——What was on the desk?（不再说 books）；问天气别忘了句尾的 like；「星期几」What day，「几月几号」What's the date，两兄弟别串门。</p>",
+        "qs_label": "课堂练习：what 的多面手",
+        "general_qs": [
+          {
+            "stem": "His mother is a teacher. 对职业提问，正确的是？",
+            "options": [
+              "What is his mother?",
+              "Who is his mother?",
+              "How is his mother?",
+              "What is his mother do?"
+            ],
+            "answer": "A. What is his mother?",
+            "explain": "问职业两套句型：What is/are + 人？或 What do/does + 人 + do?（= What does his mother do?）。B 问的是「她是谁」（身份姓名）；C 问身体状况；D 把两个句型嫁接错了，is 和 do 不能同框。"
+          },
+          {
+            "stem": "There is a book on the desk. → ________ on the desk?（对 a book 提问）",
+            "answer": "What's（= What is）",
+            "explain": "对 There be 句型的主语提问，固定 What is/was + 地点：What's on the desk? 原句的 a book 不再出现，提问后 what 自己当主语。"
+          },
+          {
+            "stem": "There were ten books on the desk. → ________ ________ on the desk?（对 ten books 提问，2 词）",
+            "answer": "What was",
+            "explain": "最大陷阱：提问后 books「隐身」，主语变成 what，be 动词跟着用单数 was——What was on the desk? 别写 What were，也别把 books 再搬回来。"
+          },
+          {
+            "stem": "He is writing a letter now. → ________ ________ he ________ now?（对 writing a letter 提问，3 词）",
+            "answer": "What, is, doing",
+            "explain": "提问「谓语动词 + 宾语」：疑问词用 what，do 的相应形式替换划线部分——现在进行时借 is，writing 变成 doing：What is he doing now?"
+          },
+          {
+            "stem": "They often read English in the morning. → ________ ________ they often ________ in the morning?（对 read English 提问，3 词）",
+            "answer": "What, do, do",
+            "explain": "读的东西是「做某事」→ what + do 的相应形式：一般现在时复数借 do，原动词 read 变回原形 do——What do they often do in the morning? 第一个 do 是助动词，第二个 do 才是「干」本身。"
+          },
+          {
+            "stem": "Today is rainy. → ________ ________ ________ ________ ________ today?（对天气提问，5 词）",
+            "answer": "What, is, the, weather, like",
+            "explain": "问天气固定句型 What is/was … the weather like? = What is the weather like today? 句尾的 like 千万别丢，丢了句子就断了。"
+          },
+          {
+            "stem": "Today is Friday. 对星期提问，正确的是？",
+            "options": [
+              "What date is today?",
+              "What day is today?",
+              "What time is it today?",
+              "What is the weather like today?"
+            ],
+            "answer": "B. What day is today?",
+            "explain": "问「星期几」用 What day；问「几月几号」才用 What is the date（Yesterday was July 1. → What was the date yesterday?）。A 问日期、C 问钟点、D 问天气，全串门了。"
+          }
+        ],
+        "memory": {
+          "front": "问职业、问 There be 主语、问天气、问星期 / 日期，各用什么句型？",
+          "back": "职业：What is/are + 人? = What do/does + 人 + do?\nThere be 主语：What is/was + 地点?（名词隐身，be 用单数 What was on the desk?）\n天气：What is/was the weather like?（别丢 like）\n星期：What day is today?　日期：What is the date today?"
+        }
+      },
+      {
+        "key": "word-order",
+        "title": "⑤ 语序三定律：问主语和问其他成分不一样",
+        "explain": "<p>陈述句变特殊疑问句，语序分三种情况，分清就不会乱：</p><p><b>① 问主语（或主语的定语）：疑问词直接替换，语序完全不动。</b></p><p>Tom often comes to China. → <b>Who</b> often comes to China? / Tom's father is a doctor. → <b>Whose father</b> is a doctor? / The girl in red is Kate. → <b>Which girl</b> is Kate?</p><p><b>② 问定语：疑问词连同后面的名词一起提前。</b></p><p>That's our school. → <b>Whose school</b> is that? / He knows the girl in red. → <b>Which girl</b> does he know?</p><p><b>③ 问谓语动词及宾语：疑问词用 what，用 do 的相应形式替换划线部分。</b></p><p>They often read English in the morning. → <b>What do</b> they often <b>do</b> in the morning? / He is writing a letter now. → <b>What is</b> he <b>doing</b> now?</p><p>再加三个小贴士：<b>否定式</b>——Why don't you ask Jim? = <b>Why not ask</b> Jim?；<b>双疑问词</b>——疑问部分可以有两个以上疑问词：When and where were you born?；<b>介词可提前</b>——What do you want a computer for? = For what do you want a computer?（For what = Why）。</p><p><b>记法</b>：问主语最省事——谁当主语谁直接上，后面一个字不改；问其他成分，一律「疑问词 + 一般疑问句语序」。</p>",
+        "qs_label": "课堂练习：语序变变变",
+        "general_qs": [
+          {
+            "stem": "Tom often comes to China. 对 Tom（主语）提问，正确的是？",
+            "options": [
+              "Who often comes to China?",
+              "Who do often come to China?",
+              "Whom often comes to China?",
+              "Whose often comes to China?"
+            ],
+            "answer": "A. Who often comes to China?",
+            "explain": "对句首主语提问：疑问词直接替换，语序完全不变，三单 comes 原地保留。B 死于多加了个 do（问主语不用借助动词）；C 的 whom 是宾格，当不了主语；D 的 whose 后面必须跟名词。"
+          },
+          {
+            "stem": "Tom's father is a doctor. → ________ ________ ________ ________ ________?（对 Tom's 提问，5 词）",
+            "answer": "Whose, father, is, a, doctor",
+            "explain": "Tom's 是主语的定语：whose 替换 Tom's，father 留在原地，整句语序照旧——Whose father is a doctor? 问主语的定语，和问主语一样「不动刀」。"
+          },
+          {
+            "stem": "That's our school. → ________ ________ is that?（对 our 提问，2 词）",
+            "answer": "Whose school",
+            "explain": "提问部分作定语时，要连同后面的名词一起提前：our school → Whose school is that? 只把 Whose 提出来、丢下 school，句子就不通了。"
+          },
+          {
+            "stem": "He knows the girl in red. → ________ ________ does he know?（对 the girl in red 提问，2 词）",
+            "answer": "Which girl",
+            "explain": "in red 是定语，「穿红衣的那个女孩」是在一群女孩里挑「哪一个」→ Which girl 连同名词提前。这不是问「谁」（who 不带挑选范围），也不是问「谁的」。"
+          },
+          {
+            "stem": "Why don't you ask Jim? = ________ ________ ________ Jim?（同义句，3 词）",
+            "answer": "Why, not, ask",
+            "explain": "否定式特殊疑问句：Why don't you do…? = Why not do…? not 后面直接跟动词原形 ask，you 和 don't 都省掉了。"
+          },
+          {
+            "stem": "I was born in Beijing in 2000. → ________ and ________ were you born?（对 in Beijing 和 in 2000 一起提问）",
+            "answer": "When, where",
+            "explain": "疑问部分可以有两个以上疑问词，用 and 连起来：When and where were you born? 习惯上 when 在前、where 在后——时间地点一起问，一箭双雕。"
+          }
+        ],
+        "memory": {
+          "front": "特殊疑问句的语序：问主语和问其他成分有什么不同？",
+          "back": "问主语（或主语的定语）：疑问词直接替换，语序不变——Who often comes to China?\n问其他成分：疑问词 + 一般疑问句语序——Where are they studying Chinese?\n定语提问连名词一起提前——Whose school is that?\n问谓语用 what + do 替换——What do they often do?\n否定式：Why don't you…? = Why not…?"
+        }
+      },
+      {
+        "key": "traps",
+        "title": "⑥ 易错七对：一眼辨出疑问词真身",
+        "explain": "<p>这一关全是「同一句话、两种问法」的坑。划线部分站的角度不同，疑问词就换人：</p><table><tr><th>句子</th><th>问 A</th><th>问 B</th></tr><tr><td>He has lived in Australia <b>since 2000</b>.</td><td>住了多久 → <b>How long</b></td><td>从何时起 → <b>Since when</b></td></tr><tr><td>I play football <b>twice a week</b>.</td><td>多久一次 → <b>How often</b></td><td>一周几次 → <b>How many times a week</b></td></tr><tr><td><b>It's 100 meters</b> from my home to school. / The street is <b>100 meters</b> from east to west.</td><td>距离 → <b>How far</b></td><td>长度 → <b>How long</b></td></tr><tr><td>They <b>have been to the Great Wall</b>. / They <b>visited the Great Wall</b>.</td><td>去了哪 → <b>Where</b></td><td>参观了什么 → <b>What</b></td></tr><tr><td>They go to work <b>at seven</b>. / Boss will visit <b>next month</b>.</td><td>钟点 → <b>What time</b></td><td>大致时间 → <b>When</b></td></tr><tr><td>It's <b>Monday</b> today. / It's <b>August 27th</b> today.</td><td>星期 → <b>What day</b></td><td>日期 → <b>What is the date</b></td></tr><tr><td>There are <b>over 3,000 people</b> in the village. / The <b>population</b> of the village is over 3,000.</td><td>多少人 → <b>How many people</b></td><td>人口多少 → <b>What</b> is the population</td></tr></table><p><b>记法</b>：问「多久」还是问「从何时起」，看刀口落在时间段还是起点上；it 指「两地的距离」用 how far，问街道本身多长用 how long；population（人口）是抽象名词，固定用 What 提问。</p>",
+        "qs_label": "课堂练习 2：易错七对辨真身",
+        "general_qs": [
+          {
+            "stem": "It took him 10 minutes to wash the dishes. → ________ did it take him to wash the dishes?（对 10 minutes 提问）",
+            "answer": "How long",
+            "explain": "it takes sb + 时间 = 「花多长时间」→ 问时间段用 how long：How long did it take him to wash the dishes?"
+          },
+          {
+            "stem": "It's 10 minutes' ride from my home to school. → ________ is it from my home to school?（对 10 minutes' ride 提问）",
+            "answer": "How far",
+            "explain": "10 minutes' ride 说的是「10 分钟的车程」——问的是距离多远，不是花的时间 → how far。和上一题一字之差，答案就换人。"
+          },
+          {
+            "stem": "They have visited the Summer Palace. → ________ have they visited?（对 the Summer Palace 提问）",
+            "answer": "What",
+            "explain": "the Summer Palace 是 visited 的宾语（参观的「物」）→ What have they visited? 如果对地点状语提问（去了哪儿）才用 where——Where have they been?"
+          },
+          {
+            "stem": "He has lived in Australia since 2000. 问「住了多久」→ ________ has he lived in Australia?",
+            "answer": "How long",
+            "explain": "since 2000 到现在是一段时间 → 问「持续多久」用 how long：How long has he lived in Australia?"
+          },
+          {
+            "stem": "He has lived in Australia since 2000. 问「从什么时候开始住」→ ________ has he lived in Australia?",
+            "answer": "Since when",
+            "explain": "同一句话换个刀口：问起点 → Since when…? 介词 since 要跟着疑问词一起提到句首。对比记忆：How long 问段，Since when 问点。"
+          },
+          {
+            "stem": "It's 100 meters from my home to school. → ________ is it from my home to school?（对 100 meters 提问）",
+            "answer": "How far",
+            "explain": "it 指「家到学校」这段路，问的是距离 → how far：How far is it from your home to school?"
+          },
+          {
+            "stem": "The street is 100 meters from east to west. → ________ is the street from east to west?（对 100 meters 提问）",
+            "answer": "How long",
+            "explain": "这里问的是街道「本身有多长」→ how long：How long is the street from east to west? 记住分工：两地隔多远 how far，东西本身多长 how long。"
+          },
+          {
+            "stem": "The population of the village is over 3,000. → ________ is the population of the village?",
+            "options": [
+              "How many",
+              "How much",
+              "What",
+              "How"
+            ],
+            "answer": "C. What",
+            "explain": "population（人口）是抽象名词，固定用 What 提问：What is the population of the village? 对比例句 There are over 3,000 people. 里的 people 才用 How many people 提问。"
+          }
+        ],
+        "memory": {
+          "front": "since 2000 有哪两种问法？twice a week 呢？population 用什么问？",
+          "back": "since 2000：问多久 → How long…?　问起点 → Since when…?\ntwice a week：问频度 → How often…?　问次数 → How many times a week…?\n距离 How far，长度 How long\nbeen to 去了哪 → Where…?　visited 参观了什么 → What…?\nat seven → What time；next month → When\n星期 What day；日期 What is the date\n人口 population 用 What 提问"
+        }
+      },
+      {
+        "key": "final",
+        "title": "⑦ 综合验收：六关考点一锅端",
+        "explain": "<p>最后一关，不讲新东西——把前面六关的考点混在一起再过一遍。做错哪题，就回哪一关翻口诀卡。</p><p>验收清单：when / what time 分工 · how 家族四兄弟（how soon / how long / how often）· what 的固定句型（职业 / There be 主语 / 日期）· 主语提问语序不变 · 易错对（How far vs How long）。</p>",
+        "qs_label": "综合验收（错哪题回哪关）",
+        "general_qs": [
+          {
+            "stem": "Lucy will be back in four days. → ________ ________ Lucy be back?（对 in four days 提问，2 词）",
+            "options": [
+              "How long will",
+              "How soon will",
+              "How often will",
+              "How far will"
+            ],
+            "answer": "B. How soon will",
+            "explain": "in + 时间段 = 「多久以后」→ how soon，配将来时（回③）。A 的 how long 问已持续的时间段；C 问频度；D 问距离，全接不住 in four days。"
+          },
+          {
+            "stem": "His mother is a teacher. 对职业提问，正确的是？",
+            "options": [
+              "Who is his mother?",
+              "What is his mother?",
+              "How is his mother?",
+              "Where is his mother?"
+            ],
+            "answer": "B. What is his mother?",
+            "explain": "问职业：What is/are + 人?（= What does his mother do?）（回④）。A 问身份姓名，C 问身体状况，D 问地点——她妈妈又不在问题上。"
+          },
+          {
+            "stem": "There were ten books on the desk. → ________ ________ on the desk?（对 ten books 提问，2 词）",
+            "answer": "What was",
+            "explain": "对 There be 主语提问：What is/was + 地点，名词 books 隐身、be 用单数 was——What was on the desk?（回④）写 What were 的都是被 books 带偏了。"
+          },
+          {
+            "stem": "Tom often comes to China. 对主语提问，正确的是？",
+            "options": [
+              "Who often comes to China?",
+              "Whom often comes to China?",
+              "Who does often come to China?",
+              "Whose often comes to China?"
+            ],
+            "answer": "A. Who often comes to China?",
+            "explain": "问主语直接替换、语序不变，comes 原地保留（回⑤）。C 死于画蛇添足加 does；B 的 whom 是宾格；D 的 whose 后面得跟名词。"
+          },
+          {
+            "stem": "I have been studying English for five years. → ________ have you been studying English?（对 for five years 提问）",
+            "answer": "How long",
+            "explain": "for five years 是时间段 → how long（回③）。how soon 接不住 for——它只盯 in + 时间段。"
+          },
+          {
+            "stem": "It is August 27th today. 对日期提问，正确的是？",
+            "options": [
+              "What day is it today?",
+              "What is the date today?",
+              "What time is it?",
+              "What's the weather like today?"
+            ],
+            "answer": "B. What is the date today?",
+            "explain": "问「几月几号」用 What is the date；What day 问星期（回④⑥）。C 问钟点，D 问天气——一个句子四个疑问方向，别串门。"
+          },
+          {
+            "stem": "She came to France in 1990. → ________ did she come to France?（对 in 1990 提问）",
+            "answer": "When",
+            "explain": "in 1990 是一般时间（年份）→ when（回②）。what time 只管几点几分。"
+          },
+          {
+            "stem": "The exam makes me so worried. → ________ makes you so worried?（对 The exam 提问）",
+            "options": [
+              "What",
+              "Who",
+              "Which",
+              "Whose"
+            ],
+            "answer": "A. What",
+            "explain": "The exam 是主语（某物）→ 用 what 替换，语序不变：What makes you so worried?（回④⑤）B 的 who 问人，C 的 which 要先有挑选范围，D 的 whose 得跟名词。"
+          }
+        ]
+      }
+    ]
+  }
+}

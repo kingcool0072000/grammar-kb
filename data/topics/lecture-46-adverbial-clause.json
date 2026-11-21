@@ -1,0 +1,531 @@
+{
+  "meta": {
+    "topic_id": "lecture-46-adverbial-clause",
+    "title": "第46讲 · 状语从句 自学",
+    "subtitle": "自学一遍再上课：热身认识从句家族新成员 → 时间从句（when/while/as → as soon as·until·since·by the time）→ 让步 → 条件（主将从现）→ 原因四档 → 结果 so/such → 目的 → 综合验收（共 9 关 · 54 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "warmup",
+        "title": "① 热身：从句家族的第二位成员",
+        "explain": "<p>第 45 讲我们认识了从句家族的第一位成员——<b>宾语从句</b>：它跟在动词后面，回答「知道什么、想知道什么」。这一讲轮到第二位成员——<b>状语从句</b>：它不伺候动词当宾语，而是像副词一样，给主句<b>补充信息</b>——什么时候发生、什么条件下发生、为什么发生、结果怎样。</p><table><tr><th></th><th>宾语从句（第 45 讲）</th><th>状语从句（本讲）</th></tr><tr><td><b>干什么</b></td><td>作动词的宾语</td><td>修饰主句的动词/形容词/副词，作状语</td></tr><tr><td><b>领队</b></td><td>that / if / 疑问词</td><td>when、if、because、so that 等从属连词</td></tr><tr><td><b>例</b></td><td>I know <b>that he is honest</b>.</td><td>He didn't come <b>because he was ill</b>.</td></tr></table><p>状语从句全家福——本讲按六个知识块逐一攻克：</p><table><tr><th>种类</th><th>常用引导词</th><th>一句话记住</th></tr><tr><td><b>时间</b></td><td>when / while / as / as soon as / until / since / by the time</td><td>什么时候做</td></tr><tr><td><b>条件</b></td><td>if / unless / as long as / once / in case</td><td>什么条件下做</td></tr><tr><td><b>让步</b></td><td>though / although / even if / 疑问词-ever</td><td>尽管如此还是做</td></tr><tr><td><b>原因</b></td><td>because / since / as / for</td><td>为什么做</td></tr><tr><td><b>结果</b></td><td>so … that / such … that</td><td>做得太……以至于</td></tr><tr><td><b>目的</b></td><td>so that / in order that</td><td>为了做到</td></tr></table><p>判断从句种类，先看<b>引导词</b>、再读<b>句意</b>——引导词就是路标。自学方法：先读讲解 → 盖住答案做题 → 点「先想再看答案」核对 → 全懂了点「我学完了」进下一关。</p>",
+        "qs_label": "热身自测（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "状语从句在复合句中起什么作用？",
+            "options": [
+              "作动词的宾语",
+              "像副词一样修饰主句，补充时间、条件、原因、结果等信息",
+              "充当句子的主语",
+              "表示说话人的语气"
+            ],
+            "answer": "B. 像副词一样修饰主句，补充时间、条件、原因、结果等信息",
+            "explain": "状语从句 = 状语 + 从句：它整个从句相当于一个大副词，给主句添细节。A 是宾语从句（第 45 讲）的活儿。"
+          },
+          {
+            "stem": "下面哪句中的从句是状语从句？",
+            "options": [
+              "I know that he is honest.",
+              "I believe what he said.",
+              "He didn't come because he was ill.",
+              "Can you tell me where he lives?"
+            ],
+            "answer": "C. He didn't come because he was ill.",
+            "explain": "because he was ill 说明「没来」的原因，修饰主句 → 状语从句。A / B / D 的从句都跟在动词 know / believe / tell 后面作宾语，是第 45 讲的宾语从句。"
+          },
+          {
+            "stem": "He didn't attend the meeting because he was ill. 划线部分 because he was ill 是什么从句？",
+            "options": [
+              "宾语从句",
+              "定语从句",
+              "原因状语从句",
+              "主语从句"
+            ],
+            "answer": "C. 原因状语从句",
+            "explain": "because 引出「为什么没参加会议」→ 原因状语从句。判断从句种类的第一步就是认引导词：because = 原因。"
+          },
+          {
+            "stem": "下面哪种信息，状语从句一般不负责提供？",
+            "options": [
+              "时间（什么时候）",
+              "条件（什么情况下）",
+              "原因（为什么）",
+              "动词的宾语（动作的对象）"
+            ],
+            "answer": "D. 动词的宾语（动作的对象）",
+            "explain": "时间、条件、原因、结果、让步、目的都是状语从句的分工；「动作的对象」是宾语的活儿，归宾语从句管。"
+          }
+        ]
+      },
+      {
+        "key": "when-while-as",
+        "title": "② 时间状语从句（上）：when / while / as 三兄弟",
+        "explain": "<p>时间状语从句是考试第一大户口。三个「当……时」的连词，分工完全不同：</p><table><tr><th>连词</th><th>规则</th><th>例句</th></tr><tr><td><b>when</b></td><td>通吃型：主句和从句动作同时或先后发生；从句谓语<b>延续、瞬间动词都行</b></td><td>He <b>was working</b> when I went in. 我进去时他正在工作。</td></tr><tr><td><b>while</b></td><td>只带<b>延续性动词或状态动词</b>，意思是「在……期间」；还可表示<b>两者对比</b></td><td>My mother <b>was cooking</b> while I was doing my homework. 我做作业时妈妈在做饭。</td></tr><tr><td><b>as</b></td><td>强调<b>同时发生</b>，多指短暂动作；还可表示「<b>随着</b>」「一边……一边」</td><td>As I left the house, I forgot the key. 我离家时忘了带钥匙。/ As I get older, I get more optimistic. 随着年龄增长，我更乐观了。</td></tr></table><p><b>判断标志词</b>：从句里是「砰、敲门、到达」这类一瞬间的事 → 用 when（while 装不下瞬间动作）；两个动作都拖拖拉拉同时进行 → while 最合适；「随着……变化」→ as。</p><p><b>记法</b>：when 是「大路货」谁都能接；while 挑食只要延续动作，还兼职「对比」（He is tall while his brother is short. 他高，他弟弟矮）；as 管「同时」和「随着」。</p>",
+        "qs_label": "课堂练习：when / while / as",
+        "general_qs": [
+          {
+            "stem": "--- What were you doing ________ I knocked at the door?\n--- I was sleeping.",
+            "options": [
+              "unless",
+              "once",
+              "when",
+              "while"
+            ],
+            "answer": "C. when",
+            "explain": "knocked（敲门）是一瞬间的事，when 对瞬间、延续动作来者不拒 → C。D 的 while 只带延续性动作，装不下「敲门」这个瞬间动作；A 的 unless（除非）、B 的 once（一旦）是条件从句连词，意思也讲不通。"
+          },
+          {
+            "stem": "We'll celebrate ________ he comes back from his trip.",
+            "options": [
+              "while",
+              "when",
+              "until",
+              "although"
+            ],
+            "answer": "B. when",
+            "explain": "「他旅行回来时（我们就）庆祝」——come back 与 celebrate 先后发生 → when。A 死于 while 要「在……期间」且从句 come back 是瞬间动作；C 死于 until 肯定句后须接延续性动作（「庆祝到回来为止」不通）；D 的 although（虽然）让步意思不通。"
+          },
+          {
+            "stem": "He ________ (work) when I went in.",
+            "answer": "was working",
+            "explain": "我进去的那一刻，他「正在」工作 → 过去进行时 was working。when 表「这时」，瞬间动作 went in 作时间点，主句用进行时铺背景。"
+          },
+          {
+            "stem": "My mother ________ (cook) while I was doing my homework.",
+            "answer": "was cooking",
+            "explain": "while「在……期间」，做作业和做饭两个延续动作同时进行 → 过去进行时 was cooking。注意 while 还能表对比：He is tall while his brother is short.（他高，他弟弟矮。）"
+          },
+          {
+            "stem": "As I get older, I get more optimistic. 这里 as 表示什么意思？",
+            "options": [
+              "当……时（短暂动作同时发生）",
+              "随着（两种情况同步变化）",
+              "虽然",
+              "因为"
+            ],
+            "answer": "B. 随着（两种情况同步变化）",
+            "explain": "「年龄增长」和「变乐观」是两个正在发展变化的情况，同步推进 → as 译「随着」。A 是 as 表时间「当……时」的用法（As I left the house, I forgot the key.）；C 的 as 表让步要倒装（Young as he is…）；D 的 as 表原因是「由于」。同一个 as 四种身份，全靠句意判断。"
+          }
+        ],
+        "memory": {
+          "front": "when / while / as 三兄弟怎么分工？",
+          "back": "when：通吃——延续、瞬间都行，动作同时或先后\nwhile：只带延续性/状态动词，「在……期间」；还可表对比\nas：强调同时发生（多指短暂动作）；还可「随着」\n例：He was working when I went in.\n　　While I was reading, Mom was cooking.\n　　As I get older, I get more optimistic."
+        }
+      },
+      {
+        "key": "time-tense",
+        "title": "③ 时间状语从句（下）：as soon as · until · since · by the time",
+        "explain": "<p>时间状语从句的真正考点是<b>时态搭配</b>——从句一句话定下时间坐标，主句的时态就得跟着走：</p><table><tr><th>引导词</th><th>意思</th><th>时态搭配</th><th>例句</th></tr><tr><td><b>before / after</b></td><td>在……之前 / 之后</td><td>更早的动作（过去的过去）用<b>过去完成时</b></td><td>My father <b>had left</b> for Canada before the letter arrived. 信到之前，爸爸已经去加拿大了。</td></tr><tr><td><b>as soon as</b></td><td>一……就……</td><td>未发生：从句一般现在时，主句将来时（<b>主将从现</b>）；已发生：两边都用过去时</td><td>As soon as he <b>arrives</b>, I <b>will call</b> you. / As soon as he <b>arrived</b>, I <b>called</b> you.</td></tr><tr><td><b>until / till</b></td><td>直到……为止 / 直到……才</td><td>肯定句 + <b>延续性动词</b>；否定句 + <b>瞬间动词</b></td><td>I <b>waited</b> for him until he came back. / I <b>didn't leave</b> until he came back.</td></tr><tr><td><b>since</b></td><td>自从</td><td>主句<b>现在完成时</b>，从句<b>一般过去时</b></td><td>We <b>have been</b> friends since we <b>met</b> in Beijing.</td></tr><tr><td><b>by the time</b></td><td>到……的时候</td><td>主句<b>过去完成时</b>，从句一般过去时</td><td>By the time he arrived at the airport, the plane <b>had taken</b> off.</td></tr></table><p>两个加分点：① 强调句 It was not until … that … 里必须用 until（It was not until the professor came that we began the experiment. 教授来了我们才开始实验）；② until 肯定句像「水龙头开着一直流」——动作要能撑得住；否定句是「开关一按才动」——瞬间动作「直到那时才发生」。</p>",
+        "qs_label": "课堂练习：时间从句的时态呼应",
+        "general_qs": [
+          {
+            "stem": "My father had left for Canada before the letter ________ (arrive).",
+            "answer": "arrived",
+            "explain": "before 理清先后：先「去加拿大」，后「信到」。「去」发生在「信到」（过去）之前，是过去的过去 → 主句用过去完成时 had left，从句信到达用一般过去时 arrived。"
+          },
+          {
+            "stem": "As soon as he arrives, I ________ (call) you.",
+            "answer": "will call",
+            "explain": "as soon as「一……就……」：他还没到 → 从句用一般现在时 arrives，主句用将来时 will call——这就是<b>主将从现</b>，第⑤关条件从句还是这条铁律。若是过去的事：As soon as he arrived, I called you.（两边都过去时。）"
+          },
+          {
+            "stem": "I ________ (wait) for him until he came back.",
+            "answer": "waited",
+            "explain": "until 肯定句「一直等到……为止」→ 要配<b>延续性动词</b>：wait 正是延续动词，动作从过去一直撑到他回来。came back 是过去 → waited。"
+          },
+          {
+            "stem": "I ________ (not leave) until he came back.",
+            "answer": "didn't leave",
+            "explain": "until 否定句 =「直到……才」→ 配<b>瞬间动词</b>：leave 是一瞬间的事，「直到他回来才离开」→ didn't leave。同一种意思，肯定句选延续动词、否定句选瞬间动词——until 的选词开关。"
+          },
+          {
+            "stem": "We ________ (be) friends since we met in Beijing.",
+            "answer": "have been",
+            "explain": "since「自从」：从句 met 是一般过去时（过去那个相遇的点），主句「一直是朋友」从那时延续到现在 → 现在完成时 have been。since 从句的标配公式：主句现在完成时 + 从句一般过去时。"
+          },
+          {
+            "stem": "By the time he arrived at the airport, the plane ________ (take) off.",
+            "answer": "had taken off",
+            "explain": "by the time「到……的时候」：他到机场（过去）之前，飞机已经飞了 → 起飞是过去的过去 → 过去完成时 had taken off；从句 arrived 一般过去时。和 before 那句是同一个时态逻辑。"
+          }
+        ],
+        "memory": {
+          "front": "时间从句引导词背后的主句时态怎么配？",
+          "back": "before / after：更早的动作（过去的过去）→ 过去完成时 had done\nas soon as：主将从现（arrives → will call）；全过去则都用过去时\nuntil：肯定句 + 延续动词（等到为止）；否定句 + 瞬间动词（直到才）\nsince：主句现在完成时，从句一般过去时\nby the time：主句过去完成时，从句一般过去时"
+        }
+      },
+      {
+        "key": "concession",
+        "title": "④ 让步状语从句：虽然不服，也得让步",
+        "explain": "<p>让步状语从句 =「尽管有这个障碍，主句照样成立」。三个入口：</p><table><tr><th>引导词</th><th>意思</th><th>规则与例句</th></tr><tr><td><b>though / although</b></td><td>虽然；尽管</td><td><b>不能和 but 连用</b>——中文的「虽然……但是……」到英语里只能二选一：Though it's hard work, I enjoy it. = It's hard work, <b>but</b> I enjoy it.</td></tr><tr><td><b>even if / even though</b></td><td>即使；尽管</td><td>语气比 though 更强，常带「退一万步说」的味儿：Even if/though he is 80, he still looks strong and healthy.</td></tr><tr><td><b>疑问词 + ever</b></td><td>无论……</td><td>= <b>no matter + 疑问词</b>：Whenever you walk in the hills, you should always wear proper clothes. = <b>No matter when</b> you walk in the hills, …</td></tr></table><p><b>判断标志词</b>：前后两个分句意思「拧着」——累了还在工作、下雨还出门、80 岁还硬朗——中间多半要塞个让步连词。</p><p><b>记法</b>：中文「虽然……但是……」是成对的，英语 though 和 but 挤在一句里就是「双连词撞车」，必须开除一个；「无论」家族就是疑问词前面挂个 ever 或 no matter，一一对应换装。</p>",
+        "qs_label": "课堂练习：让步从句",
+        "general_qs": [
+          {
+            "stem": "下面哪句是正确的？",
+            "options": [
+              "Though it was raining, but we still went out.",
+              "Though it was raining, we still went out.",
+              "Although it was raining, but we still went out.",
+              "Although it was raining, so we still went out."
+            ],
+            "answer": "B. Though it was raining, we still went out.",
+            "explain": "though / although 不能和 but 连用——一个句子里从属连词只能有一个。A / C 死于「though/although 和 but 撞车」（想用 but 就写：It was raining, but we still went out.）；D 死于 although 和 so 撞车，且 so 表结果方向也不对。"
+          },
+          {
+            "stem": "Even if/though he is 80, he still ________ (look) strong and healthy.",
+            "answer": "looks",
+            "explain": "「尽管他 80 岁了，看上去仍然硬朗」→ even if/though 引导让步从句。主语 he 三单 → looks。让步从句的时态就用正常时态，别被「80 岁的过去」带偏。"
+          },
+          {
+            "stem": "Whenever you walk in the hills, you should always wear proper clothes. = ________ ________ ________ you walk in the hills, you should always wear proper clothes.（3 词）",
+            "answer": "No matter when",
+            "explain": "疑问词 + ever = no matter + 疑问词：whenever → no matter when（无论何时）。同款换装：whatever → no matter what、whoever → no matter who、however → no matter how。"
+          },
+          {
+            "stem": "Whoever comes to my home, I will welcome him warmly. 句中 Whoever 相当于？",
+            "options": [
+              "No matter who",
+              "No matter whom",
+              "No matter whose",
+              "No matter which"
+            ],
+            "answer": "A. No matter who",
+            "explain": "whoever = no matter who（无论是谁）。从句里缺的是主语，用主格 who——B 的 whom 是宾格，这里不占宾语的位置。"
+          },
+          {
+            "stem": "________ he was very tired, he kept working until midnight.",
+            "options": [
+              "Because",
+              "Though",
+              "If",
+              "So"
+            ],
+            "answer": "B. Though",
+            "explain": "「很累」和「继续工作」意思拧着——累了照干，让步关系 → Though。A 的 Because 方向反了（累应该是停下休息的原因）；C 的 If 条件不通；D 的 So 是并列连词表结果，不能领从句。判断让步的诀窍：前后分句「顶着来」。"
+          }
+        ]
+      },
+      {
+        "key": "condition",
+        "title": "⑤ 条件状语从句：if 家族五将 + 主将从现",
+        "explain": "<p>条件状语从句 =「满足这个前提，主句才成立」。if 家族五位大将各管一摊：</p><table><tr><th>引导词</th><th>意思</th><th>规则与例句</th></tr><tr><td><b>if</b></td><td>如果</td><td>可换成「祈使句 + and / or」：If you keep working hard, you will achieve your dream. = Keep working hard, <b>and</b> you will achieve your dream.（表条件就要 and）<br>If you don't hurry up, you will be late. = Hurry up, <b>or</b> you will be late.（「不这样就会……」用 or）</td></tr><tr><td><b>unless</b></td><td>除非 = <b>if not</b></td><td>You can never play well <b>unless</b> you practise more. = You can never play well <b>if</b> you <b>don't</b> practise more.</td></tr><tr><td><b>as long as</b></td><td>只要</td><td>As long as you tell the truth, I'll try to help you. 只要你说实话，我就帮你。</td></tr><tr><td><b>once</b></td><td>一旦</td><td>Once it rains on Sunday, our school will put off the spring outing. 周日一旦下雨就推迟春游。</td></tr><tr><td><b>in case</b></td><td>万一；以防</td><td>In case you have any trouble, call me. 有麻烦就打给我。</td></tr></table><p>本关最大的雷：<b>主将从现</b>——主句用将来时 will do，if 条件从句必须用<b>一般现在时</b>。If it <b>rains</b> tomorrow, we <b>will stay</b> at home.（✗ If it will rain）所有条件连词 if / unless / as long as / once / in case 从句一律照此办理。</p><p><b>记法</b>：and 是「顺水推舟」（照做就有好结果），or 是「警告」（不做就有坏结果）；unless 自带一个隐藏的 not，翻译时先换成 if not 再读一遍就不晕。</p>",
+        "qs_label": "课堂练习：条件从句（含课堂练习 1）",
+        "general_qs": [
+          {
+            "stem": "If it ________ (rain) tomorrow, we will stay at home.",
+            "answer": "rains",
+            "explain": "主将从现：主句 will stay 将来时 → if 从句用一般现在时，it 三单 → rains。写 will rain 是本讲第一大送分陷阱。"
+          },
+          {
+            "stem": "If you keep working hard, you will achieve your dream. = Keep working hard, ________ you will achieve your dream.",
+            "answer": "and",
+            "explain": "「如果坚持努力（好条件）→ 梦想实现」= 祈使句 + <b>and</b> + 将来：顺水推舟用 and。对比：or 表「否则」。"
+          },
+          {
+            "stem": "If you don't hurry up, you will be late. = Hurry up, ________ you will be late.",
+            "answer": "or",
+            "explain": "「不抓紧 → 迟到」= 祈使句 + <b>or</b> + 将来：「快点儿，否则迟到」。这里 if 从句是否定的（don't hurry up），换成祈使句就用 or 警告——and/or 的分水岭：照做有好结果用 and，不做有坏结果用 or。"
+          },
+          {
+            "stem": "You can never play well unless you practise more. = You can never play well ________ you ________ practise more.（依次填两词）",
+            "answer": "if, don't",
+            "explain": "unless = if not：除非多练习（否则打不好）= 如果不多练习就打不好。第二空否定落在 practise 上 → don't practise。unless 自带否定，换成 if 时要把 not 还给动词。"
+          },
+          {
+            "stem": "--- What will you do then?\n--- I will telephone the police and complain about it ________ the noise stops soon.（课堂练习 1）",
+            "options": [
+              "unless",
+              "though",
+              "because",
+              "if"
+            ],
+            "answer": "A. unless",
+            "explain": "「除非噪音很快停（否则我就报警投诉）」→ unless = if not。B 的 though 让步不通；C 的 because 因果方向反了（报警不是因为噪音停了）；D 的 if 意思正好说反——「如果噪音停了就报警」逻辑不通。"
+          },
+          {
+            "stem": "As long as you tell the truth, I ________ (try) to help you.",
+            "answer": "will try",
+            "explain": "as long as「只要」和 if 一样走主将从现：从句 tell 一般现在时 → 主句 will try。只要说实话这个条件成立，我就帮。"
+          },
+          {
+            "stem": "Once it rains on Sunday, our school ________ (put) off the spring outing.",
+            "answer": "will put",
+            "explain": "once「一旦」也是条件连词，照样主将从现：从句 rains → 主句 will put off（推迟）。一旦下雨这个条件一触发，推迟春游的结果就兑现。"
+          },
+          {
+            "stem": "He packed some snacks ________ he got hungry during the trip.（课堂练习 1）",
+            "options": [
+              "as long as",
+              "in case",
+              "even if",
+              "by the time"
+            ],
+            "answer": "B. in case",
+            "explain": "「带上零食以防路上饿」→ in case（万一、以防）提前做准备。A 的 as long as「只要」语义不通（不能是「只要他饿了我就带零食」）；C 的 even if「即使」方向不对；D 的 by the time「到……时候」是时间连词，这里不表时间点。"
+          }
+        ],
+        "memory": {
+          "front": "条件从句：主将从现 + if 家族五将？",
+          "back": "主将从现：If it rains tomorrow, we will stay at home.（从句一般现在时，主句将来时）\nif → 祈使句 + and（顺水推舟）/ or（否则）\nunless = if not（自带否定）\nas long as 只要 · once 一旦 · in case 万一"
+        }
+      },
+      {
+        "key": "reason",
+        "title": "⑥ 原因状语从句：because → since → as → for 四档语气",
+        "explain": "<p>表原因的连词有四个，<b>语气由强到弱</b>排成一列：</p><pre class=\"topic-formula\">because  →  since  →  as  →  for\n（最强）                （最弱）</pre><table><tr><th>连词</th><th>分工</th><th>例句</th></tr><tr><td><b>because</b></td><td>语气最强：直接因果，回答 <b>why</b> 提问，告知对方<b>不知道的新原因</b>；可用于强调句</td><td>He didn't attend the meeting <b>because</b> he was ill. / It was <b>because</b> he was ill that he didn't attend the meeting.</td></tr><tr><td><b>since</b></td><td>「既然」：显然的或已为人所知的理由，侧重主句，通常<b>置于句首</b></td><td><b>Since</b> we are all here, we should discuss the problem together.</td></tr><tr><td><b>as</b></td><td>「由于」：双方已知的显而易见的原因，理由不重要，比 since 更弱、更不正式</td><td>Alice may need some help <b>as</b> she is new.</td></tr><tr><td><b>for</b></td><td>一般<b>不置句首</b>：陈述推测理由，或对前面事实的补充说明</td><td>The days are short, <b>for</b> it is now December.</td></tr></table><p>两个必考雷区：① <b>because 和 so 不能同在一个句子里</b>（和 though 不配 but 一个道理，连词只能二选一）：Because the book was expensive, I didn't buy it. / The book was expensive, <b>so</b> I didn't buy it. ✓ ② <b>because 是连词 + 从句；because of 是短语介词 + 名词性词语</b>：The football match was put off <b>because</b> it rained. = … put off <b>because of</b> the rain.</p>",
+        "qs_label": "课堂练习：原因从句四档",
+        "general_qs": [
+          {
+            "stem": "because, since, as & for 四个表原因的连词，语气由强至弱依次是？（按顺序写）",
+            "answer": "because, since, as, for",
+            "explain": "固定排序：because（最强，答 why）→ since（既然）→ as（由于）→ for（最弱，补充推测）。四档语气从「正式给出新原因」一路滑到「顺嘴补一句」。"
+          },
+          {
+            "stem": "--- Why were you late this morning?\n--- ________ the bus broke down on the way.",
+            "options": [
+              "Because",
+              "Since",
+              "As",
+              "For"
+            ],
+            "answer": "A. Because",
+            "explain": "回答 why 提问、告知对方不知道的新原因 → 只能用 because（语气最强、直接因果）。since / as 表「已知理由」，for 一般不置句首且不用于回答 why。"
+          },
+          {
+            "stem": "下面哪句是正确的？",
+            "options": [
+              "Because the book was expensive, so I didn't buy it.",
+              "The book was expensive, so I didn't buy it.",
+              "Because the book was expensive, but I didn't buy it.",
+              "Because of the book was expensive, I didn't buy it."
+            ],
+            "answer": "B. The book was expensive, so I didn't buy it.",
+            "explain": "because 和 so 不能同句——连词二选一。A / C 死于连词撞车（because 句和 so 句是同一意思的两种正确写法）；D 死于 because of 是介词短语，后面只能接名词性词语，接不了从句 the book was expensive。"
+          },
+          {
+            "stem": "The football match was put off ________ it rained.　The football match was put off ________ the rain.（两句各填一空）",
+            "answer": "because, because of",
+            "explain": "第一句后面是从句 it rained（有主语谓语）→ 连词 because；第二句后面是名词 the rain → 短语介词 because of。判断口诀：because 背后跟句子，because of 背后跟名词。"
+          },
+          {
+            "stem": "________ you're already here, let's get started with the meeting.（课堂练习 1）",
+            "options": [
+              "Because",
+              "As",
+              "For",
+              "Since"
+            ],
+            "answer": "D. Since",
+            "explain": "「你人都已经到了」是摆在眼前的已知理由，since 译「既然」、常置句首 → D。A 死于 because 是告知对方不知道的新原因、回答 why 用的；B 的 as 意思相近但语气更弱、偏口语；C 的 for 一般不置句首。"
+          },
+          {
+            "stem": "The days are short, for it is now December. 关于句中 for 表原因，下列说法正确的是？",
+            "options": [
+              "for 常放句首引出原因",
+              "for 一般不置句首，陈述推测理由或补充说明",
+              "for 表原因语气最强",
+              "for 后面只能接名词"
+            ],
+            "answer": "B. for 一般不置句首，陈述推测理由或补充说明",
+            "explain": "for 是四兄弟里语气最弱的，像个「补丁」：在句尾顺带解释一句「白天短，因为已是十二月」。A 死于「不置句首」；C 死于它语气最弱（最强是 because）；D 死于 for 接的是完整从句 it is now December。"
+          }
+        ],
+        "memory": {
+          "front": "原因四档怎么排？because 和 because of 怎么分？",
+          "back": "语气由强到弱：because → since → as → for\nbecause：答 why，新原因，可用强调句；不与 so 连用\nsince：既然（已知理由，常在句首）；as：由于（更弱）；for：不置句首，补充推测\nbecause + 从句；because of + 名词性词语"
+        }
+      },
+      {
+        "key": "result",
+        "title": "⑦ 结果状语从句：so … that vs such … that",
+        "explain": "<p>结果状语从句 =「太……以至于……」。so 和 such 是两条公式线，<b>so 后跟形容词/副词，such 后跟名词</b>：</p><table><tr><th>公式</th><th>例句</th></tr><tr><td>such + a(an) + 形容词 + <b>单数可数名词</b> + that</td><td>He was <b>such an honest man</b> that he was praised by the teacher.</td></tr><tr><td>such + 形容词 + <b>复数名词 / 不可数名词</b> + that</td><td>They are <b>such interesting novels</b> that I want to read them again. / It's <b>such nice weather</b> that I would like to go to the beach.</td></tr><tr><td>so + 形容词/副词 + that</td><td>He runs <b>so fast</b> that nobody can catch up with him.</td></tr><tr><td>so + 形容词 + a(an) + 单数可数名词 + that</td><td>She is <b>so clever a girl</b> that she can work out these problems by herself.</td></tr><tr><td>so + many/few + 可数名词复数 + that</td><td>There are <b>so many computers</b> that I don't know how to choose.</td></tr><tr><td>so + much/little + 不可数名词 + that</td><td>They were having <b>so much fun</b> that they forgot the time to go home.</td></tr></table><p>两组高频同义转换：</p><p>① so … that ↔ such … that（单数可数名词两种说法互换）：She is <b>so good a doctor</b> that everybody loves her. = She is <b>such a good doctor</b> that everybody loves her.</p><p>② so … that（否定）↔ too … to：He is <b>so young that he can't</b> dress himself. = He is <b>too young to</b> dress himself.</p><p><b>记法</b>：such 是「名词党」——身后早晚有名词；so 是「形容词党」——身后紧跟形容词/副词。唯一例外：so many / so much / so few / so little 直接搭数量词，不受「so 后不接名词」限制。</p>",
+        "qs_label": "课堂练习：结果从句（含课堂练习 2）",
+        "general_qs": [
+          {
+            "stem": "--- What do you think of yesterday's English speech?\n--- Well, he spoke ________ fast ________ I couldn't follow it.（课堂练习 2）",
+            "options": [
+              "so; that",
+              "both; and",
+              "too; to",
+              "as; as"
+            ],
+            "answer": "A. so; that",
+            "explain": "so + 副词 fast + that 从句：「讲得太快，我跟不上」→ A。C 死于 too…to 后面接的是动词原形（to follow），接不了完整从句 I couldn't follow it；B 的 both…and（既……又）和 D 的 as…as（和……一样）都没有「以至于」的意思。"
+          },
+          {
+            "stem": "He has made ________ great progress ________ his mother is very pleased with him.（课堂练习 2）",
+            "options": [
+              "so; that",
+              "enough; to",
+              "so; too",
+              "such; that"
+            ],
+            "answer": "D. such; that",
+            "explain": "progress 是<b>不可数名词</b>，公式 such + 形容词 + 不可数名词 + that → D。A 死于 so 不能直接搭「形容词 + 不可数名词」（so many computers、so much fun 里的 many/much 是数量词，great 不是）。这题考的就是「名词党 such、形容词党 so」这条分界线。"
+          },
+          {
+            "stem": "He was such ________ ________ ________ that he was praised by the teacher.（他非常诚实，因而受到了老师的表扬。3 词）",
+            "answer": "an honest man",
+            "explain": "such + a(an) + 形容词 + 单数可数名词：such <b>an honest man</b> that… 冠词 an 放在 such 后、形容词 honest 前——词序锁死。"
+          },
+          {
+            "stem": "She is so ________ ________ ________ that she can work out these difficult problems by herself.（她是如此聪明一个女孩……3 词）",
+            "answer": "clever a girl",
+            "explain": "so + 形容词 + a(an) + 单数可数名词：so <b>clever a girl</b> that… 冠词被挤到形容词后面——和 such a clever girl 是同一意思的两种词序，考试最爱让你来回换。"
+          },
+          {
+            "stem": "They were having so ________ ________ that they forgot the time to go home.（他们玩得太开心，以至于忘了回家。2 词）",
+            "options": [
+              "much fun",
+              "many fun",
+              "much funny",
+              "many funny"
+            ],
+            "answer": "A. much fun",
+            "explain": "so + much/little + <b>不可数名词</b>：fun 不可数 → so much fun。B 死于 many 只配可数名词；C / D 死于 funny 是形容词（「太搞笑」要说 so funny），叠在 much/many 后语法崩塌。"
+          },
+          {
+            "stem": "Mr. Wang is so good a doctor that everybody loves and respects him. = Mr. Wang is ________ a good doctor ________ everybody loves and respects him.（依次填两词）",
+            "answer": "such, that",
+            "explain": "so + 形容词 + a + 单数名词 ↔ such + a + 形容词 + 单数名词：so good a doctor → <b>such</b> a good doctor <b>that</b>。冠词位置是两条公式唯一的区别。"
+          },
+          {
+            "stem": "He is so young that he can't dress himself. = He is ________ young ________ dress himself.（依次填两词）",
+            "answer": "too, to",
+            "explain": "so…that 的否定式 ↔ too…to：「太小了以至于不能自己穿衣服」=「太小了而不会穿」。转换要点：that 从句必须是<b>否定</b>的（can't），才能换成 too … to（to 后接动词原形 dress）。"
+          }
+        ],
+        "memory": {
+          "front": "so … that 和 such … that 的公式怎么背？",
+          "back": "such + a/an + 形容词 + 单数可数名词（such an honest man）\nsuch + 形容词 + 复数/不可数名词（such nice weather）\nso + 形容词/副词（so fast）\nso + 形容词 + a/an + 单数可数名词（so clever a girl）\nso + many/few + 复数；so + much/little + 不可数（so much fun）\nso…that 否定 ↔ too…to（so young that he can't = too young to）"
+        }
+      },
+      {
+        "key": "purpose",
+        "title": "⑧ 目的状语从句：so that / in order that",
+        "explain": "<p>目的状语从句 =「为了……」，两个固定连词：</p><table><tr><th>引导词</th><th>例句</th></tr><tr><td><b>so that</b>（以便）</td><td>He got up very early <b>so that</b> he could catch the first train. 他起得很早，以便赶上第一班火车。</td></tr><tr><td><b>in order that</b>（为了）</td><td>You'd better speak louder <b>in order that</b> you can be heard by all. 你最好大声点，以便所有人都能听到。</td></tr></table><p>两个必考点：</p><p>① 两个连词都能换成<b>动词不定式</b>：so that = so as to，in order that = in order to——Mulan dressed up like a man <b>so that she could</b> join the army. = Mulan dressed up like a man <b>so as to</b> join the army. / The brain needs to rest <b>in order that it can</b> work at its best. = The brain needs to rest <b>in order to</b> work at its best.</p><p>② <b>so that 引导目的是结果，靠从句里的情态动词判断</b>：从句谓语有 can / could / may / might 等情态动词 → <b>目的</b>（Mr. Li always works hard so that he <b>may</b> make great progress. 以便取得进步）；从句没有情态动词、前面常有逗号 → <b>结果</b>（Mr. Li always works hard, so that he <b>makes</b> great progress. 所以取得了进步）。</p><p><b>记法</b>：目的是「还没发生的打算」，所以从句里挂着 may / can / could 这类「可能性」情态动词；结果是「已经发生的事实」，用一般时态落地。</p>",
+        "qs_label": "课堂练习：目的从句",
+        "general_qs": [
+          {
+            "stem": "He got up very early so that he could catch the first train. 句中 so that 引导的是什么从句？",
+            "options": [
+              "结果状语从句",
+              "目的状语从句",
+              "时间状语从句",
+              "原因状语从句"
+            ],
+            "answer": "B. 目的状语从句",
+            "explain": "从句里有情态动词 <b>could</b>——「起早」是为了「赶上车」这个还没发生的打算 → 目的状语从句。判断标志：从句谓语带 can / could / may / might。"
+          },
+          {
+            "stem": "You'd better speak louder in order that you can be heard by all. in order that 在句中引导？",
+            "options": [
+              "目的状语从句",
+              "结果状语从句",
+              "让步状语从句",
+              "条件状语从句"
+            ],
+            "answer": "A. 目的状语从句",
+            "explain": "in order that 是目的状语从句专用连词（= 为了），从句里的 can 也印证了「目的」。它没有引导结果从句的用法——这是它和 so that 的分工差异。"
+          },
+          {
+            "stem": "Mulan dressed up like a man so that she could join the army. = Mulan dressed up like a man ________ ________ ________ join the army.（3 词）",
+            "answer": "so as to",
+            "explain": "so that + 从句 ↔ so as to + 动词原形：转换时把从句「she could join」压成不定式「to join」，主语 she 与主句相同可以直接省。in order that 则换成 in order to。"
+          },
+          {
+            "stem": "The brain needs to rest in order that it can work at its best. = The brain needs to rest ________ ________ ________ work at its best.（3 词）",
+            "answer": "in order to",
+            "explain": "in order that + 从句 ↔ in order to + 动词原形。和 so as to 一对双胞胎，区别只在正式程度：in order to 更正式，且可放句首（So as to 放句首较少见）。"
+          },
+          {
+            "stem": "Mr. Li always works hard so that he may make great progress. / Mr. Li always works hard, so that he makes great progress. 两句中的 so that 分别引导？",
+            "options": [
+              "两句都是目的状语从句",
+              "两句都是结果状语从句",
+              "前句目的，后句结果",
+              "前句结果，后句目的"
+            ],
+            "answer": "C. 前句目的，后句结果",
+            "explain": "看从句谓语：前句有 may（may/can/could/might 都行）→ 还没发生的打算 → 目的；后句是一般时 makes，so that 前还有逗号 → 已发生的事实 → 结果。情态动词就是目的从句的「工牌」。"
+          },
+          {
+            "stem": "She spoke slowly ________ ________ everyone could understand her.（2 空，引导目的状语从句）",
+            "answer": "so that",
+            "explain": "「故意放慢语速」是为了「大家听懂」→ 目的 → so that / in order that 都对，这里两个空填 so that。从句里的 could 也能换成 can，目的从句常带情态动词。"
+          }
+        ]
+      },
+      {
+        "key": "final",
+        "title": "⑨ 综合验收：八关考点一锅端",
+        "explain": "<p>最后一关，不讲新东西——把前面八关的考点混在一起再过一遍。做错哪题，就回哪一关翻讲解和口诀卡。</p><p>验收清单：<b>when/while/as 分工 · 时间从句时态呼应（since 完成时、by the time 过去完成）· 让步不与 but 连用 · 主将从现 + unless · 原因四档与 because of · such/so 公式 · 目的看情态动词</b>，外加第 45 讲宾语从句的旧账要还。</p>",
+        "qs_label": "综合验收（错哪题回哪关）",
+        "general_qs": [
+          {
+            "stem": "--- Tom wants to know if you ________ a picnic next Sunday.\n--- Yes. But if it ________, we'll visit the museum instead.（课堂练习 2）",
+            "options": [
+              "will have; will rain",
+              "have; rains",
+              "have; will rain",
+              "will have; rains"
+            ],
+            "answer": "D. will have; rains",
+            "explain": "两个 if 身份不同：第一个 if 是「是否」，引导<b>宾语从句</b>（第 45 讲），next Sunday 将来 → will have；第二个 if 是「如果」，引导<b>条件状语从句</b>，主将从现 → rains。A / C 死于条件从句里的 will rain（主将从现是铁律）；B 死于宾语从句漏掉将来时。一题验两讲。"
+          },
+          {
+            "stem": "By the time I got to the station, the train ________ (leave).",
+            "answer": "had left",
+            "explain": "by the time「到……的时候」：我到站（过去）之前火车已经走了 → 过去的过去 → 过去完成时 had left。对应第③关：by the time 主句过去完成、从句一般过去。"
+          },
+          {
+            "stem": "You will miss the bus ________ you leave right now.",
+            "options": [
+              "if",
+              "unless",
+              "though",
+              "because"
+            ],
+            "answer": "B. unless",
+            "explain": "「除非现在就走，否则赶不上公交」→ unless = if not。A 的 if 意思正好说反（「如果现在走就赶不上」不通）；C 的 though 让步、D 的 because 原因都与句意无关。"
+          },
+          {
+            "stem": "It was ________ a funny story that everyone laughed.",
+            "answer": "such",
+            "explain": "such + a + 形容词 + 单数可数名词 + that：such <b>a</b> funny story。空后已有冠词 a 和名词 story → 名词党 such 上场（写 so 死于「so 后面不能直接接 a funny story」）。"
+          },
+          {
+            "stem": "He didn't go to school ________ his illness.",
+            "answer": "because of",
+            "explain": "空后是名词短语 his illness → 短语介词 because of。若接从句 he was ill，才用连词 because。这一空专查 because / because of 的词性分工。"
+          },
+          {
+            "stem": "________ he is very busy, he helps me with my homework every day.",
+            "options": [
+              "Because",
+              "Though",
+              "If",
+              "So"
+            ],
+            "answer": "B. Though",
+            "explain": "「很忙」和「每天帮我」意思拧着——再忙也帮 → 让步 Though。A 死于因果方向反（忙应该是不帮的原因）；C 的 If 条件不通；D 的 So 是并列连词不能领从句。"
+          },
+          {
+            "stem": "Tom turned down the radio so that his parents could sleep well. 句中 so that 引导？",
+            "options": [
+              "结果状语从句",
+              "目的状语从句",
+              "时间状语从句",
+              "让步状语从句"
+            ],
+            "answer": "B. 目的状语从句",
+            "explain": "从句谓语有情态动词 <b>could</b> → 调小音量是「为了」让父母睡好 → 目的状语从句（第⑧关的判断标志：目的从句挂着 may / can / could）。"
+          }
+        ]
+      }
+    ]
+  }
+}

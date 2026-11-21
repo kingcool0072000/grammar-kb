@@ -1,0 +1,473 @@
+{
+  "meta": {
+    "topic_id": "lecture-32-modal-2",
+    "title": "第32讲 · 情态动词② 自学",
+    "subtitle": "自学一遍再上课：热身 → shall（征求意见·允诺警告·条约必须）→ should / ought to（应该·劝告·推测）→ will / would（意愿·请求·习惯·推测）→ had better / would rather（最好·宁愿）→ used to / dare（过去常常·敢）→ 情态动词的被动语态 → 综合验收（共 8 关 · 50 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "intro",
+        "title": "① 热身：情态动词第二波",
+        "explain": "<p>第31讲认识了第一梯队：can / could、may / might、must、need。这一讲轮到<b>第二梯队</b>登场：shall、should / ought to、will / would、had better、would rather、used to、dare，最后再加一个杀手锏——<b>情态动词的被动语态</b>。</p><p>规矩没变，先把三条铁律带进场：</p><table><tr><th>铁律</th><th>意思</th><th>对照</th></tr><tr><td>① 后接动词原形</td><td>没有 to，没有 -ing</td><td>You should <b>keep</b> your promise.（√ should to keep ✗）</td></tr><tr><td>② 无人称变化</td><td>三单也不加 -s</td><td>He <b>should</b> go.（√ shoulds ✗）</td></tr><tr><td>③ 否定、答语各有套路</td><td>每家的否定形式和答语要单独记</td><td>Must 问 → <b>needn't</b> 答（第31讲）；Ought 问 → <b>oughtn't to</b> 答（本讲）</td></tr></table><p>本讲还有几位「编外队员」：had better、would rather、used to 严格说不是情态动词，但都<b>后接动词原形</b>，和情态动词一起混考；dare 则和第31讲的 need 一样是<b>双重身份</b>（情态动词 / 实义动词）。</p><p>自学方法：先读讲解 → 盖住答案做题 → 点「先想再看答案」核对 → 全懂了点「我学完了」进下一关。</p>",
+        "qs_label": "热身自测（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "--- Must I finish the report today?\n--- No, you ________. You can do it tomorrow.",
+            "options": [
+              "mustn't",
+              "needn't",
+              "can't",
+              "shouldn't"
+            ],
+            "answer": "B. needn't",
+            "explain": "上一讲的王牌答语：Must I…? 否定回答用 needn't / don't have to。A 的 mustn't 是「禁止」——老师不是禁止你交，是不必今天交。"
+          },
+          {
+            "stem": "He isn't at school today. He ________ be ill.",
+            "options": [
+              "can",
+              "must",
+              "shall",
+              "would"
+            ],
+            "answer": "B. must",
+            "explain": "没来上学 → 「一定」是病了 → 肯定推测 must。肯定句的「一定是」永远归 must 管，can 只住否定句和疑问句。"
+          },
+          {
+            "stem": "下面哪个词是本讲的新主角（第31讲没讲过）？",
+            "options": [
+              "can",
+              "must",
+              "shall",
+              "need"
+            ],
+            "answer": "C. shall",
+            "explain": "本讲第二梯队：shall、should / ought to、will / would、had better、would rather、used to、dare。can / must / need 都是第31讲的老朋友。"
+          },
+          {
+            "stem": "You'd better ________ (go) to bed now. It's late.",
+            "answer": "go",
+            "explain": "had better + 动词原形——本讲主角之一，先尝一口：better 后面不加 to、不加 -ing。"
+          }
+        ]
+      },
+      {
+        "key": "shall",
+        "title": "② shall：征求意见 · 允诺警告 · 条约「必须」",
+        "explain": "<p>shall 是「我来问、你来定」的商量词，也是法条里的「必须」，三张面孔：</p><table><tr><th>用法</th><th>规则</th><th>例句</th></tr><tr><td><b>征求意见 / 请求</b></td><td>主要用于<b>第一、第三人称</b>的疑问句，意为「要不要……？」「……好吗？」</td><td><b>Shall</b> I come in? / Mom, <b>shall</b> we go boating this weekend? / <b>Shall</b> the driver wait outside?</td></tr><tr><td><b>命令 / 警告 / 允诺</b></td><td>用于<b>第二、第三人称</b>的陈述句，意为「可以、必须、应该」</td><td>You <b>shall</b> have a gift if you do well in the mid-term exam.（允诺）/ She <b>shall</b> do as she is told.（命令）/ He <b>shall</b> suffer for what he did!（警告）</td></tr><tr><td><b>条约 / 法令「必须」</b></td><td>用于第三人称陈述句，在条约、规则、法令里表示义务或规定</td><td>Persons under 18 <b>shall not be employed</b>. 不得雇佣18岁以下的人。/ Each competitor <b>shall wear</b> a number.</td></tr></table><p><b>记法</b>：I / we 问是「商量」；你说、他说是「发话」——命令、警告、许诺；写进文件里就是「必须」。再记一条黄金搭配：Let's…, <b>shall we</b>?</p>",
+        "qs_label": "课堂练习：shall 三用法",
+        "general_qs": [
+          {
+            "stem": "Let's go home together, ________ ________?",
+            "answer": "shall we",
+            "explain": "Let's 开头的句子，反意疑问固定用 shall we——「我们一起回家，好吗？」这是征求意见，第一人称问句用 shall。"
+          },
+          {
+            "stem": "Shall I come in? 我能进来吗？这句里的 shall 表示什么？",
+            "options": [
+              "能力",
+              "征求意见",
+              "允诺",
+              "条约里的必须"
+            ],
+            "answer": "B. 征求意见",
+            "explain": "第一人称疑问句的 shall 是在问对方「要不要我进来」——征求意见 / 请求，意为「……好吗？」"
+          },
+          {
+            "stem": "shall 用于第二、第三人称的陈述句时，可以表示什么？",
+            "options": [
+              "能力",
+              "过去的习惯",
+              "命令、警告或允诺",
+              "理论上的可能"
+            ],
+            "answer": "C. 命令、警告或允诺",
+            "explain": "She shall do as she is told.（命令）/ He shall suffer for what he did!（警告）/ You shall have a gift.（允诺）——第二、三人称陈述句里 shall 是说话人在「发话」。"
+          },
+          {
+            "stem": "在条约、规则、法令等文件里，shall 表示什么？",
+            "options": [
+              "允诺",
+              "必须（义务或规定）",
+              "警告",
+              "征求意见"
+            ],
+            "answer": "B. 必须（义务或规定）",
+            "explain": "Persons under 18 shall not be employed. 不得雇佣18岁以下的人——法律条文里的 shall = 必须，语气像军令。"
+          },
+          {
+            "stem": "You ________ have a gift if you do well in the mid-term exam.（考得好就给你礼物，表允诺，填情态动词）",
+            "answer": "shall",
+            "explain": "第二人称陈述句 + 表允诺 → shall。「你期中考得好，就给你礼物」——说话人在许诺，正是 shall 的第二张面孔。"
+          }
+        ]
+      },
+      {
+        "key": "shouldought",
+        "title": "③ should / ought to：应该 · 劝告 · 推测",
+        "explain": "<p>should 和 ought to 是「应该」的双胞胎，考试专挑 ought to 的格式下手：</p><table><tr><th>用法</th><th>should</th><th>ought to</th></tr><tr><td><b>应该（责任义务）</b></td><td>说话人主观认为的责任义务，可用于所有人称：You <b>should keep your promise</b> once you make it.</td><td>可以代替 should；<b>没有人称、数、时态的变化</b></td></tr><tr><td><b>委婉劝告 / 建议</b></td><td>You <b>should ask</b> your parents <b>for help</b>. 语气不如 must / have to 强烈。</td><td>Jane <b>ought to go to bed</b> early.</td></tr><tr><td><b>有根据的推测</b></td><td>It <b>should be</b> 2 dollars. 标价错了，按理应该是 2 美元。</td><td>It <b>ought to be</b> a fine day tomorrow morning. 按常理明天该是好天。</td></tr><tr><td><b>格式四件套</b></td><td>否定 should not（shouldn't）</td><td>否定 <b>ought not to</b>（缩写 oughtn't to）；疑问把 <b>ought 提前</b>：Ought you to…?；答语 Yes, I <b>ought to</b>. / No, I <b>oughtn't to</b>. / I don't have to.</td></tr></table><p><b>记法</b>：ought to 的 not 放在 <b>to 前面</b>（ought not to do），别写成 ought to not；问句提前的是 ought，<b>to 永远跟着走</b>。语气排队：must「必须」最硬，should / ought to「应该」软一档——劝告建议用它最合适。</p>",
+        "qs_label": "课堂练习 1（上）：should / ought to",
+        "general_qs": [
+          {
+            "stem": "He ________ late for class again.",
+            "options": [
+              "ought not to be",
+              "ought not be",
+              "ought to not be",
+              "oughts not to be"
+            ],
+            "answer": "A. ought not to be",
+            "explain": "ought to 的否定在 to 前加 not：ought not to be。B 死于丢了 to；C 死于 not 的位置（初中口径：not 放 to 前，不插在中间）；D 死于 ought 无人称变化，不加 -s。"
+          },
+          {
+            "stem": "You should ________ ________ ________ once you make it.（许诺了就该兑现）",
+            "answer": "keep your promise",
+            "explain": "should + 动词原形；keep one's promise 信守诺言。once you make it 一旦许下诺言，就该 keep it。"
+          },
+          {
+            "stem": "If you have problems, you should ________ ________ ________ ________.（向你的父母求助）",
+            "answer": "ask your parents for help",
+            "explain": "ask sb for help 向某人求助，固定搭配；should 后接动词原形 ask。遇到问题「应该」求助——should 的委婉劝告用法。"
+          },
+          {
+            "stem": "The price on the packet is wrong. It should be 2 dollars. 这句里的 should 表示什么？",
+            "options": [
+              "应该（责任义务）",
+              "委婉劝告",
+              "有根据的推测（按理应该）",
+              "必须"
+            ],
+            "answer": "C. 有根据的推测（按理应该）",
+            "explain": "标价错了，按理说应该是 2 美元——should 表「按理说应该发生」的推测，可能性比较大，根据就是「价格错了」这个证据。"
+          },
+          {
+            "stem": "--- Ought you to finish your homework before dinner?\n--- Yes, I ________ ________.",
+            "answer": "ought to",
+            "explain": "Ought 提前的疑问句，肯定答语 Yes, I ought to——注意 to 不能丢。否定答语 No, I oughtn't to. / I don't have to."
+          },
+          {
+            "stem": "You ought not to ________ ________ ________ too quickly.（太快下结论）",
+            "answer": "jump to conclusions",
+            "explain": "ought not to + 动词原形；jump to conclusions 过早下结论、贸然断定——固定短语，结论是「跳」过去的。"
+          }
+        ],
+        "memory": {
+          "front": "ought to 的否定、疑问和答语？should 表推测是什么意思？",
+          "back": "否定：ought not to（缩写 oughtn't to）——not 放 to 前\n疑问：Ought you to…? 提前的是 ought，to 跟着走\n答语：Yes, I ought to. / No, I oughtn't to. / I don't have to.\n推测：It should be 2 dollars. 按理应该是——有根据的推测"
+        }
+      },
+      {
+        "key": "willwould",
+        "title": "④ will / would：意愿 · 请求 · 习惯 · 推测",
+        "explain": "<p>will / would 一家干四件事：</p><table><tr><th>用法</th><th>规则</th><th>例句</th></tr><tr><td><b>意愿</b></td><td>用于各个人称；will 表示现在的意愿，would 表示过去的意愿</td><td>We <b>will help</b> her if she is in trouble. / She said that she <b>would help</b> us.</td></tr><tr><td><b>请求允许</b></td><td>疑问句用于第二人称，询问对方意愿或提出请求；<b>would 比 will 更客气、委婉</b></td><td><b>Would</b> you please <b>give</b> me a hand? 你可以帮我一个忙吗？</td></tr><tr><td><b>习惯或特性</b></td><td>带主观性，意为「总是」；will 现在的习惯，would 过去的习惯</td><td>British school children <b>will</b> usually eat a sandwich and a piece of fruit for lunch.</td></tr><tr><td><b>可能性 / 推测</b></td><td>意为「可能」；<b>would 的可能性更小</b></td><td>Most people think students <b>will</b> be happy to have lighter schoolbags.</td></tr></table><p><b>记法</b>：will / would 四件事——愿意、请你、老习惯、说不定。疑问句里客气的 would <b>不是过去式</b>，只是把语气放软；真正表过去意愿时（She said…），才轮到 would 上场顶 will 的班。</p>",
+        "qs_label": "课堂练习 1（中）：will / would",
+        "general_qs": [
+          {
+            "stem": "We will help her if she ________ ________ ________.（有困难）",
+            "answer": "is in trouble",
+            "explain": "if 条件句用一般现在时（主将从现）→ is；be in trouble 有困难、处于困境。主句 will help 是现在的意愿。"
+          },
+          {
+            "stem": "She said that she ________ ________ ________.（会帮助我们）",
+            "answer": "would help us",
+            "explain": "主句 said 是过去时 → 过去的意愿用 would help us。will 没有过去式，过去的事一律交给 would。"
+          },
+          {
+            "stem": "Would you please ________ the window for a while?",
+            "options": [
+              "open",
+              "to open",
+              "opened",
+              "opening"
+            ],
+            "answer": "A. open",
+            "explain": "Would you please + 动词原形——请求句式的格式锁死原形。B / C / D 分别死于 to open / opened / opening。"
+          },
+          {
+            "stem": "Would you please give me a hand? 和 Will you…? 相比，would 有什么特别？",
+            "options": [
+              "would 是过去式，只能讲过去的事",
+              "would 只负责把请求问得更客气、委婉",
+              "would 不能用于请求",
+              "两者意思完全相同"
+            ],
+            "answer": "B. would 只负责把请求问得更客气、委婉",
+            "explain": "请求句里的 would 不是过去时，是礼貌剂——和第31讲 Could you…? 一个套路：问得客气，办的是现在的事。"
+          },
+          {
+            "stem": "British school children will usually eat a sandwich and a piece of fruit for lunch. 这句里的 will 表示什么？",
+            "options": [
+              "将来时",
+              "意愿",
+              "习惯（总是，带主观性）",
+              "推测"
+            ],
+            "answer": "C. 习惯（总是，带主观性）",
+            "explain": "will + usually 讲的是英国学生「总是」这么吃——现在的习惯特性，不是将来。will 表习惯时自带主观色彩。"
+          },
+          {
+            "stem": "will 和 would 都能表可能性，谁的可能性更小？",
+            "answer": "would",
+            "explain": "will 可能，would 可能性更小——和 may / might 的梯度一样，语气一软，把握就降一层。"
+          },
+          {
+            "stem": "When he was young, he ________ sit by the river for hours.",
+            "options": [
+              "will",
+              "would",
+              "shall",
+              "had better"
+            ],
+            "answer": "B. would",
+            "explain": "was young 锁定过去 + sit…for hours 反复发生的动作 → would 表过去的习惯「总是」。A 死于 will 没有过去式；C 死于 shall 不表习惯；D 死于「最好」语义不通。"
+          }
+        ],
+        "memory": {
+          "front": "will / would 四大用法？Would you please…? 后接什么？",
+          "back": "意愿：will 现在的意愿，would 过去的意愿（She said she would help us.）\n请求：Would you please + 动词原形（比 will 更客气）\n习惯：will 现在的习惯「总是」，would 过去的习惯\n推测：都可能，would 可能性更小"
+        }
+      },
+      {
+        "key": "betterrather",
+        "title": "⑤ had better / would rather：最好 · 宁愿",
+        "explain": "<p>两个「编外队员」，格式都是铁板一块：</p><table><tr><th></th><th>had better</th><th>would rather</th></tr><tr><td><b>意思</b></td><td>「最好」——建议、警告、意见</td><td>「宁愿、宁可」——说话人现在或将来的选择偏好</td></tr><tr><td><b>格式</b></td><td>You had better do，缩写 <b>You'd better do</b></td><td>I would rather do sth.，缩写 <b>I'd rather do</b></td></tr><tr><td><b>否定</b></td><td><b>had better not do</b>：You had better not be late for school. 最好上学别迟到</td><td><b>would rather not do</b>：I would rather not stay at home this Sunday. 宁愿别待在家里</td></tr><tr><td><b>比较</b></td><td>—</td><td><b>would rather do than do</b> 宁愿……而不愿……：She would rather <b>play</b> tennis than <b>go</b> horseback riding.</td></tr></table><p>两大考试坑：① You'd better… 的反意疑问用 <b>hadn't you</b>——better 不参与提问，拿出 had 来反问，别用 didn't；② would rather do than do 两边都接<b>动词原形</b>，than 后 even 可以省略第二个 have（have an orange than (have) a pear）。</p>",
+        "qs_label": "课堂练习 1（下）：had better / would rather",
+        "general_qs": [
+          {
+            "stem": "You'd better go to hospital at once, ________?",
+            "options": [
+              "did you",
+              "didn't you",
+              "had you",
+              "hadn't you"
+            ],
+            "answer": "D. hadn't you",
+            "explain": "had better 的反意疑问用 hadn't you——拿出 had 来反问。A / B 死于把 had better 当普通动词用 did；C 死于「前肯后否」——前面肯定，尾巴必须否定。"
+          },
+          {
+            "stem": "He would rather ________ at home than ________ out with friends.",
+            "options": [
+              "stay, hang",
+              "to stay, to hang",
+              "to stay, hang",
+              "stay, to hang"
+            ],
+            "answer": "A. stay, hang",
+            "explain": "would rather do than do——两处都接动词原形。B / C / D 死于往原形位置塞 to。宁愿待在家，也不愿出去逛。"
+          },
+          {
+            "stem": "You had better ________ ________ when you cross the street.（小心一点）",
+            "answer": "be careful",
+            "explain": "had better + 动词原形 → be careful。过马路「最好」小心——had better 的建议 / 警告用法。"
+          },
+          {
+            "stem": "You had better ________ ________ ________ for school.（上学不要迟到）",
+            "answer": "not be late",
+            "explain": "had better 的否定在 better 后加 not：had better not do。not 不能往后挪，也不能借 don't。"
+          },
+          {
+            "stem": "I would rather ________ ________ at home this Sunday.（这个周日宁愿不要待在家里）",
+            "answer": "not stay",
+            "explain": "would rather 的否定：would rather not do——not 放在 rather 后、动词前。和 had better not do 记成一对。"
+          },
+          {
+            "stem": "She would rather ________ ________ than go horseback riding.（打网球）",
+            "answer": "play tennis",
+            "explain": "would rather do than do 宁愿……而不愿……：宁愿 play tennis，不愿 go horseback riding，than 后面原形 go 已给出。"
+          }
+        ],
+        "memory": {
+          "front": "had better 和 would rather 的否定？反意疑问怎么说？",
+          "back": "had better do = You'd better do；否定 had better not do\n反意疑问：You'd better…, hadn't you?\nwould rather do；否定 would rather not do\n比较：would rather do than do 宁愿……而不愿……（than 后接原形）"
+        }
+      },
+      {
+        "key": "useddare",
+        "title": "⑥ used to / dare：过去常常 · 敢",
+        "explain": "<p>used to 专讲「过去」，dare 一词两用：</p><table><tr><th></th><th>规则</th><th>例句</th></tr><tr><td><b>used to 过去常常</b></td><td>过去常常做某事或过去存在某状态，<b>侧重过去与现在的对比</b>（现在不了 / 没了）；否定 <b>used not to do</b> 或 <b>didn't use to</b>；疑问把 used 提前，或借 did（used 还原为 use）</td><td>He <b>used to be</b> so shy and quiet.（现在不那样了）/ There <b>used to be</b> a temple.（现在没了）</td></tr><tr><td><b>dare 作情态动词</b></td><td>表示「敢、胆敢」，后接<b>动词原形</b>，无人称和数的变化，过去式 dared；否定 <b>dare not / daren't</b>；主要用于疑问句、否定句和条件从句，不用于肯定句（唯一例外 I dare say = 我看大概）</td><td>I <b>dare not swim</b> in the pool. / <b>How dare you ask</b> me such a silly question?</td></tr><tr><td><b>dare 作实义动词</b></td><td>后接<b>不定式 to do</b>，有人称、数、时态的变化；否定句和疑问句里 to 可省</td><td>She <b>dares to try</b> many things. / He didn't dare <b>(to) say</b> what he thought. / Do you dare <b>(to) go</b> with me?</td></tr></table><p><b>记法</b>：used to 的潜台词是「现在不了」——过去常这样，如今改了；dare 看后头——接光杆原形是情态（dare not swim），接 to do 是实义（dares to try）。</p>",
+        "qs_label": "课堂练习 1（收尾）：used to / dare",
+        "general_qs": [
+          {
+            "stem": "There ________ a hole in the fence that we could creep through.",
+            "options": [
+              "is used to be",
+              "used to be",
+              "is used to having",
+              "used to have"
+            ],
+            "answer": "B. used to be",
+            "explain": "There used to be 固定句型「过去曾有」——栅栏上过去有个洞（现在没了）。A 死于 be 重复；C 死于「习惯于」混入；D 死于 there be 句型里不能换成 have。"
+          },
+          {
+            "stem": "He ________ ________ ________ so shy and quiet.（过去常常很害羞很安静）",
+            "answer": "used to be",
+            "explain": "潜台词「现在已经不那样了」→ used to be。used to 后接动词原形，专讲过去与现在的对比。"
+          },
+          {
+            "stem": "下面哪个是 used to 的正确否定形式？",
+            "options": [
+              "didn't use to",
+              "didn't used to",
+              "don't used to",
+              "not used to"
+            ],
+            "answer": "A. didn't use to",
+            "explain": "两种否定都对：used not to do / didn't use to——借 did 时 used 还原为 use，不再加 -d。B / C 死于 did 后没还原；D 死于凭空拼凑。"
+          },
+          {
+            "stem": "I ________ ________ swim in the swimming pool and I need more practice.（不敢）",
+            "answer": "dare not",
+            "explain": "情态动词 dare 的否定 dare not + 动词原形 swim（也可写 daren't）。后句「还需要多练」说明是「不敢」而不是「不能」。"
+          },
+          {
+            "stem": "________ ________ you ask me such a silly question?（你怎么敢……）",
+            "answer": "How dare",
+            "explain": "How dare you + 动词原形——质问「你怎么敢」，dare 是情态动词，直接接原形 ask。这是 dare 情态用法的保留节目。"
+          },
+          {
+            "stem": "She ________ ________ ________ many things.（敢于尝试，用 dare 作实义动词）",
+            "answer": "dares to try",
+            "explain": "实义动词 dare 有人称变化：she 三单 → dares，后接 to do → dares to try。对照情态用法 dare try（无 -s、无 to）。"
+          },
+          {
+            "stem": "dare 作情态动词和作实义动词，关键区别是什么？",
+            "options": [
+              "情态 dare 后接 to do",
+              "实义 dare 后接动词原形",
+              "情态 dare 后接动词原形且无三单变化；实义 dare 后接 to do 且随人称变",
+              "两者完全一样"
+            ],
+            "answer": "C. 情态 dare 后接动词原形且无三单变化；实义 dare 后接 to do 且随人称变",
+            "explain": "一句话分家：dare not swim（情态，光杆原形）vs doesn't dare to swim（实义，有 to 有人称）。和 need 的双重身份一个套路。"
+          }
+        ],
+        "memory": {
+          "front": "used to 的否定和疑问？dare 的双重身份怎么分？",
+          "back": "used to do 过去常常（现在不了）；否定 used not to do / didn't use to\n疑问：Used he to…? / Did he use to…?\ndare 情态：+ 原形，否定 dare not / daren't（How dare you…?）\ndare 实义：+ to do，随人称、时态变化；否定疑问里 to 可省"
+        }
+      },
+      {
+        "key": "passive",
+        "title": "⑦ 情态动词的被动语态：情态动词 + be + 过去分词",
+        "explain": "<p>被动语态套上情态动词的壳，公式一句话：<b>情态动词（can / must / may / should / could / might）+ be + 过去分词</b>。</p><table><tr><th>句式</th><th>结构</th><th>例子</th></tr><tr><td>肯定句</td><td>主语 + 情态动词 + be + 过去分词</td><td>Waste paper <b>should be thrown</b> into the bin.</td></tr><tr><td>否定句</td><td>主语 + 情态动词 + <b>not</b> + be + 过去分词</td><td>Waste paper <b>should not be thrown</b> anywhere.</td></tr><tr><td>一般疑问句</td><td><b>情态动词</b>提前 + 主语 + be + 过去分词</td><td><b>Should</b> waste paper <b>be thrown</b> into the bin?</td></tr><tr><td>特殊疑问句</td><td>特殊疑问词 + 情态动词 + 主语 + be + 过去分词</td><td><b>Where should</b> waste paper <b>be thrown</b>?</td></tr></table><p>更多例句：This can <b>be done</b> by hand. 手工做 / He may <b>be criticized</b> by his father. / It needn't <b>be mentioned</b> in your talk. / The environment <b>should be improved</b>.</p><p><b>改写三步</b>：① 主动句的宾语提前作主语；② 情态动词后加 be；③ 动词变过去分词。not 永远紧跟在情态动词后面。</p>",
+        "qs_label": "课堂练习 2：主动改被动",
+        "general_qs": [
+          {
+            "stem": "We must plant many trees every year.（改为被动语态）\nMany trees ________ ________ ________ every year.",
+            "answer": "must be planted",
+            "explain": "三步改写：宾语 many trees 提前作主语 → must 后加 be → plant 变过去分词 planted。情态动词 must 原地不动。"
+          },
+          {
+            "stem": "We should not allow teenagers to have part-time jobs.（改为被动语态）\nTeenagers ________ ________ ________ ________ to have part-time jobs.",
+            "answer": "should not be allowed",
+            "explain": "allow sb to do → sb be allowed to do；否定时 not 紧跟情态动词：should not be allowed。teenagers 从「被允许的人」变回主语。"
+          },
+          {
+            "stem": "Can we use the word in this way?（改为被动语态）\n________ the word ________ ________ in this way?",
+            "answer": "Can be used",
+            "explain": "一般疑问的被动：情态动词 Can 提前，主语 the word，后接 be used。use 的过去分词 used——顺便记住 use-used-used。"
+          },
+          {
+            "stem": "The environment ________ ________ ________.（环境应当改善）",
+            "answer": "should be improved",
+            "explain": "环境是「被改善」的 → 情态动词被动语态：should be improved。improve 变 improved 作过去分词。"
+          },
+          {
+            "stem": "情态动词被动语态的否定句结构是？",
+            "options": [
+              "主语 + 情态动词 + not + be + 过去分词",
+              "主语 + 情态动词 + not + 过去分词",
+              "主语 + don't + 情态动词 + be + 过去分词",
+              "主语 + 情态动词 + be + not + 过去分词"
+            ],
+            "answer": "A. 主语 + 情态动词 + not + be + 过去分词",
+            "explain": "not 紧跟情态动词：should not be thrown anywhere。B 死于丢 be；C 死于给情态动词借 don't（情态动词从不借 do）；D 死于 not 的位置不对。"
+          },
+          {
+            "stem": "Where ________ waste paper ________ ________?（废纸应该被丢到哪里？）",
+            "answer": "should be thrown",
+            "explain": "特殊疑问句：特殊疑问词 Where + 情态动词 should + 主语 waste paper + be thrown。throw 的过去分词是 thrown——别写成 throwed。"
+          },
+          {
+            "stem": "You must finish the work before Friday.（改为被动语态）\nThe work ________ ________ ________ before Friday.",
+            "answer": "must be finished",
+            "explain": "宾语 the work 提前 → must 后加 be → finish 变 finished。和第30讲学的被动语态接上了：be + 过去分词外面套一件情态动词。"
+          }
+        ],
+        "memory": {
+          "front": "情态动词的被动语态公式？否定句、疑问句怎么变？",
+          "back": "公式：情态动词 + be + 过去分词\n肯定：Waste paper should be thrown into the bin.\n否定：not 紧跟情态动词 → should not be thrown\n一般疑问：情态动词提前 → Should waste paper be thrown…?\n特殊疑问：疑问词 + 情态动词 + 主语 + be + 过去分词 → Where should waste paper be thrown?"
+        }
+      },
+      {
+        "key": "final",
+        "title": "⑧ 综合验收：七关考点一锅端",
+        "explain": "<p>最后一关，不讲新东西——把前面七关的考点混在一起再过一遍。做错哪题，就回哪一关翻口诀卡。</p><p>验收清单：shall 问句（Shall we…?）· ought to 否定与答语 · Would you please + (not) do · hadn't you 反意疑问 · would rather…than · used to / dare not · 情态动词 + be + 过去分词。</p>",
+        "qs_label": "综合验收（错哪题回哪关）",
+        "general_qs": [
+          {
+            "stem": "Mom, ________ we go boating this weekend?（划船好吗，填情态动词）",
+            "answer": "shall",
+            "explain": "第一人称疑问句征求意见 → Shall we…?（错这题回第②关）"
+          },
+          {
+            "stem": "--- Ought he to see a doctor?\n--- No, he ________.",
+            "options": [
+              "oughtn't to",
+              "doesn't ought to",
+              "oughts not to",
+              "ought to not"
+            ],
+            "answer": "A. oughtn't to",
+            "explain": "否定答语 oughtn't to（= ought not to），to 必须带上。B / C 死于给 ought 借 do、加 -s（ought to 是真情态动词，不借 do、不变三单）；D 死于缩写后丢了 to。（错这题回第③关）"
+          },
+          {
+            "stem": "Would you please ________ (not open) the window? It's freezing outside.",
+            "answer": "not open",
+            "explain": "Would you please 的否定：please 后加 not + 动词原形 → not open。（错这题回第④关）"
+          },
+          {
+            "stem": "You'd better put on more clothes, ________?",
+            "options": [
+              "hadn't you",
+              "didn't you",
+              "had you",
+              "wouldn't you"
+            ],
+            "answer": "A. hadn't you",
+            "explain": "had better 的反意疑问用 hadn't you。B 死于用 did；C 死于「前肯后否」；D 死于拿 would 来反问——better 句里没有 would。（错这题回第⑤关）"
+          },
+          {
+            "stem": "He would rather ________ at home than ________ out in the rain.",
+            "options": [
+              "stay, go",
+              "to stay, to go",
+              "stay, to go",
+              "to stay, go"
+            ],
+            "answer": "A. stay, go",
+            "explain": "would rather do than do，两边都接动词原形——宁愿待在家，也不愿冒雨出门。（错这题回第⑤关）"
+          },
+          {
+            "stem": "There ________ ________ a temple on the hill, but now it's gone.（过去有一座寺庙）",
+            "answer": "used to",
+            "explain": "There used to be 固定句型「过去曾有」；but now it's gone 正是 used to 的潜台词——现在没了。（错这题回第⑥关）"
+          },
+          {
+            "stem": "She ________ ________ swim alone, so she never goes to the pool by herself.（不敢，用 dare 的情态动词否定形式）",
+            "answer": "dare not",
+            "explain": "情态动词 dare 的否定 dare not + 动词原形 swim（= daren't swim）。（错这题回第⑥关）"
+          },
+          {
+            "stem": "The environment ________ ________ ________.（环境应当改善，用情态动词被动语态）",
+            "answer": "should be improved",
+            "explain": "环境是「被改善」的 → should + be + 过去分词 improved。（错这题回第⑦关）"
+          }
+        ]
+      }
+    ]
+  }
+}

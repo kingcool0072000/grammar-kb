@@ -1,0 +1,563 @@
+{
+  "meta": {
+    "topic_id": "lecture-36-gerund-1",
+    "title": "第36讲 · 动名词① 自学",
+    "subtitle": "自学一遍再上课：热身认识非谓语三兄弟 → 动名词四大句法功能 → 作主语（谓语三单 + it 形式主语）→ 作宾语（doing 名单 + 介词 to 陷阱）→ like 家意义之变 → forget/remember/stop → regret/try/mean/go on → need 主动表被动 → 综合验收（共 9 关 · 55 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "intro",
+        "title": "① 热身：非谓语三兄弟，本讲主角 doing",
+        "explain": "<p>从这一讲起，我们进入「非谓语动词」大区——<b>在句中不能单独作谓语</b>的动词形式。三兄弟分别是：不定式 <b>to do</b>（34 / 35 讲的主角）、动名词 <b>doing</b>（本讲主角）、分词 <b>-ing / -ed</b>（后面再会）。</p><p>动名词的构成只有一条：<b>动词原形 + ing</b>。 Seeing is believing. 眼见为实——一句话里 doing 打了两份工（Seeing 作主语，believing 作表语）。它最像名词，能干四份活：</p><table><tr><th>功能</th><th>例句</th></tr><tr><td>主语</td><td><b>Eating</b> too much is bad for your health.</td></tr><tr><td>宾语</td><td>I like <b>playing</b> basketball very much.</td></tr><tr><td>表语</td><td>His hobby is <b>collecting</b> stamps.</td></tr><tr><td>定语</td><td>She is in the <b>reading</b> room.</td></tr></table><p>本大区主线就一刀：<b>to do vs doing</b>——什么时候只能用 doing，什么时候两者意思不一样。34 / 35 讲我们把 to do 讲透了，本讲轮到 doing 接棒，第 31 讲埋的伏笔（can't help doing、need doing）也会陆续回收。</p><p>自学方法：先读讲解 → 盖住答案做题 → 点「先想再看答案」核对 → 全懂了点「我学完了」进下一关。</p>",
+        "qs_label": "热身自测（先想再点开）",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "下面哪一项不属于非谓语动词？",
+            "options": [
+              "不定式 to do",
+              "动名词 doing",
+              "分词 -ing / -ed",
+              "情态动词"
+            ],
+            "answer": "D. 情态动词",
+            "explain": "非谓语动词三兄弟：to do、doing、分词 -ing / -ed。情态动词（can / must…）是 31 讲的「态度词」，帮谓语站台，不属于非谓语阵营。"
+          },
+          {
+            "stem": "动名词是怎么构成的？",
+            "options": [
+              "动词原形 + to",
+              "动词原形 + ing",
+              "动词原形 + ed",
+              "to + 动词原形"
+            ],
+            "answer": "B. 动词原形 + ing",
+            "explain": "do → doing，see → seeing，构成只有这一条。"
+          },
+          {
+            "stem": "Jack enjoyed ________ (run) around the park when he was free.",
+            "answer": "running",
+            "explain": "enjoy（喜欢）后面固定接 doing → running。这是 doing 名单上的第一个词，下一关还会整队点名。"
+          },
+          {
+            "stem": "Seeing is believing. 眼见为实。这句话的主语是？",
+            "options": [
+              "Seeing（动名词）",
+              "is",
+              "believing",
+              "这句话没有主语"
+            ],
+            "answer": "A. Seeing（动名词）",
+            "explain": "「看见」这件事当主语，is 是谓语，believing 作表语——动名词一句话干两份工。"
+          },
+          {
+            "stem": "________ too much is bad for your health. (eat)",
+            "answer": "Eating",
+            "explain": "「吃得太多」这件事作主语 → 动名词 Eating，句首 E 要大写。动词原形 Eat 不能直接当主语。"
+          }
+        ]
+      },
+      {
+        "key": "functions",
+        "title": "② 动名词的四大句法功能",
+        "explain": "<p>动名词长着动词的脸，干着名词的活。四大句法功能一张表看全：</p><table><tr><th>功能</th><th>例句</th><th>怎么认</th></tr><tr><td><b>主语</b></td><td><b>Eating</b> too much is bad for your health.</td><td>放句首，当「一件事」讲</td></tr><tr><td><b>宾语（动词宾语）</b></td><td>I like <b>playing</b> basketball very much.</td><td>跟在动词后面</td></tr><tr><td><b>宾语（介词宾语）</b></td><td>Stamps are used for <b>sending</b> letters. = Stamps are used <b>to send</b> letters.</td><td>跟在介词 for 后面</td></tr><tr><td><b>表语</b></td><td>His hobby is <b>collecting</b> stamps. = <b>Collecting</b> stamps is his hobby.</td><td>跟在 be 后面，说主语「是什么」</td></tr><tr><td><b>定语</b></td><td>She is in the <b>reading</b> room.</td><td>放在名词前，说明「用途」</td></tr></table><p>注意定语这一格：reading room 的 reading 表示<b>用途</b>——阅览室不是「正在阅览」的房间，是「用来阅览」的房间，同理 a swimming pool 游泳池。表语位置有个对称现象：His hobby is collecting stamps. ↔ Collecting stamps is his hobby. 主表互换，句意不变。</p><p><b>记法</b>：找 doing 的成分，先看它站在哪——句首是主语，动词/介词后面是宾语，be 后面是表语，名词前面是定语。</p>",
+        "qs_label": "自测：动名词的四份工",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "His hobby is collecting stamps. 画线的 collecting stamps 作什么成分？",
+            "options": [
+              "主语",
+              "表语",
+              "宾语",
+              "定语"
+            ],
+            "answer": "B. 表语",
+            "explain": "跟在 be 动词 is 后面、回答「hobby 是什么」→ 表语。对照：Collecting stamps is his hobby. 里它就换岗当主语了。"
+          },
+          {
+            "stem": "She is in the reading room. 画线的 reading 作什么成分？",
+            "options": [
+              "表语",
+              "宾语",
+              "定语（修饰 room）",
+              "谓语"
+            ],
+            "answer": "C. 定语（修饰 room）",
+            "explain": "reading 放在名词 room 前面说明用途——「用来阅览的」房间。这里的 doing 不表示动作正在进行。"
+          },
+          {
+            "stem": "Stamps are used for sending letters. sending letters 是什么成分？",
+            "options": [
+              "动词宾语",
+              "介词宾语（介词 for 的宾语）",
+              "主语",
+              "表语"
+            ],
+            "answer": "B. 介词宾语（介词 for 的宾语）",
+            "explain": "for 是介词，介词后面的 doing 叫介词宾语。邮票「被用来寄信」——信是 for 的宾语里的事。"
+          },
+          {
+            "stem": "同义转换：Stamps are used for sending letters. = Stamps are used ________ ________ letters.（2 词）",
+            "answer": "to send",
+            "explain": "讲义给的等价式：for sending = to send。介词 + doing 和不定式 to do 在这里互通。"
+          },
+          {
+            "stem": "下面哪句的动名词作主语？",
+            "options": [
+              "I like swimming.",
+              "Swimming is my favourite sport.",
+              "My hobby is swimming.",
+              "There is a swimming pool near my school."
+            ],
+            "answer": "B. Swimming is my favourite sport.",
+            "explain": "A 死于 like 后面是宾语；C 死于 is 后面是表语；D 死于 swimming pool 里 swimming 作定语；B 放句首当「一件事」讲 → 主语。"
+          },
+          {
+            "stem": "I like ________ (play) basketball very much.",
+            "answer": "playing",
+            "explain": "like 后面接 doing 表示一直喜欢（习惯）→ playing。like 家 to do / doing 的区别下一关细讲。"
+          }
+        ]
+      },
+      {
+        "key": "subject",
+        "title": "③ 动名词作主语：一件事 + 三单谓语",
+        "explain": "<p>动名词作主语，说的是<b>经常性、习惯性的一件事</b>——谓语把整件事当「一个东西」看，用<b>第三人称单数</b>。</p><p>① Joining the English Club <b>is</b> a good way to improve our English.（加入英语俱乐部这件事，是个好办法）</p><p>② 主语嫌长时，请 <b>it</b> 先占座，动名词搬去句尾：</p><p>It is no good <b>going</b> there again. 再去那里也没好处。<br>It's no use <b>crying</b> over spilt milk. 覆水难收。（spill-spilt-spilt 洒出）</p><p>⚠️ 本大区主线第一刀——to do vs doing 作主语：平时可以互换，但分工不同——</p><table><tr><th>to do 作主语</th><th>doing 作主语</th></tr><tr><td>具体某一次的行为、将来的动作</td><td>一般、抽象、笼统的概念，或已完成/习惯性的事</td></tr></table><p>对照读：<b>Smoking</b> is not good for you.（抽烟——泛泛而谈这个习惯）vs It is not good for you <b>to smoke</b> so much.（你抽这么多——针对这一次、这种程度的具体行为）</p><p><b>记法</b>：doing 是「老习惯」，to do 是「这一回」；动名词短语作主语，谓语一律三单。</p>",
+        "qs_label": "课堂练习：动名词作主语（先想再点开）",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "________ (join) the English Club is a good way to improve our English.",
+            "answer": "Joining",
+            "explain": "「加入俱乐部」这件事作主语 → 动名词 Joining，放句首 J 大写。注意后面谓语是 is——动名词短语作主语按三单算。"
+          },
+          {
+            "stem": "Joining the English Club ________ a good way to improve our English.",
+            "options": [
+              "is",
+              "are",
+              "be",
+              "were"
+            ],
+            "answer": "A. is",
+            "explain": "动名词短语作主语 = 一件事 → 谓语用三单 is。B 死于把一件事当复数；C / D 死于时态形式对不上一般现在时。"
+          },
+          {
+            "stem": "It's no use ________ (cry) over spilt milk.",
+            "answer": "crying",
+            "explain": "it 先占主语的位置，真主语 crying 后置——It's no use doing 句型。整句意思：覆水难收，哭了也没用。"
+          },
+          {
+            "stem": "It is no good ________ (argue) with him. (argue)",
+            "answer": "arguing",
+            "explain": "It is no good doing 和 It's no use doing 是一对双胞胎句型：跟他争辩没好处 → arguing。"
+          },
+          {
+            "stem": "不定式和动名词作主语，下面的说法哪个对？",
+            "options": [
+              "完全不能互换",
+              "常可互换：to do 偏「具体某一次 / 将来」，doing 偏「一般、抽象、习惯」",
+              "to do 表习惯，doing 表具体一次（正好说反）",
+              "只能用动名词作主语"
+            ],
+            "answer": "B. 常可互换：to do 偏「具体某一次 / 将来」，doing 偏「一般、抽象、习惯」",
+            "explain": "Smoking is not good for you.（习惯）vs It is not good for you to smoke so much.（这一次抽这么多）——A / D 死于一刀切；C 死于方向颠倒。"
+          },
+          {
+            "stem": "想说「你抽这么多烟对身体不好」（针对这一次、这个程度），选哪句？",
+            "options": [
+              "Smoking is not good for you.",
+              "It is not good for you to smoke so much.",
+              "To smoking is not good for you.",
+              "Smoke so much is not good for you."
+            ],
+            "answer": "B. It is not good for you to smoke so much.",
+            "explain": "针对「抽这么多」这个具体行为 → it 形式主语 + to smoke。A 死于它是泛泛而谈抽烟习惯（题干强调「这么多」）；C 死于不定式 to 后面不能跟 doing；D 死于动词原形短语不能作主语。"
+          }
+        ],
+        "memory": {
+          "front": "动名词作主语，谓语动词用什么？it 形式主语有哪两个句型？",
+          "back": "动名词作主语 = 一件事 → 谓语用三单\nJoining the English Club is a good way to improve our English.\nit 形式主语，动名词后置：\nIt is no good doing… / It's no use doing…\nIt's no use crying over spilt milk. 覆水难收\nto do 具体一次 · doing 一般习惯（Smoking is bad ↔ to smoke so much）"
+        }
+      },
+      {
+        "key": "object",
+        "title": "④ 动名词作宾语：doing 名单与介宾",
+        "explain": "<p>动名词作宾语，表示一般的习惯、抽象行为或经常性的动作。分两种：</p><p>① <b>动宾</b>——跟在动词后面：Would you mind <b>giving</b> me some advice on how to use an English dictionary?（能给我讲讲怎么用英语词典吗？）</p><p>哪些动词后面必须接 doing？名单要背：</p><table><tr><th>单词类</th><th>短语类</th></tr><tr><td>enjoy 喜欢 · finish 完成 · mind 介意 · practise 练习 · suggest / advise 建议 · admit 承认 · avoid 避免 · consider 考虑 · imagine 想象 · keep 保持</td><td>be busy 忙于 · think of 想起 · think about 考虑 · be worth 值得 · can't help 情不自禁 · be good at / do well in 擅长 · be fond of 喜欢 · be / get used to 习惯于 · can't stand 无法忍受 · feel like 想要 · look forward to 盼望 · stick to 坚持 · succeed in 成功 · pay attention to 注意</td></tr></table><p>⚠️ 名单里藏着一伙「假不定式」：<b>look forward to、be / get used to、stick to、pay attention to</b> 里的 to 都是<b>介词</b>——介词后面只能接 doing，别被 to 的外表骗去写原形。</p><p>② <b>介宾</b>——跟在介词后面：We have to prevent the air from <b>being polluted</b>. 我们必须阻止空气被污染。from 是介词 → 后面接动名词；空气是「被污染」，所以用动名词的被动式 <b>being done</b>。</p><p><b>记法</b>：动词名单背单词，介词后面必 doing；空气被污染，being done 来站岗。</p>",
+        "qs_label": "课堂练习 1：doing 名单与介宾（先想再点开）",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "I can't imagine ________ (live) without the internet.",
+            "answer": "living",
+            "explain": "imagine（想象）在 doing 名单上 → living。没法想象没有网络的生活。"
+          },
+          {
+            "stem": "I'm looking forward to ________ (see) you again soon.",
+            "answer": "seeing",
+            "explain": "look forward to 里的 to 是介词 → 后面接 doing → seeing。写成 to see 就掉进「假不定式」的坑；同伙还有 be / get used to、stick to、pay attention to。"
+          },
+          {
+            "stem": "We should consider ________ (take) a vacation next month.",
+            "answer": "taking",
+            "explain": "consider（考虑）在 doing 名单上 → taking。e 结尾的 take 去 e 加 ing。"
+          },
+          {
+            "stem": "I can't help ________ (laugh) when I see his funny face.",
+            "answer": "laughing",
+            "explain": "can't help doing 情不自禁——第 31 讲的黄金搭配在这里回收 → laughing。"
+          },
+          {
+            "stem": "________ (join) in the dance, everyone felt the joy of music.",
+            "answer": "Joining",
+            "explain": "句子里已有谓语 felt，空格不能再填谓语动词 → 用 doing 形式 Joining 开头（句首大写），它的逻辑主语就是主句的 everyone：大家「参加」了舞会，才「感到」音乐之乐。"
+          },
+          {
+            "stem": "Would you mind ________ the window?",
+            "options": [
+              "to open",
+              "opening",
+              "open",
+              "opened"
+            ],
+            "answer": "B. opening",
+            "explain": "mind（介意）在 doing 名单上 → opening。Would you mind doing…? 是客气请求，讲义原句 Would you mind giving me some advice 就是这个用法；A 死于 mind 不接 to do。"
+          },
+          {
+            "stem": "We have to prevent the air from ________ (pollute).",
+            "answer": "being polluted",
+            "explain": "from 是介词 → 后面接动名词；空气是「被污染」→ 被动动名词 being polluted。主动写 polluting 就成了空气污染别人。"
+          },
+          {
+            "stem": "下面哪个动词后面必须接 doing？",
+            "options": [
+              "finish",
+              "hope",
+              "want",
+              "decide"
+            ],
+            "answer": "A. finish",
+            "explain": "finish 完成 → finish doing。hope / want / decide 都接 to do——它们不在 doing 名单上。"
+          }
+        ],
+        "memory": {
+          "front": "哪些动词后面必须接 doing？哪几个 to 是介词陷阱？",
+          "back": "名单：enjoy / finish / mind / practise / suggest / advise / admit / avoid / consider / imagine / keep\n口诀：享受完成不介意，练习建议避承认；考虑想象 keep 住，禁不住（can't help）忙不停（be busy）\n短语：be worth · be good at / do well in · be fond of · can't stand · feel like · think of / about · succeed in\n介词 to 陷阱：look forward to / be / get used to / stick to / pay attention to + doing"
+        }
+      },
+      {
+        "key": "like-family",
+        "title": "⑤ begin / start 与 like / love / hate：意义变与不变",
+        "explain": "<p>to do 和 doing 跟在动词后面，有的<b>意思基本不变</b>，有的<b>意思大变</b>——先记不变的那组：</p><table><tr><th>动词</th><th>规则</th><th>例句</th></tr><tr><td><b>begin / start</b></td><td>接 to do 或 doing 都行，意义变化不大</td><td>begin to work = begin working</td></tr><tr><td><b>like / love / hate</b></td><td>to do＝具体某一次去做；doing＝一直喜欢 / 讨厌（习惯）</td><td>He hates getting up early on Sundays. / She hated to get up early this morning.</td></tr></table><p>like 家这组要对比着读：</p><p>① He hates <b>getting</b> up early on Sundays.（Sundays 复数泛指每周日——一贯讨厌，习惯 → doing）</p><p>② She hated <b>to get</b> up early this morning.（this morning 就今天早上这一回——具体一次 → to do）</p><p><b>记法</b>：doing 是「老习惯」，to do 是「就这一次」——和作主语时的分工一脉相承，本大区的主线刀法就是这一把。</p>",
+        "qs_label": "自测：意义变与不变",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "He hates ________ up early on Sundays.（周日一向如此）",
+            "options": [
+              "get",
+              "getting",
+              "to getting",
+              "got"
+            ],
+            "answer": "B. getting",
+            "explain": "Sundays 泛指每周日，说的一贯习惯 → hate doing。A 死于 hate 后不能直接接动词原形；C 死于 to 后面不能接 doing；D 形式不对。"
+          },
+          {
+            "stem": "She hated ________ (get) up early this morning.（就今天早上这一回）",
+            "answer": "to get",
+            "explain": "this morning 锁定「具体这一次」→ hate to do → to get。对照上一题的 on Sundays——一次和一贯，to do 和 doing 各管一头。"
+          },
+          {
+            "stem": "Class begins. Let's start ________.",
+            "options": [
+              "to work",
+              "working",
+              "to work 或 working 都对",
+              "work"
+            ],
+            "answer": "C. to work 或 working 都对",
+            "explain": "begin / start 后接 to do 或 doing 意义变化不大，两个都对。这是 to do / doing 里唯一「随便选」的一组。"
+          },
+          {
+            "stem": "like / love / hate + doing 表示什么？",
+            "options": [
+              "具体某一次去做",
+              "一直喜欢 / 讨厌（习惯、一贯如此）",
+              "已经做完的事",
+              "被迫去做"
+            ],
+            "answer": "B. 一直喜欢 / 讨厌（习惯、一贯如此）",
+            "explain": "doing 表一贯：I like swimming = 我（一直）喜欢游泳。具体某一次「今天想去」才轮 to do 出场。"
+          }
+        ]
+      },
+      {
+        "key": "forget-stop",
+        "title": "⑥ forget / remember / stop：看动作做了没",
+        "explain": "<p>forget / remember 后面接 to do 还是 doing，就看动作<b>做了没有</b>：</p><table><tr><th>形式</th><th>意思</th><th>例句</th></tr><tr><td>forget / remember <b>to do</b></td><td>忘记 / 记得<b>要去做</b>（还没做）</td><td>The light in the office is still on. He forgot <b>to turn</b> it off.（没关）/ Remember <b>to go</b> to the post office after school.（还没去）</td></tr><tr><td>forget / remember <b>doing</b></td><td>忘记 / 记得<b>做过</b>（已做）</td><td>He forgot <b>turning</b> the light off.（其实关了，忘了关过）/ Don't you remember <b>seeing</b> the man before?（见过）</td></tr></table><p>stop 更狠——直接换意思：</p><p>stop <b>to do</b> ＝ 停下（手头的事）<b>去做另一件事</b>：You are too tired. Stop <b>to have</b> a rest.（停下来去歇会儿）</p><p>stop <b>doing</b> ＝ <b>停止</b>正在做的事：Stop <b>talking</b>. We are going to have the English class.（别说话了，要上课了）</p><p><b>记法</b>：to do 朝前看（还没做的事），doing 装口袋（已经做过的事）；stop 后面直接跟的 doing 是「被停掉的事」，stop to do 里的 to do 是「停下来要奔向的新事」。</p>",
+        "qs_label": "课堂练习 2（上）：forget / remember / stop",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "Don't forget ________ (come) tomorrow.",
+            "answer": "to come",
+            "explain": "tomorrow 明天才来——动作还没发生 → forget to do（别忘了要来）→ to come。"
+          },
+          {
+            "stem": "The light in the office is still on. He forgot ________ it off.",
+            "options": [
+              "to turn",
+              "turning",
+              "turn",
+              "turned"
+            ],
+            "answer": "A. to turn",
+            "explain": "灯还亮着 → 关灯这事没做成 → forget to do（忘了要关）。B 死于 forget doing = 忘了做过——若选 B，灯早就灭了，跟 still on 矛盾。"
+          },
+          {
+            "stem": "I remember ________ (lock) the door before I left.",
+            "answer": "locking",
+            "explain": "before I left——出门前锁门这事<b>已经做过</b> → remember doing（记得锁过）→ locking。"
+          },
+          {
+            "stem": "Remember ________ to the post office after school.（现在还没去）",
+            "options": [
+              "to go",
+              "going",
+              "go",
+              "went"
+            ],
+            "answer": "A. to go",
+            "explain": "放学后才去，现在还没去 → remember to do（记得要去）→ to go。B 死于 remember going = 记得去过——可你还没去。"
+          },
+          {
+            "stem": "You are too tired. Stop ________ a rest.",
+            "options": [
+              "to have",
+              "having",
+              "have",
+              "had"
+            ],
+            "answer": "A. to have",
+            "explain": "停下（手头的事）去休息——rest 是停下来之后要做的新事 → stop to do → to have。B 死于 stop having = 把「休息」这件事停掉，正好说反。"
+          },
+          {
+            "stem": "Stop ________. We are going to have the English class.",
+            "options": [
+              "to talk",
+              "talking",
+              "talk",
+              "talked"
+            ],
+            "answer": "B. talking",
+            "explain": "要上课了，停止「说话」这件事本身 → stop doing → talking。A 死于 stop to talk = 停下来去说话——正好和「要上课」拧着。"
+          }
+        ],
+        "memory": {
+          "front": "forget / remember 接 to do 和 doing 差在哪？stop to do 和 stop doing 呢？",
+          "back": "to do 没做：forget to do 忘了要做 / remember to do 记得要做\ndoing 已做：forget doing 忘了做过 / remember doing 记得做过\n灯还亮着 → forgot to turn it off（没关成）\nstop to do 停下来去做另一件事（Stop to have a rest.）\nstop doing 停止正在做的事（Stop talking.）"
+        }
+      },
+      {
+        "key": "regret-family",
+        "title": "⑦ regret / try / mean / go on：to 朝前，doing 朝后",
+        "explain": "<p>剩下四对「意思大变」的组合，一刀全切：<b>to do 朝前（还没做 / 打算做），doing 朝后（已经做了 / 就是这件事）</b>。</p><table><tr><th>动词</th><th>+ to do</th><th>+ doing</th></tr><tr><td><b>regret</b></td><td>遗憾要做（还没做）：I regret <b>to tell</b> you that you can't stay here.</td><td>后悔做过（已做）：I regret <b>eating</b> so many donuts.</td></tr><tr><td><b>try</b></td><td>尽力做（下决心努力）：Try <b>to speak</b> English as much as possible.</td><td>尝试做（换方法看行不行）：I tried <b>watching</b> the movie, but I don't really like it.</td></tr><tr><td><b>mean</b></td><td>打算做：I didn't mean <b>to hurt</b> you.</td><td>意味着：Missing the bus means <b>waiting</b> for another 15 minutes.</td></tr><tr><td><b>go on</b></td><td>接着做另一件事：After doing her homework, she went on <b>to read</b> a novel.</td><td>继续做同一件事：After a short rest, she went on <b>doing</b> her homework.</td></tr></table><p>⚠️ regret 特例：后面接 <b>inform / announce / tell</b> 这类「告知」动词时，用不定式——I regret to tell you…（我也不想这样告诉你，但是……）。</p><p><b>记法</b>：to do 是「朝前看的新动作」，doing 是「兜里揣着的旧动作」；try 主语下决心 → to do，try 是试办法 → doing；mean 主语是人 → 打算，主语是事 → 意味着。</p>",
+        "qs_label": "课堂练习 2（下）：regret / try / mean / go on",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "I regret ________ you that you can't stay here.",
+            "options": [
+              "telling",
+              "to tell",
+              "tell",
+              "told"
+            ],
+            "answer": "B. to tell",
+            "explain": "regret 后接 tell / inform / announce 这类「告知」动词用不定式——遗憾地「要」告诉你（话还没出口）→ to tell。A 死于 telling = 后悔告诉过，话都说完了才谈不上遗憾地告知。"
+          },
+          {
+            "stem": "I regret ________ (eat) so many donuts now.（已经吃了）",
+            "answer": "eating",
+            "explain": "甜甜圈已经下肚 → 后悔做过 → regret doing → eating。同一个人，regret to tell 是话没说，regret eating 是事已做——方向决定形式。"
+          },
+          {
+            "stem": "Try ________ English as much as possible.（尽力多说）",
+            "options": [
+              "speaking",
+              "to speak",
+              "speak",
+              "spoke"
+            ],
+            "answer": "B. to speak",
+            "explain": "try to do = 尽力做某事，句子里藏着「努力、下决心」→ to speak。A 死于 try speaking = 试试看说英语行不行，劲儿就泄了。"
+          },
+          {
+            "stem": "If you can't pull the door, try ________ (push) it.",
+            "answer": "pushing",
+            "explain": "拉不开就「试试推」——换方法看管不管用 → try doing → pushing。和上一题对读：尽力做 → to do，试着换招 → doing。"
+          },
+          {
+            "stem": "I mean ________ (study) harder this semester.",
+            "answer": "to study",
+            "explain": "打算这学期更努力 → mean to do（打算做）→ to study。主语是人 I，脑子里的计划还没开工。"
+          },
+          {
+            "stem": "I didn't mean ________ you.",
+            "options": [
+              "hurting",
+              "to hurt",
+              "hurt",
+              "hurted"
+            ],
+            "answer": "B. to hurt",
+            "explain": "我不是「故意要」伤害你——打算、意图 → mean to do → to hurt。A 死于 mean doing = 意味着，句子说不通；D 死于 hurt 的过去式还是 hurt，没有 hurted 这个词。"
+          },
+          {
+            "stem": "Being kind to others means ________ (treat) them with respect.",
+            "answer": "treating",
+            "explain": "主语是「善待他人」这件事（不是人）→ mean doing 意味着 → treating。善待他人「意味着」尊重他们——说的是客观含义，不是谁的打算。"
+          },
+          {
+            "stem": "After doing her homework, she went on ________ a novel.",
+            "options": [
+              "reading",
+              "to read",
+              "read",
+              "to reading"
+            ],
+            "answer": "B. to read",
+            "explain": "作业做完了，接着去<b>读小说</b>——另一件事 → go on to do → to read。A 死于 go on reading = 继续做同一件事（还在写作业）。"
+          }
+        ],
+        "memory": {
+          "front": "regret / try / mean / go on，接 to do 和 doing 各是什么意思？",
+          "back": "regret to do 遗憾要做（regret to tell you 告知类固定用不定式）/ regret doing 后悔做过\ntry to do 尽力做 / try doing 尝试做（换方法）\nmean to do 打算做（主语是人）/ mean doing 意味着（主语是事）\ngo on to do 接着做另一件事 / go on doing 继续做同一件事\n总口诀：to 朝前（还没做），doing 朝后（做了）"
+        }
+      },
+      {
+        "key": "need-doing",
+        "title": "⑧ need / require / want doing：主动表被动",
+        "explain": "<p>need / require / want（需要）也能接 to do 和 doing，而且这一对接法方向相反：</p><table><tr><th>形式</th><th>意思</th><th>例句</th></tr><tr><td><b>need to do</b></td><td>需要（主语）去做</td><td>I need <b>to call</b> someone to fix our windows.</td></tr><tr><td><b>need doing</b></td><td>需要（主语）被做 ＝ need <b>to be done</b></td><td>My room needs <b>cleaning</b> every day. = My room needs <b>to be cleaned</b> every day.</td></tr></table><p>房间是「被打扫」的，但英语偏用主动形式的 cleaning——这叫<b>主动形式表被动</b>。第 31 讲见过的 The plant needs watering 就是这一路，这里正式收编。</p><p>三个动词共享这条规则：<b>need / require / want + doing</b> 全都等于 + to be done，一副意思两身衣服。</p><p><b>记法</b>：人是「主动去 need to do」，物是「躺着等 need doing」；看到物作主语 + need，就往 doing（或 to be done）上想。</p>",
+        "qs_label": "课堂练习 2（收尾）：need 主动表被动",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "My room needs ________ (clean) every day.",
+            "answer": "cleaning",
+            "explain": "房间是「被打扫」的 → need doing 主动表被动 → cleaning。物作主语，就别用 to clean 了。"
+          },
+          {
+            "stem": "同义转换：My room needs cleaning every day. = My room needs ________ ________ ________ every day.（用 clean，3 词）",
+            "answer": "to be cleaned",
+            "explain": "need doing = need to be done——主动形式的 cleaning 换上被动不定式 to be cleaned，意思分毫不动。"
+          },
+          {
+            "stem": "I need ________ (call) someone to fix our windows.",
+            "answer": "to call",
+            "explain": "主语 I 是人，我「主动去打」电话 → need to do → to call。和物等着「被做」的 need doing 方向正好相反。"
+          },
+          {
+            "stem": "The plants in the garden need ________ (water) every day.",
+            "answer": "watering",
+            "explain": "植物是「被浇」的 → need doing → watering（= need to be watered）。第 31 讲的老朋友，这里是课堂练习原题。"
+          },
+          {
+            "stem": "The bike is broken. It needs ________.",
+            "options": [
+              "to repair",
+              "repairing",
+              "repaired",
+              "repair"
+            ],
+            "answer": "B. repairing",
+            "explain": "车需要「被修」→ repairing（= to be repaired）。A 死于 to repair 是车自己去修别人；C 死于 need 后面不直接接过去分词。"
+          },
+          {
+            "stem": "The flowers want ________.（需要浇水）",
+            "options": [
+              "to water",
+              "watering",
+              "watered",
+              "water"
+            ],
+            "answer": "B. watering",
+            "explain": "want 和 need / require 一个套路：want doing = want to be done → watering。花是「被浇」的，主动形式表被动。"
+          }
+        ],
+        "memory": {
+          "front": "need doing 是什么意思？等于什么？哪三个动词都吃这套规则？",
+          "back": "need / require / want + doing ＝ + to be done（主动形式表被动）\nMy room needs cleaning. = My room needs to be cleaned.\nThe plants need watering every day.\n物作主语等着「被做」→ doing；人主动去做 → need to do"
+        }
+      },
+      {
+        "key": "final",
+        "title": "⑨ 综合验收：八关考点一锅端",
+        "explain": "<p>最后一关，不讲新东西——把前面八关的考点混在一起再过一遍。做错哪题，就回哪一关翻口诀卡。</p><p>验收清单：动名词作主语（三单谓语 + it 形式主语）· doing 名单与介词 to 陷阱（③④）· like 家一次与一贯（⑤）· forget / remember 看做没做（⑥）· mean / go on 看方向（⑦）· need doing 主动表被动（⑧）。</p>",
+        "qs_label": "综合验收（错哪题回哪关）",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "________ too much is bad for your health.",
+            "options": [
+              "Eat",
+              "Eating",
+              "Eats",
+              "To eating"
+            ],
+            "answer": "B. Eating",
+            "explain": "「吃得太多」这件事作主语 → 动名词 Eating（回③）。A / C 死于动词原形和三单都不能直接作主语；D 死于 to 后面不能跟 doing。"
+          },
+          {
+            "stem": "I suggest ________ to the museum this weekend.",
+            "options": [
+              "to go",
+              "going",
+              "go",
+              "will go"
+            ],
+            "answer": "B. going",
+            "explain": "suggest（建议）在 doing 名单上 → going（回④）。A 死于 suggest 不接 to do。"
+          },
+          {
+            "stem": "Don't forget ________ the light when you leave the room.",
+            "options": [
+              "to turn off",
+              "turning off",
+              "turn off",
+              "turned off"
+            ],
+            "answer": "A. to turn off",
+            "explain": "走的时候才关灯——动作还没做 → forget to do（别忘了要做）→ to turn off（回⑥）。B 死于 forget doing = 忘了关过。"
+          },
+          {
+            "stem": "Missing the bus means ________ (wait) for another 15 minutes.",
+            "answer": "waiting",
+            "explain": "主语是「错过公交」这件事 → mean doing 意味着 → waiting（回⑦）。事作主语谈的是客观后果，不是谁的打算。"
+          },
+          {
+            "stem": "After a short rest, she went on ________ her homework.",
+            "options": [
+              "to do",
+              "doing",
+              "do",
+              "did"
+            ],
+            "answer": "B. doing",
+            "explain": "休息之后接着做<b>同一份</b>作业 → go on doing（回⑦）。A 死于 go on to do 是接着做另一件事。"
+          },
+          {
+            "stem": "My hair is too long. It needs ________ (cut).",
+            "answer": "cutting",
+            "explain": "头发需要「被剪」→ need doing 主动表被动 → cutting（= needs to be cut）（回⑧）。"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -184,3 +184,65 @@ def test_import_lecture31_json_and_expand(tmp_path):
     # 口诀卡：5 张（can/搭配/may/must/need）
     mem = {n["key"] for n in got["nodes"] if n.get("memory")}
     assert mem == {"can", "colloc", "may", "must", "need"}
+
+
+# 2026-11-21 批量制作的讲次专题（32 起跳过综合复习 33/38/43/48）：
+# 结构守卫参数化扫描 data/topics/lecture-*.json，未来新增文件自动纳入。
+_NEW_LECTURE_TOPICS = sorted(
+    p.name for p in (_PROJECT / "data" / "topics").glob("lecture-*.json")
+    if p.name not in {
+        "lecture-29-passive-1.json", "lecture-30-passive-2.json",
+        "lecture-31-modal-1.json",
+    }
+)
+# 每讲下限（节点数, 题量）：制作规范 6~9 关、40~55 题
+_NEW_TOPIC_FLOORS = {
+    "lecture-32-modal-2.json": (7, 45),
+    "lecture-34-infinitive-1.json": (7, 45),
+    "lecture-35-infinitive-2.json": (7, 45),
+    "lecture-36-gerund-1.json": (7, 45),
+    "lecture-37-gerund-2.json": (7, 45),
+    "lecture-39-exclamation.json": (6, 40),
+    "lecture-40-tag-question.json": (7, 45),
+    "lecture-41-special-question.json": (7, 45),
+    "lecture-42-inversion.json": (7, 45),
+    "lecture-44-subject-verb-agreement.json": (7, 45),
+    "lecture-45-object-clause.json": (7, 45),
+    "lecture-46-adverbial-clause.json": (7, 45),
+    "lecture-47-attributive-clause.json": (7, 45),
+}
+
+
+def test_import_all_new_lecture_topics(tmp_path):
+    """批量讲次专题：导入/内容政策/可见性一次性全量守卫。"""
+    assert len(_NEW_LECTURE_TOPICS) == len(_NEW_TOPIC_FLOORS), (
+        "data/topics 下发现未登记下限的新讲次 JSON，请补 _NEW_TOPIC_FLOORS："
+        f"{set(_NEW_LECTURE_TOPICS) ^ set(_NEW_TOPIC_FLOORS)}"
+    )
+    store = _store(tmp_path)
+    ids = []
+    for name in _NEW_LECTURE_TOPICS:
+        data = json.loads((_PROJECT / "data" / "topics" / name)
+                          .read_text(encoding="utf-8"))
+        got = store.upsert_topic(data["meta"], data["content"])
+        ids.append(got["topic_id"])
+        min_nodes, min_qs = _NEW_TOPIC_FLOORS[name]
+        assert 6 <= len(got["nodes"]) <= 9, f"{name}: 节点数越界"
+        assert len(got["nodes"]) >= min_nodes
+
+        all_qs = [q for n in got["nodes"]
+                  for q in n["wrong_qs"] + n["general_qs"]]
+        # 内容政策：零 ref；每题 stem/answer 齐；无错题区（讲前自学）
+        assert all(q["kind"] != "ref" for q in all_qs), name
+        assert all(q["stem"] and q["answer"] for q in all_qs), name
+        assert all(not n["wrong_qs"] for n in got["nodes"]), name
+        assert len(all_qs) >= min_qs, f"{name}: 题量不足"
+        # 口诀卡 2~5 张
+        mem_n = len([n for n in got["nodes"] if n.get("memory")])
+        assert 2 <= mem_n <= 5, f"{name}: 口诀卡 {mem_n} 张"
+        # 指定学生开放
+        assert data["meta"]["assigned_to"] == "malin"
+    # topic_id 全库唯一
+    assert len(ids) == len(set(ids))
+    listed = store.list_topics(viewer="malin", role="student")
+    assert set(ids) <= {t["topic_id"] for t in listed}

@@ -1,0 +1,519 @@
+{
+  "meta": {
+    "topic_id": "lecture-34-infinitive-1",
+    "title": "第34讲 · 不定式① 自学",
+    "subtitle": "自学一遍再上课：热身认识非谓语动词与不定式 → 六大句法功能对号入座 → 作主语：三单与 it 形式主语（for/of 之争）→ 作表语 · 定语 · 状语 → 作宾语：十组动词与 it 形式宾语 → 作宾补（上）：sb. to do 三句口诀 → 作宾补（下）：省 to 与被动还原 → 综合验收（共 8 关 · 52 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "intro",
+        "title": "① 热身：认识非谓语动词与不定式",
+        "explain": "<p>从本讲起进入<b>非谓语动词</b>大板块。非谓语动词是动词的「非谓语形式」，在句中<b>不能单独作谓语</b>，一共三种：<b>不定式 (to do)、动名词 (doing)、分词 (-ing / -ed)</b>。本讲先攻第一种——不定式①。</p><p>不定式的构成只有两条，一看就会：</p><table><tr><th>构成</th><th>格式</th><th>例句</th></tr><tr><td><b>基本形式</b></td><td>to + 动词原形</td><td>Mom told the boy <b>to play</b> in the park. 妈妈告诉男孩在公园里玩。</td></tr><tr><td><b>否定形式</b></td><td>not + to do（not 放 to 前面）</td><td>Mom told the boy <b>not to play</b> in the street. 妈妈告诉男孩不要在街上玩。</td></tr></table><p>不定式有三大特征，决定了它怎么用：</p><p>① <b>没有人称和数的变化，不能作谓语</b>——主语再怎么变，它都不跟着变；</p><p>② <b>保留动词的特点</b>——可以带自己的宾语和状语：It is interesting to play <b>with snow</b> in winter.（play 带着自己的宾语 snow）；</p><p>③ <b>兼有名词、形容词、副词的特征</b>——所以能充当主语、宾语、宾补、表语、定语、状语六种成分，这是本讲的地图。</p><p>自学方法：先读讲解 → 盖住答案做题 → 点「先想再看答案」核对 → 全懂了点「我学完了」进下一关。</p>",
+        "qs_label": "热身自测（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "非谓语动词包括哪三种形式？",
+            "options": [
+              "不定式 (to do)、动名词 (doing)、分词 (-ing / -ed)",
+              "现在时、过去时、将来时",
+              "主语、宾语、表语",
+              "原形、三单、过去分词"
+            ],
+            "answer": "A. 不定式 (to do)、动名词 (doing)、分词 (-ing / -ed)",
+            "explain": "非谓语动词 = 不能单独作谓语的动词形式，三兄弟：to do、doing、分词。B 是时态，C 是句子成分，都不是它的分类。"
+          },
+          {
+            "stem": "动词不定式的基本构成是？",
+            "options": [
+              "to + 动词原形",
+              "to + 过去式",
+              "to + -ing 形式",
+              "动词原形 + to"
+            ],
+            "answer": "A. to + 动词原形",
+            "explain": "不定式 = to + 动词原形：to play、to go、to read。to 后面永远是最光的动词原形，不加 -s、-ing、-ed。"
+          },
+          {
+            "stem": "Mom told the boy ________ in the street.（不要在街上玩，用 play 补全）",
+            "answer": "not to play",
+            "explain": "否定形式 = not + to do：not to play。not 一定要放在 to 的前面，这是不定式否定唯一的写法。"
+          },
+          {
+            "stem": "关于不定式，下面哪句说法是对的？",
+            "options": [
+              "不定式可以单独作句子的谓语",
+              "不定式没有人称和数的变化，不能单独作谓语",
+              "主语是三单时，不定式也要加 -s",
+              "不定式就是谓语动词的另一种写法"
+            ],
+            "answer": "B. 不定式没有人称和数的变化，不能单独作谓语",
+            "explain": "不定式是「非谓语」，天生的规矩就是不作谓语、不随人称和数变化。A / D 死于弄错身份；C 死于「无三单变化」。"
+          },
+          {
+            "stem": "Nice ________ (meet) you!",
+            "answer": "to meet",
+            "explain": "不定式基本形式 to + 原形 → to meet。不定式还保留动词特点，后面能带自己的宾语：to meet you。"
+          }
+        ],
+        "memory": {
+          "front": "非谓语动词有哪三种？不定式怎么构成、怎么变成否定？",
+          "back": "非谓语动词：不定式 to do / 动名词 doing / 分词 -ing、-ed，都不能单独作谓语\n不定式：to + 动词原形（Mom told the boy to play in the park.）\n否定：not + to do，not 放 to 前（Mom told the boy not to play in the street.）\n三大特征：无人称数变化 · 保留动词特点 · 兼有名词/形容词/副词特征"
+        }
+      },
+      {
+        "key": "functions",
+        "title": "② 不定式的六大句法功能：对号入座",
+        "explain": "<p>不定式一身兼三性——名词、形容词、副词，所以能在句子里干六种活。做题先找「它在谁后面」：</p><table><tr><th>功能</th><th>位置信号</th><th>讲义例句</th></tr><tr><td><b>主语</b></td><td>谓语前面，句子开头</td><td><b>To see</b> is to believe. 眼见为实。</td></tr><tr><td><b>宾语</b></td><td>及物动词后面</td><td>I want <b>to go</b> home. / He likes <b>to play</b> basketball.</td></tr><tr><td><b>宾补</b></td><td>宾语后面，补说宾语做什么</td><td>He advised me <b>to lose</b> weight. / The teacher asked me <b>to clean</b> the blackboard.</td></tr><tr><td><b>表语</b></td><td>系动词 (is / am / are…) 后面</td><td>My work is <b>to clean</b> the room every day. / My dream is <b>to travel</b> around the world.</td></tr><tr><td><b>定语</b></td><td>名词后面，修饰名词</td><td>Have you got anything <b>to say</b>? / I have something important <b>to tell</b> you.</td></tr><tr><td><b>状语</b></td><td>修饰形容词或动词，表原因、目的</td><td>I'm sorry <b>to trouble</b> you. 很抱歉麻烦你 / <b>To pass the exam</b>, he studied very hard. 为了通过考试</td></tr></table><p><b>记法</b>：谓前是主，动后是宾，系后是表，宾后补足，名后修饰是定语，其余多是状语。下面六题把这六种成分各认一遍脸。</p>",
+        "qs_label": "课堂练习：六大功能对号入座",
+        "general_qs": [
+          {
+            "stem": "To speak English is not easy for us. 中 To speak English 作什么成分？",
+            "options": [
+              "主语",
+              "宾语",
+              "表语",
+              "定语"
+            ],
+            "answer": "A. 主语",
+            "explain": "不定式站在谓语 is 前面、干「谁/什么」的活——讲英语这件事不容易 → 主语。真正干活的是它，所以谓语还用三单（后面第③关细讲）。"
+          },
+          {
+            "stem": "He likes to play basketball. 中 to play basketball 作什么成分？",
+            "options": [
+              "主语",
+              "状语",
+              "宾语",
+              "宾补"
+            ],
+            "answer": "C. 宾语",
+            "explain": "like 是及物动词，喜欢「什么」？喜欢打篮球这件事 → to play basketball 作宾语。"
+          },
+          {
+            "stem": "The teacher asked me to clean the blackboard. 中 to clean the blackboard 作什么成分？",
+            "options": [
+              "宾语",
+              "宾补",
+              "状语",
+              "定语"
+            ],
+            "answer": "B. 宾补",
+            "explain": "站在宾语 me 后面，补说「我干什么」→ 宾语补足语。擦黑板的人是 me，me 和 clean 是逻辑上的主谓关系。"
+          },
+          {
+            "stem": "My work is to clean the room every day. 中 to clean the room 作什么成分？",
+            "options": [
+              "主语",
+              "宾语",
+              "定语",
+              "表语"
+            ],
+            "answer": "D. 表语",
+            "explain": "系动词 is 后面说明主语 work 的具体内容 → 表语。见到 is + to do，基本就是表语。"
+          },
+          {
+            "stem": "Have you got anything to say? 中 to say 作什么成分？",
+            "options": [
+              "宾语",
+              "定语",
+              "状语",
+              "表语"
+            ],
+            "answer": "B. 定语",
+            "explain": "跟在名词 anything 后面修饰它——「要说的」事 → 定语。不定式作定语永远后置，别把它当宾语。"
+          },
+          {
+            "stem": "To pass the exam, he studied very hard. 中 To pass the exam 作什么成分？",
+            "options": [
+              "主语",
+              "定语",
+              "状语",
+              "宾补"
+            ],
+            "answer": "C. 状语",
+            "explain": "句首的不定式说明 studied hard 的目的——为了通过考试 → 目的状语。它既不当主语（真正主语是 he），也不跟在名词后面。"
+          }
+        ]
+      },
+      {
+        "key": "subject",
+        "title": "③ 不定式作主语：三单与 it 形式主语",
+        "explain": "<p><b>1）不定式作主语，谓语用第三人称单数</b>——不定式代表「一件事」，一件事就是三单：</p><p><b>To learn</b> from each other <b>is</b> necessary. 互相学习是有必要的。</p><p><b>2）it 作形式主语</b>：不定式放句首当主语容易头重脚轻，常让 it 先占位，真正的主语挪到句末：</p><pre class=\"topic-formula\">It is necessary to learn from each other.\n形式主语          真正的主语</pre><p><b>3）It + be + adj. + for / of sb. + to do</b>——for 还是 of，看形容词说的是谁：</p><table><tr><th></th><th>形容词说什么</th><th>常用词</th><th>例句</th></tr><tr><td><b>for</b></td><td>事情的性质（对某人而言）</td><td>important / necessary / difficult / convenient</td><td>It's important <b>for us</b> to protect the environment. / It is difficult <b>for beginners</b> to master this skill.</td></tr><tr><td><b>of</b></td><td>人的品质（夸人 / 贬人）</td><td>kind / nice / brave / careless / clever / polite</td><td>It is kind <b>of you</b> to help me with my work. / It is brave <b>of him</b> to speak up in front of so many people.</td></tr></table><p><b>判断法</b>：把 sb. 拿出来造句 <b>sb. is + adj.</b>——说得通用 of（You are kind. √），说不通用 for（Us is important. ✗）。</p><p><b>记法</b>：夸人用 of，说事用 for。下面就是课堂练习 1，四空全是 for / of 之争。</p>",
+        "qs_label": "课堂练习 1：for 还是 of",
+        "general_qs": [
+          {
+            "stem": "To learn from each other ________ (be) necessary.",
+            "answer": "is",
+            "explain": "不定式作主语表示「一件事」，谓语用三单 → is。不定式自己永远不变形，变的是后面的谓语动词。"
+          },
+          {
+            "stem": "It is necessary ________ people to have food and water every day.（课堂练习 1，填 for / of）",
+            "answer": "for",
+            "explain": "necessary 说的是「事」——每天有吃喝这件事有必要，不是夸人 → for。检验：People is necessary 说不通。"
+          },
+          {
+            "stem": "It's very convenient ________ us to buy train tickets on the Internet.（课堂练习 1，填 for / of）",
+            "answer": "for",
+            "explain": "convenient（方便）说的是网购买票这件事的性质，不是夸我们人方便 → for。"
+          },
+          {
+            "stem": "It's careless ________ you to make lots of mistakes.（课堂练习 1，填 for / of）",
+            "answer": "of",
+            "explain": "careless（粗心）说的是「你」的品质 → of。检验：You are careless. 完全说得通。"
+          },
+          {
+            "stem": "It's very nice ________ you to get me two tickets.（课堂练习 1，填 for / of）",
+            "answer": "of",
+            "explain": "nice（真好）在夸「你」人好 → of。检验：You are nice. √。课堂练习 1 整组答案：for, for, of, of——前两空说事，后两空夸人。"
+          },
+          {
+            "stem": "It is difficult ________ beginners to master this skill.（填 for / of）",
+            "answer": "for",
+            "explain": "difficult 说的是「掌握这项技能」这件事难，不是初学者这个人难 → for。"
+          },
+          {
+            "stem": "什么时候用 of sb.？",
+            "options": [
+              "形容词夸 / 贬的是「人」的品质，能说 sb. is adj. 就用 of",
+              "形容词说明「事」的性质时就用 of",
+              "只要主语是人就用 of",
+              "of 和 for 意思一样，随便换"
+            ],
+            "answer": "A. 形容词夸 / 贬的是「人」的品质，能说 sb. is adj. 就用 of",
+            "explain": "of 管人、for 管事。B 死于方向反了（说事用 for）；C 死于「是人不行，得形容词在说他」；D 死于一字之差意思两样。"
+          }
+        ],
+        "memory": {
+          "front": "It is + adj. + for/of sb. + to do，for 和 of 怎么选？",
+          "back": "of：形容词说的是人的品质——kind / nice / brave / careless / clever / polite\n检验：sb. is adj. 说得通 → It is kind of you to help me.\nfor：形容词说的是事的性质——important / necessary / difficult / convenient\nIt's important for us to protect the environment.\n一句话：夸人用 of，说事用 for。"
+        }
+      },
+      {
+        "key": "predicative",
+        "title": "④ 不定式作表语 · 定语 · 状语",
+        "explain": "<p><b>作表语</b>：不定式放在系动词之后，说明主语的具体内容或目的：</p><p>My work is <b>to clean</b> the room every day. 我的工作就是每天打扫这间屋子。/ My dream is <b>to travel</b> around the world. 我的梦想是环游世界。</p><p><b>主表互换</b>：不定式作表语时，通常可以和主语换位置，意思不变——</p><pre class=\"topic-formula\">A good way of learning English is to listen to English songs.\n= To listen to English songs is a good way of learning English.</pre><p>另外两种成分也顺手练熟：</p><p><b>作定语</b>（名词后面修饰名词）：Have you got anything <b>to say</b>? / I have something important <b>to tell</b> you.——注意 something 是不定代词，修饰它的 important 和 to tell you 都得放它后面。</p><p><b>作状语</b>（修饰形容词或动词）：I'm sorry <b>to trouble</b> you.（原因——为什么抱歉）/ <b>To pass the exam</b>, he studied very hard.（目的——为了通过考试）</p><p><b>记法</b>：系后是表可互换，名后是定紧相随，句首目的、sorry 后原因，都是状语来点缀。</p>",
+        "qs_label": "练习：表语 · 定语 · 状语各来一题",
+        "general_qs": [
+          {
+            "stem": "My dream is ________ (travel) around the world.",
+            "answer": "to travel",
+            "explain": "系动词 is 后面作表语 → to travel。表语说明 dream 的具体内容：环游世界这个梦想。"
+          },
+          {
+            "stem": "同义互换：To listen to English songs is a good way of learning English. 下面哪句意思相同？",
+            "options": [
+              "A good way of learning English is to listen to English songs.",
+              "A good way of learning English is listen to English songs.",
+              "A good way to learning English is listening to English songs.",
+              "A good way of learning English is to listening to English songs."
+            ],
+            "answer": "A. A good way of learning English is to listen to English songs.",
+            "explain": "主表互换：不定式表语可以和主语位置对调，to do 形式不变。B 死于 is 后少了 to；C 死于 way to do 才对、且表语丢了 to；D 死于 to 后面不能接 -ing。"
+          },
+          {
+            "stem": "Have you got anything ________ (say)?",
+            "answer": "to say",
+            "explain": "不定式放在 anything 后面作定语——「要说的」话。不定式作定语永远后置。"
+          },
+          {
+            "stem": "下面哪句是正确的？",
+            "options": [
+              "I have important something to tell you.",
+              "I have something important to tell you.",
+              "I have something to tell important you.",
+              "I have something important telling you."
+            ],
+            "answer": "B. I have something important to tell you.",
+            "explain": "something 是不定代词，修饰它的形容词 important 和不定式 to tell you 都要放它后面。A 死于形容词跑到 something 前面；C 死于把 important 塞进了宾语；D 死于定语位置用了 telling。"
+          },
+          {
+            "stem": "I'm sorry to trouble you. 中 to trouble 作什么成分？",
+            "options": [
+              "主语",
+              "宾语",
+              "状语",
+              "宾补"
+            ],
+            "answer": "C. 状语",
+            "explain": "它说明抱歉的原因——「麻烦你」这件事让我抱歉 → 原因状语，修饰形容词 sorry。"
+          },
+          {
+            "stem": "________ (pass) the exam, he studied very hard.",
+            "answer": "To pass",
+            "explain": "句首不定式作目的状语：为了通过考试，他学习很努力。句首要大写 → To pass。不能写成 Pass（没 to 就不是不定式了）。"
+          }
+        ]
+      },
+      {
+        "key": "object",
+        "title": "⑤ 不定式作宾语：十组动词与 it 形式宾语",
+        "explain": "<p><b>1）作动词的宾语</b>：I decided <b>to change</b> my eating habit. 我决定改变我的饮食习惯。</p><p>哪些动词后面请 to do 当宾语？讲义列了十组，考试专挑这里挖坑：</p><table><tr><th>动词 + to do</th><th>意思</th><th>动词 + to do</th><th>意思</th></tr><tr><td>wish / hope to do</td><td>希望</td><td>agree to do</td><td>同意</td></tr><tr><td>expect to do</td><td>期待</td><td>refuse to do</td><td>拒绝</td></tr><tr><td>want / would like to do</td><td>想要</td><td>promise to do</td><td>承诺</td></tr><tr><td>manage to do</td><td>设法完成</td><td>learn to do</td><td>学会</td></tr><tr><td>decide to do</td><td>决定</td><td>plan to do</td><td>计划</td></tr></table><p><b>2）find / think 后用 it 作形式宾语</b>：真正的宾语（不定式）太长，先让 it 占座，把真宾语挪到句末：</p><pre class=\"topic-formula\">I find it easy to read English every day.\n        形式宾语  真正的宾语\nDo you think it possible to finish the work within one day?</pre><p><b>记法</b>：宾语太长它先坐，it 占座真宾语靠后站；十组动词接 to do，一个萝卜一个坑。</p>",
+        "qs_label": "课堂练习 2（上）：作宾语",
+        "general_qs": [
+          {
+            "stem": "I expect ________ at home on weekends.",
+            "options": [
+              "stay",
+              "to stay",
+              "staying",
+              "to staying"
+            ],
+            "answer": "B. to stay",
+            "explain": "expect（期待）是十组动词之一，后接 to do → to stay。A 死于丢了 to；C 死于 expect 不接 -ing；D 死于 to 后面多事。"
+          },
+          {
+            "stem": "He ________ to live a simple life.",
+            "options": [
+              "advises",
+              "suggests",
+              "hopes",
+              "allows"
+            ],
+            "answer": "C. hopes",
+            "explain": "四个动词里只有 hope 能直接接 to do（hope to do 希望）。A / D 死于要先接人——advise sb. to do / allow sb. to do；B 死于 suggest 后面接 doing，不接 to do。"
+          },
+          {
+            "stem": "He wants ________ (play) basketball with us after school.",
+            "answer": "to play",
+            "explain": "want / would like 都接 to do 想要做 → to play。I want to go home. / He likes to play basketball. 是同一套路。"
+          },
+          {
+            "stem": "I promised ________ (not be) late again.",
+            "answer": "not to be",
+            "explain": "两步：promise 接 to do；否定形式 not 放 to 前 → not to be。承诺「不再迟到」= promised not to be late。"
+          },
+          {
+            "stem": "I find it easy ________ (read) English every day.",
+            "answer": "to read",
+            "explain": "find + it + adj. + to do：it 是形式宾语占座，真正的宾语 to read English every day 站句末，easy 作宾补。"
+          },
+          {
+            "stem": "Do you think it possible ________ the work within one day?",
+            "options": [
+              "finish",
+              "to finish",
+              "finishing",
+              "finished"
+            ],
+            "answer": "B. to finish",
+            "explain": "think + it + adj. + to do 形式宾语结构 → to finish the work。真正的宾语永远以 to do 身份站在句末。"
+          },
+          {
+            "stem": "I find it easy to read English every day. 这句里的 it 指什么？",
+            "options": [
+              "指读英语这件事——真正的宾语 to read English every day",
+              "指 every day",
+              "指 English 这门语言",
+              "什么也不指，纯凑数"
+            ],
+            "answer": "A. 指读英语这件事——真正的宾语 to read English every day",
+            "explain": "it 是形式宾语，替真宾语 to read English every day 占座。宾语太长站前面会把句子压歪，所以让它往后站、it 先顶上。"
+          }
+        ],
+        "memory": {
+          "front": "哪十组动词后接 to do 作宾语？find / think 后的 it 是什么？",
+          "back": "十组动词接 to do：wish/hope 希望、expect 期待、want/would like 想要、manage 设法完成、decide 决定、agree 同意、refuse 拒绝、promise 承诺、learn 学会、plan 计划\n形式宾语：find / think + it + adj. + to do，it 占位，真宾语在后\nI find it easy to read English every day."
+        }
+      },
+      {
+        "key": "objcomp1",
+        "title": "⑥ 不定式作宾补（上）：V + sb. + to do",
+        "explain": "<p><b>不定式作宾补（宾语补足语）</b>：与宾语有<b>逻辑上的主谓关系</b>——He advised me to lose weight. 里，是「me」去 lose weight，me 就是 lose 的逻辑主语。格式：及物动词 + 宾语 (sb. / sth.) + to do。</p><p>My parents don't allow me <b>to watch</b> TV on school nights. 我父母不允许我在上学的晚上看电视。/ My mother encourages me <b>to develop</b> the habit of independent thinking. 我妈妈鼓励我养成独立思考的习惯。</p><p>哪些动词这样用？讲义三句口诀，九个词全在里面：</p><pre class=\"topic-formula\">① 建议鼓励少命令：advise / encourage / order sb. to do sth.\n② 允许警告教要求：allow / warn / teach / ask sb. to do sth.\n③ 告诉邀请作宾补：tell / invite sb. to do sth.</pre><p>He advised me to lose weight. 他建议我减肥 / The teacher asked me to clean the blackboard. 老师让我擦黑板 / invite sb. to do sth. 邀请某人做某事（或参加某活动）。</p><p>否定把 not 放到 to 前面：The teacher told them <b>not to make</b> so much noise. 老师叫他们别那么吵。</p><p><b>记法</b>：三句口诀背熟，九个动词见一个认一个——「建议鼓励少命令，允许警告教要求，告诉邀请作宾补」。</p>",
+        "qs_label": "课堂练习 2（中）：sb. to do 宾补",
+        "general_qs": [
+          {
+            "stem": "My parents don't allow me ________ (watch) TV on school nights.",
+            "answer": "to watch",
+            "explain": "allow 在口诀第二句「允许警告教要求」里 → allow sb. to do sth. → to watch。"
+          },
+          {
+            "stem": "The teacher asked me ________ the blackboard.",
+            "options": [
+              "clean",
+              "to clean",
+              "cleaning",
+              "cleaned"
+            ],
+            "answer": "B. to clean",
+            "explain": "ask sb. to do sth. 要求某人做某事 → to clean。A 死于 ask 不是省 to 的使役动词（那是 make / let / have 的待遇，下一关讲）。"
+          },
+          {
+            "stem": "The teacher told them ________ make so much noise.",
+            "options": [
+              "don't",
+              "not",
+              "will not",
+              "not to"
+            ],
+            "answer": "D. not to",
+            "explain": "宾补是 tell sb. to do 的否定：把 not 放到 to 前 → told them not to make。A / C 死于宾补要不定式、不能塞进一个句子；B 死于光有 not 丢了 to。"
+          },
+          {
+            "stem": "My mother encourages me ________ (develop) the habit of independent thinking.",
+            "answer": "to develop",
+            "explain": "encourage 在口诀第一句「建议鼓励少命令」里 → encourage sb. to do sth. → to develop。"
+          },
+          {
+            "stem": "下面哪组动词都接 sb. to do 作宾补？",
+            "options": [
+              "advise / encourage / allow / warn",
+              "make / let / see / hear",
+              "enjoy / finish / practise",
+              "hope / wish / plan"
+            ],
+            "answer": "A. advise / encourage / allow / warn",
+            "explain": "A 组全在「建议鼓励少命令 + 允许警告教要求」两句口诀里。B 组是使役 / 感官动词，宾补省 to（下一关）；C 组后面接 -ing；D 组直接接 to do 作宾语，中间不许插 sb."
+          },
+          {
+            "stem": "--- What did Mr Brown say?\n--- He invited me ________ to his birthday party.",
+            "options": [
+              "come",
+              "to come",
+              "coming",
+              "came"
+            ],
+            "answer": "B. to come",
+            "explain": "invite 在口诀第三句「告诉邀请作宾补」里 → invite sb. to do sth. 邀请某人做某事 → to come。"
+          }
+        ],
+        "memory": {
+          "front": "接 sb. to do 作宾补的三句口诀？否定怎么放？",
+          "back": "建议鼓励少命令：advise / encourage / order\n允许警告教要求：allow / warn / teach / ask\n告诉邀请作宾补：tell / invite\n格式：V + sb. + to do（He advised me to lose weight.）\n否定：not 放 to 前——tell sb. not to do"
+        }
+      },
+      {
+        "key": "objcomp2",
+        "title": "⑦ 不定式作宾补（下）：感官使役省 to，被动还原",
+        "explain": "<p>第二类宾补换个画风：<b>感官动词 / 使役动词 + 宾语 + 动词原形</b>（不带 to 的不定式）：</p><table><tr><th>类别</th><th>动词</th><th>例句</th></tr><tr><td><b>使役动词</b></td><td>make / let / have（help sb. (to) do 带不带 to 都行）</td><td>The boss <b>made</b> the workers <b>work</b> 14 hours a day. 老板让工人们一天工作 14 小时。</td></tr><tr><td><b>感官动词</b></td><td>see / watch / notice / hear</td><td>I often <b>see</b> him <b>play</b> by the river. 我经常看见他在河边玩。</td></tr></table><p><b>王牌考点——变被动，to 还原</b>：这些动词变被动语态时，省掉的 to 必须请回来：</p><p>（主动）I often see him play by the river. →（被动）He is often seen <b>to play</b> by the river.</p><p>（主动）The boss made the workers work 14 hours a day. →（被动）The workers were made <b>to work</b> 14 hours a day by the boss.</p><p><b>记法</b>：主动省 to，被动还 to——「省了的 to，被动要还」。</p>",
+        "qs_label": "课堂练习 2（下）：省 to 与还原",
+        "general_qs": [
+          {
+            "stem": "I saw him ________ out of the room.",
+            "options": [
+              "go",
+              "had gone",
+              "has gone",
+              "goes"
+            ],
+            "answer": "A. go",
+            "explain": "see 是感官动词，宾补用不带 to 的原形 → see him go。B / C 死于宾补位置不接过去 / 完成形式；D 死于宾补不是谓语，没有三单。"
+          },
+          {
+            "stem": "Though he had often made his little sister ________, today he was made ________ by his little sister.",
+            "options": [
+              "cry；to cry",
+              "crying；crying",
+              "cry；cry",
+              "to cry；cry"
+            ],
+            "answer": "A. cry；to cry",
+            "explain": "一题双考：前半句主动，make sb. do 省 to → cry；后半句被动 was made，省掉的 to 必须还原 → to cry。C 死于后半句忘了还原，D 死于前半句多带了 to。"
+          },
+          {
+            "stem": "The boss made the workers ________ (work) 14 hours a day.",
+            "answer": "work",
+            "explain": "make 是使役动词，主动句宾补用光杆原形 → work。要是写成 to work 就把使役动词当成 ask 那一伙了。"
+          },
+          {
+            "stem": "The workers were made ________ (work) 14 hours a day by the boss.",
+            "answer": "to work",
+            "explain": "同一句话变被动：were made 后面 to 必须还原 → to work。主动省 to、被动还 to，本讲王牌考点。"
+          },
+          {
+            "stem": "下面哪个动词的宾补不带 to？",
+            "options": [
+              "ask",
+              "tell",
+              "let",
+              "invite"
+            ],
+            "answer": "C. let",
+            "explain": "let 是使役动词，let sb. do 让某人做。A / B / D 都在「教要求、告诉邀请」口诀里，老老实实接 sb. to do。"
+          },
+          {
+            "stem": "He was often seen ________ (play) by the river.",
+            "answer": "to play",
+            "explain": "I often see him play by the river. 的被动版：was seen 后 to 还原 → to play。别看它被动了就光杆原形跟上。"
+          },
+          {
+            "stem": "hear / watch / notice 属于哪类动词？宾补怎么处理？",
+            "options": [
+              "感官动词，宾补省 to（宾语后接动词原形）",
+              "使役动词，宾补必须带 to",
+              "接 sb. to do 的动词",
+              "后面只能接 -ing 形式"
+            ],
+            "answer": "A. 感官动词，宾补省 to（宾语后接动词原形）",
+            "explain": "see / watch / notice / hear 四个感官动词都是「看见 / 听见整个过程」，宾语后接原形。B 死于类别认错；C 死于它们恰恰不带 to；D 死于 -ing 是「正在进行」的用法，不是这里的规定。"
+          }
+        ],
+        "memory": {
+          "front": "感官 / 使役动词作宾补省 to——哪些词？变被动后呢？",
+          "back": "使役：make / let / have（help sb. (to) do 带不带都行）\n感官：see / watch / notice / hear\n主动：I often see him play by the river.（省 to）\n被动：He is often seen to play by the river.（to 还原）\nThe workers were made to work 14 hours a day.\n一句话：主动省 to，被动还 to"
+        }
+      },
+      {
+        "key": "final",
+        "title": "⑧ 综合验收：七关考点一锅端",
+        "explain": "<p>最后一关，不讲新东西——把前面七关的考点混在一起再过一遍。做错哪题，就回哪一关翻口诀卡。</p><p>验收清单：不定式构成与否定（第①关）· 六大成分识别（第②关）· 三单与 for / of 之争（第③关）· 主表互换与定语状语（第④关）· 十组 to do 动词（第⑤关）· sb. to do 三句口诀（第⑥关）· 省 to 与被动还原（第⑦关）。</p>",
+        "qs_label": "综合验收（错哪题回哪关）",
+        "general_qs": [
+          {
+            "stem": "It's very kind ________ you to help me with my work.",
+            "options": [
+              "for",
+              "of",
+              "to",
+              "with"
+            ],
+            "answer": "B. of",
+            "explain": "kind（好心）夸的是「你」的品质——You are kind. 说得通 → of。回第③关：夸人用 of，说事用 for。"
+          },
+          {
+            "stem": "To learn English well ________ (be) not easy for us.",
+            "answer": "is",
+            "explain": "不定式作主语代表「一件事」，谓语用三单 → is。回第③关第一格。"
+          },
+          {
+            "stem": "He decided ________ (change) his eating habit.",
+            "answer": "to change",
+            "explain": "decide 是十组动词之一，接 to do → to change。回第⑤关：一个萝卜一个坑。"
+          },
+          {
+            "stem": "I would like ________ home now.",
+            "options": [
+              "go",
+              "to go",
+              "going",
+              "went"
+            ],
+            "answer": "B. to go",
+            "explain": "want / would like 接 to do 想要做 → to go。C 死于 would like 不接 -ing。回第⑤关。"
+          },
+          {
+            "stem": "My mother asked me ________ (not play) computer games at night.",
+            "answer": "not to play",
+            "explain": "ask sb. to do sth. 的否定：not 放 to 前 → not to play。回第⑥关：三句口诀 + not 提前。"
+          },
+          {
+            "stem": "He was often heard ________ (sing) in the next room.",
+            "answer": "to sing",
+            "explain": "hear 是感官动词，主动省 to（hear him sing），变被动 to 还原 → was heard to sing。回第⑦关：主动省 to，被动还 to。"
+          },
+          {
+            "stem": "My job is ________ (look) after the baby.",
+            "answer": "to look",
+            "explain": "系动词 is 后面作表语 → to look。和 My work is to clean the room. 同款。回第④关：系后是表可互换。"
+          },
+          {
+            "stem": "I have a lot of homework ________ (do).",
+            "answer": "to do",
+            "explain": "不定式跟在名词 homework 后面修饰它——「要做的」作业 → 定语。和 I have something important to tell you. 同款。回第④关：名后是定。"
+          }
+        ]
+      }
+    ]
+  }
+}

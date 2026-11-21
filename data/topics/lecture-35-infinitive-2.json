@@ -1,0 +1,574 @@
+{
+  "meta": {
+    "topic_id": "lecture-35-infinitive-2",
+    "title": "第35讲 · 不定式② 自学",
+    "subtitle": "自学一遍再上课：热身回顾34讲 → 定语两种逻辑关系 → 状语目的·原因·结果 → 被动式 to be done → 疑问词+to do → 省 to 三家店 → 综合验收（共 9 关 · 53 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "intro",
+        "title": "① 热身：34 讲的底子 + 本讲地图",
+        "explain": "<p>第 34 讲我们把不定式的「老四样」过完了：作<b>主语</b>（常用 it 顶着，真正的主语放句末）、作<b>表语</b>、作<b>宾语</b>、作<b>宾补</b>——感官动词（see / watch / notice / hear）和使役动词（make / let / have）后面的不定式<b>不带 to</b>，一变被动 to 还要还原。本讲是下半场，五件新装备：</p><table><tr><th>新装备</th><th>一句话记住</th></tr><tr><td>① 作定语</td><td>放在被修饰词后面，两种逻辑关系定生死</td></tr><tr><td>② 作状语</td><td>目的 · 原因 · 结果，三套识别暗号</td></tr><tr><td>③ 被动式</td><td>to be done，逻辑主语是动作的承受者</td></tr><tr><td>④ 疑问词 + to do</td><td>who / what / which / when / where / how + to do，相当于名词</td></tr><tr><td>⑤ to 的省略</td><td>感官使役 / 三大短语 / 前有 do 后省 to</td></tr></table><p>自学方法：先读讲解 → 盖住答案做题 → 点「先想再看答案」核对 → 全懂了点「我学完了」进下一关。</p>",
+        "qs_label": "热身自测：34 讲的底子还在吗（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "The teacher made us ________ (copy) the new words three times.",
+            "answer": "copy",
+            "explain": "make 是使役动词，宾补里的不定式不带 to → made us copy。34 讲老规则：see / watch / notice / hear / make / let / have 后接光杆原形。"
+          },
+          {
+            "stem": "同一件事变成被动语态：We were made ________ all night.",
+            "options": [
+              "work",
+              "to work",
+              "working",
+              "worked"
+            ],
+            "answer": "B. to work",
+            "explain": "变被动语态后，原来省掉的 to 要还原 → were made to work。A 死于忘了「被动还 to」这条回收条款。"
+          },
+          {
+            "stem": "________ is important to learn English well.",
+            "options": [
+              "This",
+              "That",
+              "It",
+              "He"
+            ],
+            "answer": "C. It",
+            "explain": "不定式作主语太长时请 it 顶着形式主语的位子，真正的主语 to learn English well 退到句末——34 讲的 it 形式主语。"
+          },
+          {
+            "stem": "不定式的否定形式怎么构成？",
+            "options": [
+              "to not do",
+              "not to do",
+              "don't to do",
+              "not doing"
+            ],
+            "answer": "B. not to do",
+            "explain": "not 放在整个不定式前面：not to do。Tell him not to be late. 就是这么来的。"
+          }
+        ]
+      },
+      {
+        "key": "attributive",
+        "title": "② 不定式作定语：两种逻辑关系定生死",
+        "explain": "<p>不定式作<b>定语</b>时，放在被修饰词的<b>后面</b>（后置定语）。它和被修饰词是哪种逻辑关系，决定了句子的意思和写法：</p><table><tr><th>逻辑关系</th><th>规则</th><th>例句</th></tr><tr><td><b>主谓关系</b></td><td>被修饰词是不定式动词的「执行者」</td><td>Joe was the first <b>to arrive</b>.（Joe 到 → Joe 是 arrive 的主语）；He was the first <b>to make</b> a voyage around the world. 他是第一个环游世界的人</td></tr><tr><td><b>动宾关系</b></td><td>被修饰词是动词的「承受者」；<b>不及物动词后面要补上适当的介词</b></td><td>I will have a class <b>to attend</b>.（attend a class）；I have nothing <b>to worry about</b>.（worry 不及物 → worry about nothing）</td></tr></table><p>高频句型顺手收走：<b>the first / the second / the last / the next / the only + 名词 + to do</b>——「第一个 / 最后一个 / 唯一……做某事的人」。</p><p><b>记法</b>：主谓关系「人做事」，直接 to do；动宾关系「物被做」，动词若不及物就得<b>拖个介词</b>出门——nothing to worry <b>about</b>、a pen to write <b>with</b>。</p>",
+        "qs_label": "课堂练习 1（上）：不定式作定语",
+        "general_qs": [
+          {
+            "stem": "I'm hungry. Get me something _________.",
+            "options": [
+              "eat",
+              "to eat",
+              "eating",
+              "for eating"
+            ],
+            "answer": "B. to eat",
+            "explain": "something 和 eat 是动宾关系（eat something）→ 不定式 to eat 后置作定语。A 死于不定式丢了 to；C 死于 eating 表不了「拿来吃的」这层意思；D 死于 for eating 不是本考点格式——考试答案锁定 to do。"
+          },
+          {
+            "stem": "I was the second ________ in my English paper in the exam.",
+            "options": [
+              "to hand",
+              "handing",
+              "hand",
+              "to handing"
+            ],
+            "answer": "A. to hand",
+            "explain": "the second + to do：序数词（the first / the second / the last…）后接不定式作定语——「第二个交英语卷的人」。B、C 死于没用不定式；D 死于 to 后面手滑接了 handing。"
+          },
+          {
+            "stem": "Joe was the first ________ (arrive) at the station, so he got the best seat.",
+            "answer": "to arrive",
+            "explain": "the first + to do：Joe 和 arrive 是主谓关系（Joe 到站）→ to arrive。"
+          },
+          {
+            "stem": "I have nothing ________ about.",
+            "options": [
+              "worry",
+              "to worry",
+              "worrying",
+              "worried"
+            ],
+            "answer": "B. to worry",
+            "explain": "动宾关系：worry about nothing（没什么可担心的）。worry 是不及物动词，介词 about 留在句尾。A 死于丢了不定式；C、D 分词方向不对。"
+          },
+          {
+            "stem": "I need a pen ________.",
+            "options": [
+              "to write",
+              "write with",
+              "to write with",
+              "writing with"
+            ],
+            "answer": "C. to write with",
+            "explain": "动宾关系：write with a pen（用钢笔写）。write 在这里是不及物用法，介词 with 得跟着不定式一起留下。A 死于丢了 with——write 什么？钢笔不能被「写」；B 死于丢了 to。"
+          },
+          {
+            "stem": "不定式作定语、被修饰词和不定式动词是动宾关系时，若该动词是不及物动词，必须注意什么？",
+            "options": [
+              "把不定式移到句首",
+              "在不定式后保留适当的介词",
+              "把不定式改成被动式",
+              "把 to 省略掉"
+            ],
+            "answer": "B. 在不定式后保留适当的介词",
+            "explain": "不及物动词接不了宾语，就要靠介词把关系接上：nothing to worry about / a chair to sit on / a pen to write with。讲义原话：如果是不及物动词，要在不定式后加上适当的介词。"
+          }
+        ],
+        "memory": {
+          "front": "不定式作定语的两种逻辑关系？序数词后面接什么？",
+          "back": "后置：不定式放被修饰词后面\n主谓关系（人做事）：Joe was the first to arrive.\n动宾关系（物被做）：I have a class to attend.（attend a class）\n不及物动词 → 介词别丢：nothing to worry about / a pen to write with\n高频句型：the first / second / last / next / only + 名词 + to do"
+        }
+      },
+      {
+        "key": "adverbial",
+        "title": "③ 不定式作状语：目的 · 原因 · 结果",
+        "explain": "<p>不定式作<b>状语</b>，一肩挑三职——目的、原因、结果，考试各有一套识别暗号：</p><table><tr><th>用法</th><th>识别暗号</th><th>例句</th></tr><tr><td><b>目的状语</b></td><td>「为了……」，句首句末都行；= in order / so as + to do</td><td>(In order) <b>To arrive there on time</b>, I got up one hour earlier than usual. / I stopped <b>to have a rest</b>.</td></tr><tr><td><b>原因状语</b></td><td>跟在 glad / sorry / excited / disappointed 等<b>情绪词</b>后面</td><td>I am sorry <b>to hear</b> that your father is ill. / She was disappointed <b>to find</b> out that the concert had been cancelled.</td></tr><tr><td><b>结果状语</b></td><td>only to（不料）/ enough to（足够……能）/ too…to（太……而不能）</td><td>I visited him <b>only to find</b> him out. / He is old <b>enough to go</b> to school. / He is <b>too young to go</b> to school.</td></tr></table><p>等价互换要看熟：<b>He is too young to go to school. = He is not old enough to go to school.</b>——「太小了不能去」翻个面就是「不够大去不了」，too…to 和 not…enough to 是一句话的两件外套。</p><p><b>记法</b>：目的「为了」、原因「情绪」、结果「三件套」；too…to 天生带否定，enough to 天生带肯定。</p>",
+        "qs_label": "课堂练习 1（下）：不定式作状语",
+        "general_qs": [
+          {
+            "stem": "The community（社区）worker is patient enough ________ to the old how to use the phone.",
+            "options": [
+              "explain",
+              "explains",
+              "to explain",
+              "explaining"
+            ],
+            "answer": "C. to explain",
+            "explain": "enough to do 结果状语：足够耐心「去解释」。enough 后面锁死 to do——A 死于原形裸奔；B 死于三单；D 死于 -ing。"
+          },
+          {
+            "stem": "________ myself, I will take up a hobby like painting this summer.",
+            "options": [
+              "Improve",
+              "Improving",
+              "To improve",
+              "Improved"
+            ],
+            "answer": "C. To improve",
+            "explain": "句首表目的，用不定式 To improve（= In order to improve）：「为了提升自己」。A 死于原形不能作状语；B 死于动名词放句首不表目的；D 死于过去分词表被动，方向反了。"
+          },
+          {
+            "stem": "同义转换：He is too young to go to school. = He is ________ ________ ________ to go to school.（用 old，3 词）",
+            "answer": "not old enough",
+            "explain": "too…to = not…enough to：太年轻去不了 = 不够大去不了。too 后的形容词 young 换成反义词 old，前面加 not，后面配 enough——not old enough。"
+          },
+          {
+            "stem": "I visited him only ________ him out.",
+            "options": [
+              "finding",
+              "to find",
+              "find",
+              "found"
+            ],
+            "answer": "B. to find",
+            "explain": "only to do 表出乎意料的结果：去拜访他，「不料」他出去了。A 死于 -ing 不表意外结果。"
+          },
+          {
+            "stem": "I am sorry ________ that your father is ill.",
+            "options": [
+              "hear",
+              "hearing",
+              "to hear",
+              "heard"
+            ],
+            "answer": "C. to hear",
+            "explain": "情绪词 sorry 后面接 to do 作原因状语：因为「听到」你父亲病了而难过。"
+          },
+          {
+            "stem": "She was disappointed ________ (find) out that the concert had been cancelled.",
+            "answer": "to find",
+            "explain": "disappointed 是情绪词，后面接 to do 交代失望的原因 → to find out。音乐会取消了，她失望地发现这个消息。"
+          },
+          {
+            "stem": "作目的状语的不定式短语可以放在句子的什么位置？",
+            "options": [
+              "只能放在句首",
+              "只能放在句末",
+              "句首或句末都可以",
+              "只能放在句中"
+            ],
+            "answer": "C. 句首或句末都可以",
+            "explain": "讲义原话：作目的状语可以放在句首或者句末——To arrive there on time, I got up early. / I got up early to arrive there on time. 两头都行。"
+          }
+        ],
+        "memory": {
+          "front": "不定式作状语的三个用途？too…to 等于哪句话？",
+          "back": "目的：为了……，句首句末都行，= in order to / so as to do\n原因：glad / sorry / excited / disappointed 等情绪词后接 to do\n结果三件套：only to 不料 / enough to 足够 / too…to 太…而不能\ntoo…to = not…enough to：He is too young to go. = He is not old enough to go."
+        }
+      },
+      {
+        "key": "passive",
+        "title": "④ 不定式的被动语态：to be done",
+        "explain": "<p>不定式也有被动语态：<b>to be + 过去分词（to be done）</b>。用它就一个理由——不定式的逻辑主语是动作的<b>承受者</b>：</p><table><tr><th>例句</th><th>为什么用被动</th></tr><tr><td>The room is <b>to be cleaned</b> tomorrow.</td><td>房间是「被打扫」的</td></tr><tr><td>The broken window is <b>to be repaired</b> by a professional.</td><td>窗户是「被修」的</td></tr><tr><td>It is an honour <b>to be invited</b> to the banquet.</td><td>「我」是被邀请的——承蒙邀请，甚是荣幸</td></tr><tr><td>She begged <b>to be allowed</b> to return home.</td><td>恳求「被允许」回家</td></tr></table><p><b>记法</b>：一句话判断——主语「去做」用 to do，主语「被做」用 to be done。看到 by 短语、beg / honour 这类句型，先问一句：这个动作落到谁头上？落到主语头上，就是被动。</p>",
+        "qs_label": "练习：不定式的被动语态",
+        "general_qs": [
+          {
+            "stem": "不定式被动语态的基本形式是？",
+            "options": [
+              "to doing",
+              "to be done",
+              "to be doing",
+              "to have done"
+            ],
+            "answer": "B. to be done",
+            "explain": "to be + 过去分词：to be cleaned / to be repaired / to be invited。核心就一条：逻辑主语是动作的承受者。"
+          },
+          {
+            "stem": "It is an honour ________ ________ (invite) to the banquet.",
+            "answer": "to be invited",
+            "explain": "承蒙「被邀请」赴宴，甚是荣幸——被邀请的人才是荣幸的主人 → to be invited。写成 to invite 就成了「我去邀请别人」，方向反了。"
+          },
+          {
+            "stem": "She begged ________ ________ ________ (allow) to return home.",
+            "answer": "to be allowed",
+            "explain": "她恳求「被允许」回家——allow 这个动作落到她头上 → to be allowed to return home。"
+          },
+          {
+            "stem": "The broken window is ________ by a professional.",
+            "options": [
+              "to repair",
+              "to be repaired",
+              "repaired to",
+              "to repairing"
+            ],
+            "answer": "B. to be repaired",
+            "explain": "窗户自己不会修，只能「被修」→ to be repaired；后面 by a professional 更是把被动方向写得明明白白。A 死于主动 to repair。"
+          },
+          {
+            "stem": "The room is to be cleaned tomorrow. 为什么用 to be cleaned？",
+            "options": [
+              "因为 room 自己会打扫",
+              "因为 room 是「被打扫」的对象",
+              "表示房间已经打扫完了",
+              "表示房间正在被打扫"
+            ],
+            "answer": "B. 因为 room 是「被打扫」的对象",
+            "explain": "不定式被动语态的判断标准只有一条：逻辑主语是动作的承受者。房间是打扫的对象，所以 to be cleaned——房间明天将被打扫。"
+          }
+        ]
+      },
+      {
+        "key": "whword",
+        "title": "⑤ 疑问词 + to do：不定式戴上疑问词的帽子",
+        "explain": "<p>不定式常和疑问词连用，构成<b>疑问词 + to do</b> 短语。这种结构<b>相当于名词</b>，在句中充当主语、宾语、表语等成分：</p><table><tr><th>成分</th><th>例句</th></tr><tr><td>作主语</td><td><b>How to solve</b> the problem is very important. 如何解决这个问题很重要</td></tr><tr><td>作宾语</td><td>He didn't know <b>what to say</b>. 他不知道该说什么</td></tr><tr><td>作表语</td><td>The question is <b>where to find</b> the water. 问题是该去哪里找水</td></tr></table><p>能戴的帽子就这几顶：<b>who / whom / what / which / when / where / how</b>（注意名单里没有 why——想问「为什么不做」，下一关的 Why not do 才是正主）。</p><p>易混点：<b>what 泛指「什么」，which 特指范围里的「哪一个」</b>。货架上椅子已经摆出来了，纠结的是「哪一把」，就用 which。</p>",
+        "qs_label": "课堂练习：疑问词 + to do",
+        "general_qs": [
+          {
+            "stem": "There are so many kinds of chairs on sale that I can't make up my mind ________ to buy.",
+            "options": [
+              "what",
+              "which",
+              "how",
+              "where"
+            ],
+            "answer": "B. which",
+            "explain": "椅子的大范围已经摆在那儿（so many kinds of chairs），纠结的是「哪一把」→ which 特指范围中的哪一个。A 的 what 泛指「什么东西」，这里范围明确；C、D 与 buy 的意思接不上——buy 还缺宾语，疑问词得能当它的宾语。"
+          },
+          {
+            "stem": "She doesn't know when ________ (start) working.",
+            "answer": "to start",
+            "explain": "「什么时候开始」→ 疑问词 when + to start，整个短语作 know 的宾语。know 后面不能直接接 when + 动词原形，中间必须站着 to。"
+          },
+          {
+            "stem": "________ to solve the problem is very important.",
+            "options": [
+              "How",
+              "What",
+              "Which",
+              "Where"
+            ],
+            "answer": "A. How",
+            "explain": "「如何解决这个问题」——how 指方式方法，整个短语作主语，谓语用三单 is。"
+          },
+          {
+            "stem": "The question is ________ to find the water.",
+            "options": [
+              "when",
+              "where",
+              "what",
+              "who"
+            ],
+            "answer": "B. where",
+            "explain": "「问题是该去哪里找水」——where 指地点，短语作表语。讲义原句 The question is where to find the water."
+          },
+          {
+            "stem": "下面哪个疑问词不能和 to do 连用？",
+            "options": [
+              "what",
+              "how",
+              "why",
+              "where"
+            ],
+            "answer": "C. why",
+            "explain": "讲义给出的名单是 who / whom / what / which / when / where / how——唯独没有 why。想问「为什么不做」，要用 Why not do（下一关的主角之一）。"
+          }
+        ],
+        "memory": {
+          "front": "疑问词 + to do 相当于什么、能作哪些成分？what 和 which 差在哪？",
+          "back": "相当于名词：作主语（How to solve the problem is very important.）、宾语（He didn't know what to say.）、表语（The question is where to find the water.）\n可用疑问词：who / whom / what / which / when / where / how（没有 why）\nwhat 泛指「什么」，which 特指范围中的「哪一个」"
+        }
+      },
+      {
+        "key": "omit-perception",
+        "title": "⑥ 省 to 第一家：感官动词 · 使役动词",
+        "explain": "<p>第一组省 to 的：感官动词和使役动词。它们后面接<b>宾语 + 不带 to 的不定式</b>作宾补：</p><table><tr><th>家族</th><th>成员</th><th>例句</th></tr><tr><td>感官动词</td><td>see / watch / notice / hear 等</td><td>I saw her <b>enter</b> the room. 我看见她进入了房间</td></tr><tr><td>使役动词</td><td>make / let / have 等</td><td>He made me <b>laugh</b>. 他让我笑了</td></tr></table><p>⚠️ 34 讲的回收条款要焊死：<b>变被动语态后，省掉的 to 要还原</b>——She was heard <b>to sing</b>. 主动省 to，被动还 to。</p><p><b>记法</b>：「看见听闻、让使派」后头光杆上场；句子一翻成被动，to 立刻归队。</p>",
+        "qs_label": "练习：感官 · 使役动词后省 to",
+        "general_qs": [
+          {
+            "stem": "I saw her ________ (enter) the room just now.",
+            "answer": "enter",
+            "explain": "see 是感官动词，宾补用不带 to 的不定式 → saw her enter。"
+          },
+          {
+            "stem": "He made me ________ (laugh).",
+            "answer": "laugh",
+            "explain": "make 是使役动词 → make me laugh，不加 to。"
+          },
+          {
+            "stem": "The boss made them ________ twelve hours a day.",
+            "options": [
+              "work",
+              "to work",
+              "working",
+              "worked"
+            ],
+            "answer": "A. work",
+            "explain": "make sb do sth：使役动词后的宾补是光杆原形 → made them work。B 死于多带了个 to。"
+          },
+          {
+            "stem": "She was heard ________ (sing) in the next room.",
+            "answer": "to sing",
+            "explain": "变被动语态后 to 要还原 → was heard to sing。主动是 heard her sing，被动就是 she was heard to sing。"
+          },
+          {
+            "stem": "感官动词 / 使役动词后的不定式，什么情况下要把 to 补回来？",
+            "options": [
+              "句子变被动语态时",
+              "主语是第三人称单数时",
+              "句子是过去时时",
+              "句子变疑问句时"
+            ],
+            "answer": "A. 句子变被动语态时",
+            "explain": "只有一条触发条件：变被动。He was made to work. / She was heard to sing.——时态、人称怎么变都不用管 to 的事。"
+          }
+        ]
+      },
+      {
+        "key": "omit-phrases",
+        "title": "⑦ 省 to 第二家：had better / would rather / Why not",
+        "explain": "<p>第二组：三个「天生不认 to」的固定短语，后面直接跟动词原形：</p><table><tr><th>短语</th><th>意思</th><th>例句</th></tr><tr><td><b>had better (do)</b></td><td>最好……；否定 had better <b>not</b> do</td><td>You had better <b>finish</b> your homework before you go out to play. / You had better <b>not stay</b> up late every night, it's bad for your health.</td></tr><tr><td><b>would rather (do)</b></td><td>宁愿……；would rather <b>not</b> do；would rather do <b>than</b> do</td><td>She would rather <b>walk</b> to work than <b>take</b> the bus. / I would rather <b>not talk</b> about it right now.</td></tr><tr><td><b>Why not (do)…?</b></td><td>为什么不……呢？（提建议）= Why don't you do…?</td><td><b>Why not go</b> for a walk after dinner? / Why not <b>call</b> me if you need any help?</td></tr></table><p><b>记法</b>：三家都接光杆原形；否定词 not 一律插在原形<b>前面</b>（had better not tell / would rather not talk）。would rather do than do 是成对的——than 前后两个动词都光杆，一个都不许带 to。</p>",
+        "qs_label": "课堂练习 2（上）：三大短语省 to",
+        "general_qs": [
+          {
+            "stem": "You had better ________ (not tell) him the truth.",
+            "answer": "not tell",
+            "explain": "had better 的否定：not 放在动词原形前 → had better not tell（最好不要告诉他真相）。别写成 don't tell 或 not to tell。"
+          },
+          {
+            "stem": "I would rather ________ (walk) than ________ (take) the bus.",
+            "answer": "walk / take",
+            "explain": "would rather do than do：than 前后成对，都用光杆原形 → would rather walk than take。宁愿走路去上班，也不愿坐公交。"
+          },
+          {
+            "stem": "It's bad for your health. You had better ________ stay up late every night.",
+            "options": [
+              "not",
+              "don't",
+              "not to",
+              "to not"
+            ],
+            "answer": "A. not",
+            "explain": "had better not do——否定词 not 直接放在原形前。B、C、D 都是把 not 的位置或形式搞错了。"
+          },
+          {
+            "stem": "Why not ________ for a walk after dinner?",
+            "options": [
+              "going",
+              "go",
+              "to go",
+              "goes"
+            ],
+            "answer": "B. go",
+            "explain": "Why not + 动词原形：Why not go for a walk? 晚饭后为什么不去散散步呢？"
+          },
+          {
+            "stem": "She would rather walk to work than ________ the bus.",
+            "options": [
+              "take",
+              "taking",
+              "to take",
+              "takes"
+            ],
+            "answer": "A. take",
+            "explain": "would rather do than do 成对出现，than 后面也是光杆原形 → take。D 死于三单——would rather 后没有三单这回事。"
+          },
+          {
+            "stem": "I would rather ________ ________ (not talk) about it right now.",
+            "answer": "not talk",
+            "explain": "would rather not do：宁愿不谈 → would rather not talk about it。"
+          },
+          {
+            "stem": "Why don't you call me if you need any help? = Why ________ me if you need any help?",
+            "options": [
+              "not call",
+              "not to call",
+              "don't call",
+              "not calling"
+            ],
+            "answer": "A. not call",
+            "explain": "Why don't you do…? = Why not do…?——两句是提建议的双胞胎 → Why not call me?"
+          }
+        ],
+        "memory": {
+          "front": "had better / would rather / Why not 后面接什么？否定放哪儿？",
+          "back": "had better do / had better not do 最好（不）……\nwould rather do (than do) 宁愿……而不……；would rather not do\nWhy not do…? = Why don't you do…? 提建议\n共同点：都接动词原形；not 插在原形前面"
+        }
+      },
+      {
+        "key": "omit-but",
+        "title": "⑧ 省 to 第三家：前有 do，后省 to",
+        "explain": "<p>第三组最有意思：<b>but / except</b>（除了……之外）前后的 to 去留，只看一件事——but / except 前面有没有实义动词 <b>do</b> 的任何形式：</p><table><tr><th>情况</th><th>口诀</th><th>例句</th></tr><tr><td>前面有 do（do / does / did / can do…）</td><td><b>前有 do，后省 to</b></td><td>We have nothing <b>to do</b> but <b>wait</b>. / They <b>did</b> nothing all day but <b>watch</b> TV.</td></tr><tr><td>前面没有 do</td><td><b>无 do，to 留下</b></td><td>She has no choice but <b>to accept</b> the offer. / He can't speak but <b>to nod</b> his head.</td></tr></table><p>⚠️ 一个要背死的组合：<b>have no choice but to do</b>（别无选择，只能……）——choice 不是 do，to 必须留下；而且这个搭配里的 <b>but 不能换成 except</b>。</p><p><b>记法</b>：「do 到，to 逃」——but 前面只要出现 do 的任何身影（to do / did / can do 都算），but 后面就接光杆原形；找不到 do，to 就老老实实站着。做题先别看 but 后面，先<b>扫一眼 but 前面有没有 do</b>。</p>",
+        "qs_label": "课堂练习 2（下）：前有 do 后省 to",
+        "general_qs": [
+          {
+            "stem": "They have nothing to do but ________ (stay) at home.",
+            "answer": "stay",
+            "explain": "but 前面有 to do → 前有 do，后省 to → stay。他们除了待在家里无事可做。"
+          },
+          {
+            "stem": "There is nothing we can do but ________ (accept) the fact.",
+            "answer": "accept",
+            "explain": "别被 there is 句型带偏——往 but 前面扫一眼：can do 也是 do 的形式 → 后面省 to → accept。"
+          },
+          {
+            "stem": "She doesn't have any choice but ________ (leave) the company.",
+            "answer": "to leave",
+            "explain": "but 前面找不到 do（choice 不是 do）→ to 留下 → to leave。固定搭配 have no choice but to do：别无选择，只能……"
+          },
+          {
+            "stem": "We have nothing to do but ________ (wait).",
+            "answer": "wait",
+            "explain": "前有 to do → 后省 to → wait。我们除了等待无事可做。"
+          },
+          {
+            "stem": "He can't speak but ________ his head.",
+            "options": [
+              "nod",
+              "to nod",
+              "nodding",
+              "nodded"
+            ],
+            "answer": "B. to nod",
+            "explain": "can't speak 里没有 do → 无 do，to 留下 → but to nod。他不能讲话，只能点头。A 死于看见 but 就条件反射省 to——省 to 的前提是前面有 do。"
+          },
+          {
+            "stem": "She has no choice but ________ the offer.",
+            "options": [
+              "accept",
+              "to accept",
+              "accepting",
+              "accepted"
+            ],
+            "answer": "B. to accept",
+            "explain": "have no choice but to do 固定搭配：别无选择，只能接受。记住这个搭配里 to 不省、but 不能换成 except。"
+          },
+          {
+            "stem": "「前有 do，后省 to」里的 do 指的是？",
+            "options": [
+              "只能是动词原形 do",
+              "do 的任何形式（do / does / did / to do / can do…）",
+              "助动词 be 动词",
+              "句子里随便哪个动词"
+            ],
+            "answer": "B. do 的任何形式（do / does / did / to do / can do…）",
+            "explain": "讲义原话：but / except 之前有实义动词 do 的「任何形式」都算——nothing to do、did nothing、can do，全都能触发省 to。"
+          }
+        ],
+        "memory": {
+          "front": "but / except 前后 to 的去留看什么？哪个组合必须留 to？",
+          "back": "口诀：前有 do，后省 to；无 do，to 留下\n有 do：nothing to do but wait / did nothing but watch TV / can do but accept\n无 do：can't speak but to nod his head\n死记：have no choice but to do（别无选择只能……，but 不能换 except）"
+        }
+      },
+      {
+        "key": "final",
+        "title": "⑨ 综合验收：八关考点一锅端",
+        "explain": "<p>最后一关，不讲新东西——把前面八关的考点混在一起再过一遍。做错哪题，就回哪一关翻口诀卡。</p><p>验收清单：定语两关系（主谓 / 动宾 + 介词）· 状语三用途（目的 / 原因 / too…to 与 enough to）· 被动式 to be done · 疑问词 + to do · 省 to 三家（感官使役 / better·rather·Why not / 前有 do 后省 to）。</p>",
+        "qs_label": "综合验收（错哪题回哪关）",
+        "general_qs": [
+          {
+            "stem": "The old man lives alone and has no one ________.",
+            "options": [
+              "to talk",
+              "talk to",
+              "to talk to",
+              "talking to"
+            ],
+            "answer": "C. to talk to",
+            "explain": "回②定语关：动宾关系 talk to no one——talk 不及物，介词 to 得跟着不定式一起留下。A 死于丢介词；B 死于丢 to。"
+          },
+          {
+            "stem": "He was ________ excited ________ say a word.",
+            "options": [
+              "so, that",
+              "too, to",
+              "very, to",
+              "enough, to"
+            ],
+            "answer": "B. too, to",
+            "explain": "回③状语关：too…to 太……而不能——他兴奋得一句话也说不出来。C 的 very 不能和 to 搭结构；D 死于 enough 得放在形容词后面（excited enough to）。"
+          },
+          {
+            "stem": "It is a great honour ________ ________ (choose) as monitor.",
+            "answer": "to be chosen",
+            "explain": "回④被动关：「我」是被选上的 → to be chosen。写成 to choose 就成了「我去选别人」，方向反了。"
+          },
+          {
+            "stem": "Nobody told me ________ the machine.",
+            "options": [
+              "how to start",
+              "how start",
+              "how starting",
+              "to how start"
+            ],
+            "answer": "A. how to start",
+            "explain": "回⑤疑问词关：「怎样启动」→ 疑问词 how + to start，整个短语作 told 的宾语。语序永远是疑问词在前、to do 在后。"
+          },
+          {
+            "stem": "The teacher had the boy ________ the classroom after school.",
+            "options": [
+              "clean",
+              "to clean",
+              "cleaning",
+              "cleaned"
+            ],
+            "answer": "A. clean",
+            "explain": "回⑥感官使役关：have 是使役动词 → have sb do → had the boy clean。B 死于多带的 to——主动句宾补不带 to。"
+          },
+          {
+            "stem": "It's raining hard. You had better ________ ________ (not leave) now.",
+            "answer": "not leave",
+            "explain": "回⑦短语关：had better not do → not leave。否定词 not 插在原形前面。"
+          },
+          {
+            "stem": "The child did nothing all day but ________.",
+            "options": [
+              "cry",
+              "to cry",
+              "crying",
+              "cried"
+            ],
+            "answer": "A. cry",
+            "explain": "回⑧前有 do 关：did nothing——but 前面有 do 的过去式 did → 后省 to → cry。"
+          }
+        ]
+      }
+    ]
+  }
+}

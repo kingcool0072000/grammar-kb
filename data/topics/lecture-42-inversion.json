@@ -1,0 +1,521 @@
+{
+  "meta": {
+    "topic_id": "lecture-42-inversion",
+    "title": "第42讲 · 倒装句 自学",
+    "subtitle": "自学一遍再上课：热身认识倒装 → 完全倒装（there be 就近 · 副词/地点/引语开头）→ 部分倒装（So/Neither · only · not only · Hardly…when）→ the more…the more → 综合验收（共 8 关 · 50 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "intro",
+        "title": "① 热身：倒装是什么，完全倒装 vs 部分倒装",
+        "explain": "<p>英语的<b>正常语序</b>是「主语在前，谓语在后」；但为了表达的需要，把谓语的<b>全部或一部分</b>放到主语之前，就叫<b>倒装语序</b>。</p><p>倒装分两大类，先认清再做题：</p><table><tr><th></th><th>完全倒装</th><th>部分倒装</th></tr><tr><td><b>谁搬家</b></td><td><b>整个谓语</b>都提到主语前</td><td>只把<b>助动词 / 系动词 / 情态动词</b>提到主语前</td></tr><tr><td><b>时态</b></td><td>通常只用一般现在时和一般过去时</td><td>各种时态都行</td></tr><tr><td><b>例句</b></td><td><b>Here is</b> your book. / <b>Down went</b> the small boat.</td><td><b>Only by working hard can</b> one succeed. / <b>Never have I</b> seen her before.</td></tr></table><p>一个眼力测试：Never have I seen her before.——正常语序是 I have never seen her before，现在把 <b>have</b> 提到了 I 前面，这就是<b>部分倒装</b>：只搬了助动词，实义动词 seen 还留在原地。</p><p>本讲路线：完全倒装两关 → 部分倒装四关 → the more…the more 一关 → 综合验收。每关先读讲解、盖住答案做题，错哪题回哪关翻口诀卡。</p>",
+        "qs_label": "热身自测（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "英语的正常陈述语序是？",
+            "options": [
+              "谓语在前，主语在后",
+              "主语在前，谓语在后",
+              "宾语在前，主语在后",
+              "助动词在前，宾语在后"
+            ],
+            "answer": "B. 主语在前，谓语在后",
+            "explain": "正常语序 = 主语 + 谓语。为了强调等表达需要，才把谓语全部或一部分搬到主语前，形成倒装。"
+          },
+          {
+            "stem": "部分倒装是把什么放到主语之前？",
+            "options": [
+              "整个谓语",
+              "谓语的一部分：助动词 / 系动词 / 情态动词",
+              "句子的宾语",
+              "句子的表语"
+            ],
+            "answer": "B. 谓语的一部分：助动词 / 系动词 / 情态动词",
+            "explain": "部分倒装像一般疑问句的语序：只把助动词/系动词/情态动词提到主语前，实义动词不动。整个谓语都搬家的是完全倒装。"
+          },
+          {
+            "stem": "下面哪句是倒装句？",
+            "options": [
+              "She has been to Tokyo.",
+              "Never have I seen her before.",
+              "He went to the cinema last night.",
+              "I can swim very fast."
+            ],
+            "answer": "B. Never have I seen her before.",
+            "explain": "B 把助动词 have 提到主语 I 之前 = 部分倒装。A / C / D 都是老老实实的主语在前谓语在后。"
+          },
+          {
+            "stem": "Here ________ (be) your book.",
+            "answer": "is",
+            "explain": "here 放句首，谓语 is 整个提到主语 your book 之前 = 完全倒装。真正的主语 your book 是单数 → is。"
+          },
+          {
+            "stem": "完全倒装通常只用于哪两种时态？",
+            "options": [
+              "一般现在时和一般过去时",
+              "现在完成时和过去完成时",
+              "一般将来时和过去将来时",
+              "任何时态都可以"
+            ],
+            "answer": "A. 一般现在时和一般过去时",
+            "explain": "完全倒装是「谓语整锅端」，只用于一般现在时（Here is your book.）和一般过去时（Down went the small boat.）。完成时、将来时想倒装，只能用部分倒装。"
+          }
+        ]
+      },
+      {
+        "key": "therebe",
+        "title": "② 完全倒装第一式：there be 句型（就近原则）",
+        "explain": "<p>there be 句型表示「有 / 存在」：there 站在句首，be 动词跟在后面，<b>真正的主语藏在 be 后面</b>——这就是完全倒装。</p><p>铁律是<b>就近原则</b>：be 动词的单复数，只看<b>紧挨着它的那个主语</b>，后面的主语再长再复数也管不着：</p><p>① There <b>is</b> a mobile phone and some books on the desk.（is 认 a mobile phone，单数）</p><p>② There <b>are</b> some books and a mobile phone on the desk.（are 认 some books，复数）</p><p>同样的两样东西，谁排在前面 be 就认谁——两句话都对，区别只在就近的主语。</p><p>there be 家族还有几个「变体动词」，用法完全一样，动词单复数同样就近：</p><table><tr><th>句型</th><th>例句</th></tr><tr><td>there <b>stand</b>（矗立）</td><td>There <b>stand</b> two tall buildings. 有两栋高楼矗立在那里。</td></tr><tr><td>there <b>live</b>（居住）</td><td>There <b>live</b> many birds in the forest. 森林里住着许多鸟。</td></tr><tr><td>there <b>exist</b>（存在）</td><td>There <b>exist</b> different opinions on this question. 关于这个问题存在不同意见。</td></tr></table><p><b>记法</b>：there be 家族认亲只认「最近的一个」——近水楼台先得「数」。</p>",
+        "qs_label": "课堂练习：there be 与就近原则",
+        "general_qs": [
+          {
+            "stem": "There ________ a cat and several dogs under the tree.",
+            "options": [
+              "has",
+              "have",
+              "is",
+              "are"
+            ],
+            "answer": "C. is",
+            "explain": "就近原则：be 只看最近的主语 a cat（单数）→ is。A / B 死于 there be 句型不用 has / have——那是「某人拥有」；D 死于被后面的 several dogs 带跑，就近只认 a cat。"
+          },
+          {
+            "stem": "There ________ some books and a mobile phone on the desk.",
+            "options": [
+              "is",
+              "are",
+              "has",
+              "have"
+            ],
+            "answer": "B. are",
+            "explain": "这回排在前面的主语是 some books（复数）→ are。和上一题对照着记：两样东西换个座位，be 动词立刻跟着最近的主语变。"
+          },
+          {
+            "stem": "There ________ (stand) two tall buildings.",
+            "answer": "stand",
+            "explain": "there stand 句型（矗立着），主语 two tall buildings 是复数、一般现在时 → 原形 stand。家族动词和 be 一样就近。"
+          },
+          {
+            "stem": "There ________ (live) many birds in the forest.",
+            "answer": "live",
+            "explain": "there live 句型（居住着），主语 many birds 复数 → live。森林里「住着」许多鸟。"
+          },
+          {
+            "stem": "There ________ different opinions on this question.",
+            "options": [
+              "exists",
+              "exist",
+              "is",
+              "has"
+            ],
+            "answer": "B. exist",
+            "explain": "there exist（存在着），主语 different opinions 是复数 → 动词用原形 exist。A / C / D 都死于单数形式，被 different opinions 看穿。"
+          },
+          {
+            "stem": "There be 句型里，be 动词的单复数由谁决定？",
+            "options": [
+              "第一个出现的词",
+              "离 be 最近的主语",
+              "后面所有主语加在一起",
+              "句子里有没有复数词"
+            ],
+            "answer": "B. 离 be 最近的主语",
+            "explain": "就近原则是唯一标准：There is a phone and some books. / There are some books and a phone.——谁紧挨着 be，be 就跟谁变。"
+          }
+        ],
+        "memory": {
+          "front": "There be 句型的 be 由谁决定？there stand / live / exist 怎么用？",
+          "back": "就近原则：be 只看紧挨着它的主语\nThere is a phone and some books.（is 认 a phone）\nThere are some books and a phone.（are 认 some books）\n家族三兄弟用法相同，动词同样就近：\nThere stand two tall buildings.（矗立着）\nThere live many birds in the forest.（住着）\nThere exist different opinions.（存在着）"
+        }
+      },
+      {
+        "key": "fulladv",
+        "title": "③ 完全倒装第二式：副词开路 · 地点介词短语 · 直接引语",
+        "explain": "<p>完全倒装还有三个常见的句首信号，看到它们，谓语整锅端到主语前：</p><table><tr><th>句首信号</th><th>规则</th><th>例句</th></tr><tr><td><b>here / there / now / then / thus</b> 等副词</td><td>+ come / go / be 等动词 + 主语</td><td><b>Here comes</b> the bus. / <b>There goes</b> the bell. / <b>Now comes</b> my turn. / <b>Then came</b> the order to take off. / <b>Thus faded</b> the memories of a happy childhood.</td></tr><tr><td><b>地点介词短语</b></td><td>+ 谓语 + 主语</td><td><b>At the foot of the hill lies</b> a beautiful lake. / <b>On the floor were</b> piles of old magazines. / <b>Outside the main gates of the city stood</b> a huge wooden horse.</td></tr><tr><td><b>直接引语</b></td><td>+ 引述动词 + 主语</td><td><b>\"Very well,\" said</b> the French student.</td></tr></table><p>⚠️ 两条重要的「豁免条款」，考试专挖这两个坑：</p><p>① 主语是<b>人称代词</b>时，用正常语序，不倒装：<b>Here we are.</b> 我们到了（✗ Here come we）——代词太轻，不值得为它倒装。</p><p>② 引述动词<b>带宾语</b>时，不倒装：<b>\"Sit down,\" the teacher told me.</b>——me 是宾语，不能再把 the teacher 和 told 倒过去。</p><p><b>记法</b>：句首信号一亮，谓语全搬家；主语是代词或动词带宾语，立刻恢复正常语序。</p>",
+        "qs_label": "课堂练习：三种句首信号",
+        "general_qs": [
+          {
+            "stem": "--- I'm waiting for the visitors very anxiously.\n--- Look, here ________ these visitors.",
+            "options": [
+              "come",
+              "comes",
+              "go",
+              "goes"
+            ],
+            "answer": "A. come",
+            "explain": "here 开头完全倒装，真正的主语是后面的 these visitors（复数）→ come。B / D 死于把 here 当成了单数主语；C 死于方向——Look! 提示「来了」用 come，不是 go。"
+          },
+          {
+            "stem": "At the foot of the hill ________.",
+            "options": [
+              "a beautiful lake lies",
+              "a beautiful lake lays",
+              "lies a beautiful lake",
+              "lays a beautiful lake"
+            ],
+            "answer": "C. lies a beautiful lake",
+            "explain": "地点介词短语开头 → 完全倒装：谓语 lies 放到主语 a beautiful lake 之前。A / B 死于没有倒装；lay 是「放置 / 躺下」的另一个动词，D 死于用错词。"
+          },
+          {
+            "stem": "\"Of course!\" ________.",
+            "options": [
+              "answer the boy",
+              "answered the boy",
+              "did the boy answer",
+              "the boy answered"
+            ],
+            "answer": "B. answered the boy",
+            "explain": "直接引语句首 → 完全倒装：引述动词放主语前；引述的是过去说的话 → answered。A 死于时态；C 死于 did——完全倒装不用助动词，谓语整个提前；D 死于没有倒装。"
+          },
+          {
+            "stem": "Here ________ (come) the bus. 汽车来了。",
+            "answer": "comes",
+            "explain": "here 开头完全倒装，主语 the bus 单数 → comes。对照上一关的 here come these visitors：主语是复数就用 come，单复数看后面真正的主语。"
+          },
+          {
+            "stem": "There ________ (go) the bell. 铃响了。",
+            "answer": "goes",
+            "explain": "there 开头完全倒装，主语 the bell 单数 → goes。「There goes the bell.」是学校里最常听到的倒装句。"
+          },
+          {
+            "stem": "「我们到了。」下面哪句对？",
+            "options": [
+              "Here we are.",
+              "Here are we.",
+              "Here come we.",
+              "Here goes we."
+            ],
+            "answer": "A. Here we are.",
+            "explain": "完全倒装的豁免条款：主语是人称代词 we → 不倒装，用正常语序 Here we are.。B / C / D 都死于给代词强行倒装——代词作主语，谓语不过去。"
+          },
+          {
+            "stem": "\"Sit down,\" ________.",
+            "options": [
+              "the teacher told me",
+              "told the teacher me",
+              "did the teacher tell me",
+              "told me the teacher"
+            ],
+            "answer": "A. the teacher told me",
+            "explain": "引述动词 told 带了宾语 me → 不倒装。B / D 死于把宾语 me 和主语搅在一起；C 死于 did——这是完全倒装的场合，这里直接豁免不倒。"
+          }
+        ],
+        "memory": {
+          "front": "完全倒装的三个句首信号？哪两种情况不倒装？",
+          "back": "① 副词开头（here / there / now / then / thus）+ come / go / be：Here comes the bus.\n② 地点介词短语开头：At the foot of the hill lies a beautiful lake.\n③ 直接引语开头：\"Very well,\" said the French student.\n两条豁免：\n主语是人称代词 → 正常语序（Here we are.）\n引述动词带宾语 → 不倒装（\"Sit down,\" the teacher told me.）"
+        }
+      },
+      {
+        "key": "soneither",
+        "title": "④ 部分倒装第一式：So / Neither / Nor（也 · 也不 · 的确如此）",
+        "explain": "<p>部分倒装只把<b>助动词 / 系动词 / 情态动词</b>提到主语前，像一般疑问句的语序。第一大常客是 so 和 neither/nor：</p><table><tr><th>句型</th><th>意思</th><th>要点</th></tr><tr><td><b>So + 助动词/系动词/情态动词 + 主语</b></td><td>「……也一样」前面说的肯定情况也适用于另一人</td><td>倒装；前后主语<b>不同</b>；助动词跟前一句<b>借</b>：has been → have，can → can，went → did</td></tr><tr><td><b>So + 主语 + 助动词/系动词/情态动词</b></td><td>「的确如此、就是这样」</td><td><b>不是倒装</b>；前后主语<b>相同</b>：So he can. / So he does. / So it is. / So he did.</td></tr><tr><td><b>Neither / Nor + 助动词 + 主语</b></td><td>「……也不」前面的否定情况对另一人也成立</td><td>倒装；只用于<b>否定</b>之后：Neither will I. / Nor can he.</td></tr></table><p>三组配对练眼力：</p><p>① --- She <b>has been</b> to Tokyo. --- <b>So have I.</b>（我也去过——借 have，倒装）</p><p>② --- He <b>gets up</b> very early. --- <b>So he does.</b>（他确实很早——同一主语，不倒装）</p><p>③ --- I <b>cannot</b> swim. --- <b>Neither / Nor can he.</b>（他也不会——否定接 neither/nor，借 can）</p><p><b>记法</b>：主语换了说「也一样」，So + 助动词倒着装；主语没换说「的确如此」，So + 主语顺着讲；否定回应找 neither/nor，借哪个助动词，前一句说了算。</p>",
+        "qs_label": "课堂练习：So / Neither / Nor",
+        "general_qs": [
+          {
+            "stem": "--- She has been to Tokyo.\n--- So ________ ________.（我也去过）",
+            "answer": "have I",
+            "explain": "「也一样」→ 倒装：So + 助动词 + 主语。前句 has been 是现在完成时，借 have → So have I.。"
+          },
+          {
+            "stem": "--- He can swim.\n--- So ________ ________.（她也能）",
+            "answer": "can she",
+            "explain": "前句有情态动词 can，回应直接借 can → So can she.。借谁，前一句说了算，不用加 do/does。"
+          },
+          {
+            "stem": "--- He went to the cinema last night.\n--- So ________ ________.（我也去了）",
+            "answer": "did I",
+            "explain": "前句 went 是一般过去时，实义动词自己没有帮手，借 did → So did I.。一般过去时的回应句永远借 did。"
+          },
+          {
+            "stem": "--- My brother can swim in the sea.\n--- So ________ ________.（他的确可以）",
+            "answer": "he can",
+            "explain": "「的确如此」→ 主语相同（my brother = he）→ 不倒装：So + 主语 + 助动词 → So he can.。对照「她也能 So can she.」——主语一换，语序立刻反转。"
+          },
+          {
+            "stem": "--- He gets up very early.\n--- So ________ ________.（他确实很早）",
+            "answer": "he does",
+            "explain": "同一主语 → 的确如此，不倒装。gets 是三单、一般现在时 → 借 does → So he does.。"
+          },
+          {
+            "stem": "--- I cannot swim.\n--- Neither / Nor ________ ________.（他也不会）",
+            "answer": "can he",
+            "explain": "否定情况的回应 → Neither/Nor + 助动词 + 主语。cannot → 借 can → Neither/Nor can he.。"
+          },
+          {
+            "stem": "--- Peter doesn't know many people here.\n--- ________.",
+            "options": [
+              "So do I",
+              "So am I",
+              "Neither am I",
+              "Neither do I"
+            ],
+            "answer": "D. Neither do I",
+            "explain": "两刀切：① 前句 doesn't know 是否定 → 用 neither/nor，A / B 死于 so 只接肯定；② know 是实义动词，doesn't 的原形是 does → 借 do，C 死于 am——句子里根本没有 be。"
+          },
+          {
+            "stem": "--- I'd love to go hiking with you, but I have much homework ________.\n--- If you don't go, ________.",
+            "options": [
+              "to do; so do I",
+              "to do; nor will I",
+              "doing; so will I",
+              "do; neither am I"
+            ],
+            "answer": "B. to do; nor will I",
+            "explain": "双考点一题：① have much homework to do（要做的作业），不定式作后置定语，C / D 死于此；② 前句否定 → nor 开头倒装，If you don't go 是条件从句，主句用将来 will → nor will I。A 死于 so 接了否定方向。"
+          }
+        ],
+        "memory": {
+          "front": "So 倒装和 So 不倒装怎么区分？否定情况用什么回应？",
+          "back": "「也一样」：So / Neither / Nor + 助动词 + 主语（倒装，另一个人）\n— She has been to Tokyo. — So have I.\n「的确如此」：So + 主语 + 助动词（不倒装，同一主语）\n— He gets up early. — So he does.\n否定一律 Neither / Nor，不与 so 混用；助动词跟前句借：can → can，过去 → did\n— If you don't go, nor will I.（条件句主句用将来）"
+        }
+      },
+      {
+        "key": "onlynotonly",
+        "title": "⑤ 部分倒装第二式：only 状语前置 · not only…but also",
+        "explain": "<p>两个「only 家族」的倒装开关，开关一开，助动词提到主语前：</p><table><tr><th>句型</th><th>规则</th><th>例句</th></tr><tr><td><b>only + 状语</b> 放句首</td><td>部分倒装：助动词 / 情态动词提到主语前</td><td><b>Only then did</b> I understand my father.（only + 时间状语）<br><b>Only in this way does</b> this machine work.（only + 方式状语）<br><b>Only by working hard can</b> one succeed.（only + 介词短语）</td></tr><tr><td><b>only + 主语</b></td><td><b>不倒装</b>——only 修饰的是人不是状语</td><td><b>Only he can</b> answer this question.</td></tr><tr><td><b>Not only</b> + 分句（句首）</td><td>前半句部分倒装</td><td><b>Not only did</b> she <b>pass</b> the exam with flying colors, but she also won a scholarship. / <b>Not only did</b> the storm <b>do</b> a lot of damage, but it also left thousands without power.</td></tr><tr><td><b>Not only…but also 只连接两个主语</b></td><td><b>不倒装</b>；谓语就近后一个主语</td><td>Not only he but also <b>I am</b> interested in music.</td></tr></table><p>借谁看时态：一般过去时借 <b>did</b>（后面动词还原成原形），一般现在时借 <b>does / do</b>，有情态动词直接借（can one succeed）。</p><p><b>记法</b>：only 拉着状语站门口 → 倒装；only 只夸主语本人 → 不倒。not only 放句首要倒装，但它要是只串两个主语，就各回各家。</p>",
+        "qs_label": "课堂练习：only 与 not only 开关",
+        "general_qs": [
+          {
+            "stem": "Only at that time ________ that he was wrong.",
+            "options": [
+              "he realized",
+              "did he realize",
+              "he did realize",
+              "realized he"
+            ],
+            "answer": "B. did he realize",
+            "explain": "only + 时间状语 at that time 放句首 → 部分倒装：did + 主语 + 动词原形。A / C 死于没倒装（did 必须在主语前面）；D 死于把实义动词 realize 整个提前——部分倒装只借 did，动词自己不许搬家。"
+          },
+          {
+            "stem": "Only in this way ________ (do) this machine work.",
+            "answer": "does",
+            "explain": "only + 方式状语 in this way 句首 → 部分倒装；主语 this machine 三单、一般现在时 → 借 does。只有这样才能让机器运转。"
+          },
+          {
+            "stem": "Only by working hard ________ one ________ (succeed).",
+            "answer": "can succeed",
+            "explain": "only + 介词短语 by working hard 句首 → 倒装，直接借情态动词 can；情态动词后接原形 succeed → Only by working hard can one succeed."
+          },
+          {
+            "stem": "Not only ________ she ________ the exam with flying colors, but she also won a scholarship.",
+            "options": [
+              "did; pass",
+              "does; pass",
+              "did; passed",
+              "/; passed"
+            ],
+            "answer": "A. did; pass",
+            "explain": "Not only 分句句首 → 前半句部分倒装；won 说明是过去 → 借 did，后面的动词还原成原形 pass。B 死于时态（won 是过去）；C 死于 did 和 passed 撞车——借了 did 就不许再用过去式；D 死于没有倒装。"
+          },
+          {
+            "stem": "Not only ________ the storm ________ a lot of damage, but it also left thousands without power.",
+            "answer": "did do",
+            "explain": "Not only 句首 → 前半句倒装：did + 主语 the storm + 原形 do。后半句 left 提示过去时，所以借 did 而不是 does。"
+          },
+          {
+            "stem": "Not only he but also I ________ interested in music.",
+            "options": [
+              "am",
+              "is",
+              "are",
+              "be"
+            ],
+            "answer": "A. am",
+            "explain": "not only…but also 这里只连接两个主语（he 和 I）→ 不倒装，谓语就近看后一个主语 I → am。一题两个考点：先判断倒不倒，再就近定单复数。"
+          },
+          {
+            "stem": "下面哪一句需要倒装？",
+            "options": [
+              "Only he can answer this question.",
+              "Only then did I see the truth.",
+              "Not only you but also she likes music.",
+              "I watch TV only on Sundays."
+            ],
+            "answer": "B. Only then did I see the truth.",
+            "explain": "A 的 only 修饰主语 he → 不倒装；C 的 not only 连接两个主语 → 不倒装；D 的 only 待在句中，没被推到句首；只有 B 是 only + 时间状语 then 放句首 → 倒装（B 句本身就是倒装好的样子）。"
+          }
+        ],
+        "memory": {
+          "front": "only 什么时候倒装什么时候不倒？not only…but also 呢？",
+          "back": "only + 状语句首 → 倒装：Only then did I understand. / Only in this way does it work.\nonly + 主语 → 不倒装：Only he can answer.\nnot only 分句句首 → 前半句倒装：Not only did she pass the exam...\nnot only 连接两个主语 → 不倒装，谓语就近：Not only he but also I am...\n借谁看时态：过去借 did（动词还原），现在三单借 does，情态直接用 can"
+        }
+      },
+      {
+        "key": "hardlynosooner",
+        "title": "⑥ 部分倒装第三式：Hardly / Scarcely…when · No sooner…than（刚……就……）",
+        "explain": "<p>「刚……就……」有三个固定搭配，前半句<b>过去完成时</b>倒装（had 提到主语前），后半句<b>一般过去时</b>：</p><table><tr><th>搭配</th><th>连接词</th><th>例句</th></tr><tr><td><b>Hardly</b> had + 主语 + done</td><td><b>when</b></td><td><b>Hardly had</b> he started to leave <b>when</b> it began to rain. 他刚要离开，天就下起了雨。</td></tr><tr><td><b>Scarcely</b> had + 主语 + done</td><td><b>when</b></td><td><b>Scarcely had</b> he sat down <b>when</b> his mobile phone rang. 他刚坐下，手机就响了。</td></tr><tr><td><b>No sooner</b> had + 主语 + done</td><td><b>than</b></td><td><b>No sooner had</b> he handed in his paper <b>than</b> he realized his mistakes. 他刚交卷就意识到出错了。</td></tr></table><p>两个动作都发生在过去，「刚做完」的那个更早——所以前半句用<b>过去完成时</b>（had done），后半句用一般过去时。</p><p>⚠️ 配对<b>锁死</b>，不能交叉混搭：hardly / scarcely 只配 <b>when</b>；no sooner 只配 <b>than</b>。考试最爱出「No sooner…when」这种混搭陷阱。</p><p><b>记法</b>：hardly、scarcely、no sooner 三胞胎，had 一律打头阵；when 跟着 h 和 s 走，than 专属 no sooner——「sooner 比 than，见 when 就翻车」。</p>",
+        "qs_label": "课堂练习：刚……就……",
+        "general_qs": [
+          {
+            "stem": "Hardly had he started to leave ________ it began to rain.",
+            "answer": "when",
+            "explain": "hardly 固定配 when：Hardly had + 主语 + done…when + 一般过去时。刚要离开，天就下雨了。"
+          },
+          {
+            "stem": "Scarcely had he sat down ________ his mobile phone rang.",
+            "answer": "when",
+            "explain": "scarcely 和 hardly 一样配 when。前半句过去完成时 had sat down，后半句一般过去时 rang。"
+          },
+          {
+            "stem": "No sooner had he handed in his paper ________ he realized his mistakes.",
+            "answer": "than",
+            "explain": "no sooner 固定配 than，不能见 when——「sooner」本身就是比较级，比较级和 than 是天生一对。"
+          },
+          {
+            "stem": "________ had I arrived at the office ________ the phone rang.",
+            "options": [
+              "Hardly; when",
+              "Hardly; then",
+              "No sooner; when",
+              "No sooner; then"
+            ],
+            "answer": "A. Hardly; when",
+            "explain": "两对合法搭配：Hardly…when ✓ 和 No sooner…than ✓。B / D 死于 then——这对结构里没有 then 的位置；C 死于交叉混搭（no sooner 必须配 than）。"
+          },
+          {
+            "stem": "No sooner ________ he arrived home than it started to rain.",
+            "options": [
+              "had",
+              "has",
+              "did",
+              "was"
+            ],
+            "answer": "A. had",
+            "explain": "no sooner 后半句用过去完成时：had + 主语 + 过去分词。「到家」发生在「下雨」之前，是「过去的过去」。B 死于时态；C / D 死于这个结构只认 had。"
+          },
+          {
+            "stem": "同义改写：Hardly had she sat down when the film began.\n= Scarcely ________ she ________ down when the film began.",
+            "answer": "had sat",
+            "explain": "hardly / scarcely / no sooner 是三胞胎，换头不换身子：结构保持 had + 主语 + 过去分词 → had sat down。连接词 when 也原样保留。"
+          }
+        ],
+        "memory": {
+          "front": "「刚……就……」的三个搭配怎么配对？前半句用什么时态？",
+          "back": "Hardly / Scarcely + had + 主语 + done…when + 一般过去时\nNo sooner + had + 主语 + done…than + 一般过去时\n配对锁死：hardly、scarcely ↔ when；no sooner ↔ than，不能交叉\n例：Hardly had he sat down when the phone rang.\n　　No sooner had he handed in his paper than he realized his mistakes."
+        }
+      },
+      {
+        "key": "moremore",
+        "title": "⑦ 特殊倒装：the more…the more…（越……越……）",
+        "explain": "<p>「越……越……」用 <b>the + 比较级</b>开头，比较级被提到句首，也是一种倒装：</p><table><tr><th>例句</th><th>提前的是什么</th></tr><tr><td><b>The harder</b> you work, <b>the happier</b> you feel. 你越努力工作，就越觉得快乐。</td><td>表语提前（正常语序：you feel <b>happier</b> → happier 连着 the 搬到主语前）</td></tr><tr><td><b>The more</b> you study, <b>the more</b> you know. 你学得越多，就明白越多。</td><td>宾语提前（正常语序：you study <b>more</b> → more 连着 the 搬到句首）</td></tr></table><p>结构公式：The + 比较级 + 主语 + 谓语，the + 比较级 + 主语 + 谓语。前后两半<b>都要</b> the + 比较级，一个都不能少。</p><p>三个细节：</p><p>① 比较级自己会变形：hard → harder，happy → happier（变 y 为 i 加 er），不能写 the more happy。</p><p>② much 的比较级是 more，所以 the more you study 里的 more 就是「更多」。</p><p>③ the 不能丢：丢了一个 the，句子立刻被打回普通陈述句。</p><p><b>记法</b>：the more 结构像跷跷板——两头各坐一个「the + 比较级」，缺一个就翻车。</p>",
+        "qs_label": "课堂练习：the more…the more",
+        "general_qs": [
+          {
+            "stem": "The harder you work, ________.",
+            "options": [
+              "the happier you feel",
+              "you feel happier",
+              "the more happy you feel",
+              "you happier feel"
+            ],
+            "answer": "A. the happier you feel",
+            "explain": "前后两半都要 the + 比较级提前。B 死于丢了 the；C 死于 happy 的比较级是 happier，不能堆 more happy；D 死于语序混乱——提前的只有 the + 比较级，主谓顺序不动。"
+          },
+          {
+            "stem": "The ________ (much) you study, the more you know.",
+            "answer": "more",
+            "explain": "much 的比较级是 more → The more you study, the more you know. 学得越多，懂得越多。"
+          },
+          {
+            "stem": "The more you read, ________ you know.",
+            "options": [
+              "the more",
+              "more",
+              "the much",
+              "the most"
+            ],
+            "answer": "A. the more",
+            "explain": "后半句同样要 the + 比较级：the more you know。B 死于丢 the；D 的 most 是最高级，这里只谈「越多」，不谈「最多」。"
+          },
+          {
+            "stem": "________ ________ (hard) you work, the luckier you get.",
+            "answer": "The harder",
+            "explain": "前半句用 the + 比较级：The harder you work。副词 hard 的比较级直接加 er。后半句 the luckier you get 已经摆好，就等你配对。"
+          }
+        ]
+      },
+      {
+        "key": "final",
+        "title": "⑧ 综合验收：七关考点一锅端",
+        "explain": "<p>最后一关，不讲新东西——把前面七关的考点混在一起再过一遍。做错哪题，就回哪一关翻讲解和口诀卡。</p><p>验收清单：there be 就近原则（②）· 完全倒装三信号 + 两条豁免（③）· So / Neither 倒装与不倒装（④）· only / not only 开关（⑤）· Hardly…when 配对（⑥）· the more 结构（⑦）。</p>",
+        "qs_label": "综合验收（错哪题回哪关）",
+        "general_qs": [
+          {
+            "stem": "There ________ a pencil-box and two pens on the desk.",
+            "options": [
+              "is",
+              "are",
+              "has",
+              "have"
+            ],
+            "answer": "A. is",
+            "explain": "回②关：就近原则只认最近的主语 a pencil-box（单数）→ is。B 死于被 two pens 带跑；C / D 死于 there be 句型不用 has / have。"
+          },
+          {
+            "stem": "Look! ________.（火车来了）",
+            "options": [
+              "There goes the train",
+              "There the train goes",
+              "Does the train go",
+              "The train there goes"
+            ],
+            "answer": "A. There goes the train",
+            "explain": "回③关：there 副词句首 + 主语 the train 是名词 → 完全倒装，goes 提到主语前。B / D 死于没倒装；C 是疑问语序，这里只是陈述「火车来了」。"
+          },
+          {
+            "stem": "--- I have never been to Hainan.\n--- ________ ________.（我也没去过）",
+            "answer": "Neither have I",
+            "explain": "回④关：前句 never 否定 → 用 Neither/Nor + 助动词 + 主语；现在完成时借 have → Neither have I.（Nor have I. 也对）。"
+          },
+          {
+            "stem": "--- Tom passed the driving test.\n--- ________. 他的确通过了。",
+            "options": [
+              "So he did",
+              "So did he",
+              "Neither did he",
+              "So does he"
+            ],
+            "answer": "A. So he did",
+            "explain": "回④关：回应的还是同一个主语 Tom →「的确如此」→ So + 主语 + 助动词，不倒装：So he did.。B 的 So did he 是「另一个人也通过了」——主语一换才倒装；C 死于方向（前句是肯定）；D 死于时态（passed 是过去时借 did）。"
+          },
+          {
+            "stem": "Only when you lose something ________ its value.",
+            "options": [
+              "you realize",
+              "do you realize",
+              "you do realize",
+              "realize you"
+            ],
+            "answer": "B. do you realize",
+            "explain": "回⑤关：only + when 从句放句首 → 主句部分倒装；realize 是实义动词、一般现在时 → 借 do → do you realize。A / C 死于没倒装；D 死于实义动词自己跑到主语前，没有借 do。"
+          },
+          {
+            "stem": "Hardly had the meeting started ________ the power went out.",
+            "options": [
+              "when",
+              "than",
+              "then",
+              "that"
+            ],
+            "answer": "A. when",
+            "explain": "回⑥关：hardly 固定配 when。B 死于 than——than 是 no sooner 的专属搭档；C / D 都不属于这对结构。"
+          },
+          {
+            "stem": "________ harder you work, ________ more luck you seem to have.",
+            "options": [
+              "The; the",
+              "/; the",
+              "The; /",
+              "/; /"
+            ],
+            "answer": "A. The; the",
+            "explain": "回⑦关：the more 结构前后两半都要 the，一个都不能少。填空题里最容易被划掉的恰恰是这两个小词。"
+          }
+        ]
+      }
+    ]
+  }
+}

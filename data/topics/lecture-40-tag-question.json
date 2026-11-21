@@ -1,0 +1,482 @@
+{
+  "meta": {
+    "topic_id": "lecture-40-tag-question",
+    "title": "第40讲 · 反义疑问句 自学",
+    "subtitle": "自学一遍再上课：热身认识反义疑问句 → 基本构成（前肯后否）→ have 全家桶 → 否定词的陷阱 → 主语替换特训（there be·I am·不定代词）→ must 与 need → 祈使句与复合句（Let's·I think）→ 答语规则 → 综合验收（共 9 关 · 55 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "intro",
+        "title": "① 热身：反义疑问句是什么",
+        "explain": "<p>反义疑问句 = <b>陈述句 + 附加问句</b>：说完一件事，在尾巴上翘一个小问句，向对方求证「你同意吧？」。它表示对陈述句所说的事实提出相反的疑问，要求对方用 <b>yes</b> 或 <b>no</b> 来回答。</p><p>总公式就八个字：<b>前肯后否，前否后肯</b>——陈述句肯定，尾巴用否定；陈述句否定，尾巴用肯定。</p><table><tr><th>陈述句</th><th>尾巴</th><th>例句</th></tr><tr><td>肯定</td><td>否定</td><td>You come from Beijing, <b>don't you</b>? 你来自北京，不是吗？</td></tr><tr><td>否定</td><td>肯定</td><td>You don't come from Beijing, <b>do you</b>? 你不是来自北京，是吗？</td></tr></table><p>尾巴虽然只有两个词，但动词用哪个、主语换成谁，处处是考点：have 一词多义、否定词真假难辨、Let's 和 Let us 不一样……本讲就按这条路线一关一关拆。</p><p>自学方法：先读讲解 → 盖住答案做题 → 点「先想再看答案」核对 → 全懂了点「我学完了」进下一关。</p>",
+        "qs_label": "热身自测（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "反义疑问句表示对陈述句所说的事实提出相反的疑问，要求对方怎么回答？",
+            "options": [
+              "用 yes 或 no 回答",
+              "把陈述句重复一遍",
+              "只点头或摇头",
+              "反问对方一个新问题"
+            ],
+            "answer": "A. 用 yes 或 no 回答",
+            "explain": "定义原文：反义疑问句要求对方用 yes 或 no 来回答。B 死于「重复原句是求证，不是回答」；C/D 都不是语法上的回答方式。"
+          },
+          {
+            "stem": "You come from Beijing, ________?",
+            "options": [
+              "do you",
+              "don't you",
+              "aren't you",
+              "are you"
+            ],
+            "answer": "B. don't you",
+            "explain": "前肯后否：陈述句是肯定 → 尾巴用否定。句中没有 be 动词，也没有情态动词 → 借助动词 do → don't you。A 死于方向反了（前肯不能用后肯）；C / D 死于「句子里没有 be 动词，轮不到 are」。"
+          },
+          {
+            "stem": "You don't come from Beijing, ________?",
+            "options": [
+              "don't you",
+              "do you",
+              "are you",
+              "won't you"
+            ],
+            "answer": "B. do you",
+            "explain": "前否后肯：陈述句已带否定 don't → 尾巴用肯定 do you。A 死于「否定叠否定」；C 死于乱入 be 动词。"
+          },
+          {
+            "stem": "反义疑问句「尾巴」的总规则是？",
+            "options": [
+              "前肯后否、前否后肯",
+              "前肯后肯、前否后否",
+              "一律用否定式",
+              "一律用肯定式"
+            ],
+            "answer": "A. 前肯后否、前否后肯",
+            "explain": "「反义」二字就体现在方向相反：前面肯定后面否，前面否定后面肯。B / C / D 都违背了这个方向相反的原则。"
+          }
+        ]
+      },
+      {
+        "key": "basics",
+        "title": "② 基本构成：动词就地取材，主语换成代词",
+        "explain": "<p>总公式「前肯后否、前否后肯」之外，尾巴问句的组成就两步走：</p><table><tr><th>步骤</th><th>规则</th><th>例句</th></tr><tr><td>① 定动词</td><td>陈述句里有 <b>be 动词 / 助动词 / 情态动词</b> → 直接拿来用；都没有 → 借 <b>do / does / did</b></td><td>My brother <b>is</b> interested in English, <b>isn't</b> he? / His sister <b>will</b> go home, <b>won't</b> she?</td></tr><tr><td>② 定主语</td><td>与陈述句主语保持一致，且<b>只能用人称代词</b>替代</td><td>Tom comes…, doesn't <b>he</b>? / Mary loves reading books, doesn't <b>she</b>?</td></tr></table><p>三句样例看方向：<b>前肯后否</b> He is happy, isn't he?；<b>前否后肯</b> Lucy didn't come, did she?；<b>情态动词直接用</b> They can't swim, can they?</p><p><b>记法</b>：动词「就地取材，没有就借 do」；主语「一律换成代词」。前肯后否时记得缩写：is → isn't，will → won't，does → doesn't。</p>",
+        "qs_label": "课堂练习 1 · 基本构成",
+        "general_qs": [
+          {
+            "stem": "He is happy today, ________?（课堂练习 1 第 1 题）",
+            "answer": "isn't he",
+            "explain": "陈述句有 be 动词 is → 就地取材；前肯后否 → isn't he。主语 He 换成代词还是 he。别写成 does he——句子里明明有 is，不用借 do。"
+          },
+          {
+            "stem": "Lucy didn't come to school yesterday, ________?（课堂练习 1 第 6 题）",
+            "answer": "did she",
+            "explain": "前否后肯：didn't 已经把「助动词 + 否定」带出来了 → 问句只用 did；Lucy 是女生 → she。别画蛇添足写 didn't she——前面已是否定。"
+          },
+          {
+            "stem": "Tom comes from Beijing, ________?",
+            "options": [
+              "does he",
+              "doesn't he",
+              "isn't he",
+              "don't he"
+            ],
+            "answer": "B. doesn't he",
+            "explain": "comes 三单、又没有 be / 情态动词 → 借 does；前肯后否 → doesn't；Tom 是男生 → he。A 死于方向反了（前肯后否）；C 死于乱用 be 动词；D 死于 does 三单形式没跟上。"
+          },
+          {
+            "stem": "附加问句的主语要求是？",
+            "options": [
+              "重复陈述句里的名词",
+              "与陈述句主语一致，且只能用人称代词替代",
+              "一律换成 it",
+              "可以省略不写"
+            ],
+            "answer": "B. 与陈述句主语一致，且只能用人称代词替代",
+            "explain": "Tom → he，Mary → she，the books → they——名词一律「代词化」，但代词的性和数要跟原主语对上。A 死于「不能照抄名词」；C 死于一刀切；D 死于主语不能省。"
+          },
+          {
+            "stem": "They can't swim, ________?",
+            "answer": "can they",
+            "explain": "情态动词 can 已在陈述句中（还是否定式 can't）→ 直接拿来用；前否后肯 → can they。主语 They 用代词还是 they。"
+          },
+          {
+            "stem": "His sister will go home, ________?",
+            "answer": "won't she",
+            "explain": "助动词 will → 否定缩写 won't；前肯后否；His sister 是女生 → she。两步：动词就地取材，主语换成 she。"
+          }
+        ],
+        "memory": {
+          "front": "反义疑问句的公式？动词和主语怎么定？",
+          "back": "前肯后否，前否后肯\n动词：陈述句有 be / 助动词 / 情态动词 → 直接用；没有 → 借 do / does / did\n主语：换成对应的人称代词（Tom → he，Mary → she）\nYou come from Beijing, don't you?\nThey can't swim, can they?"
+        }
+      },
+      {
+        "key": "have",
+        "title": "③ have 全家桶：一个 have 五种反问",
+        "explain": "<p>have 是反义疑问句里的「变形金刚」：它在句子里干什么活，尾巴的动词就跟着变：</p><table><tr><th>have 的意思</th><th>尾巴用什么</th><th>例句</th></tr><tr><td><b>有</b>（拥有）</td><td>have / do <b>都行</b></td><td>He has a new car, <b>doesn't / hasn't</b> he?</td></tr><tr><td><b>吃、喝、玩、度过、举办</b></td><td>只用 <b>do</b></td><td>He has supper at home every day, <b>doesn't</b> he? / They had a good time in Beijing, <b>didn't</b> they?</td></tr><tr><td><b>have to</b>（不得不、必须）</td><td>只用 <b>do</b></td><td>They have to stay at home tonight, <b>don't</b> they?</td></tr><tr><td><b>had better</b>（最好）</td><td>用 <b>had</b></td><td>We had better go to school at once, <b>hadn't</b> we? / You had better not stay up late, <b>had</b> you?</td></tr><tr><td><b>完成时的助动词</b></td><td>用 <b>have</b></td><td>They have known the matter, <b>haven't</b> they?</td></tr></table><p><b>记法</b>：只有「有」最自由（have / do 通吃）；一干别的活（吃喝、不得不）就只认 do——因为那已经不是助动词了，是个普通动词；had better 认 had；完成时里它是助动词，当然还用 have。</p>",
+        "qs_label": "课堂练习 1 · have 全家桶",
+        "general_qs": [
+          {
+            "stem": "He has a new car, ________?（have 表「有」）",
+            "answer": "doesn't/hasn't he",
+            "explain": "have 表「有」是唯一两可的情况：doesn't he / hasn't he 都对。写成 hasn't he 更传统，写 doesn't he 也完全正确——考试两种都给分。"
+          },
+          {
+            "stem": "They have lunch at school, ________?（课堂练习 1 第 8 题）",
+            "answer": "don't they",
+            "explain": "这里的 have 是「吃」（have lunch 吃午饭），不是「有」→ 只能用 do → don't they。看到 have 先问它干什么活：吃吃喝喝一律 do。"
+          },
+          {
+            "stem": "They have to finish the work now, ________?（课堂练习 1 第 9 题）",
+            "answer": "don't they",
+            "explain": "have to 表「不得不」→ 实义动词，只认 do → don't they。对照讲义另一句：You don't have to go to school today, do you?——don't have to 否定，尾巴照样 do you。"
+          },
+          {
+            "stem": "We had better go to school at once, ________?",
+            "answer": "hadn't we",
+            "explain": "had better 表「最好」→ 尾巴用 had → 前肯后否 hadn't we。别被 better 迷惑——better 只是副词，真正的助动词是 had。"
+          },
+          {
+            "stem": "You had better not stay up late, ________?",
+            "answer": "had you",
+            "explain": "had better <b>not</b> 是否定式 → 前否后肯 → had you。和上一条正好一正一反成一对：had better get up, hadn't you? / had better not stay up, had you?"
+          },
+          {
+            "stem": "下面哪句的反义疑问句不用 do 构成？",
+            "options": [
+              "They have to stay at home tonight.",
+              "He has supper at home every day.",
+              "They had a good time in Beijing.",
+              "They have known the matter."
+            ],
+            "answer": "D. They have known the matter.",
+            "explain": "D 是完成时，have 是助动词 → 尾巴用 haven't they。A 的 have to（不得不）、B 的 have supper（吃晚饭）、C 的 had a good time（玩得开心）全是实义动词 → 都用 do 家（don't / doesn't / didn't）。"
+          }
+        ]
+      },
+      {
+        "key": "negative",
+        "title": "④ 否定的陷阱：真否定后肯定，假否定照旧否",
+        "explain": "<p>否定词一出现就要「前否后肯」——但先得分清谁是<b>真否定</b>、谁是<b>假否定</b>：</p><table><tr><th>类型</th><th>成员</th><th>处理方式</th><th>例句</th></tr><tr><td><b>真否定</b></td><td>never, hardly, seldom, rarely, scarcely, little, few, nobody, nothing, no one, none, neither…</td><td>算否定句 → 问句用<b>肯定式</b></td><td>She <b>never</b> tells a lie, <b>does</b> she? / There is <b>little</b> milk, <b>is</b> there?</td></tr><tr><td><b>假否定</b>（词缀化妆）</td><td>un- / dis- / im- / in- 前缀、-less 后缀：unhappy, dislikes, impossible, useless…</td><td>当<b>肯定句</b>处理 → 问句照用<b>否定式</b></td><td>He is <b>unhappy</b> today, <b>isn't</b> he? / She <b>dislikes</b> apples, <b>doesn't</b> she?</td></tr></table><p>⚠️ 特别小心 <b>few vs a few</b>：few（几乎没有）是否定，a few（有一些）是肯定——差一个字母，尾巴方向完全相反。</p><p><b>记法</b>：否定词「自带」的（never / hardly / few）才是真否定；靠前缀后缀「化妆」出来的（un- / dis- / im-）是假否定——形式上没有 not / never，语法上就算肯定句。考试专设这个坑。</p>",
+        "qs_label": "课堂练习 1 · 否定陷阱",
+        "general_qs": [
+          {
+            "stem": "She never tells a lie, ________?",
+            "answer": "does she",
+            "explain": "never 是真否定 → 陈述句按否定句处理 → 前否后肯 → does she。别看句子里一个 not 都没有就当成肯定句——never 本身就是否定词。"
+          },
+          {
+            "stem": "There are few students in the classroom, ________?（课堂练习 1 第 4 题）",
+            "answer": "are there",
+            "explain": "few（几乎没有）是真否定 → 前否后肯 → are there。two birds：there be 句型尾巴主语还是 there，be 动词 are 直接用。"
+          },
+          {
+            "stem": "There are a few students in the classroom, ________?（课堂练习 1 第 5 题）",
+            "answer": "aren't there",
+            "explain": "a few（有一些）是<b>肯定</b> → 前肯后否 → aren't there。和上一题只差一个 a，方向就翻过来——这就是 few / a few 的经典陷阱。"
+          },
+          {
+            "stem": "He is unhappy today, ________?（课堂练习 1 第 2 题）",
+            "answer": "isn't he",
+            "explain": "un- 前缀的 unhappy 是「假否定」→ 当肯定句处理 → 前肯后否 → isn't he。这是本讲最阴的坑：意思上他「不高兴」，但语法上只认 not / never，不认词缀。"
+          },
+          {
+            "stem": "She dislikes apples, ________?（课堂练习 1 第 3 题）",
+            "answer": "doesn't she",
+            "explain": "dis- 前缀的 dislikes 同样是假否定 → 当肯定句处理 → 借 does → doesn't she。对照讲义：He dislikes English, doesn't he?"
+          },
+          {
+            "stem": "下面哪个词属于「假否定」，反义疑问句仍用否定式？",
+            "options": [
+              "seldom",
+              "neither",
+              "impossible",
+              "rarely"
+            ],
+            "answer": "C. impossible",
+            "explain": "impossible 靠 im- 前缀表否定 → 假否定 → It is impossible, isn't it?。A / B / D（seldom、neither、rarely）都是「自带」的否定词 → 真否定，问句要用肯定式。"
+          }
+        ],
+        "memory": {
+          "front": "真假否定怎么分？few 和 a few 差在哪？",
+          "back": "真否定 → 问句用肯定式：never, hardly, seldom, rarely, little, few, nobody, nothing, none, neither…\nShe never tells a lie, does she?\n假否定（un- / dis- / im- / -less 词缀）→ 当肯定句处理，问句仍用否定式\nHe is unhappy today, isn't he?\nfew 几乎没有（否定）/ a few 有一些（肯定）——一字之差，方向相反"
+        }
+      },
+      {
+        "key": "subjects",
+        "title": "⑤ 主语替换特训：there be · I am · 不定代词 · 指示代词",
+        "explain": "<p>陈述句的主语五花八门，尾巴的主语怎么换？一张表全收：</p><table><tr><th>陈述句主语</th><th>尾巴主语</th><th>例句</th></tr><tr><td><b>There be</b> 句型</td><td>照用 <b>there</b>（不换成代词）</td><td>There are two cakes on the plate, aren't <b>there</b>?</td></tr><tr><td><b>I am</b>…</td><td><b>aren't I</b>（习惯用法）</td><td>I am your friend, <b>aren't I</b>?</td></tr><tr><td><b>this / that</b></td><td><b>it</b></td><td>That is an old temple, isn't <b>it</b>?</td></tr><tr><td><b>these / those</b></td><td><b>they</b></td><td>Those are some apples, aren't <b>they</b>?</td></tr><tr><td>something / anything / nothing / everything</td><td><b>it</b></td><td>Something is wrong with the computer, isn't <b>it</b>?</td></tr><tr><td>somebody / anybody / nobody / everybody / everyone / none…</td><td><b>he</b> 或 <b>they</b></td><td>Someone has taken the seat, hasn't <b>he</b>?</td></tr></table><p><b>记法</b>：thing 结尾的一律 it；body / one 结尾的是人 → he 或 they（动词的数跟着变）；指物的 this / that → it，复数 these / those → they；there be 句型的 there 不换人；I am 特殊记 <b>aren't I</b>——英语里没有 amn't 这个词，习惯上借 aren't 应急。</p>",
+        "qs_label": "课堂练习 1+2 · 主语替换",
+        "general_qs": [
+          {
+            "stem": "There are two cakes on the plate, ________?",
+            "answer": "aren't there",
+            "explain": "there be 句型 → 尾巴用「be 动词 + there」，主语不换成代词 → aren't there。别写 isn't there——主语 two cakes 是复数，be 用 are。"
+          },
+          {
+            "stem": "I am a student, ________?（课堂练习 1 第 7 题）",
+            "answer": "aren't I",
+            "explain": "I am 句型习惯上用 aren't I → 前肯后否 → aren't I。英语里不存在 amn't I，别自己发明；也不用 am not I——考试标准答案是 aren't I。"
+          },
+          {
+            "stem": "That is an old temple, ________?（课堂练习 2 第 1 题）",
+            "answer": "isn't it",
+            "explain": "指示代词 that 作主语 → 尾巴主语换成 it → isn't it。别写 isn't that——that 必须「代词化」成 it。"
+          },
+          {
+            "stem": "Those are some apples, ________?（课堂练习 2 第 2 题）",
+            "answer": "aren't they",
+            "explain": "those 是 these / those 复数阵营 → 换成 they → aren't they。单数 this / that → it，复数 these / those → they，一对儿记。"
+          },
+          {
+            "stem": "Something is wrong with the computer, ________?",
+            "answer": "isn't it",
+            "explain": "something / anything / nothing / everything 这类 thing 结尾的不定代词 → 尾巴主语用 it。something 虽然意思偏「某个东西」，语法上仍当单数 → isn't it。"
+          },
+          {
+            "stem": "Someone has taken the seat, ________?",
+            "answer": "hasn't he",
+            "explain": "somebody / someone 等指人的不定代词 → 尾巴主语用 he 或 they；这里动词是 has（单数）→ 问句跟着用 hasn't he。用 they 也行，但要写成 haven't they，动词跟着换。"
+          },
+          {
+            "stem": "Nothing has happened to them, ________?",
+            "answer": "has it",
+            "explain": "nothing 是 thing 结尾的不定代词 → it；同时 nothing 是真否定 → 前否后肯 → has it。这题把「主语替换 + 真假否定」两个考点焊在一起：如果只记得 has it 忘了方向，写成 hasn't it 就踩坑了。"
+          }
+        ],
+        "memory": {
+          "front": "there be、I am、something、this / that 的尾巴主语用什么？",
+          "back": "There be…, aren't there?（there 不换）\nI am…, aren't I?（没有 amn't，借 aren't）\nsomething / nothing / everything → it\nthis / that → it；these / those → they\nsomebody / nobody / everyone → he 或 they\nSomeone has taken the seat, hasn't he?"
+        }
+      },
+      {
+        "key": "modals",
+        "title": "⑥ must 与 need：先认身份，再写尾巴",
+        "explain": "<p>must 和 need 都有双重身份，写尾巴前先判断它们此刻是什么意思：</p><table><tr><th>词</th><th>身份 / 意思</th><th>尾巴</th><th>例句</th></tr><tr><td><b>must</b></td><td>必须</td><td><b>mustn't</b> you?</td><td>You must take off your shoes when getting into the room, <b>mustn't</b> you?</td></tr><tr><td><b>must</b></td><td>肯定推测（一定是）</td><td><b>不看 must，按实际语意定</b></td><td>He must be angry, <b>isn't</b> he? / You must have finished it yesterday, <b>didn't</b> you? / She must have read it already, <b>hasn't</b> she?</td></tr><tr><td><b>need</b></td><td>情态动词（+ 动词原形）</td><td>用 <b>need</b></td><td>You needn't go there, <b>need</b> you?</td></tr><tr><td><b>need</b></td><td>实义动词（need to do / need sth）</td><td>用 <b>do</b> 的适当形式</td><td>We need to help them, <b>don't</b> we? / He needs the book, <b>doesn't</b> he?</td></tr></table><p>must 表推测时尾巴怎么定？看时间线：句中就是 be 动词 → isn't he；有 <b>yesterday</b>（昨天做完）→ didn't you；有 <b>already</b>（已经读完）→ hasn't she。推测的 must 只负责「猜」，问句问的是那个真实动作，所以假装没看见 must。</p><p><b>记法</b>：must 必须 → mustn't you；must 推测 → 按后面的动词 + 时间写问句；need 看 to——带 to（need to do）是实义动词用 do，光杆原形（needn't go）是情态动词用 need。</p>",
+        "qs_label": "课堂练习 2 · must 与 need",
+        "general_qs": [
+          {
+            "stem": "You must take off your shoes when getting into the room, ________?",
+            "options": [
+              "mustn't you",
+              "needn't you",
+              "don't you",
+              "isn't he"
+            ],
+            "answer": "A. mustn't you",
+            "explain": "这里 must 表「必须」（进屋必须脱鞋）→ 尾巴直接用 must → mustn't you。B / C 死于「must 表必须时不用 need / do」；D 连主语都换了。"
+          },
+          {
+            "stem": "He must be angry, ________?",
+            "options": [
+              "mustn't he",
+              "isn't he",
+              "doesn't he",
+              "won't he"
+            ],
+            "answer": "B. isn't he",
+            "explain": "这里 must 表「肯定是」的推测 → 尾巴不看 must，按实际语意（be 动词 is）写 → isn't he。A 死于「推测的 must 不用 mustn't」——这是 must 两大身份里最容易混的一点；C 死于句中是 be 不是实义动词。"
+          },
+          {
+            "stem": "You must have finished your job yesterday, ________?",
+            "answer": "didn't you",
+            "explain": "must have done 表对过去的推测，句中有 yesterday → 问句落到过去时 → didn't you。推测的 must 同样被无视，认准时间词 yesterday。"
+          },
+          {
+            "stem": "She must have read the book already, ________?",
+            "options": [
+              "mustn't she",
+              "didn't she",
+              "hasn't she",
+              "doesn't she"
+            ],
+            "answer": "C. hasn't she",
+            "explain": "already（已经）是完成时的标志性副词 → 问句用完成时 → hasn't she。B 死于把它当过去时——already 钉死了完成时；A 死于用 mustn't。"
+          },
+          {
+            "stem": "He needn't go there, ________?（课堂练习 2 第 3 题）",
+            "answer": "need he",
+            "explain": "needn't go 是光杆原形 → 此刻 need 是情态动词 → 尾巴用 need → 前否后肯 → need he。别写 doesn't he——实义动词才有资格借 do。"
+          },
+          {
+            "stem": "Jack needs time to exercise, ________?（课堂练习 2 第 4 题）",
+            "answer": "doesn't he",
+            "explain": "needs 有三单 -s，还带了宾语 time → 实义动词 → 借 does → doesn't he。判断技巧：能加 -s、能加宾语的就是实义动词。"
+          },
+          {
+            "stem": "We need to help them, ________?",
+            "answer": "don't we",
+            "explain": "need <b>to</b> do——带 to → 实义动词 → 借 do → don't we。对照 needn't go（情态）和 need to go（实义）一条分界线：中间有没有 to。"
+          }
+        ]
+      },
+      {
+        "key": "imperative",
+        "title": "⑦ 祈使句与复合句：Let's 用 shall we，I think 否定往前挪",
+        "explain": "<p>祈使句没有主语可换，尾巴是固定搭配，一个都不能串门：</p><table><tr><th>句型</th><th>尾巴</th><th>例句</th></tr><tr><td><b>Let's…</b>（咱们一起……吧）</td><td><b>shall we?</b></td><td>Let's go home together, <b>shall we</b>?</td></tr><tr><td><b>Let us…</b>（请允许我们……）</td><td><b>will you?</b></td><td>Let us go to the park together, <b>will you</b>?</td></tr><tr><td>祈使句（肯定或 Don't 否定）</td><td><b>will you?</b></td><td>Sit down, <b>will you</b>? / Don't make any noise, <b>will you</b>?</td></tr><tr><td><b>I / We + think</b>（料想类）</td><td>跟<b>从句</b>走，注意<b>否定前移</b></td><td>I think she will win, <b>won't she</b>? / We don't think you are right, <b>are you</b>?</td></tr><tr><td>主从复合句（主语非 I/We）</td><td>跟<b>主句</b>走</td><td>He thinks she will win, <b>doesn't he</b>? / She said Tom would come, <b>didn't she</b>?</td></tr></table><p>⚠️ 本讲第一大陷阱：<b>Let's 用 shall we，Let us 用 will you</b>。Let's = 咱们一起（把对方算进来），商量「好不好」→ shall we；Let us = 说话人请求对方「让我们……」（对方只是听请求的人）→ will you。拼写只差一个 's，尾巴完全两样。</p><p><b>记法</b>：只有主语是 I / We 且动词是 think / believe / suppose / imagine / expect（料想类）时，才「跳过主句看从句」；而且 don't think 的 not 实际管的是从句（否定前移）——We don't think you are right = 我们认为「你<b>不</b>对」→ 从句是否定 → 前否后肯 → are you?</p>",
+        "qs_label": "课堂练习 2 · 祈使句与复合句",
+        "general_qs": [
+          {
+            "stem": "Open the door, ________?（课堂练习 2 第 5 题）",
+            "answer": "will you",
+            "explain": "祈使句固定搭配 will you（「好吗？」）→ will you。祈使句没有主语，别去想 he / she。"
+          },
+          {
+            "stem": "Don't close the door, ________?（课堂练习 2 第 6 题）",
+            "answer": "will you",
+            "explain": "否定祈使句 Don't… 尾巴<b>照旧</b>用 will you——前否后肯的公式在这里不适用，祈使句只认固定搭配。别被 Don't 带偏写成 do you。"
+          },
+          {
+            "stem": "Let's go to the park together, ________?（课堂练习 2 第 7 题）",
+            "answer": "shall we",
+            "explain": "Let's（let us 缩写，咱们一起）→ 固定搭配 shall we。Let's 后面藏的「主语」是 we，所以问「我们走不走，好不好」。"
+          },
+          {
+            "stem": "Let us go to the park together, ________?",
+            "options": [
+              "shall we",
+              "will you",
+              "shall us",
+              "won't we"
+            ],
+            "answer": "B. will you",
+            "explain": "Let us 不缩写 = 「请你允许我们……」，请求的对象是 you → will you。A 死于和 Let's 混淆——只有缩写成 Let's 才用 shall we；C 的 shall us 根本不存在；D 方向错。"
+          },
+          {
+            "stem": "I think she will win the game, ________?（课堂练习 2 第 9 题）",
+            "answer": "won't she",
+            "explain": "I + think 是料想类第一人称 → 问句跟<b>从句</b>走：she will → 前肯后否 → won't she。别写 don't I——主句 I think 被「跳过」了。"
+          },
+          {
+            "stem": "He thinks she will win the game, ________?（课堂练习 2 第 10 题）",
+            "answer": "doesn't he",
+            "explain": "主语是 He（第三人称），不享受「跳到从句」的待遇 → 问句老老实实跟主句：thinks 三单 → doesn't he。和上一题对比着记：I think 看 从句，He thinks 看主句。"
+          },
+          {
+            "stem": "We don't think you are right, ________?",
+            "answer": "are you",
+            "explain": "We + think → 问句跟从句；但 don't think 的 not 是「否定前移」——实际否定的是从句（我们认为「你不对」）→ 从句按否定算 → 前否后肯 → are you。若没看出否定前移，就会错写成 aren't you。"
+          }
+        ],
+        "memory": {
+          "front": "Let's、Let us、祈使句、I think 的反问尾巴各是什么？",
+          "back": "Let's…, shall we?（咱们一起 → 商量大家）\nLet us…, will you?（请允许我们 → 请求你）\n祈使句 / Don't…, will you?\nI / We + think 类动词：问句跟从句，don't think 否定前移\nI think she will win, won't she?\nWe don't think you are right, are you?"
+        }
+      },
+      {
+        "key": "answers",
+        "title": "⑧ 答语规则：真相只有一个，Yes 后肯定 No 后否定",
+        "explain": "<p>反义疑问句的回答有两条铁律：</p><table><tr><th>原则</th><th>说明</th></tr><tr><td>① <b>尊重事实</b></td><td>真相只有一个：事实是肯定的答 Yes，事实是否定的答 No——跟问句怎么问<b>无关</b></td></tr><tr><td>② <b>格式固定</b></td><td><b>Yes, + 肯定式</b> / <b>No, + 否定式</b>，Yes 后面绝不能接否定，No 后面绝不能接肯定</td></tr></table><p>难的是<b>前否后肯</b>的句子——英文的 Yes / No 和中文的「是 / 不」正好反着翻：</p><p>--- Tom isn't tall, is he? 汤姆不高，是吗？</p><p>--- <b>No, he isn't.</b> 是的，他不高。（事实是「不高」→ No；No 后接否定式）</p><p>--- <b>Yes, he is.</b> 不，他很高。（事实是「高」→ Yes；Yes 后接肯定式）</p><p><b>记法</b>：先想事实 → 再选 Yes / No → 最后按「Yes+肯定、No+否定」套格式。前否后肯时翻译要「反向」：英文 Yes 翻成中文「不」，英文 No 翻成中文「是」——别被中文语感带进坑。</p>",
+        "qs_label": "答语自测（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "--- You like coffee, don't you?（你喜欢咖啡，不是吗？）事实：你喜欢咖啡。该怎么回答？",
+            "options": [
+              "Yes, I do.",
+              "No, I don't.",
+              "Yes, I don't.",
+              "No, I do."
+            ],
+            "answer": "A. Yes, I do.",
+            "explain": "两步走：① 事实是你喜欢 → 选 Yes；② 格式铁律 Yes,+肯定式 → Yes, I do.。C / D 死于「Yes 接否定、No 接肯定」——格式直接违宪；B 死于和事实相反。"
+          },
+          {
+            "stem": "--- Tom isn't tall, is he?（Tom 不高，是吗？）事实：他确实不高。该怎么回答？",
+            "options": [
+              "Yes, he is.",
+              "No, he isn't.",
+              "Yes, he isn't.",
+              "No, he is."
+            ],
+            "answer": "B. No, he isn't.",
+            "explain": "① 事实是他不高 → 选 No（尊重事实，不管问句怎么绕）；② No,+否定式 → No, he isn't.。中文翻成「是的，他不高」——前否后肯时 Yes/No 的中文是反的。C / D 死于 Yes/No 和后面肯否打架。"
+          },
+          {
+            "stem": "--- You don't like coffee, do you?（你不喜欢咖啡，是吗？）事实：你喜欢咖啡。该怎么回答？",
+            "options": [
+              "Yes, I do.（不，我喜欢。）",
+              "No, I don't.（是的，我不喜欢。）",
+              "Yes, I don't.（是的，我不喜欢。）",
+              "No, I do.（不，我喜欢。）"
+            ],
+            "answer": "A. Yes, I do.（不，我喜欢。）",
+            "explain": "前否后肯的经典场景：事实是「喜欢」→ 英文必须答 Yes（尊重事实），格式 Yes+肯定 → Yes, I do.；中文翻译反转成「不，我喜欢」。B 死于被中文语感骗了——不喜欢才说 No；C / D 死于 Yes/No 与肯否定自相矛盾。"
+          },
+          {
+            "stem": "反义疑问句回答的格式铁律是？",
+            "options": [
+              "Yes, + 肯定式；No, + 否定式",
+              "Yes 后面可以接否定式",
+              "问句是否定式就一定答 No",
+              "按说话人心情自由选择格式"
+            ],
+            "answer": "A. Yes, + 肯定式；No, + 否定式",
+            "explain": "格式固定是两大核心原则之一：Yes,+肯定式 或 No,+否定式。B 死于直接违反格式；C 死于「答 No 看事实，不看问句形式」；D 死于格式不容自由发挥。"
+          },
+          {
+            "stem": "--- They won't come to the party, will they?（他们不会来派对，是吗？）事实：他们不会来。该怎么回答？",
+            "options": [
+              "No, they won't.（是的，他们不会来。）",
+              "Yes, they won't.（是的，他们不会来。）",
+              "No, they will.（是的，他们不会来。）",
+              "Yes, they don't."
+            ],
+            "answer": "A. No, they won't.（是的，他们不会来。）",
+            "explain": "事实是「不会来」→ No；No,+否定式 → No, they won't.；中文反转翻成「是的，他们不会来」。B 死于 Yes 接否定；C 死于 No 接肯定；D 死于时态和格式双重错误。"
+          }
+        ],
+        "memory": {
+          "front": "反义疑问句怎么回答？中文翻译什么时候反转？",
+          "back": "两条铁律：① 尊重事实（真相只有一个）② Yes,+肯定式 / No,+否定式\n--- Tom isn't tall, is he?（不高）→ No, he isn't. 是的，他不高\n--- You don't like coffee, do you?（喜欢）→ Yes, I do. 不，我喜欢\n前否后肯时，英文 Yes / No 和中文「是 / 不」正好相反"
+        }
+      },
+      {
+        "key": "final",
+        "title": "⑨ 综合验收：八关考点一锅端",
+        "explain": "<p>最后一关，不讲新东西——把前面八关的考点混在一起再过一遍。做错哪题，就回哪一关翻讲解和口诀卡。</p><p>验收清单：基本公式（前肯后否 · 动词就地取材）· have 全家桶 · 真假否定（never / few / 词缀）· 主语替换（there be / it / he）· must 推测 · Let's 特殊问法 · I think 否定前移 · 答语规则。</p>",
+        "qs_label": "综合验收（错哪题回哪关）",
+        "general_qs": [
+          {
+            "stem": "There is little milk in your cup, ________?（回第④⑤关）",
+            "answer": "is there",
+            "explain": "little（几乎没有）是真否定 → 前否后肯；there be 句型尾巴照用 there → is there。两个考点叠一起：认出 little 否定 + there 不换主语。"
+          },
+          {
+            "stem": "It is unfair, ________?（回第④关）",
+            "answer": "isn't it",
+            "explain": "un- 前缀的 unfair 是假否定 → 当肯定句处理 → 前肯后否 → isn't it。别看意思是「不公平」就用 is it。"
+          },
+          {
+            "stem": "There wasn't enough food for everyone at the party, ________?（回第②⑤关）",
+            "answer": "was there",
+            "explain": "wasn't 是否定 → 前否后肯；there be 句型 → 动词 + there → was there。be 动词单复数跟 there was 的 was 保持一致。"
+          },
+          {
+            "stem": "Mary loves reading books, ________?（回第②关）",
+            "answer": "doesn't she",
+            "explain": "loves 三单、无 be / 情态动词 → 借 does；前肯后否 → doesn't she；Mary → she。基本公式三件套一题走完。"
+          },
+          {
+            "stem": "Let's go home together, ________?（回第⑦关）",
+            "answer": "shall we",
+            "explain": "Let's（咱们一起）→ 固定搭配 shall we。只有缩写 Let's 才用 shall we；Let us 分开写就得换 will you。"
+          },
+          {
+            "stem": "I don't think he can finish the work on time, ________?（回第⑦关）",
+            "answer": "can he",
+            "explain": "I + think → 问句跟从句；don't think 否定前移 → 从句按否定算（我认为他「不能」按时完成）→ 前否后肯 → can he。"
+          },
+          {
+            "stem": "You must be tired after the long walk, ________?（回第⑥关）",
+            "answer": "aren't you",
+            "explain": "must 表「一定是」的推测 → 问句不看 must，按实际语意（be 动词 are）写 → aren't you。写 mustn't you 就掉进「把推测当必须」的坑了。"
+          }
+        ]
+      }
+    ]
+  }
+}

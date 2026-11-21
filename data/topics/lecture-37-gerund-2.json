@@ -1,0 +1,561 @@
+{
+  "meta": {
+    "topic_id": "lecture-37-gerund-2",
+    "title": "第37讲 · 动名词② 自学",
+    "subtitle": "自学一遍再上课：热身接住动名词① → 动名词作表语 → 动名词 vs 不定式作表语 → 动名词作定语 → 分词作定语 → -ing 令人 / -ed 感到 → 一感一使二听五看 → sleeping baby vs sleeping area → 综合验收（共 9 关 · 53 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "intro",
+        "title": "① 热身：动名词①功底小测",
+        "explain": "<p>上一讲（动名词①）我们认识了动名词——动词的<b>名词马甲</b>：形式是 doing，既保留动词的本事（能带宾语），又能当名词用。它已经打过两份工：<b>作主语</b>（Swimming is fun.）和<b>作宾语</b>（enjoy / finish / practise + doing）。</p><p>本讲解锁它剩下的两份工，还请来两位新朋友：</p><table><tr><th>本讲关卡</th><th>内容</th></tr><tr><td>②③ 动名词作表语</td><td>跟在 be 后面说明主语的内容，还要和不定式抢地盘</td></tr><tr><td>④ 动名词作定语</td><td>贴在名词前当<b>用途标签</b>（a swimming pool 游泳池）</td></tr><tr><td>⑤~⑦ 分词（新朋友）</td><td>现在分词 -ing、过去分词 -ed 作<b>定语、状语、表语、补足语</b></td></tr><tr><td>⑧ 终极分辨</td><td>sleeping baby vs sleeping area——同样是 -ing，身份大不同</td></tr></table><p>自学方法：先读讲解 → 盖住答案做题 → 点「先想再看答案」核对 → 全懂了点「我学完了」进下一关。</p>",
+        "qs_label": "热身自测（先想再点开）",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "动名词长什么样？",
+            "options": [
+              "动词原形 do",
+              "to do",
+              "doing",
+              "done"
+            ],
+            "answer": "C. doing",
+            "explain": "动名词的基本形式就是 doing。A 是动词原形，B 是不定式，D 是过去分词——都不是动名词。"
+          },
+          {
+            "stem": "enjoy / finish / practise 这些动词后面接什么？",
+            "options": [
+              "to do",
+              "doing",
+              "动词原形 do",
+              "done"
+            ],
+            "answer": "B. doing",
+            "explain": "动名词①的接续清单：enjoy / finish / practise / mind + doing。A 死于 to do——这类动词后面不放不定式。"
+          },
+          {
+            "stem": "________ (collect) stamps is my hobby.",
+            "answer": "Collecting",
+            "explain": "动名词短语作主语（36 讲内容），句首首字母大写；谓语 is 用单数。"
+          },
+          {
+            "stem": "\"My favourite sport is skating.\" 这句里的 skating 作什么成分？",
+            "options": [
+              "主语",
+              "宾语",
+              "表语",
+              "定语"
+            ],
+            "answer": "C. 表语",
+            "explain": "skating 放在 is 后面，说明主语 sport 的内容——表语。这正是本讲第②关的主角：动名词作表语。"
+          }
+        ]
+      },
+      {
+        "key": "predicative",
+        "title": "② 动名词作表语：报告主语的内容",
+        "explain": "<p>表语 = 跟在 be 动词后面、说明主语「是什么」的部分。动名词作表语，就是在<b>报告主语的内容</b>：</p><p>My favourite sport is <b>skating</b>. 我最喜爱的运动是滑冰。 = <b>Skating</b> is my favourite sport.</p><p><b>验钞机</b>：把主语和表语互换位置，句子仍然成立 → 动名词作表语。「运动的内容」就是滑冰，「滑冰」也确实是一种运动，两头都通。</p><p>再验一个：Her hobby is <b>growing</b> flowers. 她的爱好是种花——hobby 的内容就是种花，<b>Growing</b> flowers is her hobby 也照样成立。</p><p><b>记法</b>：动名词作表语不是在「变戏法」，它和老熟人进行时（is doing）长得一样，但身份不同——动名词把 doing 当名词用，说的是主语「是干什么的」。</p>",
+        "qs_label": "开胃小练：动名词作表语",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "My favourite sport is ________ (swim).",
+            "answer": "swimming",
+            "explain": "sport 的内容就是游泳 → swimming。主表可互换：Swimming is my favourite sport."
+          },
+          {
+            "stem": "Her hobby is ________ (grow) flowers.",
+            "answer": "growing",
+            "explain": "hobby 的内容是种花 → growing。验钞机：Growing flowers is her hobby. 互换成立。"
+          },
+          {
+            "stem": "怎么验证一个 -ing 是「动名词作表语」而不是别的？",
+            "options": [
+              "看它有没有大写",
+              "把主语和表语互换位置，句子仍然成立",
+              "看句子里有没有 be 动词",
+              "数一数动词的个数"
+            ],
+            "answer": "B. 把主语和表语互换位置，句子仍然成立",
+            "explain": "My favourite sport is skating ↔ Skating is my favourite sport，互换成立，说明表语在报告主语的内容——这就是动名词作表语的铁证。"
+          },
+          {
+            "stem": "Skating is my favourite sport.（同义转换）My favourite sport ________ ________.",
+            "answer": "is skating",
+            "explain": "主表互换：skating 从句首挪回 is 后面。一句话，两个站姿，内容不变。"
+          },
+          {
+            "stem": "\"My favourite sport is skating.\" 里的 skating 说明的是什么？",
+            "options": [
+              "运动发生的时间",
+              "这项运动的内容——滑冰",
+              "运动发生的地点",
+              "运动的执行者"
+            ],
+            "answer": "B. 这项运动的内容——滑冰",
+            "explain": "动名词作表语 = 报告主语的内容：sport 的内容就是滑冰。A / C / D 都不是表语的活儿。"
+          }
+        ]
+      },
+      {
+        "key": "pred-vs-inf",
+        "title": "③ 表语之争：动名词 vs 不定式",
+        "explain": "<p>不定式和动名词都能作表语，但一般<b>不能互换</b>，分工有三条：</p><table><tr><th>规则</th><th>用法</th><th>例句</th></tr><tr><td><b>① 具体将来 vs 一般抽象</b></td><td>不定式表具体的某一次行为、将来的动作；动名词表一般的、抽象的、笼统的概念</td><td>What I would suggest is <b>to start</b> work at once.（具体的建议）/ Our work is <b>serving</b> the people.（笼统的内容）</td></tr><tr><td><b>② 前后对称</b></td><td>主语是不定式（表条件），表语也是不定式（表结果）</td><td><b>To see</b> is <b>to believe</b>. 百闻不如一见 / <b>To do</b> two things at a time is <b>to do</b> neither. 一次做两件事等于未做</td></tr><tr><td><b>③ 抽象名词配不定式</b></td><td>主语是 aim / duty / hope / idea / happiness / job / plan / problem / purpose / thing / wish 等名词，或 what 引导的从句 → 不定式作表语，对主语起补充说明作用</td><td>His wish is <b>to become</b> a magician. 他的愿望是成为一位魔术师</td></tr></table><p><b>记法</b>：主语动名词，表语跟动名词；主语 To 开头，表语也配 To——前后对称；看见 plan / wish / job / hope 这些「愿望·打算」家族当主语，表语稳稳用 to do。</p>",
+        "qs_label": "课堂练习 1（上）：动名词 vs 不定式作表语",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "Seeing is ________.",
+            "options": [
+              "believe",
+              "to believe",
+              "believing",
+              "to be believed"
+            ],
+            "answer": "C. believing",
+            "explain": "主语 Seeing 是动名词，表「看见」这件笼统的事 → 表语也用动名词 believing：Seeing is believing. 眼见为实。A 死于动词原形不能作表语；B 死于和主语不同类；D 死于被动方向（「看见」不是「被相信」）。"
+          },
+          {
+            "stem": "To see is ________.",
+            "options": [
+              "believe",
+              "to believe",
+              "believing",
+              "to be believed"
+            ],
+            "answer": "B. to believe",
+            "explain": "主语是不定式 To see（表条件），表语也用不定式（表结果）——前后对称：To see is to believe. 百闻不如一见。C 死于打破了「不定式对不定式」的对称。"
+          },
+          {
+            "stem": "Our plan is ________ the work in two weeks.",
+            "options": [
+              "finish",
+              "finished",
+              "finishing",
+              "to finish"
+            ],
+            "answer": "D. to finish",
+            "explain": "plan 属于 aim / duty / hope / job / wish 家族 → 不定式作表语，补充说明计划的具体内容（两周内完成——具体、将来的动作）。C 死于动名词只表「一般、抽象的概念」，接不住具体计划。"
+          },
+          {
+            "stem": "What I want to say is ________ rid of the plan forever.",
+            "options": [
+              "get",
+              "to get",
+              "getting",
+              "got"
+            ],
+            "answer": "B. to get",
+            "explain": "what 引导的名词性从句作主语 → 不定式作表语补充说明「我要说的内容」：永远摆脱这个计划（get rid of 摆脱）。C 死于动名词；A 死于动词原形；D 死于过去分词。"
+          },
+          {
+            "stem": "Our work is ________ (serve) the people.",
+            "answer": "serving",
+            "explain": "「为人民服务」是一般的、抽象的、笼统的概念 → 动名词 serving。对照：具体某一次、将来的动作才请不定式出场。"
+          },
+          {
+            "stem": "His wish is ________ (become) a magician.",
+            "answer": "to become",
+            "explain": "wish 在「愿望·打算」家族里（aim / duty / hope / plan…）→ 不定式 to become 补充说明主语：他的愿望是成为一位魔术师。"
+          },
+          {
+            "stem": "主语是 To learn English well（不定式），表语通常用什么形式？",
+            "options": [
+              "动名词 doing",
+              "不定式 to do",
+              "过去分词 done",
+              "动词原形"
+            ],
+            "answer": "B. 不定式 to do",
+            "explain": "对称原则：主语是不定式（条件），表语也用不定式（结果）——To learn English well is to use it every day. 学好英语就是每天用它。"
+          }
+        ],
+        "memory": {
+          "front": "动名词和不定式作表语怎么分工？（三条规则）",
+          "back": "① 不定式 = 具体某一次、将来的动作；动名词 = 一般、抽象、笼统的概念\n② 主语是不定式（条件），表语也是不定式（结果）：To see is to believe.\n③ 主语是 aim / duty / hope / idea / job / plan / problem / purpose / thing / wish 或 what 从句 → 不定式补充说明\n例：His wish is to become a magician."
+        }
+      },
+      {
+        "key": "attributive",
+        "title": "④ 动名词作定语：用途标签",
+        "explain": "<p>动名词作定语 = 给名词贴一张<b>用途标签</b>：说明被修饰词「干什么用的」，位置固定在被修饰词<b>前面</b>：</p><table><tr><th>短语</th><th>意思</th><th>短语</th><th>意思</th></tr><tr><td>writing skills</td><td>写作技能</td><td>a reading room</td><td>阅览室</td></tr><tr><td>teaching methods</td><td>教学方法</td><td>a shopping list</td><td>购物清单</td></tr><tr><td>learning experience</td><td>学习经验</td><td>a cooking pot</td><td>烹饪锅</td></tr><tr><td>drinking water</td><td>饮用水</td><td>a washing machine</td><td>洗衣机</td></tr><tr><td>a driving test</td><td>驾驶测试</td><td>a swimming pool</td><td>游泳池</td></tr><tr><td>a smiling face</td><td>微笑的脸</td><td>a sleeping bag</td><td>睡袋</td></tr></table><p><b>读法</b>：读短语时心里问一句「这是干什么的？」——a reading room 是<b>用来阅读</b>的房间，a sleeping bag 是<b>用来睡觉</b>的袋子。</p><p>埋个伏笔：被修饰的名词<b>不会自己做</b>这个动作（房间不阅读、机器不洗自己、池子不游泳）——这是动名词作定语和现在分词作定语的根本区别，⑧ 关见分晓。</p>",
+        "qs_label": "课堂练习 1（下）：动名词作定语",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "It used to be difficult to get ________ water here.",
+            "options": [
+              "drinking",
+              "drank",
+              "drunk",
+              "to drink"
+            ],
+            "answer": "A. drinking",
+            "explain": "drinking water 饮用水——water 是「用来喝的」，动名词作定语表用途，放在名词前。B 死于 drank 是过去式，根本不能作定语；C 死于 drunk 是过去分词，表「被喝完」方向拧了；D 死于不定式作定语要放名词后（water to drink）。"
+          },
+          {
+            "stem": "「阅览室」英语是 a ________ room.",
+            "answer": "reading",
+            "explain": "用来阅读的房间 → a reading room，动名词作定语贴在名词前。"
+          },
+          {
+            "stem": "「洗衣机」英语是 a ________ ________.",
+            "answer": "washing machine",
+            "explain": "用来洗衣服的机器 → a washing machine。同款还有 a cooking pot 烹饪锅、a swimming pool 游泳池。"
+          },
+          {
+            "stem": "a swimming pool（游泳池）里的 swimming 表示什么？",
+            "options": [
+              "泳池正在游泳",
+              "泳池的用途——用来游泳",
+              "泳池已经被游过",
+              "泳池将要去游泳"
+            ],
+            "answer": "B. 泳池的用途——用来游泳",
+            "explain": "动名词作定语 = 用途标签：池子不会自己游泳，swimming 只回答「这个池子是干什么的」。"
+          },
+          {
+            "stem": "下面哪个短语里的 -ing 是动名词作定语（表用途）？",
+            "options": [
+              "a sleeping baby",
+              "a sleeping bag",
+              "a sleeping boy",
+              "the sleeping girl"
+            ],
+            "answer": "B. a sleeping bag",
+            "explain": "睡袋是「用来睡觉的」，bag 和 sleep 没有主谓关系 → 动名词。A / C / D 里的人和 sleep 是主谓关系（人正在睡）——那是现在分词，⑧ 关细讲。"
+          }
+        ],
+        "memory": {
+          "front": "动名词作定语怎么识别？常见搭配有哪些？",
+          "back": "动名词作定语 = 用途标签，放被修饰词前面，回答「干什么用的」\nwriting skills 写作技能 / teaching methods 教学方法 / learning experience 学习经验\ndrinking water 饮用水 / a driving test 驾驶测试 / a reading room 阅览室\na shopping list 购物清单 / a cooking pot 烹饪锅 / a washing machine 洗衣机\na swimming pool 游泳池 / a sleeping bag 睡袋"
+        }
+      },
+      {
+        "key": "part-attrib",
+        "title": "⑤ 分词作定语：主动进行 vs 被动完成",
+        "explain": "<p>新朋友分词 = 动词的「形容词马甲」，分两种：<b>现在分词</b>（动词 + -ing）和<b>过去分词</b>（动词 + -ed，有不规则的如 fallen / broken）。</p><table><tr><th></th><th>现在分词 -ing</th><th>过去分词 -ed</th></tr><tr><td><b>关系</b></td><td>逻辑主语 = 它修饰的词（主动）</td><td>逻辑宾语 = 它修饰的词（被动）</td></tr><tr><td><b>意义</b></td><td>主动、进行</td><td>被动、完成</td></tr><tr><td><b>例句</b></td><td>a <b>sleeping</b> baby 睡着的婴儿 / The girl <b>standing</b> under the tree is really beautiful.</td><td>a <b>broken</b> cup 破杯子 / The <b>closed</b> door means no one is in the room.</td></tr></table><p><b>位置规矩</b>：单个分词作定语放被修饰词<b>前面</b>（Fallen trees, broken windows and rubbish were everywhere.）；分词<b>短语</b>作定语放被修饰词<b>后面</b>（The man <b>speaking to the teacher</b> is my father.）。</p><p><b>判断一步走</b>：被修饰的名词和动词是主动关系还是被动关系？主动 → -ing，被动 → -ed。</p>",
+        "qs_label": "开胃小练：分词作定语",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "Look! The girl ________ (stand) under the tree is really beautiful.",
+            "answer": "standing",
+            "explain": "女孩和 stand 是主动关系——她自己「站着」，而且正站在那儿 → 现在分词短语作定语，放名词后面（单个分词才放前面）。"
+          },
+          {
+            "stem": "「一只破碎的杯子」英语是？",
+            "options": [
+              "a break cup",
+              "a breaking cup",
+              "a broken cup",
+              "a cup breaking"
+            ],
+            "answer": "C. a broken cup",
+            "explain": "杯子是「被」打碎的——被动关系 → 过去分词 broken 作定语。B 的 breaking 表主动进行，杯子不会自己动手破。"
+          },
+          {
+            "stem": "The ________ (close) door means no one is in the room.",
+            "answer": "closed",
+            "explain": "门是「被」关上的 → 过去分词 closed 作定语：关着的门意味着房间里没人。"
+          },
+          {
+            "stem": "The man ________ to the teacher is my father.（正在和老师谈话的那个男人）",
+            "options": [
+              "speak",
+              "speaks",
+              "speaking",
+              "spoken"
+            ],
+            "answer": "C. speaking",
+            "explain": "speak 的逻辑主语是 the man——主动关系 → speaking。speaking to the teacher 是分词短语，放被修饰词后面。A / B 死于一个简单句装不下第二个谓语动词；D 死于被动方向。"
+          },
+          {
+            "stem": "现在分词作定语表示什么？",
+            "options": [
+              "被动、完成",
+              "主动、进行",
+              "被动、进行",
+              "主动、完成"
+            ],
+            "answer": "B. 主动、进行",
+            "explain": "现在分词 = 主动、进行（a sleeping baby 婴儿在睡）；过去分词 = 被动、完成（a broken cup 杯子被打破）。一对搭档，方向相反。"
+          },
+          {
+            "stem": "________ (fall) trees, broken windows and rubbish were everywhere.",
+            "answer": "Fallen",
+            "explain": "树是「被」吹倒的 → 过去分词 Fallen（fall-fell-fallen 不规则变化）作定语。单个分词放名词前面。"
+          }
+        ]
+      },
+      {
+        "key": "part-adv-pred",
+        "title": "⑥ 分词作状语、表语：-ing 令人 / -ed 感到",
+        "explain": "<p>分词还有两个岗位：</p><p><b>作状语</b>：分词的逻辑主语 = 句子的主语。The students went out of the classroom, <b>talking and laughing</b>. 学生们谈笑着走出了教室——谈笑的就是 the students 自己，主动关系 → -ing。</p><p><b>作表语</b>：现在分词表示主语的<b>性质、特征</b>（令人……）；过去分词表示主语所处的<b>状态</b>（感到……）。</p><table><tr><th>-ing 令人……</th><th>-ed 感到……</th></tr><tr><td>exciting 令人兴奋的</td><td>excited 感到兴奋的</td></tr><tr><td>interesting 有趣的</td><td>interested 感到有兴趣的</td></tr><tr><td>frightening 令人害怕的</td><td>frightened 感到害怕的</td></tr><tr><td>worrying 令人担心的</td><td>worried 感到担心的</td></tr><tr><td>surprising 令人惊讶的</td><td>surprised 感到惊讶的</td></tr><tr><td>embarrassing 令人尴尬的</td><td>embarrassed 感到尴尬的</td></tr></table><p><b>判断一步走</b>：说明「让人产生感觉」的那个东西（消息、电影、声音）→ -ing；说明「人心里产生的感觉」→ -ed。The film is <b>interesting</b>. 电影有趣 / The boy is <b>interested</b> in the book. 男孩感到有兴趣。</p>",
+        "qs_label": "课堂练习 2（上）：-ing / -ed 与分词作状语",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "They were ________ to hear the ________ sound.",
+            "options": [
+              "frightened, frightened",
+              "frightening, frightening",
+              "frightened, frightening",
+              "frightening, frightened"
+            ],
+            "answer": "C. frightened, frightening",
+            "explain": "两个空各管一头：人「感到害怕」→ -ed，They were frightened；声音「令人害怕」→ -ing，the frightening sound。一句同时考「令人 / 感到」。"
+          },
+          {
+            "stem": "She came into the classroom, ________ a pile of papers in her hand.",
+            "options": [
+              "hold",
+              "held",
+              "was holding",
+              "holding"
+            ],
+            "answer": "D. holding",
+            "explain": "holding 作状语，逻辑主语是句子主语 she——她手里「拿着」一摞纸，主动关系 → holding。C 死于没有连词 and，一个简单句不能冒出第二个谓语 was holding。"
+          },
+          {
+            "stem": "She came into the classroom and ________ a pile of papers in her hand.",
+            "options": [
+              "hold",
+              "held",
+              "was holding",
+              "holding"
+            ],
+            "answer": "B. held",
+            "explain": "连词 and 一出现 → 并列谓语：前半句 came 是过去时，后半句配 held。D 死于分词不能作谓语。和上一题对照：有没有 and，决定用分词还是谓语动词。"
+          },
+          {
+            "stem": "The film is ________ (interest), and I'm ________ (interest) in it.",
+            "answer": "interesting, interested",
+            "explain": "电影「令人」感兴趣 → interesting；我「感到」有兴趣 → interested。-ing 令人 / -ed 感到，一对双胞胎别认错。"
+          },
+          {
+            "stem": "The ________ news made everyone ________.",
+            "options": [
+              "surprised, surprising",
+              "surprising, surprised",
+              "surprising, surprising",
+              "surprised, surprised"
+            ],
+            "answer": "B. surprising, surprised",
+            "explain": "news 是「令人」惊讶的来源 → surprising；everyone 是「感到」惊讶的人 → surprised。判断口诀：东西 -ing，人心 -ed。"
+          },
+          {
+            "stem": "My grandma is ________ (worry) about my grades.",
+            "answer": "worried",
+            "explain": "奶奶「感到」担心 → worried；be worried about 是固定搭配。说事情「令人担心」才用 worrying。"
+          },
+          {
+            "stem": "分词作状语时，它的逻辑主语是？",
+            "options": [
+              "句子的宾语",
+              "句子的主语",
+              "分词自己另带的主语",
+              "表语"
+            ],
+            "answer": "B. 句子的主语",
+            "explain": "The students went out of the classroom, talking and laughing.——谈笑的就是 the students 自己。逻辑主语 = 句子主语，是主动关系 → 用 -ing。"
+          }
+        ],
+        "memory": {
+          "front": "-ing 和 -ed 怎么区分？六对高频词是？",
+          "back": "-ing 令人……（性质、特征）｜-ed 感到……（人的状态）\nexciting 令人兴奋 / excited 感到兴奋\ninteresting 有趣 / interested 感兴趣\nfrightening 令人害怕 / frightened 感到害怕\nworrying 令人担心 / worried 感到担心\nsurprising 令人惊讶 / surprised 感到惊讶\nembarrassing 令人尴尬 / embarrassed 感到尴尬\nThe film is interesting. / The boy is interested in the book."
+        }
+      },
+      {
+        "key": "complement",
+        "title": "⑦ 分词作补足语：一感一使二听五看",
+        "explain": "<p>感官动词、使役动词后面常带「宾语 + 补足语」，补足语用分词还是原形，看的<b>是时间切片</b>：</p><table><tr><th>补足语</th><th>含义</th><th>例句</th></tr><tr><td><b>现在分词 doing</b></td><td>主动 + 正在进行</td><td>Don't keep us <b>waiting</b> for a long time. / I heard him <b>singing</b> in the classroom.</td></tr><tr><td><b>过去分词 done</b></td><td>被动 + 已经完成（活儿由别人干）</td><td>He'll have his hair <b>cut</b> after school.（have sth done） / make yourself <b>respected</b></td></tr><tr><td><b>动词原形 do</b></td><td>听到 / 看到<b>全过程</b></td><td>I often hear her <b>sing</b>.（有频率副词 often）/ I saw him <b>fall</b> on the ground.（fall 瞬间动作）</td></tr></table><p>能接「宾语 + doing」的动词有句口诀：<b>一感 feel、一使 keep、二听 hear / listen to、五看 look at / see / watch / notice / observe</b>。</p><p><b>记法</b>：doing 拍的是「正在做」的片段，do 放的是「做完了」的全过程，done 干的活儿是「被人做」的。</p>",
+        "qs_label": "课堂练习 2（下）：感官使役动词 + doing / do / done",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "Mum kept him ________ all the week.",
+            "options": [
+              "work",
+              "works",
+              "to work",
+              "working"
+            ],
+            "answer": "D. working",
+            "explain": "keep sb doing 让某人一直做——keep 是口诀里的「一使」，宾补用现在分词表持续进行：妈妈让他忙活了一整周。A / C 死于 keep 后不接原形也不接 to do。"
+          },
+          {
+            "stem": "When I entered the room, I saw him ________ a big pear.",
+            "options": [
+              "eat",
+              "was eating",
+              "ate",
+              "eating"
+            ],
+            "answer": "D. eating",
+            "explain": "see sb doing 看到某人正在做——我进门那一刻他「正吃着」梨。B / C 死于 see 后面的动词是宾补，不能变成第二个谓语。"
+          },
+          {
+            "stem": "I heard her ________ (cry) when I walked past.",
+            "answer": "crying",
+            "explain": "我路过时她「正在」哭 → 感官动词 + doing 表进行。听到的是哭声的片段，不是全过程。"
+          },
+          {
+            "stem": "I often hear her ________ (sing) in the next room.",
+            "answer": "sing",
+            "explain": "often 是频率副词 → 经常听到「唱歌」这件事的全过程 → 感官动词 + 动词原形。和上一题对照：有没有「正在」，决定用 doing 还是 do。"
+          },
+          {
+            "stem": "He'll have his hair ________ (cut) after school.",
+            "answer": "cut",
+            "explain": "have sth done —— 头发是「被剪」的，活儿由别人（理发师）来干 → 过去分词。cut 的过去分词还是 cut，别被它骗了。"
+          },
+          {
+            "stem": "口诀「一感、一使、二听、五看」里，「五看」是哪一组？",
+            "options": [
+              "see, watch, look at, notice, observe",
+              "hear, listen to, see, watch, notice",
+              "feel, keep, see, watch, look at",
+              "see, hear, feel, keep, observe"
+            ],
+            "answer": "A. see, watch, look at, notice, observe",
+            "explain": "五看 = look at / see / watch / notice / observe。B 混进了「二听」hear、listen to；C、D 混进了「一感」feel 和「一使」keep。完整口诀：一感 feel、一使 keep、二听 hear / listen to、五看 look at / see / watch / notice / observe。"
+          },
+          {
+            "stem": "I sat near her and heard her ________ the new song.",
+            "options": [
+              "singing",
+              "sing",
+              "sung",
+              "to sing"
+            ],
+            "answer": "B. sing",
+            "explain": "我坐在她旁边听完了整首新歌——指「全过程」→ heard her sing（动词原形）。A 的 singing 只表示「正在唱」的片段；C 死于被动方向；D 死于感官动词后不接 to do。"
+          }
+        ],
+        "memory": {
+          "front": "一感一使二听五看是哪些？后面接 doing、do 还是 done？",
+          "back": "一感 feel｜一使 keep｜二听 hear、listen to｜五看 look at、see、watch、notice、observe\n+ doing：动作正在进行（I heard her crying.）\n+ do：听到 / 看到全过程（I often hear her sing. / I saw him fall.）\n+ done：动作被动、由别人做（He'll have his hair cut.）"
+        }
+      },
+      {
+        "key": "sleeping",
+        "title": "⑧ 终极分辨：sleeping baby vs sleeping area",
+        "explain": "<p>现在分词作定语和动名词作定语长得一模一样（都是名词 + -ing），但身份不同——这是本讲最锋利的一刀：</p><table><tr><th></th><th>a sleeping baby</th><th>a sleeping area</th></tr><tr><td><b>主谓关系？</b></td><td>有：baby 能自己 sleep（婴儿在睡觉）</td><td>没有：area（区域）不会睡觉</td></tr><tr><td><b>身份</b></td><td>现在分词作定语</td><td>动名词作定语</td></tr><tr><td><b>含义</b></td><td>一个<b>正在睡觉</b>的婴儿（主动、进行）</td><td>一块<b>用来睡觉</b>的区域（用途）</td></tr></table><p><b>一步检验法</b>：问被修饰的名词——「你自己能做这个动作吗？」能 → 现在分词（正在做）；不能，它只是回答「干什么的」→ 动名词（用途标签）。</p><p>再验两个：drinking water——水不会自己喝 → 动名词；The girl standing under the tree——女孩自己在站 → 现在分词。</p>",
+        "qs_label": "终极分辨小练：谁是分词，谁是动名词",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "a sleeping baby（一个睡着的婴儿）里的 sleeping 是什么？",
+            "options": [
+              "动名词",
+              "现在分词",
+              "过去分词",
+              "不定式"
+            ],
+            "answer": "B. 现在分词",
+            "explain": "baby 和 sleep 有逻辑主谓关系——婴儿「正在睡觉」→ 现在分词作定语，主动、进行。"
+          },
+          {
+            "stem": "a sleeping area（睡眠区）里的 sleeping 是什么？",
+            "options": [
+              "动名词",
+              "现在分词",
+              "过去分词",
+              "谓语动词"
+            ],
+            "answer": "A. 动名词",
+            "explain": "area 不会自己睡觉——sleeping 只说明这块区域的用途「用来睡觉」→ 动名词作定语。"
+          },
+          {
+            "stem": "分辨「现在分词作定语」和「动名词作定语」，一步检验法是？",
+            "options": [
+              "看 -ing 词的长短",
+              "看被修饰的名词能不能自己做这个动作：能 → 现在分词；只是用途 → 动名词",
+              "看 -ing 前面有没有介词",
+              "看句子里有没有逗号"
+            ],
+            "answer": "B. 看被修饰的名词能不能自己做这个动作：能 → 现在分词；只是用途 → 动名词",
+            "explain": "a sleeping baby——婴儿能睡（主谓关系）→ 现在分词；a sleeping area——区域不能睡（只是用途）→ 动名词。一个问句，刀切两半。"
+          },
+          {
+            "stem": "下面哪个短语里的 -ing 是动名词作定语？",
+            "options": [
+              "a swimming boy",
+              "the crying girl",
+              "a washing machine",
+              "a sleeping baby"
+            ],
+            "answer": "C. a washing machine",
+            "explain": "洗衣机不会自己「洗」，washing 只说明用途 → 动名词。A / B / D 里的人能自己做这个动作（男孩在游、女孩在哭、婴儿在睡）→ 现在分词。"
+          },
+          {
+            "stem": "drinking water（饮用水）里，water 和 drink 是什么关系？",
+            "options": [
+              "主谓关系——水自己在喝",
+              "没有主谓关系——drink 说明水的用途",
+              "被动进行——水正在被喝",
+              "完成关系——水已经被喝过"
+            ],
+            "answer": "B. 没有主谓关系——drink 说明水的用途",
+            "explain": "水不会喝水，drink 回答的是「这是干什么用的水」→ 动名词作定语。同一个道理：a reading room、a swimming pool。"
+          }
+        ]
+      },
+      {
+        "key": "final",
+        "title": "⑨ 综合验收：八关考点一锅端",
+        "explain": "<p>最后一关，不讲新东西——把前面八关的考点混在一起再过一遍。做错哪题，就回哪一关翻讲解和口诀卡。</p><p>验收清单：动名词 vs 不定式作表语 · 动名词作定语表用途 · 分词作定语（主动 -ing / 被动 -ed）· -ing 令人 / -ed 感到 · 感官动词 + doing / do / done · sleeping baby vs sleeping area。</p>",
+        "qs_label": "综合验收（错哪题回哪关）",
+        "wrong_qs": [],
+        "general_qs": [
+          {
+            "stem": "Our plan is ________ (hold) a sports meeting next week.",
+            "answer": "to hold",
+            "explain": "plan 在「愿望·打算」家族，且下周举办是将来的具体动作 → 不定式 to hold。回③关。"
+          },
+          {
+            "stem": "My favourite sport is ________ (skate).",
+            "answer": "skating",
+            "explain": "sport 的内容 = skating，主表可互换：Skating is my favourite sport. 回②关。"
+          },
+          {
+            "stem": "Before we leave, Mum writes a ________ (shop) list.",
+            "answer": "shopping",
+            "explain": "购物清单——list 的用途是「用来购物」→ 动名词作定语 a shopping list。回④关。"
+          },
+          {
+            "stem": "The ________ (excite) fans shouted when the star appeared.",
+            "answer": "excited",
+            "explain": "fans 是人，「感到」兴奋 → -ed：excited fans。说东西「令人兴奋」（the exciting news）才用 -ing。回⑥关。"
+          },
+          {
+            "stem": "The teacher came in, ________ (follow) by some students.",
+            "answer": "followed",
+            "explain": "老师是「被」学生们跟着的 → follow 和 teacher 是被动关系 → 过去分词 followed 作状语。主动跟着别人才用 following。回⑤⑥关。"
+          },
+          {
+            "stem": "When I passed the music room, I heard someone ________ (play) the piano.",
+            "answer": "playing",
+            "explain": "路过那一刻「正在」弹 → hear sb doing 表进行。听到全过程（如听完一整首）才用原形 play。回⑦关。"
+          },
+          {
+            "stem": "a dancing girl（正在跳舞的女孩）和 a dancing hall（舞厅）里的 dancing 分别是什么？",
+            "options": [
+              "都是现在分词",
+              "都是动名词",
+              "前者现在分词，后者动名词",
+              "前者动名词，后者现在分词"
+            ],
+            "answer": "C. 前者现在分词，后者动名词",
+            "explain": "女孩自己在跳——和 dance 有主谓关系 → 现在分词；hall 不会跳舞，dancing 只说明用途「用来跳舞」→ 动名词。⑧ 关的一步检验法：名词能不能自己做这个动作。"
+          }
+        ]
+      }
+    ]
+  }
+}

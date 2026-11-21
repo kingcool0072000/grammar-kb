@@ -1,0 +1,591 @@
+{
+  "meta": {
+    "topic_id": "lecture-47-attributive-clause",
+    "title": "第47讲 · 定语从句 自学",
+    "subtitle": "自学一遍再上课：热身认识定语从句和先行词 → 关系代词 who/which/that → whose 与 whom → 介词+关系代词 → 只能用 that 的四大场合 → 关系副词 when/where/why → 关系副词换装「介词+which」→ 两步判断法 → 综合验收（共 9 关 · 54 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "intro",
+        "title": "① 热身：什么是定语从句",
+        "explain": "<p>定语从句就是<b>用一整句话去修饰一个名词</b>——相当于给名词配了个超长形容词。被修饰的名词有个专门的名字：<b>先行词</b>（它总是排在从句前面，先行一步，所以叫「先行」）。</p><p>连接先行词和从句的词叫<b>关系词</b>，它一人干三件事：① 引导定语从句；② 代替先行词；③ 在从句中担当一个成分（主语、宾语、定语或状语）。</p><p>它是怎么来的？看讲义的两句合一：</p><p>句1：He is a student.　句2：The student studies hard.</p><p>合成：He is a student <b>who studies hard</b>.——两个 student 重复了，就用关系代词 <b>who</b> 顶替句2 的主语 the student，跟在先行词后面。</p><table><tr><th>关系词两大家族</th><th>成员</th><th>在从句中作什么</th></tr><tr><td><b>关系代词</b></td><td>that, which, who, whom, whose</td><td>主语、宾语、表语、定语</td></tr><tr><td><b>关系副词</b></td><td>when, where, why</td><td>状语</td></tr></table><p>本讲是从句区的收官大讲：关系代词、关系副词、只用 that 的场合、介词+关系代词，一次学完。自学方法：先读讲解 → 盖住答案做题 → 点「先想再看答案」核对 → 全懂了点「我学完了」进下一关。</p>",
+        "qs_label": "热身自测（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "定语从句的作用是什么？",
+            "options": [
+              "表示动作发生的时间",
+              "修饰名词或代词，相当于一个形容词",
+              "作句子的谓语",
+              "表达说话人的态度"
+            ],
+            "answer": "B. 修饰名词或代词，相当于一个形容词",
+            "explain": "定语从句就是拿一句话去修饰名词：a student who studies hard（努力学习的学生）。A 是时间状语的活，C 是谓语的活，D 是情态动词的活，都不归它管。"
+          },
+          {
+            "stem": "被定语从句修饰的名词有个专门的名字，叫什么？",
+            "options": [
+              "关系词",
+              "先行词",
+              "宾语",
+              "状语"
+            ],
+            "answer": "B. 先行词",
+            "explain": "定语从句必须放在被修饰的名词或代词<b>后面</b>——它总是先行一步，所以叫先行词。A 的关系词是引导从句的 who/which/that 这些词，别和被修饰的词搞混。"
+          },
+          {
+            "stem": "下面哪一项不是关系词的作用？",
+            "options": [
+              "引导定语从句",
+              "代替先行词",
+              "在定语从句中担当一个成分",
+              "表示动作发生在过去"
+            ],
+            "answer": "D. 表示动作发生在过去",
+            "explain": "关系词三件事：引导从句、代替先行词、在从句里担当一个成分。时态是谓语动词的事，不归关系词管。"
+          },
+          {
+            "stem": "把两句合成一句：He is a student. + The student studies hard. → He is a student ________ studies hard.（填关系代词）",
+            "answer": "who",
+            "explain": "两个 student 重复了，用关系代词代替句2 的主语 the student → who studies hard。先行词 student 指人、从句缺主语 → who（that 也行）。"
+          },
+          {
+            "stem": "关系代词（that, which, who, whom, whose）和关系副词（when, where, why）在从句中各作什么成分？",
+            "options": [
+              "关系代词作主语、宾语、定语等；关系副词作状语",
+              "关系代词作状语；关系副词作主语、宾语",
+              "都作主语",
+              "都作状语"
+            ],
+            "answer": "A. 关系代词作主语、宾语、定语等；关系副词作状语",
+            "explain": "记住分工：代词顶名词的班（主语/宾语/定语），副词顶状语的班（时间/地点/原因）。这是第⑧关「两步判断法」的地基。"
+          }
+        ]
+      },
+      {
+        "key": "who-which-that",
+        "title": "② 关系代词 who / which / that：指人还是指物",
+        "explain": "<p>关系代词站在先行词和从句中间，替先行词「进从句上班」。选谁，先看先行词指什么：</p><table><tr><th>关系代词</th><th>指什么</th><th>在从句中作什么</th><th>例句</th></tr><tr><td><b>who</b></td><td>人</td><td>主语或宾语</td><td>The person <b>who</b> broke the window must pay for it.</td></tr><tr><td><b>which</b></td><td>物</td><td>主语或宾语</td><td>I've read the newspaper <b>which</b> carries the important news.</td></tr><tr><td><b>that</b></td><td>人和物都行</td><td>主语或宾语</td><td>The car <b>that</b> you lent me broke down on the way.</td></tr></table><p>两个动手细节：</p><p>① 关系代词作<b>主语</b>时，从句动词要跟先行词保持一致——the newspaper（三单）→ that <b>carries</b> the important news。</p><p>② 作<b>宾语</b>时，关系代词后面必须跟完整的主谓（the car that <b>you lent me</b>），口语里这个关系代词还可以省略：the boy who I met = the boy I met。但作主语时绝对不能省。</p><p><b>记法</b>：who 管人，which 管物，that 全都能管——先认先行词，再看从句缺不缺主语。</p>",
+        "qs_label": "课堂练习 1 · 讲义例句：who / which / that",
+        "general_qs": [
+          {
+            "stem": "I've read the newspaper that / which ________ (carry) the important news.（用 carry 的适当形式填空）",
+            "answer": "carries",
+            "explain": "that/which 代替先行词 the newspaper 作从句主语，动词跟着先行词用三单 → carries。别看见 I've 就填 carried。"
+          },
+          {
+            "stem": "The car that / which you ________ (lend) me broke down on the way.（用 lend 的适当形式填空）",
+            "answer": "lent",
+            "explain": "that/which 作 lend 的宾语（你借给我的那辆车）。借车发生在过去，车已经抛锚了 → 过去式 lent。主句 broke down 也是过去时，两边对得上。"
+          },
+          {
+            "stem": "The person who ________ (break) the window must pay for it.（用 break 的适当形式填空）",
+            "answer": "broke",
+            "explain": "who 代替 the person 作从句主语。打碎玻璃发生在过去 → broke。主句 must pay 是「现在必须赔」，别被它带偏成现在时。"
+          },
+          {
+            "stem": "The boy who I ________ (meet) in the computer room is an exchange student.（用 meet 的适当形式填空）",
+            "answer": "met",
+            "explain": "who 作 meet 的宾语（我在电脑房遇到的男孩）。相遇发生在过去 → met。主句 is 负责「现在是交换生」，两头时间各管各的。"
+          },
+          {
+            "stem": "--- What can we do for the left-home children in the village ________ need help?\n--- We can help them with their study online on weekends.",
+            "options": [
+              "which",
+              "whom",
+              "whose",
+              "who"
+            ],
+            "answer": "D. who",
+            "explain": "先行词是 children（指人），从句缺主语（________ need help）→ who。A 死于 which 只指物；B 死于 whom 是宾格、不作主语；C 死于 whose 后面必须跟名词。"
+          },
+          {
+            "stem": "The woman ________ is talking to our teacher is my mother.",
+            "options": [
+              "which",
+              "who",
+              "whom",
+              "whose"
+            ],
+            "answer": "B. who",
+            "explain": "先行词 the woman 指人、从句缺主语（________ is talking…）→ who。A 死于指物；C 死于 whom 不作主语；D 死于后面没有名词可挂。"
+          },
+          {
+            "stem": "The book ________ I bought yesterday is very interesting.",
+            "options": [
+              "who",
+              "whom",
+              "which",
+              "whose"
+            ],
+            "answer": "C. which",
+            "explain": "先行词 the book 指物、作 bought 的宾语 → which（that 也行）。A / B 死于指人；D 死于 whose 后面要跟名词。"
+          }
+        ],
+        "memory": {
+          "front": "who / which / that 怎么选？作主语时从句动词注意什么？",
+          "back": "who 指人（主语或宾语），which 指物（主语或宾语），that 人和物都行\n作主语：从句动词跟先行词保持一致（the newspaper that carries…）\n作宾语：后面接完整主谓（the car that you lent me），口语中关系代词可省略\n作主语时关系代词不能省略"
+        }
+      },
+      {
+        "key": "whose-whom",
+        "title": "③ whose 与 whom：作定语的「谁的」和宾格专用",
+        "explain": "<p>whose 在从句中作<b>定语</b>，意思是「<b>谁的</b>」——它后面必须紧跟一个名词，表示「这个名词是谁的」。</p><table><tr><th>指谁</th><th>规则</th><th>例句</th></tr><tr><td><b>指人</b></td><td>whose + 人有的东西</td><td>The girl <b>whose mother is ill</b> is staying at home today. 她妈妈病的那个女孩</td></tr><tr><td><b>指物</b></td><td>whose + 物有的部分</td><td>This is the house <b>whose roof was painted blue</b>. 屋顶被涂成蓝色的房子</td></tr></table><p>判断口诀：从句里的名词前面缺「谁的」，就请 whose 出场——the girl 的 mother、the house 的 roof。</p><p>同场的 <b>whom</b>：指人，在从句中<b>只作宾语</b>（不能作主语），是最正式的宾格关系代词：The boy <b>whom</b> I met in the computer room is an exchange student.（= who / that，口语里更常用 who，或干脆省略）</p><p><b>记法</b>：whose = 谁的，后面必须挂名词，人和物通吃；whom = who 的宾格，只蹲在动词和介词后面。</p>",
+        "qs_label": "课堂练习 1 · 讲义例句：whose 与 whom",
+        "general_qs": [
+          {
+            "stem": "The girl ________ ________ ________ ________ is staying at home today.（她妈妈病了，用 whose 短语填 4 词）",
+            "answer": "whose mother is ill",
+            "explain": "从句缺「谁的妈妈」→ whose mother is ill。whose 作定语修饰 mother，whose mother 整体再作从句主语。"
+          },
+          {
+            "stem": "This is the house ________ ________ ________ ________ ________.（屋顶被涂成蓝色，用 whose 短语填 5 词）",
+            "answer": "whose roof was painted blue",
+            "explain": "房子的屋顶 → whose roof was painted blue。房子是物，whose 照样能用——它不是人的专利。"
+          },
+          {
+            "stem": "I like teachers ________ classes are interesting and creative.",
+            "options": [
+              "which",
+              "who",
+              "whom",
+              "whose"
+            ],
+            "answer": "D. whose",
+            "explain": "从句里的 classes 前面缺「谁的」→ whose classes（老师们的课）。A 死于指物；B / C 死于从句已有主语 classes，不缺主语也不缺宾语。"
+          },
+          {
+            "stem": "Do you know the boy ________ father is a doctor?",
+            "options": [
+              "who",
+              "which",
+              "whose",
+              "whom"
+            ],
+            "answer": "C. whose",
+            "explain": "the boy 的 father → whose father。从句 father is a doctor 里主语齐了，缺的是 father 前面的定语「谁的」。"
+          },
+          {
+            "stem": "whose 能修饰哪些先行词？",
+            "options": [
+              "只能指人",
+              "只能指物",
+              "人和物都可以",
+              "只能指地点"
+            ],
+            "answer": "C. 人和物都可以",
+            "explain": "the girl whose mother is ill（人）/ the house whose roof was painted blue（物）——只要从句名词前缺「谁的」，人和物都用 whose。"
+          },
+          {
+            "stem": "I live in a room whose window ________ (face) south.（用 face 的适当形式填空）",
+            "answer": "faces",
+            "explain": "whose window 一起作从句主语，中心词 window 是三单 → faces。关系代词作主语时，动词跟它后面的名词保持一致。"
+          }
+        ],
+        "memory": {
+          "front": "whose 怎么用？后面跟什么？指物行不行？",
+          "back": "whose + 名词 = 谁的……，在从句中作定语\n指人：The girl whose mother is ill… 她妈妈病的那个女孩\n指物：This is the house whose roof was painted blue. 屋顶被涂成蓝色的房子\n判断口诀：从句名词前缺「谁的」就选 whose\nwhom 是 who 的宾格，指人、只作宾语不作主语"
+        }
+      },
+      {
+        "key": "prep-rel",
+        "title": "④ 介词提前：介词后不用 that",
+        "explain": "<p>关系代词紧跟在介词后面作宾语时，有一条铁律：<b>介词后面不用 that</b>。</p><table><tr><th>情况</th><th>用什么</th><th>例句</th></tr><tr><td>介词不提前（留在句尾）</td><td>that / which / whom / who 都可以</td><td>the famous singer <b>who/whom/that</b> we have often talked about</td></tr><tr><td>介词提前（搬到关系词前面）</td><td>只能 <b>whom</b>（指人）/ <b>which</b>（指物）</td><td>the famous singer <b>about whom</b> we have often talked / the city <b>in which</b> I lived for five years</td></tr></table><p>介词提前的句子两步走：① 看先行词——singer 指人 → whom，city / key 指物 → which；② 找固定搭配——talk <b>about</b> sb、live <b>in</b> the city、open the door <b>with</b> the key，介词就是从这些搭配里「搬家」搬过来的。</p><p><b>记法</b>：介词搬家，that 出局——搬家的队伍里只认 whom（人）和 which（物）。</p>",
+        "qs_label": "课堂练习 1 · 讲义例句：介词 + whom / which",
+        "general_qs": [
+          {
+            "stem": "The key with ________ I opened the door was on the table.",
+            "options": [
+              "where",
+              "that",
+              "which",
+              "whom"
+            ],
+            "answer": "C. which",
+            "explain": "介词 with 提前到关系词前面，先行词 key 指物 → 只能用 which。A 死于 where 是关系副词，不能作介词宾语；B 死于「介词后不用 that」；D 死于 key 是物、不用 whom。"
+          },
+          {
+            "stem": "We'll go to visit the famous singer ________ ________ we have often talked.（介词提前，填 2 词）",
+            "answer": "about whom",
+            "explain": "固定搭配 talk about sb → 介词 about 提前，先行词 singer 指人 → about whom。介词不提前时，说 who/whom/that we have often talked about 也对。"
+          },
+          {
+            "stem": "The city ________ ________ I lived for five years has changed a lot.（介词提前，填 2 词）",
+            "answer": "in which",
+            "explain": "固定搭配 live in the city → 介词 in 提前，city 指物 → in which。不能填 in that——介词后面 that 出局。"
+          },
+          {
+            "stem": "关系代词 that 紧跟在介词后面作宾语，可以吗？",
+            "options": [
+              "可以",
+              "不可以",
+              "只能在疑问句里",
+              "看时态决定"
+            ],
+            "answer": "B. 不可以",
+            "explain": "铁律：介词后面不用 that。介词留在句尾时 that 随便用；一旦搬到介词后面，必须换 which（物）或 whom（人）。"
+          },
+          {
+            "stem": "介词提前时，先行词指人应该用哪个关系代词？",
+            "options": [
+              "which",
+              "who",
+              "whom",
+              "that"
+            ],
+            "answer": "C. whom",
+            "explain": "介词 + whom（指人）/ which（指物）。B 的 who 不能紧跟在介词后面作宾语——宾格位置得用 whom。"
+          }
+        ]
+      },
+      {
+        "key": "that-only",
+        "title": "⑤ 只能用 that 的四大场合",
+        "explain": "<p>大多数场合 that 和 which 可以互换，但下面<b>四种场合只能用 that</b>，请 which 让位：</p><table><tr><th>场合</th><th>例句</th></tr><tr><td>① 先行词是<b>不定代词</b>：all, few, little, none, something, anything, everything, nothing…</td><td>Is there <b>anything that</b> I can do for you? / There is <b>nothing that</b> can stop us from achieving our goals.</td></tr><tr><td>② 先行词被<b>最高级或序数词</b>修饰</td><td>She is <b>the most talented</b> singer <b>that</b> I have ever seen. / <b>The first</b> thing <b>that</b> we should do is to get some food.</td></tr><tr><td>③ 先行词被 <b>the only, the very, the same, the last</b> 修饰</td><td>This is <b>the only</b> solution <b>that</b> we have at this point. / <b>The very</b> dress <b>that</b> she wore last night made her look stunning.</td></tr><tr><td>④ 先行词<b>既有人又有物</b></td><td><b>The artist and her paintings that</b> I saw were breathtaking.——人和物混在一起，who/which 谁都没法同时代表，只好请 that 一肩挑</td></tr></table><p><b>记法</b>：不定、最高、唯一、人+物——四大场合 that 独挑大梁。见到 anything / the best / the only / 人和物并列，闭眼选 that。</p>",
+        "qs_label": "课堂练习 1 · 讲义例句：只能用 that 的场合",
+        "general_qs": [
+          {
+            "stem": "Everything ________ she touches turns to gold.",
+            "options": [
+              "how",
+              "who",
+              "what",
+              "that"
+            ],
+            "answer": "D. that",
+            "explain": "everything 是不定代词 → 只用 that。C 的 what 根本不能引导定语从句；B 死于 everything 指物不用 who；A 的 how 更不沾边。"
+          },
+          {
+            "stem": "There is ________ that can stop us from achieving our goals.（「没有什么」，填不定代词）",
+            "answer": "nothing",
+            "explain": "修饰这个不定代词的 that 从句已经给出 → 先行词是「没有什么」→ nothing。Nothing that can stop us：没有什么能阻止我们实现目标。"
+          },
+          {
+            "stem": "She is the most talented singer ________ I have ever seen.",
+            "options": [
+              "which",
+              "who",
+              "that",
+              "whom"
+            ],
+            "answer": "C. that",
+            "explain": "先行词被最高级 the most talented 修饰 → 只用 that。A / D 死于 which / whom 不用于此场合；B 死于最高级场合 who 也要让位。"
+          },
+          {
+            "stem": "This is the only solution ________ we have at this point.",
+            "options": [
+              "that",
+              "which",
+              "who",
+              "whose"
+            ],
+            "answer": "A. that",
+            "explain": "the only 修饰先行词 solution → 只用 that。the only / the very / the same / the last 是同一伙的。B 死于 the only 场合不用 which。"
+          },
+          {
+            "stem": "The artist and her paintings ________ I saw were breathtaking.",
+            "options": [
+              "who",
+              "which",
+              "whom",
+              "that"
+            ],
+            "answer": "D. that",
+            "explain": "先行词 the artist and her paintings 又有人又有物 → 只用 that。who / whom 只能管人，which 只能管物，谁都没法两个一起代表。"
+          },
+          {
+            "stem": "下面哪种先行词必须用 that 引导定语从句？",
+            "options": [
+              "先行词指人",
+              "先行词是不定代词（如 everything）",
+              "先行词指物",
+              "先行词是地点"
+            ],
+            "answer": "B. 先行词是不定代词（如 everything）",
+            "explain": "不定代词 all / everything / something / anything / nothing 等后面只用 that。指人用 who、指物用 which 都还在正常营业。"
+          },
+          {
+            "stem": "The very dress ________ she wore last night made her look stunning.（填关系代词）",
+            "answer": "that",
+            "explain": "the very（正是那件）修饰 dress → 只用 that。它和 the only / the same / the last 是一伙的，见到就填 that。"
+          }
+        ],
+        "memory": {
+          "front": "哪四种场合只能用 that，不能用 which？",
+          "back": "① 先行词是不定代词：all, everything, something, anything, nothing, few, little, none…\n② 先行词被最高级或序数词修饰：the best…, the first…\n③ 先行词被 the only / the very / the same / the last 修饰\n④ 先行词既有人又有物：The artist and her paintings that…\n记忆口诀：不定、最高、唯一、人+物 → that 独挑大梁"
+        }
+      },
+      {
+        "key": "rel-adv",
+        "title": "⑥ 关系副词 when / where / why",
+        "explain": "<p>关系副词出场的前提：从句主谓（宾）齐全，什么都不缺，只缺一个「在什么时候 / 在哪儿 / 为什么」的<b>状语</b>：</p><table><tr><th>关系副词</th><th>指什么</th><th>作什么状语</th><th>常见先行词</th></tr><tr><td><b>when</b></td><td>时间</td><td>时间状语</td><td>the time, the day, the summer…</td></tr><tr><td><b>where</b></td><td>地点</td><td>地点状语</td><td>the house, the school, the city, the town…</td></tr><tr><td><b>why</b></td><td>原因</td><td>原因状语</td><td>the reason, the cause</td></tr></table><p>例句感受：</p><p>① I'll never forget the time <b>when we worked on the farm</b>.（从句主谓齐全，缺「什么时候」→ when）</p><p>② This is the house <b>where we lived last year</b>.（live 不及物，从句不缺宾语，缺「在哪里」→ where）</p><p>③ We don't know the reason <b>why she didn't show up</b>.（缺「为什么」→ why）</p><p><b>记法</b>：先行词是时间选 when，是地点选 where，是原因选 why——但先确认从句自己完整、不缺主语宾语，才轮到关系副词（第⑧关细讲怎么判断）。</p>",
+        "qs_label": "课堂练习 2（上）：when / where / why",
+        "general_qs": [
+          {
+            "stem": "This is the school ________ I studied English for five years.",
+            "options": [
+              "where",
+              "which",
+              "when",
+              "on which"
+            ],
+            "answer": "A. where",
+            "explain": "school 是地点；从句 I studied English for five years 主谓宾齐全，缺地点状语 → where（= in which）。B 死于从句不缺宾语；C 死于时间；D 死于介词搭错——是 in which 不是 on which。"
+          },
+          {
+            "stem": "I will never forget the day ________ we first met.",
+            "options": [
+              "in which",
+              "when",
+              "that",
+              "where"
+            ],
+            "answer": "B. when",
+            "explain": "day 是时间；we first met 主谓完整，缺时间状语 → when。A 死于介词搭错（应是 on which）；C 死于 met 后面不缺宾语；D 死于地点方向不对。"
+          },
+          {
+            "stem": "The reason ________ he didn't come to the party is unknown.",
+            "options": [
+              "why",
+              "which",
+              "that",
+              "because"
+            ],
+            "answer": "A. why",
+            "explain": "reason（原因）→ why 作原因状语。D 的 because 是连词，不能引导定语从句——这是本关最大的坑；B / C 死于从句不缺主语宾语。"
+          },
+          {
+            "stem": "I still miss the small town ________ ________ ________ ________.（我在那里长大，填 4 词）",
+            "answer": "where I grew up",
+            "explain": "town 是地点、从句 I grew up 完整（grow up 不及物）→ where I grew up。从句不缺宾语，不能用 which。"
+          },
+          {
+            "stem": "We don't know the reason why she didn't ________ ________.（出现，填 2 词）",
+            "answer": "show up",
+            "explain": "show up 出现、露面。why 引导的从句 she didn't show up 主谓完整，不缺主宾。"
+          },
+          {
+            "stem": "先行词是 the summer（那个夏天），从句不缺主语宾语，该用哪个关系词？",
+            "options": [
+              "where",
+              "which",
+              "when",
+              "who"
+            ],
+            "answer": "C. when",
+            "explain": "夏天是时间，从句又完整 → 关系副词 when 作时间状语。B 死于从句不缺主语宾语；A 死于方向是地点。"
+          }
+        ],
+        "memory": {
+          "front": "when / where / why 各配什么先行词？作什么成分？",
+          "back": "when 指时间（the time / the day / the summer…）→ 时间状语\nwhere 指地点（the house / the school / the city…）→ 地点状语\nwhy 指原因（the reason / the cause）→ 原因状语\n前提：从句自己主谓（宾）完整，不缺主语宾语，才轮到关系副词\nwhy 的专属搭档只有 the reason / the cause"
+        }
+      },
+      {
+        "key": "prep-which",
+        "title": "⑦ 关系副词换装：when / where / why = 介词 + which",
+        "explain": "<p>关系副词有个孪生写法：<b>介词 + which</b>。能不能互换、用哪个介词，全看固定搭配：</p><table><tr><th>关系副词</th><th>可以换成</th><th>例句</th></tr><tr><td><b>when</b></td><td>on / in / at / during which</td><td>the day <b>when</b> we celebrated… = the day <b>on which</b> we celebrated…（on the day）</td></tr><tr><td><b>where</b></td><td>in / on / at / to / from which</td><td>the city <b>where</b> I was born and raised = the city <b>in which</b> I was born and raised（in the city）</td></tr><tr><td><b>why</b></td><td><b>for which</b>（只有这一个搭档）</td><td>the reason <b>why</b> he resigned = the reason <b>for which</b> he resigned</td></tr></table><p>介词怎么挑？把关系副词还原成「介词 + 先行词」：on <b>the day</b> → on which；in <b>the city</b> → in which；for <b>the reason</b> → for which。介词搭错全句报废——on the city、in the day 都不成立。</p><p><b>记法</b>：when/where/why 换衣服，还是「介词 + which」一副面孔——介词跟着先行词的固定搭配走。</p>",
+        "qs_label": "讲义例句：关系副词换装",
+        "general_qs": [
+          {
+            "stem": "I'll never forget the day when we celebrated our graduation.\n= I'll never forget the day ________ ________ we celebrated our graduation.（填 2 词）",
+            "answer": "on which",
+            "explain": "on the day（在那天）→ 介词 on 搬到 which 前 → on which。具体某一天搭配介词 on。"
+          },
+          {
+            "stem": "This is the city where I was born and raised.\n= This is the city ________ ________ I was born and raised.（填 2 词）",
+            "answer": "in which",
+            "explain": "in the city（在这座城市）→ in which。city 指物，介词提前时 which 上场，不能写 in that。"
+          },
+          {
+            "stem": "I don't understand the reason why he resigned from his job.\n= I don't understand the reason ________ ________ he resigned from his job.（填 2 词）",
+            "answer": "for which",
+            "explain": "for the reason（因为这个原因）→ for which。why 只有一个介词搭档：for。"
+          },
+          {
+            "stem": "the reason 后面的关系副词 why 换成「介词 + which」，介词用哪个？",
+            "options": [
+              "in",
+              "on",
+              "for",
+              "at"
+            ],
+            "answer": "C. for",
+            "explain": "还原固定搭配：for the reason → for which。in / on / at 和 reason 都不搭。"
+          },
+          {
+            "stem": "Do you remember the summer ________ we went camping in the mountains?",
+            "options": [
+              "which",
+              "when",
+              "where",
+              "who"
+            ],
+            "answer": "B. when",
+            "explain": "summer 是时间、从句 we went camping in the mountains 完整 → when（= in which）。A 死于从句不缺宾语；C 死于地点方向不对。"
+          }
+        ]
+      },
+      {
+        "key": "distinguish",
+        "title": "⑧ 关系代词 vs 关系副词：两步判断法",
+        "explain": "<p>the days 后面到底填 when 还是 which？两步判断，一步都不能跳：</p><table><tr><th>步骤</th><th>看什么</th><th>结论</th></tr><tr><td>① 先看<b>先行词含义</b></td><td>指人、物、时间、地点还是原因</td><td>指物不能用 who/whom，指人不能用 which…</td></tr><tr><td>② 再看关系词<b>在从句中作什么成分</b></td><td>作主语、宾语、表语、定语，还是状语</td><td>主/宾/表/定 → <b>关系代词</b>；状语 → <b>关系副词</b></td></tr></table><p>讲义给的经典对照，先行词都是 the days：</p><p>① I will always remember the days <b>that/which we spent together</b>.——spend 是及物动词，从句缺<b>宾语</b>（spent 后面空着）→ 关系代词。</p><p>② I will always remember the days <b>when we studied together</b>.——study together 主谓完整，从句缺<b>时间状语</b> → 关系副词。</p><p>快检办法：把先行词放回从句里试试——spend <b>the days</b>（成立，the days 是宾语）→ 关系代词；study <b>the days</b>（不成立）→ 缺状语 → when。</p><p><b>记法</b>：一眼看先行词，二眼数从句缺不缺主宾——缺主宾用代词（that/which/who/whose），不缺用副词（when/where/why）。</p>",
+        "qs_label": "课堂练习 2（下）：两步判断法",
+        "general_qs": [
+          {
+            "stem": "Is this the museum ________ you visited last year?",
+            "options": [
+              "where",
+              "that",
+              "in which",
+              "whom"
+            ],
+            "answer": "B. that",
+            "explain": "visit 是及物动词，从句缺宾语（visited 后面空着）→ 关系代词 that/which。A / C 死于从句不缺状语——这是「看到地点就选 where」的经典陷阱；D 死于 museum 指物。"
+          },
+          {
+            "stem": "I will always remember the days ________ we spent together.",
+            "options": [
+              "when",
+              "which",
+              "where",
+              "on which"
+            ],
+            "answer": "B. which",
+            "explain": "把先行词放回从句：spend the days 成立，the days 是 spent 的宾语 → 关系代词 which/that。A / C / D 都是关系副词路线，死于从句缺的是宾语不是状语。"
+          },
+          {
+            "stem": "I will always remember the days ________ we studied together.",
+            "options": [
+              "which",
+              "that",
+              "when",
+              "who"
+            ],
+            "answer": "C. when",
+            "explain": "study the days 不成立，从句主谓完整 → 关系副词 when。上一题先行词同样是 the days，从句一变答案就变——这就是两步判断法的威力。"
+          },
+          {
+            "stem": "This is the house ________ we lived last year.（填关系词）",
+            "answer": "where",
+            "explain": "live 不及物，从句不缺宾语，缺地点状语 → where。对比：the house that we visited（visited 缺宾语）就得用关系代词。"
+          },
+          {
+            "stem": "两步判断法的第一步看什么？",
+            "options": [
+              "关系词的长短",
+              "先行词指人、物、时间、地点还是原因",
+              "从句的时态",
+              "主句的语气"
+            ],
+            "answer": "B. 先行词指人、物、时间、地点还是原因",
+            "explain": "第一步先看先行词含义，排除不可能的选项（指物不用 who/whom，指人不用 which）；第二步再看关系词在从句中作什么成分。"
+          },
+          {
+            "stem": "关系词在从句中作状语时，用哪一家？",
+            "options": [
+              "关系代词",
+              "关系副词",
+              "疑问代词",
+              "助动词"
+            ],
+            "answer": "B. 关系副词",
+            "explain": "作主语、宾语、表语、定语 → 关系代词；作状语 → 关系副词。一句话：代词顶名词的班，副词顶状语的班。"
+          }
+        ],
+        "memory": {
+          "front": "when 还是 which？两步判断法怎么走？",
+          "back": "第一步：看先行词含义——指人/物/时间/地点/原因\n第二步：看关系词在从句中作什么成分\n作主语、宾语、表语、定语 → 关系代词（that/which/who/whom/whose）\n作状语 → 关系副词（when/where/why）\n快检：把先行词放回从句——spend the days 成立 → 缺宾语 → 关系代词；study the days 不成立 → 缺状语 → when"
+        }
+      },
+      {
+        "key": "final",
+        "title": "⑨ 综合验收：八关考点一锅端",
+        "explain": "<p>最后一关，不讲新东西——把前面八关的考点混在一起再过一遍。做错哪题，就回哪一关翻口诀卡。</p><p>验收清单：关系代词选 who/which/that（第②关）· whose 谁的（第③关）· 介词 + whom/which（第④关）· 只用 that 四场合（第⑤关）· when/where/why（第⑥⑦关）· 两步判断法（第⑧关）。</p>",
+        "qs_label": "综合验收（错哪题回哪关）",
+        "general_qs": [
+          {
+            "stem": "The man ________ is standing there is our new English teacher.",
+            "options": [
+              "which",
+              "who",
+              "whom",
+              "whose"
+            ],
+            "answer": "B. who",
+            "explain": "指人、从句缺主语（________ is standing…）→ who（回第②关）。A 死于指物；C 死于 whom 不作主语；D 死于后面没有名词。"
+          },
+          {
+            "stem": "The girl ________ leg was hurt in the accident is now in hospital.",
+            "options": [
+              "who",
+              "whom",
+              "whose",
+              "which"
+            ],
+            "answer": "C. whose",
+            "explain": "leg 前面缺「谁的」→ whose leg（回第③关）。A / B 死于从句已有主语 leg，不缺主语宾语；D 死于指物。"
+          },
+          {
+            "stem": "This is the pen with ________ I wrote the letter.",
+            "options": [
+              "that",
+              "which",
+              "whom",
+              "whose"
+            ],
+            "answer": "B. which",
+            "explain": "介词 with 提前、pen 指物 → which（回第④关）。A 死于介词后不用 that；C 死于 pen 是物不用 whom；D 死于后面没有名词。"
+          },
+          {
+            "stem": "This is the best movie ________ I have ever seen.",
+            "options": [
+              "which",
+              "who",
+              "that",
+              "whom"
+            ],
+            "answer": "C. that",
+            "explain": "最高级 the best 修饰 movie → 只用 that（回第⑤关）。A 死于最高级场合不用 which；B / D 死于先行词指物。"
+          },
+          {
+            "stem": "I'll never forget the time ________ we worked on the farm.",
+            "options": [
+              "when",
+              "which",
+              "where",
+              "who"
+            ],
+            "answer": "A. when",
+            "explain": "time 是时间、从句 we worked on the farm 完整 → when（回第⑥关）。B 死于从句不缺宾语；C 死于地点状语已经有人（on the farm）；D 死于指物。"
+          },
+          {
+            "stem": "This is the school ________ we visited last year.",
+            "options": [
+              "where",
+              "that",
+              "when",
+              "whose"
+            ],
+            "answer": "B. that",
+            "explain": "visit 缺宾语 → 关系代词 that（回第⑧关）。别看到 school 就选 where——对比 the school where I studied（从句完整）才是关系副词。"
+          },
+          {
+            "stem": "Can you tell me the reason ________ you were late this morning?",
+            "options": [
+              "why",
+              "which",
+              "when",
+              "whom"
+            ],
+            "answer": "A. why",
+            "explain": "reason 的专属搭档 → why 作原因状语（回第⑥⑦关），= for which。B / C 死于从句 you were late 不缺主语宾语；D 死于指物。"
+          }
+        ]
+      }
+    ]
+  }
+}

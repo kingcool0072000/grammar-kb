@@ -1,0 +1,554 @@
+{
+  "meta": {
+    "topic_id": "lecture-45-object-clause",
+    "title": "第45讲 · 宾语从句 自学",
+    "subtitle": "自学一遍再上课：热身认识宾语从句 → that 只搬句子不干活 → whether/if 的四扇独占门 → 疑问词上岗作成分 → 疑问语序扶正 → 主过从必过主现从不限 → 否定转移 → 综合验收（共 8 关 · 55 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "intro",
+        "title": "① 热身：什么是宾语从句",
+        "explain": "<p>先建立一个大图景：<b>从句</b>就是一个「降级的句子」——它自己有主语有谓语，本来是个完整的句子，但整个跑进另一个句子里，当其中的一个零件。当什么零件，就叫什么从句；当<b>宾语</b>的，就叫<b>宾语从句</b>。</p><p>定义：在复合句中，由<b>一个句子</b>充当宾语，这个句子叫做宾语从句。宾语从句常位于<b>及物动词</b>或<b>介词</b>之后，作宾语。</p><pre class=\"topic-formula\">I know that the Water Festival is really fun.\n主语 + 谓语 + [连接词 + 从句自己的主语 + 从句自己的谓语]\n　　　　　　　└─────────── 宾语从句 ───────────┘</pre><p>宾语从句在句中有三个岗位：</p><table><tr><th>岗位</th><th>讲义例句</th><th>翻译</th></tr><tr><td><b>作动词（短语）的宾语</b></td><td>I know <b>that the Water Festival is really fun</b>.</td><td>我知道泼水节真的很有趣。</td></tr><tr><td><b>作介词的宾语</b></td><td>It depends on <b>whether it will be fine tomorrow</b>.</td><td>这取决于明天天气是否晴朗。</td></tr><tr><td><b>作系表结构（形容词）后的宾语</b></td><td>Mary is glad <b>that she was praised</b>.</td><td>Mary 很高兴她被表扬了。</td></tr></table><p>学好宾语从句只要抓三件事：<b>引导词选谁</b>（第②③④关）、<b>语序怎么排</b>（第⑤关）、<b>时态怎么配</b>（第⑥⑦关）。每关吃透一件事，最后综合验收见真章。</p><p>自学方法：先读讲解 → 盖住答案做题 → 点「先想再看答案」核对 → 全懂了点「我学完了」进下一关。</p>",
+        "qs_label": "热身自测（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "一个句子叫做「宾语从句」，是因为它在复合句中充当什么成分？",
+            "options": [
+              "主语",
+              "宾语",
+              "定语",
+              "状语"
+            ],
+            "answer": "B. 宾语",
+            "explain": "由一个句子充当<b>宾语</b>，这个句子就是宾语从句。当主语叫主语从句、当定语叫定语从句——名字就是岗位说明书。"
+          },
+          {
+            "stem": "I know that the Water Festival is really fun. 这句中的宾语从句是？",
+            "options": [
+              "I know",
+              "that",
+              "the Water Festival is really fun",
+              "really fun"
+            ],
+            "answer": "C. the Water Festival is really fun",
+            "explain": "从句 = that 加上它带的整句话（有自己完整的主谓），整体作 know 的宾语。B 只是引导词一个人，从句要连主谓一起算。"
+          },
+          {
+            "stem": "It depends on whether it will be fine tomorrow. 从句 whether it will be fine tomorrow 作的是？",
+            "options": [
+              "动词 depends 的宾语",
+              "介词 on 的宾语",
+              "主语 It",
+              "表语"
+            ],
+            "answer": "B. 介词 on 的宾语",
+            "explain": "宾语从句不只跟在动词后，还能跟在<b>介词</b>后——这里它作介词 on 的宾语。这是宾语从句三大岗位之一，第③关还会用到这个知识点。"
+          },
+          {
+            "stem": "Mary is glad that she was praised. that 从句的岗位是？",
+            "options": [
+              "作动词的宾语",
+              "作介词的宾语",
+              "作系表结构（is glad）后的宾语",
+              "作主语"
+            ],
+            "answer": "C. 作系表结构（is glad）后的宾语",
+            "explain": "is 是系动词、glad 是表语，从句跟在形容词 glad 后面——系表结构后的宾语，讲义列的第三大岗位。"
+          },
+          {
+            "stem": "宾语从句常位于哪两类词之后？",
+            "options": [
+              "及物动词或介词",
+              "不及物动词或形容词",
+              "冠词或代词",
+              "连词或副词"
+            ],
+            "answer": "A. 及物动词或介词",
+            "explain": "讲义定义原文：宾语从句常位于<b>及物动词或介词</b>之后，作宾语。know 后面、depend on 里面、glad 后面，都能挂从句。"
+          },
+          {
+            "stem": "下面哪一句含有宾语从句？",
+            "options": [
+              "She likes English very much.",
+              "I believe that he will make a great success in his career.",
+              "He runs very fast.",
+              "It depends on the weather."
+            ],
+            "answer": "B. I believe that he will make a great success in his career.",
+            "explain": "A / C / D 都只有一个主谓结构，是简单句；B 中 that 引导的整句话挂在 believe 后面作宾语——「句子里套句子」，这就是宾语从句。"
+          }
+        ],
+        "wrong_qs": []
+      },
+      {
+        "key": "that",
+        "title": "② 引导词 that：只搬句子、不干活",
+        "explain": "<p>第一梯队引导词：<b>that / whether / if</b>。它们只负责把从句「接进」主句，自己<b>不在从句中作任何成分</b>。</p><p><b>that 无实义</b>：从句本身是个完整的陈述句（不缺任何成分），that 只管把它整个搬进主句当宾语。</p><p>两个讲义原句，注意括号：</p><p>I believe <b>(that)</b> he will make a great success in his career. 我相信他会在事业上取得巨大成功。</p><p>He said <b>(that)</b> he couldn't finish his work before dusk. 他说黄昏之前他完不成任务。</p><p>注意：在<b>口语和非正式书面语</b>中，that 经常被<b>省略</b>；但在正式或书面语境中，保留 that 可以增强句子的清晰度。省不省，语法都成立、意思都不变。</p><p><b>怎么想到用 that</b>：把从句单独拿出来看——句子完整吗？主谓宾都齐 + 意思是陈述（不是「是否」、不是提问）→ 用 that。</p>",
+        "qs_label": "课堂练习：that 引导陈述内容",
+        "general_qs": [
+          {
+            "stem": "She told me ________ she had passed the exam with flying colors.",
+            "options": [
+              "that",
+              "whether",
+              "if",
+              "what"
+            ],
+            "answer": "A. that",
+            "explain": "从句 she had passed the exam with flying colors 自己主谓齐全、是陈述内容 → that。B / C 死于意思——whether/if 是「是否」，这里讲的是「考得很好」这个事实，不问是非；D 死于 what 必须在从句中作成分，而从句不缺任何成分。"
+          },
+          {
+            "stem": "I believe that he will ________ ________ ________ in his career.（取得巨大成功，3 词）",
+            "answer": "make a great success",
+            "explain": "讲义原句。that 引导 believe 的宾语从句；will 后接动词原形 make，make a great success 取得巨大成功。"
+          },
+          {
+            "stem": "He said (that) he couldn't finish his work ________ ________.（黄昏之前，2 词）",
+            "answer": "before dusk",
+            "explain": "讲义原句。括号里的 (that) 标出「可省略」；before dusk 黄昏之前，时间短语放句末。主句 said 过去 → 从句 couldn't 也是过去（第⑥关细讲）。"
+          },
+          {
+            "stem": "I think (that) you are right. 口语里 that 可以省略。正式书面语为什么常保留 that？",
+            "options": [
+              "语法规定必须保留，否则是错句",
+              "保留 that 让句子层次更清晰",
+              "省略后句子就变成疑问句",
+              "保留 that 会改变句子意思"
+            ],
+            "answer": "B. 保留 that 让句子层次更清晰",
+            "explain": "讲义注意点：口语和非正式书面语中常省略，正式或书面语境保留 that 可以增强句子的清晰度。省不省都合法、意思都不变——A / D 死于「必须保留」和「改变意思」。"
+          },
+          {
+            "stem": "that 引导宾语从句时，它在从句中充当什么成分？",
+            "options": [
+              "主语",
+              "宾语",
+              "不作任何成分，只起连接作用",
+              "定语"
+            ],
+            "answer": "C. 不作任何成分，只起连接作用",
+            "explain": "that 是「搬运工」：只负责把完整的句子搬进主句，自己不在从句里顶任何岗位。需要在从句里「上岗干活」的引导词是另一家——第④关见。"
+          }
+        ],
+        "wrong_qs": []
+      },
+      {
+        "key": "whether-if",
+        "title": "③ 引导词 whether / if：表「是否」，if 有四扇进不去的门",
+        "explain": "<p>whether 和 if 都意为<b>「是否」</b>，引导一个「没给出答案的句子」。一般情况下两者<b>可以互换</b>：</p><p>Nobody knows <b>whether/if</b> he likes school. 没有人知道他是否喜欢上学。</p><p>We're not sure <b>whether/if</b> the train will be on time tomorrow. 我们不确定明天火车是否会准时。</p><p>但有<b>四扇门只有 whether 进得去</b>：</p><table><tr><th>场合</th><th>讲义例句</th></tr><tr><td><b>① 与 or not 连用</b></td><td>Let me know <b>whether</b> you can come <b>or not</b>. / We need to decide <b>whether</b> we should accept the offer <b>or not</b> by Friday.</td></tr><tr><td><b>② 作介词的宾语</b></td><td>We are interested in <b>whether</b> you will attend the meeting. / Our travel plans depend on <b>whether</b> the weather is good enough to fly.</td></tr><tr><td><b>③ 动词不定式前</b></td><td>I don't know <b>whether</b> to go. / I'm not sure <b>whether</b> to stay at home or go out for a walk.</td></tr><tr><td><b>④ 从句置于句首</b></td><td><b>Whether</b> this is true or not, I wonder. / <b>Whether</b> he will join in the camp, I'm not sure.</td></tr></table><pre class=\"topic-formula\">只用 whether 的四扇门：\nor not 连用 · 介词后面 · to do 前面 · 从句领跑句首</pre><p>做题时先扫一眼：句子里有 or not？空格前是介词？空格后是不定式 to？从句跑到句首了？——占任何一条，锁死 whether；一条不占，whether / if 随便用。</p>",
+        "qs_label": "课堂练习：whether / if 四扇门",
+        "general_qs": [
+          {
+            "stem": "We're not sure whether/if the train ________ ________ ________ ________ tomorrow.（会准时，4 词）",
+            "answer": "will be on time",
+            "explain": "whether/if 在这里通用；从句按实际情况用将来时 will be on time——说明天火车「是否会准时」。be on time 准时（时态呼应第⑥关细讲）。"
+          },
+          {
+            "stem": "I'm thinking of ________ we will visit the farm tomorrow.",
+            "options": [
+              "if",
+              "which",
+              "whether",
+              "what"
+            ],
+            "answer": "C. whether",
+            "explain": "空格紧跟介词 of →「介词的宾语从句」这扇门 only whether。A 死于 if 进不了介词门；D 死于 what 必须在从句中作成分（从句 we will visit the farm 不缺）；B 意思不通。"
+          },
+          {
+            "stem": "I'm hesitating ________ to apply for the job or not.",
+            "options": [
+              "if",
+              "which",
+              "whether",
+              "what"
+            ],
+            "answer": "C. whether",
+            "explain": "一句话撞了两扇门：空格在不定式 to apply 前 + 与 or not 连用——都锁死 whether。if 没有这两种用法，B / D 意思不通。"
+          },
+          {
+            "stem": "Let me know ________ you can come ________ ________.（让我知道你能否来。第一空填引导词，后两空填 or not）",
+            "answer": "whether, or not",
+            "explain": "whether … or not 连用。or not 一出现，whether 必须出场，if 直接出局——这是四扇门里的第一扇。"
+          },
+          {
+            "stem": "We are interested in ________ you will attend the meeting.（我们对你是否会参加会议感兴趣）",
+            "answer": "whether",
+            "explain": "介词 in 后面的宾语从句 → 只能 whether，不能用 if。讲义原句，介词门的标准考法。"
+          },
+          {
+            "stem": "Our travel plans ________ ________ ________ the weather is good enough to fly.（取决于是否，3 词）",
+            "answer": "depend on whether",
+            "explain": "三个空连考两点：depend on（取决于，介词短语）+ whether（介词 on 后的宾语从句）。if 依旧进不了介词的门。"
+          },
+          {
+            "stem": "I don't know ________ ________ ________.（我不知道是否该去，3 词）",
+            "answer": "whether to go",
+            "explain": "空格在不定式 to go 前面 → 只能 whether：whether to go。if 不能直接带不定式——这是四扇门里的第三扇。"
+          },
+          {
+            "stem": "下面哪种情况 whether 和 if 可以互换？",
+            "options": [
+              "介词后面的宾语从句中",
+              "与 or not 连用时",
+              "动词不定式前",
+              "从句跟在动词 know 后，如 Nobody knows ________ he likes school."
+            ],
+            "answer": "D. 从句跟在动词 know 后，如 Nobody knows ________ he likes school.",
+            "explain": "A / B / C 是 whether 的独占门；D 从句跟在动词后面、无 or not、不置句首——四扇门一条不占，whether / if 通用（讲义原句 Nobody knows whether/if he likes school.）。"
+          }
+        ],
+        "memory": {
+          "front": "if 进不去的四扇门是哪四扇？什么场合只能用 whether？",
+          "back": "口诀：or not 牵手、介词身后、to do 前面、句首领跑——四处只用 whether\n① Let me know whether you can come or not.（or not 连用）\n② We are interested in whether you will attend.（介词后）\n③ I don't know whether to go.（不定式前）\n④ Whether this is true or not, I wonder.（从句置句首）\n四扇门之外，whether / if 通用"
+        },
+        "wrong_qs": []
+      },
+      {
+        "key": "wh-words",
+        "title": "④ 连接代词 / 连接副词：要「上岗干活」的引导词",
+        "explain": "<p>第二梯队引导词要<b>上岗干活</b>：<b>连接代词</b> who / whom / whose / what / which 在从句中充当<b>主语、宾语、表语、定语</b>等成分；<b>连接副词</b> when / where / how / why 充当<b>状语</b>。它们都<b>不可省略</b>——这和「只搬运、不干活」的 that 是本质区别。</p><table><tr><th>引导词</th><th>从句中岗位</th><th>讲义例句</th></tr><tr><td><b>who</b></td><td>主语 / 宾语 / 表语</td><td>Do you know <b>who</b> is in charge of the company?（主语）/ The police are investigating <b>who</b> the suspect is.（表语）</td></tr><tr><td><b>whom</b></td><td>宾语</td><td>Do you know <b>whom</b> Jack is talking to?（宾语）</td></tr><tr><td><b>whose</b></td><td>定语</td><td>I wonder <b>whose</b> schoolbag it is.（谁的→修饰 schoolbag）</td></tr><tr><td><b>what</b></td><td>主语 / 宾语 / 表语</td><td>We never know <b>what</b> will happen in the future.（主语）/ Can you tell me <b>what</b> you need for the project?（宾语）</td></tr><tr><td><b>which</b></td><td>主语 / 宾语 / 定语</td><td>I want to know <b>which</b> is the best solution.（主语）/ Can you tell me <b>which</b> boy is your son?（定语）</td></tr><tr><td><b>when / where / how / why</b></td><td>时间 / 地点 / 方式 / 原因状语</td><td>I don't know <b>when</b> we will meet again. / Do you know <b>where</b> Mr. Brown lives? / The police asked me <b>how</b> the accident happened.</td></tr></table><p><b>选词思路</b>：把从句单独拿出来，看它缺什么岗位——缺「人 / 物」（主语、宾语、表语、定语）→ 找连接代词；缺「时间 / 地点 / 原因 / 方式」（状语）→ 找连接副词。从句什么都不缺的完整句，才轮到 that 搬运。</p>",
+        "qs_label": "课堂练习：wh- 引导词选岗",
+        "general_qs": [
+          {
+            "stem": "I wonder ________ turn it is to do the dishes tonight.",
+            "options": [
+              "who",
+              "whom",
+              "why",
+              "whose"
+            ],
+            "answer": "D. whose",
+            "explain": "空格后面有名词 turn（今晚轮到谁洗碗的「轮次」）→ 修饰名词的岗位是<b>定语</b> → whose（轮到<b>谁的</b>班）。who / whom 只顶主语宾语表语岗、不能直接贴着名词；why 是副词顶状语岗。"
+          },
+          {
+            "stem": "Do you know who ________ ________ ________ the company?（负责，3 词）",
+            "answer": "is in charge of",
+            "explain": "从句缺主语（谁负责？）→ who 顶上作主语，后面直接跟谓语 is in charge of（负责）。注意 who 后面是谓语、不是疑问语序——第⑤关细讲这个。"
+          },
+          {
+            "stem": "I wonder ________ ________ it is.（这是谁的书包，2 词）",
+            "answer": "whose schoolbag",
+            "explain": "whose 作定语修饰 schoolbag：whose schoolbag it is。whose 必须紧跟它修饰的名词。"
+          },
+          {
+            "stem": "We never know ________ ________ ________ in the future.（未来会发生什么，3 词）",
+            "answer": "what will happen",
+            "explain": "从句缺主语（什么事情会发生）→ what 顶主语位：what will happen。what 在从句中作主语，不可省略。"
+          },
+          {
+            "stem": "The police are investigating who ________ ________ ________.（嫌疑犯是谁，3 词）",
+            "answer": "the suspect is",
+            "explain": "who 作表语（嫌疑犯＝谁）。注意语序：who + the suspect（主语）+ is——陈述语序，不能写成 who is the suspect。who 问的是 the suspect 的身份，所以主语要排在 is 前面（第⑤关的规则已经在这埋伏了）。"
+          },
+          {
+            "stem": "The scientists didn't know why the penguins were lost. why 在从句中充当什么成分？",
+            "options": [
+              "主语",
+              "宾语",
+              "原因状语",
+              "定语"
+            ],
+            "answer": "C. 原因状语",
+            "explain": "连接副词管状语：why 交代「为什么消失」→ 原因状语。从句自己的主语是 the penguins，why 只负责说明原因，不顶主宾岗位。"
+          },
+          {
+            "stem": "Do you know where Mr. Brown ________?（住，1 词）",
+            "answer": "lives",
+            "explain": "where 作地点状语；从句主语 Mr. Brown 三单 → lives。where + 主语 + 谓语，标准的陈述语序。"
+          },
+          {
+            "stem": "I don't know ________ he called.（我不知道他给谁打了电话）空格里填 who 或 whom 都可以，因为引导词在从句中作？",
+            "options": [
+              "主语",
+              "宾语",
+              "表语",
+              "状语"
+            ],
+            "answer": "B. 宾语",
+            "explain": "讲义原句 I don't know who/whom he called.——he 是从句主语，called 缺宾语 → 引导词顶宾语位。whom 是宾格（正式），口语里常用 who 顶替；两者作宾语时通用，这正说明看的是「岗位」不是词形。"
+          }
+        ],
+        "memory": {
+          "front": "that 和 wh- 引导词的本质区别是什么？从句缺什么选什么？",
+          "back": "that：只起连接作用，不在从句中作任何成分，口语可省略\nwh- 词（who/whom/whose/what/which + when/where/how/why）：必须在从句中顶岗位（主语/宾语/表语/定语/状语），不可省略\n选词：从句缺人/物（主宾表定）→ 连接代词；缺时间/地点/原因/方式 → 连接副词"
+        },
+        "wrong_qs": []
+      },
+      {
+        "key": "order",
+        "title": "⑤ 语序：疑问句进从句，先「扶正」成陈述语序",
+        "explain": "<p>宾语从句第一大坑：<b>语序</b>。规则只有两条：</p><p><b>规则一</b>：陈述句作宾语从句，<b>仍用原陈述句语序</b>——Everyone should use public transportation. → I think that <b>everyone should use public transportation</b>. 原样搬进来就行。</p><p><b>规则二</b>：疑问句作宾语从句，<b>疑问语序必须改成陈述语序</b>——</p><pre class=\"topic-formula\">What is your job?　（疑问语序：is 跑在主语前）\n→ Can you tell me what your job is?　（扶正：what + 主语 + 动词）</pre><p><b>扶正三步</b>：① 疑问词站最前；② be 动词 / 助动词退回主语后面；③ do / does / did 在从句里下岗（时态信息由从句谓语自己扛）。</p><p>Did they go fishing? → I ask them <b>if they went fishing</b>.（did 消失，went 扛回过去时）</p><p><b>一个易冤案</b>：Do you know <b>who is in charge of the company</b>? 这句不是语序错误——who 自己就是从句主语，「疑问词 + 谓语」本来就是陈述语序。</p>",
+        "qs_label": "课堂练习：语序扶正",
+        "general_qs": [
+          {
+            "stem": "Can you tell me ________?",
+            "options": [
+              "when will you come back",
+              "when you will come back",
+              "when would you come back",
+              "when you would come back"
+            ],
+            "answer": "B. when you will come back",
+            "explain": "双重筛选：①语序——从句必须陈述语序，you 要站在 will 前，A / C 死于疑问语序残留；②时态——主句 Can you tell me 是现在时，从句按实际情况用将来 will，D 死于 would。两道筛子一起过，只剩 B。"
+          },
+          {
+            "stem": "Could you tell me ________?",
+            "options": [
+              "when will you come back",
+              "when you will come back",
+              "when would you come back",
+              "when you would come back"
+            ],
+            "answer": "B. when you will come back",
+            "explain": "本关坑王：Could you tell me 的 could <b>不是过去</b>，是比 can 更客气的委婉说法，时间还是「现在」。所以从句照样能用将来时 will。A / C 死于疑问语序；D 死于把 could 当成过去时、连累从句退过去。同类：Might I…? 的 might 也只管客气。"
+          },
+          {
+            "stem": "What is your job? → Can you tell me ________ ________ ________ ________?（你的工作是什么，4 词）",
+            "answer": "what your job is",
+            "explain": "扶正三步实战：what 站最前；your job（主语）归位；is 退到句尾。原疑问语序 What is your job 里「is 在主语前」必须改掉。"
+          },
+          {
+            "stem": "Did they go fishing? → I ask them ________ ________ ________ ________.（是否去钓鱼了，4 词）",
+            "answer": "if they went fishing",
+            "explain": "一般疑问句进从句两步走：①加 if / whether 表「是否」（这里填 if，whether 也可以）；②did 下岗、went 扛回过去式、they 归位——陈述语序。"
+          },
+          {
+            "stem": "下面哪一句完全正确？",
+            "options": [
+              "I don't know where is the station.",
+              "I don't know where the station is.",
+              "I don't know the station where is.",
+              "I don't know where the station."
+            ],
+            "answer": "B. I don't know where the station is.",
+            "explain": "标准陈述语序：where + the station（主语）+ is（动词收尾）。A 死于 is 跑到主语前（疑问语序残留）；C 死于语序全乱；D 死于从句没有谓语动词。"
+          },
+          {
+            "stem": "Do you know who is in charge of the company? 这句 who 后面直接跟 is，为什么没错？",
+            "options": [
+              "这是固定例外，要死记",
+              "who 在从句中作主语，「疑问词 + 谓语」本身就是陈述语序",
+              "疑问句作宾语从句可以不改语序",
+              "is 是助动词，位置随意"
+            ],
+            "answer": "B. who 在从句中作主语，「疑问词 + 谓语」本身就是陈述语序",
+            "explain": "who 一词两职：既是引导词又是从句主语，后面自然直接跟谓语。对照第④关例句 The police are investigating who the suspect is.——who 作表语时，主语 the suspect 就得排在 is 前面。看引导词在从句中顶什么岗，才知道语序长什么样。"
+          },
+          {
+            "stem": "The police asked me how ________ ________ ________.（事故是怎么发生的，3 词）",
+            "answer": "the accident happened",
+            "explain": "how + 主语 the accident + happened——陈述语序。原疑问句 How did the accident happen? 里的 did 进从句后下岗，过去时由 happened 自己扛。"
+          }
+        ],
+        "memory": {
+          "front": "疑问句变宾语从句，语序怎么处理？扶正三步是什么？",
+          "back": "疑问词打头 + 主语 + 谓语（陈述语序）\nWhat is your job? → Can you tell me what your job is?\nDid they go fishing? → I ask them if they went fishing.\n扶正三步：①疑问词站最前 ②be/助动词退回主语后 ③do/does/did 下岗\nwho/what 作从句主语时，疑问词+谓语本来就是陈述语序"
+        },
+        "wrong_qs": []
+      },
+      {
+        "key": "tense",
+        "title": "⑥ 时态呼应：主过从必过，主现从不限",
+        "explain": "<p>宾语从句第二大坑：<b>时态</b>。口诀九个字：<b>主过从必过，主现从不限</b>，再加一句「真理永现在」。</p><pre class=\"topic-formula\">主句现在/将来/祈使 → 从句按实际情况自选时态\n主句过去时         → 从句退到相应的过去时态\n从句是客观真理     → 永远一般现在时</pre><table><tr><th>情形</th><th>讲义例句</th></tr><tr><td><b>① 主现从不限</b>：主句是一般现在 / 进行 / 将来 / 完成时或祈使句，从句按自己事实选时态</td><td>She says that she <b>works</b> from Monday to Friday.（班表事实→一般现在）/ I have known that he <b>worked</b> here five years ago.（ago→过去）</td></tr><tr><td><b>② 主过从必过</b>：主句是一般过去 / 过去进行时，从句要用相应的过去时态</td><td>The policeman asked the boy where he <b>lived</b>. / Kim was thinking about when he <b>would go</b> abroad for further study at that moment.</td></tr><tr><td><b>③ 客观真理</b>：科学事实、自然规律不受主句影响</td><td>He said that light <b>travels</b> much faster than sound. / The teacher explained that water <b>boils</b> at 100 degrees Celsius.</td></tr></table><p><b>记法</b>：主句是过去，从句整体「往回退一格」——现在 → 过去、将来（will）→ 过去将来（would）；唯独科学事实免票：光永远比声快，水永远在 100 摄氏度沸腾。</p>",
+        "qs_label": "课堂练习：时态呼应",
+        "general_qs": [
+          {
+            "stem": "She says that she ________ from Monday to Friday.（work 适当形式）",
+            "answer": "works",
+            "explain": "主句 says 现在时 → 主现从不限，从句按实际选：周一到周五上班是习惯性事实 → 一般现在时，主语 she 三单 → works。"
+          },
+          {
+            "stem": "I have known that he ________ here five years ago.（work 适当形式）",
+            "answer": "worked",
+            "explain": "主句现在完成时属于「现在」阵营 → 从句只听事实的：five years ago 锁死一般过去时 → worked。从句时态不跟主句走、只跟事实走——这就是「主现从不限」。"
+          },
+          {
+            "stem": "The policeman asked the boy where he ________.（live 适当形式）",
+            "answer": "lived",
+            "explain": "主句 asked 过去时 → 主过从必过 → lived。「住哪儿」这个状态是过去被问到的，用一般过去时。"
+          },
+          {
+            "stem": "Kim was thinking about when he ________ ________ abroad for further study at that moment.（go 适当形式，2 词）",
+            "answer": "would go",
+            "explain": "主句 was thinking 过去进行时 → 从句退格：站在过去看将来，用过去将来时 would go。at that moment 也提醒整个场景都在过去的时间轴上。"
+          },
+          {
+            "stem": "He said that light ________ much faster than sound.（travel 适当形式）",
+            "answer": "travels",
+            "explain": "光比声传播快是客观真理 → 免票，永远一般现在时 travels。写成 travelled 就掉进本关最大的陷阱——真理不跟着主句退格。"
+          },
+          {
+            "stem": "The teacher explained that water ________ at 100 degrees Celsius.（boil 适当形式）",
+            "answer": "boils",
+            "explain": "水在 100 摄氏度沸腾——科学事实 → boils。主句 explained 再「过去」，也改变不了自然规律的时态。"
+          },
+          {
+            "stem": "The girl made up her mind that ________ to catch up with others.",
+            "options": [
+              "she will study harder",
+              "she would study harder",
+              "she is going to study harder",
+              "she studies harder"
+            ],
+            "answer": "B. she would study harder",
+            "explain": "made up her mind（下定决心）是过去 → 主过从必过 → would study。A / C / D 死于时态留在现在，没跟着主句一起退格。"
+          },
+          {
+            "stem": "主句是过去时，从句什么情况下可以不用过去时态？",
+            "options": [
+              "从句内容是客观真理或科学事实",
+              "从句比较短",
+              "从句主语是第三人称",
+              "任何时候都可以"
+            ],
+            "answer": "A. 从句内容是客观真理或科学事实",
+            "explain": "唯一的豁免是客观真理：He said that light travels much faster than sound.——自然规律不跟主句的时态跑。"
+          }
+        ],
+        "memory": {
+          "front": "宾语从句的时态口诀是什么？客观真理怎么办？",
+          "back": "主过从必过：主句过去时，从句退过去档（asked → lived / would go）\n主现从不限：主句现在/将来，从句按事实自选（says → works；ago → worked）\n真理永现在：He said that light travels much faster than sound.\n退格路线：现在→过去，will→would"
+        },
+        "wrong_qs": []
+      },
+      {
+        "key": "negative",
+        "title": "⑦ 否定转移：否定从从句「搬家」到主句",
+        "explain": "<p>第三大坑看着玄，其实规则很窄：<b>否定转移</b>。</p><p><b>触发条件（两条同时满足）</b>：主句主语是<b>第一人称 I / We</b> + 谓语是表「料想、猜测」的动词 <b>think / believe / suppose / imagine / expect</b> 等。</p><pre class=\"topic-formula\">I don't think they will agree to the plan.\n字面：我不认为「他们会同意」＝ 我「认为他们不会同意」\n否定的真身在从句，形式上却写在主句——否定搬了家</pre><p>讲义原句：I don't think they will agree to the plan. 我认为他们不会同意这个计划。/ I don't believe that he broke the glass on purpose. 我不相信他是故意打碎玻璃的。</p><p><b>反意疑问句联动考点</b>：否定转移后，反意疑问部分<b>跟从句走</b>，且「前否后肯」——</p><p>I don't believe the book will make a big difference to me, <b>will it</b>?（前半句形式上有 don't，算否定句 → 尾巴用肯定 will it，问的是从句 the book will…）</p><p><b>记法</b>：五兄弟（think / believe / suppose / imagine / expect）+ 第一人称，否定就搬家；反意疑问不听主句的、只听从句的。</p>",
+        "qs_label": "课堂练习：否定转移与反意疑问",
+        "general_qs": [
+          {
+            "stem": "________ ________ ________ they will agree to the plan.（我认为他们不会同意，3 词）",
+            "answer": "I don't think",
+            "explain": "think 是料想动词、主语 I 第一人称 → 否定转移：把「不会同意」的否定搬到 think 身上，写成 I don't think。从句 they will agree 保持肯定模样。"
+          },
+          {
+            "stem": "________ ________ ________ that he broke the glass on purpose.（我不相信他是故意打碎玻璃的，3 词）",
+            "answer": "I don't believe",
+            "explain": "believe 和 think 同门 → I don't believe that he broke the glass on purpose. 中文说「我不相信他打碎了」，英文把否定写在 believe 上——这就是否定转移。"
+          },
+          {
+            "stem": "I don't believe the book will make a big difference to me, ________?",
+            "options": [
+              "do I",
+              "don't I",
+              "will it",
+              "won't it"
+            ],
+            "answer": "C. will it",
+            "explain": "反意疑问「跟从句走」：真正被否定的是从句 the book will make… → 尾巴问从句 → will it。A / B 死于错跟主句主语 I；D 死于 won't——前半句形式上已有 don't（前否），尾巴必须肯定。"
+          },
+          {
+            "stem": "I think he is right, ________?",
+            "options": [
+              "is he",
+              "isn't he",
+              "do I",
+              "don't I"
+            ],
+            "answer": "B. isn't he",
+            "explain": "这次主句没有否定 → 前肯后否；尾巴照样跟从句（he is right）→ isn't he。和上一题配对记：反意疑问永远盯从句，主句有没有否定只决定前肯后否还是前否后肯。"
+          },
+          {
+            "stem": "否定转移要哪两个条件同时满足？",
+            "options": [
+              "主语是第一人称 I/We + 谓语是 think/believe/suppose/imagine/expect 等料想动词",
+              "主句必须是过去时",
+              "从句必须是疑问句",
+              "只要句子里有 think 就行"
+            ],
+            "answer": "A. 主语是第一人称 I/We + 谓语是 think/believe/suppose/imagine/expect 等料想动词",
+            "explain": "两个条件缺一不可：第一人称主语 + 料想猜测类动词。He doesn't think…（第三人称）不属于否定转移——它的否定本来就在主句，从句否定与否照实写。"
+          }
+        ],
+        "memory": {
+          "front": "否定转移的两个条件？反意疑问句跟谁走？",
+          "back": "条件：主语 I/We + think/believe/suppose/imagine/expect → 否定搬到主句\nI don't think they will agree. ＝ 我认为他们不会同意\n反意疑问跟从句走：I don't believe…, will it?（前否后肯）\nI think…, isn't he?（前肯后否）"
+        },
+        "wrong_qs": []
+      },
+      {
+        "key": "final",
+        "title": "⑧ 综合验收：七关考点一锅端",
+        "explain": "<p>最后一关，不讲新东西——把七关考点混在一起验收：<b>that 只搬运</b> · <b>whether 四扇门</b> · <b>wh- 要上岗</b> · <b>语序扶正</b> · <b>主过从必过</b> · <b>真理永现在</b> · <b>否定搬家</b>。做错哪题，就回哪一关翻讲解和口诀卡。</p>",
+        "qs_label": "综合验收（错哪题回哪关）",
+        "general_qs": [
+          {
+            "stem": "Do you know ________ or not the concert has been put off?（回第③关）",
+            "options": [
+              "if",
+              "whether",
+              "that",
+              "what"
+            ],
+            "answer": "B. whether",
+            "explain": "or not 就贴在旁边 → 与 or not 连用是 if 进不去的门 → whether。A 死于 if 不能配 or not；C 死于意思不通（这里是问「是否延期」，不是陈述）；D 死于从句不缺 what 的岗位。"
+          },
+          {
+            "stem": "Could you tell me ________?（回第⑤关）",
+            "options": [
+              "where does Tom live",
+              "where Tom lives",
+              "where did Tom live",
+              "where Tom live"
+            ],
+            "answer": "B. where Tom lives",
+            "explain": "两关连考：①could 委婉不是过去，按「现在」处理；②陈述语序 where + Tom + lives。A / C 死于疑问语序残留；D 死于 Tom 三单 live 没加 s。"
+          },
+          {
+            "stem": "My mother told me that the sun ________ in the east.（rise 适当形式）（回第⑥关）",
+            "answer": "rises",
+            "explain": "太阳从东边升起——客观真理 → 永远一般现在时，主语 the sun 三单 → rises。主句 told 是过去也管不着真理。"
+          },
+          {
+            "stem": "He asked me what I ________ at eight last night.（do 适当形式）（回第⑥关）",
+            "answer": "was doing",
+            "explain": "主句 asked 过去 → 主过从必过；昨晚八点那一刻「正在进行」→ 过去进行时 was doing。「退过去档」要退到正确的档位。"
+          },
+          {
+            "stem": "I don't suppose he will come on time, ________?（回第⑦关）",
+            "options": [
+              "do I",
+              "don't I",
+              "will he",
+              "won't he"
+            ],
+            "answer": "C. will he",
+            "explain": "suppose 是五兄弟之一、主语 I 第一人称 → 否定转移成立，前半句算否定 → 尾巴用肯定、跟从句（he will come）→ will he。A / B 死于错盯主句。"
+          },
+          {
+            "stem": "Could you tell me ________ dictionary this is?（回第④关）",
+            "options": [
+              "who",
+              "whom",
+              "whose",
+              "which"
+            ],
+            "answer": "C. whose",
+            "explain": "空格后面有名词 dictionary → 修饰名词的定语岗 → whose（这是<b>谁的</b>词典）。A / B 顶不了定语岗；D 变成「哪本词典」不合语境。顺带检查语序：this is 陈述语序，没错。"
+          },
+          {
+            "stem": "I believe ________ our team will win the game.（填引导词）（回第②关）",
+            "answer": "that",
+            "explain": "从句 our team will win the game 主谓宾齐全、是陈述内容 → that（口语可省略）。从句不缺成分，不能填 what；不是问「是否」，不填 whether / if。"
+          },
+          {
+            "stem": "The teacher asked the boy ________.（回第⑤⑥关）",
+            "options": [
+              "why is he late",
+              "why he was late",
+              "why was he late",
+              "why he is late"
+            ],
+            "answer": "B. why he was late",
+            "explain": "两关连考：①语序扶正——why + he（主语）+ was，A / C 死于疑问语序残留；②主过从必过——asked 过去 → 从句退过去 was，D 死于时态没退格。"
+          }
+        ],
+        "wrong_qs": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,451 @@
+{
+  "meta": {
+    "topic_id": "lecture-39-exclamation",
+    "title": "第39讲 · 感叹句 自学",
+    "subtitle": "自学一遍再上课：热身认识感叹句 → What 型三架子 → How 型三架子 → 一眼定 What 还是 How → What/What a/What an 三选一 → 陈述句变感叹句三步法 → 互换与省略形式 → 综合验收（共 8 关 · 44 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "intro",
+        "title": "① 热身：感叹句是什么",
+        "explain": "<p>感叹句用来表示<b>喜怒哀乐等强烈感情</b>。表现形式很灵活：可以是完整的句子，也可以是一个短语甚至一个单词——<b>Fire!</b>（失火了！）本身就是一个感叹句。</p><p>主力形式由 <b>what</b> 或 <b>how</b> 引导，分工一刀切：</p><table><tr><th>引导词</th><th>修饰谁</th><th>例句</th></tr><tr><td><b>What</b></td><td>名词（名词短语）</td><td>What a kind girl she is! / What bad weather it is!</td></tr><tr><td><b>How</b></td><td>形容词、副词或句子</td><td>How delicious the food is! / How fast they run!</td></tr></table><p>本讲路线：What 型三架子 → How 型三架子 → 一眼定 What/How → a/an 精选 → 三步法变换 → 互换与省略 → 综合验收。</p><p>自学方法：先读讲解 → 盖住答案做题 → 点「先想再看答案」核对 → 全懂了点「我学完了」进下一关。</p>",
+        "qs_label": "热身自测（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "感叹句的主要作用是什么？",
+            "options": [
+              "提出问题，等待回答",
+              "表示喜怒哀乐等强烈感情",
+              "发出命令或请求",
+              "客观陈述一个事实"
+            ],
+            "answer": "B. 表示喜怒哀乐等强烈感情",
+            "explain": "感叹句是「情绪出口」：喜（How beautiful!）、怒（What a mess!）、哀、乐都靠它表达。A 是疑问句的活儿，C 是祈使句，D 是陈述句。"
+          },
+          {
+            "stem": "what 和 how 的分工是？",
+            "options": [
+              "what 修饰名词，how 修饰形容词、副词或句子",
+              "what 修饰形容词，how 修饰名词",
+              "两个都修饰名词",
+              "两个都修饰形容词"
+            ],
+            "answer": "A. what 修饰名词，how 修饰形容词、副词或句子",
+            "explain": "分工一刀切：what 后面站的是名词（What a kind girl!），how 后面站的是形容词、副词或整个句子（How kind she is!）。B 死于把分工说反了；C / D 死于「各管一摊」不是「都管一摊」。"
+          },
+          {
+            "stem": "________ happy I am!（我多么幸福啊！）",
+            "answer": "How",
+            "explain": "happy 是形容词，后面直接跟主谓 I am，没有名词 → How + 形容词 + 主谓。写 What 就死于「What 后面必须站名词」。"
+          },
+          {
+            "stem": "________ a kind girl she is!（她是多么善良的女孩！）",
+            "answer": "What",
+            "explain": "中心词是名词短语 a kind girl（一位善良的女孩）→ What 家族。girl 单数可数、kind 辅音音素开头，所以是 What a——a 已经给出，横线上只填 What。"
+          }
+        ]
+      },
+      {
+        "key": "what-type",
+        "title": "② What 型感叹句：三种架子",
+        "explain": "<p>What 型感叹句的中心词是<b>名词</b>，一共三种架子：</p><table><tr><th>架子</th><th>结构</th><th>例句</th></tr><tr><td><b>① 单数可数</b></td><td>What + a/an + 形容词 + 可数名词单数（+主语+谓语）！</td><td>What a kind girl she is! 她是多么善良的女孩！</td></tr><tr><td><b>② 不可数 / 复数</b></td><td>What + 形容词 + 不可数名词 / 可数名词复数（+主语+谓语）！</td><td>What bad weather it is! 天气真糟糕！/ What good children they are! 他们是多么好的孩子呀！</td></tr><tr><td><b>③ 光杆名词</b></td><td>What + a/an + 可数名词单数（+主谓）！或 What + 不可数名词（+主谓）！</td><td>What a pity! 真是遗憾！/ What noise they are making! 他们发出多吵的噪音呀！</td></tr></table><p>注意架子 ②：weather、fun、noise、advice 这类<b>不可数名词</b>前面<b>永远不加 a/an</b>——「What a bad weather」是考试最爱挖的坑。</p><p>架子 ③ 的 What a pity! 其实省略了主语和谓语，完整说就是 What a pity (it is)!——口语里常只留感叹的核心部分。</p>",
+        "qs_label": "What 型三架子练习（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "What a kind girl she is! 用的是哪个架子？",
+            "options": [
+              "What + 形容词 + 不可数名词",
+              "What + a/an + 形容词 + 可数名词单数（+主谓）",
+              "What + 形容词 + 可数名词复数",
+              "How + 形容词 + a/an + 可数名词单数"
+            ],
+            "answer": "B. What + a/an + 形容词 + 可数名词单数（+主谓）",
+            "explain": "拆开看：a（冠词）+ kind（形容词）+ girl（单数可数名词）+ she is（主谓）——标准架子①。C 死于复数名词前不加 a/an；D 是 How 型的另一套语序，引导词都换了。"
+          },
+          {
+            "stem": "________ good children they are!（他们是多么好的孩子呀！）",
+            "answer": "What",
+            "explain": "children 是可数名词复数 → What + 形容词 + 复数名词。复数名词前没有 a/an 的座位，What a / What an 都死于「复数不加冠词」。"
+          },
+          {
+            "stem": "________ noise they are making!（他们发出多吵的噪音呀！）",
+            "answer": "What",
+            "explain": "noise（噪音）是不可数名词 → 光杆 What。别被 are making 的复数感觉带跑——判断冠词只看名词本尊：不可数，a/an 免谈。"
+          },
+          {
+            "stem": "What a pity! 为什么后面没有主语和谓语？",
+            "options": [
+              "感叹句本来就不许有主语",
+              "pity 是副词，不能配主谓",
+              "主语和谓语 it is 被省略了（What a pity (it is)!）",
+              "pity 前面不能有动词"
+            ],
+            "answer": "C. 主语和谓语 it is 被省略了（What a pity (it is)!）",
+            "explain": "感叹句口语里常省掉主谓、只留感叹的核心，这就是省略形式。A 死于「不是不许，是省了」；B / D 死于词性——pity 是名词「遗憾」。"
+          },
+          {
+            "stem": "下面哪一句完全正确？",
+            "options": [
+              "What a bad weather it is!",
+              "How bad weather it is!",
+              "What a bad weathers it is!",
+              "What bad weather it is!"
+            ],
+            "answer": "D. What bad weather it is!",
+            "explain": "weather 不可数：A / C 死于「不可数名词前加 a」；C 还把 weather 写成复数 weathers，错上加错；B 死于「How 后面不能直接站名词短语」。"
+          },
+          {
+            "stem": "What a mess!（真是一团糟！）属于哪个架子？",
+            "options": [
+              "What + a/an + 可数名词单数（形容词可省略）",
+              "What + 形容词 + 复数名词",
+              "What + 不可数名词",
+              "How + 形容词 + 名词"
+            ],
+            "answer": "A. What + a/an + 可数名词单数（形容词可省略）",
+            "explain": "a mess = a + mess，冠词后面直接跟单数可数名词，形容词省掉了——架子①的精简版。B / C 死于 mess 单数可数、前面有 a；D 连引导词都不对。"
+          }
+        ],
+        "memory": {
+          "front": "What 型感叹句有哪三种架子？不可数名词前加不加 a/an？",
+          "back": "① What + a/an + 形容词 + 可数名词单数：What a kind girl she is!\n② What + 形容词 + 不可数/复数：What bad weather it is! / What good children they are!\n③ 光杆：What a pity! / What noise they are making!\n铁律：weather / fun / noise / advice 等不可数名词前不加 a/an"
+        }
+      },
+      {
+        "key": "how-type",
+        "title": "③ How 型感叹句：三种架子",
+        "explain": "<p>How 型感叹句的中心词是<b>形容词或副词</b>，也有三种架子：</p><table><tr><th>架子</th><th>结构</th><th>例句</th></tr><tr><td><b>① 形容词 / 副词</b></td><td>How + 形容词/副词（+主语+谓语）！</td><td>How delicious the food is! 这食品真好吃！/ How fast they run! 他们跑得多快啊！</td></tr><tr><td><b>② 形 + a/an + 名</b></td><td>How + 形容词 + a/an + 可数名词单数（+主语+谓语）！</td><td>How kind a girl she is! 她是多么善良的女孩！</td></tr><tr><td><b>③ 直接主谓</b></td><td>How + 主语 + 谓语！</td><td>How time flies! 光阴似箭！/ How I wish I could go with you! 我多么希望我能和你一起去！</td></tr></table><p>架子 ② 的语序最特别：形容词要<b>紧贴 How</b>，a/an 被挤到形容词后面——What a kind girl she is! 换成 How 型就成了 How kind a girl she is!，两句话一个意思。</p><p>架子 ③ 里 How 后面直接跟主语和谓语，不接形容词副词——How 修饰的是<b>整个句子</b>。</p>",
+        "qs_label": "How 型三架子练习（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "________ delicious the food is!（这食品真好吃！）",
+            "answer": "How",
+            "explain": "delicious 是形容词，后面直接跟主谓 the food is → How + 形容词（+主谓）。写 What 死于「delicious 后面没有名词可感叹」。"
+          },
+          {
+            "stem": "How fast they run!（他们跑得多快啊！）里 How 后面的 fast 是什么词性？",
+            "options": [
+              "名词",
+              "形容词",
+              "副词",
+              "动词"
+            ],
+            "answer": "C. 副词",
+            "explain": "fast 在这里修饰动词 run（跑得快）→ 副词 → How + 副词 + 主谓。B 死于「修饰名词的才是形容词」——对比 How fast the car is!（这车真快）里 fast 才是形容词。"
+          },
+          {
+            "stem": "How kind a girl she is! 这个架子的语序特点是？",
+            "options": [
+              "How + 名词 + a/an + 形容词",
+              "How + 形容词 + a/an + 可数名词单数，形容词紧贴 How",
+              "和 What a kind girl she is! 语序完全一样",
+              "a/an 要提到 How 前面"
+            ],
+            "answer": "B. How + 形容词 + a/an + 可数名词单数，形容词紧贴 How",
+            "explain": "架子②最特别：形容词提前、冠词夹中间——How kind a girl she is! = What a kind girl she is!。A / D 死于语序颠倒；C 死于「两型语序不同：What 型 a 在形容词前，How 型 a 在形容词后」。"
+          },
+          {
+            "stem": "How time flies!（光阴似箭！）用的是哪个架子？",
+            "options": [
+              "How + 形容词 + 主谓",
+              "How + 副词 + 主谓",
+              "How + 主语 + 谓语（How 直接修饰整个句子）",
+              "What + 名词"
+            ],
+            "answer": "C. How + 主语 + 谓语（How 直接修饰整个句子）",
+            "explain": "time flies（时间飞逝）前面既没形容词也没副词，How 直接感叹整个句子 → How + 主谓。同类：How I wish I could go with you! A / B 死于句中根本没有形容词副词；D 死于引导词。"
+          },
+          {
+            "stem": "________ I wish I could go with you!（我多么希望我能和你一起去！）",
+            "answer": "How",
+            "explain": "How + 主语 + 谓语 架子：I wish 是主谓，How 修饰整句表达强烈愿望。别写 What——这里根本没有名词短语可感叹。"
+          }
+        ],
+        "memory": {
+          "front": "How 型感叹句的三种架子？How kind a girl 语序特别在哪？",
+          "back": "① How + 形容词/副词（+主谓）：How delicious the food is! / How fast they run!\n② How + 形容词 + a/an + 可数名词单数：How kind a girl she is!（形容词紧贴 How）\n③ How + 主语 + 谓语：How time flies! / How I wish I could go with you!"
+        }
+      },
+      {
+        "key": "what-or-how",
+        "title": "④ 一眼定 What 还是 How：看中心词",
+        "explain": "<p>拿到句子先找<b>中心词</b>——感叹的核心是名词就用 What，是形容词、副词就用 How。讲义把判断诀窍分成四格：</p><table><tr><th>样子</th><th>用哪个</th><th>例句</th></tr><tr><td><b>What + 光杆名词</b></td><td>What</td><td>What a mess! 真是一团糟！</td></tr><tr><td><b>形名相连</b>（形容词和名词连在一起）</td><td>What</td><td>What terrible weather we're having! / What a beautiful flower it is! / What wonderful books they are!</td></tr><tr><td><b>How + 形容词/副词</b></td><td>How</td><td>How happy I am! / How carefully she did her homework!</td></tr><tr><td><b>形名分开</b>（名词带着主谓在后面）</td><td>How</td><td>How beautiful the flower is! 花多么美丽啊！</td></tr></table><p>一句话：<b>形容词后面紧跟名词 → What；形容词后面跟的是主语+谓语 → How</b>。本关 7 题是讲义课堂练习 1 的原题（选择 How 或 What (a/an) 填空），做完对答案。</p>",
+        "qs_label": "课堂练习 1：选择 How 或 What (a/an) 填空",
+        "general_qs": [
+          {
+            "stem": "1. ________ delicious the cake is!（这蛋糕真好吃！）",
+            "options": [
+              "What",
+              "What a",
+              "What an",
+              "How"
+            ],
+            "answer": "D. How",
+            "explain": "找中心词：delicious 是形容词，后面直接跟主谓 the cake is，没有名词跟在后面 → How。A / B / C 死于「What 家族后面必须站名词」。"
+          },
+          {
+            "stem": "2. ________ interesting book it is!（这是一本多么有趣的书啊！）",
+            "options": [
+              "What an",
+              "What",
+              "What a",
+              "How"
+            ],
+            "answer": "A. What an",
+            "explain": "两层：① interesting + book 形名相连，中心词 book 是名词 → What 家族；② book 单数可数，interesting 以元音音素 /ɪ/ 开头 → What an。D 死于无视名词 book；B / C 死于音素判断。"
+          },
+          {
+            "stem": "3. ________ badly he hurt himself!（他伤得多么严重啊！）",
+            "options": [
+              "What a",
+              "What",
+              "What an",
+              "How"
+            ],
+            "answer": "D. How",
+            "explain": "badly（严重地）是副词，修饰动词 hurt → How + 副词 + 主谓。-ly 结尾大概率是副词，What 家族只收名词，A / B / C 全死于词性。"
+          },
+          {
+            "stem": "4. ________ friendly she is to everyone!（她对每个人多么友好啊！）",
+            "options": [
+              "What",
+              "How",
+              "What a",
+              "What an"
+            ],
+            "answer": "B. How",
+            "explain": "大坑：friendly 以 -ly 结尾却是<b>形容词</b>（友好的）。它后面没有名词（she is to everyone 是主谓）→ How + 形容词。被 -ly 骗去选 What 家族就阵亡了。"
+          },
+          {
+            "stem": "5. ________ kind girl she is!（她是多么善良的女孩！）",
+            "options": [
+              "What an",
+              "What",
+              "How",
+              "What a"
+            ],
+            "answer": "D. What a",
+            "explain": "kind girl 形名相连，中心词 girl 单数可数 → What 家族；kind 辅音音素开头 → What a。C 死于「形名相连时 How 不能上场」；A 死于音素。"
+          },
+          {
+            "stem": "6. ________ bad weather! I hope it won't last long.（天气真糟糕！希望别一直这样。）",
+            "options": [
+              "What a",
+              "What an",
+              "How",
+              "What"
+            ],
+            "answer": "D. What",
+            "explain": "bad weather 形名相连 → What 家族；weather 不可数 → 光杆 What，连 a 都不给。A / B 死于给不可数名词加冠词；C 死于 How 后面站不了名词。"
+          },
+          {
+            "stem": "7. ________ fun it is to swim in the sea!（在海里游泳真有趣！）",
+            "options": [
+              "What",
+              "How",
+              "What a",
+              "What an"
+            ],
+            "answer": "A. What",
+            "explain": "fun（乐趣）是不可数名词 → 光杆 What。B 死于 fun 不是形容词；C / D 死于「不可数名词不加冠词」。it is to swim in the sea 是主谓 + 不定式，架子照走不误。"
+          }
+        ],
+        "memory": {
+          "front": "拿到句子一秒定 What 还是 How，看什么？",
+          "back": "找中心词：是名词 → What；是形容词/副词 → How\n形名相连 → What（What terrible weather we're having!）\n形名分开（名词在主谓里）→ How（How beautiful the flower is!）\n光杆名词 → What（What a mess!）\n一句话：形容词后紧跟名词用 What，跟主谓用 How"
+        }
+      },
+      {
+        "key": "what-a-an",
+        "title": "⑤ What、What a 还是 What an",
+        "explain": "<p>定了 What 之后还有第二刀：<b>加不加 a/an？加 a 还是 an？</b>看名词的「户口」：</p><table><tr><th>情况</th><th>用哪个</th><th>例句</th></tr><tr><td>不可数名词 / 可数名词复数</td><td>光杆 <b>What</b></td><td>What fun it is to play with friends! 和朋友一起玩真有趣！/ What beautiful paintings they have created! 他们创作的画作真漂亮！</td></tr><tr><td>可数名词单数 + <b>辅音音素</b>开头</td><td><b>What a</b></td><td>What a wonderful surprise! 多么令人惊喜啊！</td></tr><tr><td>可数名词单数 + <b>元音音素</b>开头</td><td><b>What an</b></td><td>What an interesting book it is! 这是一本多么有趣的书啊！</td></tr></table><p>⚠️ 判断 a/an <b>读音素，不读字母</b>：honest 的 h 不发音，真正的开头是元音 /ɒ/ → What an honest boy!；useful 的 u 读 /juː/，/j/ 是辅音音素 → What a useful book!（university、European 同属一伙）。</p>",
+        "qs_label": "What / What a / What an 三选一（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "What fun it is to play with friends!（和朋友一起玩真有趣！）为什么用光杆 What？",
+            "options": [
+              "fun 是可数名词单数",
+              "fun 是不可数名词，前面不加 a/an",
+              "fun 是复数",
+              "固定搭配，没有道理"
+            ],
+            "answer": "B. fun 是不可数名词，前面不加 a/an",
+            "explain": "fun（乐趣）不可数 → What + 不可数名词。A / C 死于词性判断错误；D 死于「有道理：不可数就不加冠词，这条规律很讲道理」。"
+          },
+          {
+            "stem": "________ beautiful paintings they have created!（他们创作的画作真漂亮！）",
+            "answer": "What",
+            "explain": "paintings 是可数名词复数 → What + 形容词 + 复数。复数名词前没有 a/an 的座位，What a / What an 都死于「复数不加冠词」。"
+          },
+          {
+            "stem": "________ interesting book it is!（这是一本多么有趣的书啊！）",
+            "answer": "What an",
+            "explain": "book 单数可数；interesting 以元音音素 /ɪ/ 开头 → What an。别看拼写看读音——首音是元音就用 an。"
+          },
+          {
+            "stem": "________ honest boy he is!（他是多么诚实的男孩啊！）",
+            "answer": "What an",
+            "explain": "honest 的 h 不发音，真正打头的是元音 /ɒ/ → What an。写 What a 死于「读音素不读字母」。"
+          },
+          {
+            "stem": "________ useful book it is!（这是一本多么有用的书啊！）",
+            "options": [
+              "What an",
+              "What a",
+              "What",
+              "How"
+            ],
+            "answer": "B. What a",
+            "explain": "useful 的 u 读 /juː/，/j/ 是辅音音素 → What a。A 死于「见 u 就 an」；C 死于 book 单数可数不能光杆；D 死于 How 后面站不了名词。university、European 是同类陷阱。"
+          }
+        ]
+      },
+      {
+        "key": "transform",
+        "title": "⑥ 陈述句变感叹句：三步法",
+        "explain": "<p>把陈述句改成感叹句，按讲义的三步走：</p><pre class=\"topic-formula\">第 1 步　找强调部分：形容词、副词、还是名词短语？\n第 2 步　定引导词：形/副 → How；名词短语 → What\n第 3 步　去掉 too/very/quite/really/so/extremely 等程度副词，其余照抄</pre><p>两个例子走一遍：</p><p>① He is an honest boy. → 强调 an honest boy（名词短语）→ 用 What → 没有程度副词 → <b>What an honest boy he is!</b></p><p>② The boy is very honest. → 强调 honest（形容词）→ 用 How → 去掉 very → <b>How honest the boy is!</b></p><p>提醒：第 3 步最容易被忽略——very / so / too <b>必须扔掉</b>，感叹句的情绪全靠 How/What 本身扛，不靠程度副词。语序也要重排：引导词打头，被强调的词紧跟，主谓收尾。</p>",
+        "qs_label": "课堂练习 2：陈述句改为感叹句",
+        "general_qs": [
+          {
+            "stem": "1. The sunset is beautiful.（用三步法改为感叹句，写整句）",
+            "answer": "How beautiful the sunset is!",
+            "explain": "第 1 步找强调：beautiful（形容词）；第 2 步定 How；第 3 步没有程度副词，照抄主谓 → How beautiful the sunset is! 写 What 死于「What 后面站不了光杆形容词」。"
+          },
+          {
+            "stem": "2. She is a talented musician.（改为感叹句，写整句）",
+            "answer": "What a talented musician she is!",
+            "explain": "强调 a talented musician（名词短语）→ What；musician 单数可数、talented 辅音音素开头 → What a。想用 How 也可以，但语序得是 How talented a musician she is!，直接 How talented musician 是错的。"
+          },
+          {
+            "stem": "3. He drives very carefully.（改为感叹句，写整句）",
+            "answer": "How carefully he drives!",
+            "explain": "强调 carefully（副词）→ How；关键第 3 步：把 very 扔掉 → How carefully he drives! 留着 very 直接错——程度副词在感叹句里没有户口。"
+          },
+          {
+            "stem": "4. The children are having a wonderful time.（改为感叹句，写整句）",
+            "answer": "What a wonderful time the children are having!",
+            "explain": "强调 a wonderful time（名词短语，have a wonderful time 玩得开心）→ What a。别被 are having 骤成 How——中心词 time 是名词。"
+          },
+          {
+            "stem": "5. The mountains are so high.（改为感叹句，写整句）",
+            "answer": "How high the mountains are!",
+            "explain": "强调 high（形容词）→ How；第 3 步把 so 扔掉 → How high the mountains are! mountains 是复数也不影响——How 型只看形容词本尊。"
+          },
+          {
+            "stem": "6. It is so interesting to talk with you.（讲义例句，改为感叹句，写整句）",
+            "answer": "How interesting it is to talk with you!",
+            "explain": "强调 interesting（形容词）→ How；扔掉 so，it is to talk with you 照抄在后 → How interesting it is to talk with you! 和你聊天真有趣！"
+          }
+        ],
+        "memory": {
+          "front": "陈述句变感叹句三步法？哪类词必须扔掉？",
+          "back": "一找：强调部分（形容词 / 副词 / 名词短语）\n二断：形/副 → How；名词短语 → What\n三去照抄：去掉 too/very/quite/really/so/extremely，其余重排照抄\n例：He is an honest boy. → What an honest boy he is!\n　　The boy is very honest. → How honest the boy is!"
+        }
+      },
+      {
+        "key": "swap",
+        "title": "⑦ What 与 How 互换 · 无引导词的感叹句",
+        "explain": "<p><b>① What 与 How 互换</b>：同一句感叹可以换件衣服，但单词顺序要变：</p><table><tr><th>What 型</th><th>How 型</th></tr><tr><td>What a beautiful girl she is!</td><td>How beautiful she is!</td></tr><tr><td>What tall buildings they are!</td><td>How tall the buildings are!</td></tr></table><p>焦点不同：What 句强调<b>名词短语本身</b>（多么漂亮的姑娘），How 句强调<b>性质</b>（多么漂亮）。互换套路：名词短语拆开——形容词给 How 打头，名词加 the 进主谓。</p><p><b>② 没有 What/How 也能感叹</b>：陈述句加 so / such / really 加强语气（The garden looks so lovely today!）；否定疑问句表赞叹，不用回答（Isn't it a lovely day! 天气真好！/ Don't you just love the way the sun sets over the ocean?）；祈使句（Stop talking!）；甚至一个单词（Fire! 失火了！/ Cheer!）。</p><p><b>③ 省略形式</b>：口语里常把主语和谓语吞掉，只留感叹的核心——What a fine day (it is)! / What red apples (they are)! / How cool!</p>",
+        "qs_label": "互换与省略练习（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "What a beautiful girl she is! 的 How 型说法是？",
+            "options": [
+              "How beautiful she is!",
+              "How a beautiful girl she is!",
+              "How beautifully she is!",
+              "What beautiful she is!"
+            ],
+            "answer": "A. How beautiful she is!",
+            "explain": "互换套路：名词短语 a beautiful girl 拆开——形容词 beautiful 给 How 打头，girl 变 the girl 进主谓。B 死于 How 后面不能直接跟 a；C 死于 beautifully 是副词，感叹人要用形容词；D 死于 What 后面光杆形容词站不住。"
+          },
+          {
+            "stem": "同义转换：What tall buildings they are! = How ________ ________ ________ are!（3 词，多么高的楼房呀！）",
+            "answer": "tall the buildings",
+            "explain": "What 型换 How 型：形容词 tall 打头，名词 buildings 加 the 进主谓 → How tall the buildings are! 形容词和名词从此分家——这正是「形名相连用 What、形名分开用 How」的活教材。"
+          },
+          {
+            "stem": "Isn't it a lovely day!（天气真好！）这句话在做什么？",
+            "options": [
+              "真的在问今天天气好不好，需要回答",
+              "否定疑问句用作感叹句，表达赞叹，不需要回答",
+              "否定对方刚才说的天气",
+              "祈使句，要求别提天气"
+            ],
+            "answer": "B. 否定疑问句用作感叹句，表达赞叹，不需要回答",
+            "explain": "否定疑问句 Isn't it...! 不索取信息，只输出情绪——等于 How lovely the day is!。同类：Don't you just love the way the sun sets over the ocean? A 死于「这不是提问」；C / D 死于句型功能判断错误。"
+          },
+          {
+            "stem": "The garden looks so lovely today!（这花园今天真美！）里 so 的作用是？",
+            "options": [
+              "表示结果「所以」",
+              "加强语气，让普通陈述句带上感叹色彩（同类还有 such / really）",
+              "引导从句",
+              "可有可无，去掉之后仍是感叹句"
+            ],
+            "answer": "B. 加强语气，让普通陈述句带上感叹色彩（同类还有 such / really）",
+            "explain": "没有 What/How 也能感叹：陈述句 + so / such / really 加强语气就成感叹句。A 死于把 so 当连词；D 死于「去掉 so 就退回平淡的陈述句 The garden looks lovely today，感叹劲儿没了」。"
+          },
+          {
+            "stem": "口语省略：What a fine day!（多晴朗的天呀！）的完整形式是 What a fine day ________ ________!（2 词）",
+            "answer": "it is",
+            "explain": "省略形式把主语和谓语吞掉只留核心，补回来就是 it is。同类：What red apples (they are)! / How cool!"
+          }
+        ]
+      },
+      {
+        "key": "final",
+        "title": "⑧ 综合验收：七关考点一锅端",
+        "explain": "<p>最后一关，不讲新东西——把前面七关的考点混在一起再过一遍。做错哪题，就回哪一关翻讲解和口诀卡。</p><p>验收清单：What 还是 How（④）· a/an 与音素陷阱（⑤）· 不可数与复数（②⑤）· How + 形 + a/an 语序（③）· 三步法变换（⑥）· 互换（⑦）。</p>",
+        "qs_label": "综合验收（错哪题回哪关）",
+        "general_qs": [
+          {
+            "stem": "________ exciting the news is!（这消息多令人兴奋啊！）",
+            "answer": "How",
+            "explain": "exciting 是形容词，后面直接跟主谓 the news is → How。回④：形容词后面没名词，What 免谈。"
+          },
+          {
+            "stem": "________ lovely weather we're having!（我们赶上多好的天气呀！）",
+            "answer": "What",
+            "explain": "lovely weather 形名相连 → What 家族；weather 不可数 → 光杆 What。讲义原句 What terrible weather we're having! 的姊妹题。两个坑：写 How 死于名词中心；写 What a 死于不可数。"
+          },
+          {
+            "stem": "下面哪一句完全正确？",
+            "options": [
+              "How a kind girl she is!",
+              "What kind girl she is!",
+              "How kind a girl she is!",
+              "What kind a girl she is!"
+            ],
+            "answer": "C. How kind a girl she is!",
+            "explain": "架子③②组合：How + 形容词 + a/an + 可数名词单数，形容词紧贴 How。A 死于 How 后面 a/an 不能打头；B 死于单数可数名词 girl 前必须有冠词；D 死于 What 型里 a 应放在形容词 kind 之前（What a kind girl）。"
+          },
+          {
+            "stem": "The flowers are so beautiful.（改为感叹句，写整句）",
+            "answer": "How beautiful the flowers are!",
+            "explain": "beautiful 形容词 → How；第 3 步扔掉 so → How beautiful the flowers are! 忘了删 so 是本关第一大死因，回⑥复习三步法。"
+          },
+          {
+            "stem": "________ useful advice he gave us!（他给了我们多好的建议呀！）",
+            "answer": "What",
+            "explain": "双坑题：advice 是不可数名词 → 光杆 What。别被 useful 的辅音读音带去写 What a——a/an 只给单数可数名词留座位，不可数根本排不上号。"
+          },
+          {
+            "stem": "What delicious food it is! 的 How 型同义句是？",
+            "options": [
+              "How delicious the food is!",
+              "How deliciously the food is!",
+              "What delicious the food is!",
+              "How a delicious food it is!"
+            ],
+            "answer": "A. How delicious the food is!",
+            "explain": "名词短语 delicious food 拆开：形容词 delicious 给 How 打头，food 加 the 进主谓。B 死于 deliciously 是副词，方向错（感叹性质不是感叹动作）；C 死于 What 后面光杆形容词站不住；D 死于 How 后不能接 a，且 food 不可数。"
+          }
+        ]
+      }
+    ]
+  }
+}

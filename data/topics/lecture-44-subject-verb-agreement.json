@@ -1,0 +1,435 @@
+{
+  "meta": {
+    "topic_id": "lecture-44-subject-verb-agreement",
+    "title": "第44讲 · 主谓一致 自学",
+    "subtitle": "自学一遍再上课：热身认识三原则 → 语法一致·必单数六情况 → 语法一致·必复数与陪衬结构 → 意义一致·上（整体一份算单数）→ 意义一致·下（family/means 两面派）→ 就近 vs 就远 → 综合验收（共 7 关 · 50 题。作业卷留到课后当考试，这里不剧透）",
+    "emoji": "📘",
+    "assigned_to": "malin"
+  },
+  "content": {
+    "nodes": [
+      {
+        "key": "intro",
+        "title": "① 热身：主谓一致，到底谁说了算",
+        "explain": "<p>主谓一致的定义一句话：谓语动词与<b>主语</b>在<b>人称</b>和<b>数</b>上保持一致。听着简单，难在「怎么判断单复」——同一个名词，换个意思单复就翻面。全部考点归三条原则：</p><table><tr><th>原则</th><th>判断标准</th><th>例句</th></tr><tr><td><b>语法一致</b></td><td>主语形式单数 → 谓语单数；形式复数 → 谓语复数</td><td>He <b>does</b> his homework every evening. / You and I <b>are</b> good students.</td></tr><tr><td><b>意义一致</b></td><td>不看形式看意思</td><td>The people <b>are</b> busy.（形式单数、意义复数）/ My family <b>is</b> big.（整体）/ My family <b>are</b> watching TV.（成员）</td></tr><tr><td><b>就近原则</b></td><td>谓语只听<b>最近的主语</b>的</td><td>Neither you nor he <b>likes</b> pop music. / Either he or I <b>am</b> responsible for the project.</td></tr></table><p>本讲路线：②③关吃透<b>语法一致</b>（哪些主语必单数、哪些必复数、谁是陪衬），④⑤关拿下<b>意义一致</b>（一堆「看着像、其实不是」的两面派），⑥关搞定<b>就近 vs 就远</b>，最后综合验收。</p><p>自学方法：先读讲解 → 盖住答案做题 → 点「先想再看答案」核对 → 全懂了点「我学完了」进下一关。</p>",
+        "qs_label": "热身自测（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "主谓一致指的是什么？",
+            "options": [
+              "谓语动词与状语在时态上保持一致",
+              "谓语动词与主语在人称和数上保持一致",
+              "主语与宾语在数上保持一致",
+              "谓语动词与表语在人称上保持一致"
+            ],
+            "answer": "B. 谓语动词与主语在人称和数上保持一致",
+            "explain": "定义背原句：谓语动词跟主语走，在人称和数上保持一致。A / C / D 死于「跟谁一致」的对象全找错了。"
+          },
+          {
+            "stem": "My family is big. 但 My family are watching TV now. 同一个 family，一个 is 一个 are，用的是哪条原则？",
+            "options": [
+              "语法一致",
+              "意义一致",
+              "就近一致",
+              "没有原则，看心情"
+            ],
+            "answer": "B. 意义一致",
+            "explain": "family 拼写没变，意思变了：is big 说「家」这个整体（单数），are watching 说「家人们」这群成员（复数）——形式让位给意义，正是意义一致原则。"
+          },
+          {
+            "stem": "Neither you nor he ________ pop music. 这句要靠哪条原则定谓语？",
+            "options": [
+              "语法一致：you 是第二人称",
+              "意义一致",
+              "就近一致：谓语听最近的主语 he 的",
+              "倒装原则"
+            ],
+            "answer": "C. 就近一致：谓语听最近的主语 he 的",
+            "explain": "neither…nor 连接两个主语时，谓语只看离它最近的那个——he 是三单，所以用 likes。这就是第⑥关要细练的就近原则。"
+          },
+          {
+            "stem": "Either he or I ________ (be) responsible for the project.",
+            "answer": "am",
+            "explain": "就近原则：谓语和最近的主语 I 保持一致 → am。这题的考点不是人称有多难，而是「谓语跟着近邻变」这个意识。"
+          },
+          {
+            "stem": "He ________ (do) his homework every evening.",
+            "answer": "does",
+            "explain": "最朴素的语法一致：He 三单 + every evening 一般现在时 → does。主谓一致的「一致」，从三单开始。"
+          }
+        ]
+      },
+      {
+        "key": "grammar-sg",
+        "title": "② 语法一致·上：六种「必单数」主语",
+        "explain": "<p>语法一致原则看<b>形式</b>：主语形式是单数，谓语就用单数。下面六种主语，出场即单数：</p><table><tr><th>主语长这样</th><th>例句</th></tr><tr><td><b>① 不可数名词 / 可数名词单数</b></td><td>Water <b>is</b> very important to the trees.</td></tr><tr><td><b>② to do / doing 短语作主语</b></td><td>To improve your English <b>is</b> the most important work. / Watching TV too much <b>is</b> bad for your eyes.</td></tr><tr><td><b>③ 不定代词</b>（either, neither, each, one, another + some- / any- / no- / every- 系列）</td><td>Somebody <b>is</b> waiting for you at the gate. / Nothing <b>is</b> too difficult.</td></tr><tr><td><b>④ one / each one / anyone + of + 复数名词</b></td><td>One of the boys <b>goes</b> to school by car.</td></tr><tr><td><b>⑤ this kind of / a pair of / a piece of + 名词</b></td><td>This kind of apples <b>tastes</b> sweet.</td></tr><tr><td><b>⑥ the number of + 复数名词</b>（……的数量）</td><td>The number of students <b>is</b> more than two thousand.</td></tr></table><p><b>记法</b>：④⑤⑥全是「量词打头」——真正的主语是 one / kind / pair / number 这些单数词，of 后面的复数名词只是陪衬，说了不算。</p>",
+        "qs_label": "课堂练习 1（上）：单数关（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "Making a good weekly plan ________ very helpful for you to achieve your goals.",
+            "options": [
+              "is",
+              "have",
+              "has",
+              "are"
+            ],
+            "answer": "A. is",
+            "explain": "Making…plan 是动名词短语作主语 → 当单数 → is。B / C 死于 helpful 是形容词，前面要系动词 be，不能换成 have / has；D 死于把动名词主语当复数。"
+          },
+          {
+            "stem": "Watching TV too much ________ (be) bad for your eyes.",
+            "answer": "is",
+            "explain": "动名词短语 Watching TV too much 作主语 → 一件事，单数 → is。看电视这件事「是」伤眼的，一件事用单数。"
+          },
+          {
+            "stem": "Somebody ________ (be) waiting for you at the gate.",
+            "answer": "is",
+            "explain": "somebody 属 some- 系列不定代词 → 单数 → is。别被「有人」的中文感觉骗成复数——some- / any- / no- / every- 系列全家单数。"
+          },
+          {
+            "stem": "Nothing ________ (be) too difficult if you put your heart into it.",
+            "answer": "is",
+            "explain": "no- 系列不定代词 nothing → 单数 → is。世上无难事，只怕有心人——nothing / nobody / no one 和 something / everyone 同命运。"
+          },
+          {
+            "stem": "One of the boys in our class ________ (go) to school by car.",
+            "answer": "goes",
+            "explain": "one of + 复数名词：真正的主语是 one（其中一个）→ 单数 → goes。the boys 是 of 后面的陪衬，别看它复数就写成 go。"
+          },
+          {
+            "stem": "This kind of apples ________ (taste) sweet.",
+            "answer": "tastes",
+            "explain": "this kind of + 名词：主语是 kind（单数）→ tastes。后面用 apple 还是 apples 都不影响——kind 才是主语。"
+          },
+          {
+            "stem": "In our school, the number of men teachers ________ more than 100 now.",
+            "options": [
+              "is",
+              "are",
+              "was",
+              "were"
+            ],
+            "answer": "A. is",
+            "explain": "the number of + 复数名词 = 「……的数量」，中心词是 number（单数）→ is。C / D 死于句尾 now 锁死现在时；B 死于被 men teachers 带偏——「数量」这个数才是主语。"
+          },
+          {
+            "stem": "To improve your English ________ (be) the most important work.",
+            "answer": "is",
+            "explain": "不定式 To improve… 作主语 → 单数 → is。to do 和 doing 作主语待遇相同：一律按单数办。"
+          }
+        ],
+        "memory": {
+          "front": "六种主语，谓语必用单数——分别是哪六种？",
+          "back": "① 不可数名词 / 可数单数（Water is important.）\n② to do / doing 短语（Watching TV too much is bad.）\n③ 不定代词：some- / any- / no- / every- 系列、each、either、neither、one、another\n④ one of + 复数名词（One of the boys goes…）\n⑤ this kind of / a pair of / a piece of（This kind of apples tastes sweet.）\n⑥ the number of + 复数名词（「数量」是单数）\n一句话：量词打头（one / kind / pair / number），of 后面的复数只是陪衬"
+        }
+      },
+      {
+        "key": "grammar-pl",
+        "title": "③ 语法一致·下：必复数主语与「陪衬」陷阱",
+        "explain": "<p>三条「必复数」，再加一组最爱设坑的「陪衬结构」：</p><table><tr><th>情况</th><th>规则</th><th>例句</th></tr><tr><td><b>① and / both … and 并列</b></td><td>两个（或以上）主语并列 → 复数</td><td>He and his brother <b>are</b> both teachers.</td></tr><tr><td><b>② a number of + 复数名词</b></td><td>= 许多 → 复数（对照：the number of 数量 → 单数）</td><td>A number of students <b>come</b> from Sichuan.</td></tr><tr><td><b>③ 成对物体的名词</b>（trousers, shoes, glasses 眼镜, socks, gloves, clothes…）</td><td>本身按复数；但被 this / a pair of 修饰时 → 单数</td><td>Her shoes <b>are</b> green. / This pair of shoes <b>is</b> very expensive.</td></tr><tr><td><b>④ 陪衬结构</b>：with, together with, as well as, except, but, like 引导的短语</td><td>谓语只跟<b>前面的主语</b>走（就远）</td><td>Tom with his parents <b>has</b> gone to Beijing.</td></tr></table><p>还有三个「看对象」的点：① none 指不可数 → 单数（None of the money <b>is</b> mine.），指可数 → 单复皆可（None of us <b>knows / know</b>…）；② 定语从句里 that / who / which 作主语，谓语跟<b>先行词</b>走（The students who <b>are</b> good at writing…）；③ 倒装句谓语跟<b>后面的真主语</b>（Here <b>comes</b> the bus. / There <b>goes</b> the bell.）。</p><p><b>记法</b>：a number of 是「许多」（复数），the number of 是「数量」（单数）——多一个 the，单复数翻个面；with / as well as 一家是「陪衬」，决定谓语的只有最前面那个主语。</p>",
+        "qs_label": "课堂练习 1（下）：复数关与陪衬（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "Both Lily and Mary ________ to take part in the competition and they decide to prepare for it together.",
+            "options": [
+              "wants",
+              "want",
+              "wanted",
+              "wanting"
+            ],
+            "answer": "B. want",
+            "explain": "both…and 并列两个人 → 复数 → want。A 死于单数；C 死于后半句 decide 是一般现在时，前后时态要一致；D 死于 wanting 不能单独作谓语。"
+          },
+          {
+            "stem": "Tommy often with his family ________ to the park on weekends.",
+            "options": [
+              "goes",
+              "go",
+              "are going",
+              "went"
+            ],
+            "answer": "A. goes",
+            "explain": "with his family 是陪衬，主语只有 Tommy（三单）→ goes。B / C 死于被 family 带成复数；D 死于 often 提示一般现在时，不能用过去式。"
+          },
+          {
+            "stem": "Sally as well as her parents ________ eating different kinds of delicious food.",
+            "options": [
+              "like",
+              "likes",
+              "liking",
+              "is like"
+            ],
+            "answer": "B. likes",
+            "explain": "as well as her parents 也是陪衬，主语 Sally 三单 → likes。A 死于单复数；C 死于 liking 不能单独作谓语；D 死于 be like 意思是「像」，这里要的是「喜欢」。"
+          },
+          {
+            "stem": "He and his brother ________ (be) both teachers.",
+            "answer": "are",
+            "explain": "and 并列两个主语（他 + 他哥，两个人）→ 复数 → are。对比第④关：and 连接同一概念（the poet and writer 一个人）才用单数，这里是两个活人。"
+          },
+          {
+            "stem": "A number of students ________ (come) from Sichuan.",
+            "answer": "come",
+            "explain": "a number of = 许多 → 修饰复数 students，谓语用复数 → come。和 the number of（数量，单数）是一对头号易混搭档：多一个 the 就翻面。"
+          },
+          {
+            "stem": "Her shoes ________ (be) green.",
+            "answer": "are",
+            "explain": "shoes 是成对物体的名词（两只算一双）→ 复数 → are。同类：trousers、glasses（眼镜）、socks、gloves、clothes。"
+          },
+          {
+            "stem": "This pair of shoes ________ (be) very expensive.",
+            "answer": "is",
+            "explain": "一旦被 this pair of / a pair of 打头，主语变成 pair（单数）→ is。上一题 shoes 直接当主语是复数，戴上 pair 的帽子就单数——同一双鞋，两种待遇。"
+          },
+          {
+            "stem": "None of the money ________ (be) mine.",
+            "answer": "is",
+            "explain": "none 指不可数名词 money → 谓语单数 → is。none 指可数名词时单复皆可（None of us knows / know…），但指钱这种不可数，只能单数。"
+          }
+        ],
+        "memory": {
+          "front": "a number of 和 the number of 怎么区分？with / as well as 后面的名词能决定谓语吗？",
+          "back": "a number of + 复数名词 = 许多 → 谓语复数（A number of students come…）\nthe number of + 复数名词 = ……的数量 → 谓语单数（The number of students is…）\nwith / together with / as well as / except / but / like 引导的短语是「陪衬」，谓语只看前面的主语\n成对名词 shoes / trousers / glasses 直接作主语 → 复数；this / a pair of 打头 → 单数\nnone 指不可数 → 单数；指可数 → 单复皆可"
+        }
+      },
+      {
+        "key": "sense-1",
+        "title": "④ 意义一致·上：形式像复数，其实当单数",
+        "explain": "<p>意义一致原则看<b>意思</b>不看形式。先看「形式像复数、意义是单数」这一组：</p><table><tr><th>主语</th><th>规则</th><th>例句</th></tr><tr><td><b>① 时间 / 距离 / 金额 / 重量</b>（复数形式）</td><td>当整体看 → 单数</td><td>Three weeks <b>is</b> already enough. / Seventy miles <b>is</b> a long distance.</td></tr><tr><td><b>② and 连接同一人 / 同一事 / 同一概念</b></td><td>一个 the → 同一个人，单数；两个 the → 两个人，复数</td><td>The poet and writer <b>has</b> come.（一人）/ The poet and the writer <b>have</b> come.（两人）</td></tr><tr><td><b>③ 固定复合名词</b>（fish and chips, bacon and eggs, bread and butter, a knife and fork…）</td><td>一份东西 → 单数</td><td>Fish and chips <b>is</b> a popular meal in Britain.</td></tr><tr><td><b>④ s 结尾但单数意义</b>（news, maths, physics, politics）</td><td>单数</td><td>The good news <b>is</b> that our class won the game.</td></tr><tr><td><b>⑤ every … and every … / each … and each … / no … and no …</b></td><td>两个 every / each 重复，仍单数</td><td>Every boy and every girl <b>has</b> the right to get education.</td></tr><tr><td><b>⑥ many a / more than one + 单数名词</b></td><td>意思「许多」，形式单数 → 谓语单数</td><td>Many a student <b>wants</b> to be a spaceman like Yang Liwei.</td></tr></table><p><b>记法</b>：「整体一份算单数」——三个星期是一段时间、鱼和薯条是一份饭、诗人兼作家是一个人；many a / more than one 最别扭，意思明明「不止一个」，谓语偏用单数，因为核心词是那个 a / one。</p>",
+        "qs_label": "课堂练习 2（上）：意义一致·上（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "Physics ________ my favorite subject.",
+            "options": [
+              "is",
+              "are",
+              "has",
+              "have"
+            ],
+            "answer": "A. is",
+            "explain": "physics 以 s 结尾，但是学科名 → 单数意义 → is。同类：news, maths, politics。C / D 死于 my favorite subject 前面要系动词 is，不是「拥有」。"
+          },
+          {
+            "stem": "Two weeks ________ not a long time, but you can do many preparations for your history report.",
+            "options": [
+              "was",
+              "is",
+              "are",
+              "were"
+            ],
+            "answer": "B. is",
+            "explain": "two weeks 是一段时间，当整体看 → 单数 → is。C / D 死于把「两个星期」当成两个东西；A 死于这是陈述一般事实，用现在时即可。"
+          },
+          {
+            "stem": "Three weeks ________ (be) already enough for you to finish the work.",
+            "answer": "is",
+            "explain": "三个星期 = 一段时间的整体 → is。够不够说的是这段时间的总量，总量是「一个数」。"
+          },
+          {
+            "stem": "The poet and writer ________ already come.（那位诗人兼作家已经来了）",
+            "options": [
+              "has",
+              "have",
+              "is",
+              "are"
+            ],
+            "answer": "A. has",
+            "explain": "the poet and writer 只有一个 the → 同一个人（诗人兼作家）→ 单数 → has come。若写成 the poet and <b>the</b> writer，两个 the 就是两个人，才用 have。C / D 死于 come 是实义动词，完成时要借 has / have，不能用 be 动词。"
+          },
+          {
+            "stem": "Fish and chips ________ (be) a popular meal in Britain.",
+            "answer": "is",
+            "explain": "fish and chips 是固定复合名词 = 一份饭 → 单数 → is。同类：bacon and eggs、bread and butter、a knife and fork（一副刀叉）。不是随便两个名词 and 一下都复数。"
+          },
+          {
+            "stem": "The good news ________ (be) that our class won the basketball game.",
+            "answer": "is",
+            "explain": "news 以 s 结尾却不可数 → 单数 → is。news 是「消息」这个整体概念，不是「许多 news」。"
+          },
+          {
+            "stem": "Each teacher and each student ________ to attend the meeting.",
+            "options": [
+              "is allowed",
+              "are allowed",
+              "has allowed",
+              "have allowed"
+            ],
+            "answer": "A. is allowed",
+            "explain": "each…and each…（以及 every…and every…、no…and no…）结构 → 一律单数；师生是「被允许」参加 → 被动 is allowed。B 死于复数；C / D 死于主动语态——主语不能自己 allow 自己。"
+          },
+          {
+            "stem": "Many a student ________ (want) to be a spaceman like Yang Liwei.",
+            "answer": "wants",
+            "explain": "many a + 单数名词：意思「许多学生」，形式却是 a student → 单数 → wants。意义一致里最别扭的一条：意思很多，形式认一个。"
+          }
+        ],
+        "memory": {
+          "front": "意义一致·上：哪些主语形式像复数，却按单数办？",
+          "back": "① 时间 / 距离 / 金额复数 → 整体，单数（Three weeks is enough. / Seventy miles is a long distance.）\n② and 连同一人 / 同一概念 → 单数（The poet and writer has come.；两个 the 才是两人，用 have）\n③ 复合名词 fish and chips / bacon and eggs / a knife and fork → 一份，单数\n④ news / maths / physics / politics：s 结尾，意义单数\n⑤ every…and every… / each…and each… / no…and no… → 单数\n⑥ many a / more than one + 单数名词 → 谓语单数（Many a student wants…）"
+        }
+      },
+      {
+        "key": "sense-2",
+        "title": "⑤ 意义一致·下：两面派名词大点兵",
+        "explain": "<p>再看反方向的一组：形式看不出复数（或干脆单数），意义却是复数：</p><table><tr><th>主语</th><th>规则</th><th>例句</th></tr><tr><td><b>① people / police</b></td><td>复数意义的集体名词 → 复数</td><td>The police <b>are</b> asking them questions.</td></tr><tr><td><b>② the + 姓氏复数</b>（the Smiths, the Greens）</td><td>= 一家人 → 复数</td><td>The Greens <b>are</b> going to have a picnic.</td></tr><tr><td><b>③ the + 形容词</b>（the rich, the poor, the wounded）</td><td>= 一类人 → 复数</td><td>The rich <b>are</b> not always happy. / The wounded <b>are</b> still in hospital.</td></tr><tr><td><b>④ family / class / group / team</b></td><td>整体 → 单数；成员 → 复数</td><td>His family <b>isn't</b> large. / His family <b>were</b> watching TV.</td></tr><tr><td><b>⑤ 单复同形</b>（fish, deer, means, species, series）</td><td>看意思：单数意义 → 单数；复数意义 → 复数</td><td>Every means <b>has been tried</b>. / The means of communication <b>are</b> interrupted.</td></tr><tr><td><b>⑥ and 连接两个 doing / to do</b></td><td>不同概念 → 复数；同一概念 → 单数</td><td>Reading and listening <b>are</b> good choices. / Respecting the old and taking care of the young <b>is</b> a good tradition.</td></tr></table><p><b>记法</b>：family 两面派——「家」是一个整体（is big），「家人」是一群人（are watching）；means 两面派——「每一种方法」（has been tried）单数，「多种通讯手段」（are interrupted）复数。判断标准只有一条：它指<b>一个</b>还是<b>一群</b>。</p>",
+        "qs_label": "课堂练习 2（下）：意义一致·下（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "The Smiths often ________ in the mountains on the weekend. They really like to spend time with nature.",
+            "options": [
+              "go camping",
+              "goes camping",
+              "is going camping",
+              "are going camping"
+            ],
+            "answer": "A. go camping",
+            "explain": "the + 姓氏复数（the Smiths）= 史密斯一家人 → 复数；often 提示一般现在时 → go camping。B / C 死于单数；D 死于 often 不能配进行时。"
+          },
+          {
+            "stem": "The police ________ (ask) them questions now.",
+            "answer": "are asking",
+            "explain": "police 是复数意义的集体名词（不说 a police）→ 谓语复数；now 提示进行时 → are asking。同类：people。"
+          },
+          {
+            "stem": "The rich ________ (be) not always happy.",
+            "answer": "are",
+            "explain": "the + 形容词 = 一类人（富人们）→ 复数 → are。the wounded（受伤的人们）、the poor（穷人们）同一待遇。"
+          },
+          {
+            "stem": "His family ________ (be) large.",
+            "answer": "is",
+            "explain": "「家大不大」说的是「家庭」这个整体 → 单数 → is。同一个词，下一题立刻变脸。"
+          },
+          {
+            "stem": "His family ________ (watch) TV when I arrived.",
+            "answer": "were watching",
+            "explain": "家人们正在看电视，说的是一个个成员 → 复数；when I arrived 过去时点上进行 → were watching。family 是单复切换的头号两面派。"
+          },
+          {
+            "stem": "Every possible means ________ to save his life.",
+            "options": [
+              "has been used",
+              "have been used",
+              "has used",
+              "have used"
+            ],
+            "answer": "A. has been used",
+            "explain": "every 锁定 means 的单数意义（每一种方法）→ 单数；方法是「被使用」→ 被动 → has been used。B 死于复数；C / D 死于主动语态——方法不能自己用自己。"
+          },
+          {
+            "stem": "Reading and listening to light music ________ (be) good choices to relax ourselves.",
+            "answer": "are",
+            "explain": "and 连接两个不同的动名词概念（阅读、听音乐是两件事）→ 复数 → are。对比：Respecting the old and taking care of the young is…（尊老爱幼算一件事）→ 单数。"
+          }
+        ],
+        "memory": {
+          "front": "意义一致·下：people / the Smiths / family / means 各自听谁的？",
+          "back": "people / police → 复数（The police are asking…）\nthe + 姓氏复数 = 一家人 → 复数（The Greens are…）\nthe + 形容词 = 一类人 → 复数（The rich are not always happy.）\nfamily / class / team：整体 → 单数（His family isn't large.）；成员 → 复数（His family were watching TV.）\nmeans 单复同形：每一种 → 单数（Every means has been tried.）；多种手段 → 复数\nand 连 doing：不同概念 → 复数；同一概念 → 单数"
+        }
+      },
+      {
+        "key": "proximity",
+        "title": "⑥ 就近原则 vs 就远原则",
+        "explain": "<p><b>就近原则</b>：谓语的单复数不看全部主语，只看<b>离它最近的那一个</b>。登场的是「就近三剑客」和 there be 句型：</p><table><tr><th>结构</th><th>规则</th><th>例句</th></tr><tr><td><b>either … or / neither … nor / not only … but also / or</b></td><td>谓语跟最近的主语</td><td>Neither you nor your father <b>is</b> able to help me. / Either you or I <b>go</b> swimming with our father.</td></tr><tr><td><b>there / here be + 并列主语</b></td><td>be 跟第一个（最近的）主语</td><td>There <b>is</b> a dictionary and some books on the desk.</td></tr></table><p>对照<b>就远原则</b>（第③关的陪衬结构）：with / together with / as well as / except / but / like 引导的短语跟在主语后面时，谓语只认<b>最前面那个主语</b>——Tom with his parents <b>has</b> gone to Beijing.</p><p><b>记法</b>：三剑客（either…or / neither…nor / not only…but also）把谓语拽向<b>近处</b>；陪衬团（with / as well as / except…）让谓语守住<b>远方</b>的主语。一个贪近，一个念旧，方向正好相反。</p>",
+        "qs_label": "课堂练习 3：就近 vs 就远（先想再点开）",
+        "general_qs": [
+          {
+            "stem": "Either Amy or her sisters ________ (plan) to go to the supermarket to buy fruit yesterday.",
+            "answer": "planned",
+            "explain": "either…or 就近：离谓语最近的是 her sisters（复数）→ 谓语按复数走；yesterday 过去时 → planned。Amy 的三单念头千万别冒出来。"
+          },
+          {
+            "stem": "Not only my teacher but also my parents ________ (support) my dream, so I will try my best to make it come true.",
+            "answer": "support",
+            "explain": "not only…but also 就近：最近的主语 my parents 复数 → support（原形）。teacher 虽是三单，但它离得远，说不上话。"
+          },
+          {
+            "stem": "There ________ (be) a river and many flowers in the park near my home and I usually go for a walk along the river.",
+            "answer": "is",
+            "explain": "there be 并列主语就近：be 跟第一个主语 a river（单数）→ is。后面的 many flowers 再热闹也不管——就近只认第一个。"
+          },
+          {
+            "stem": "Neither his parents nor his sister ________ (be) to the Palace Museum so far.",
+            "answer": "has been",
+            "explain": "neither…nor 就近：最近的主语 his sister 单数；so far 现在完成时 → has been。parents 复数的诱惑就摆在眼前，考的就是你敢不敢看近处。"
+          },
+          {
+            "stem": "Neither you nor your father ________ (be) able to help me.",
+            "answer": "is",
+            "explain": "就近：最近的主语 your father 三单 → is。和讲义另一句 Either you or I am… 对照着记——同一结构，近邻换了人，谓语就跟着换。"
+          },
+          {
+            "stem": "Tom with his parents 与 Not only Tom but also his parents 作主语，谓语分别跟谁？",
+            "options": [
+              "都跟 Tom（单数）",
+              "都跟 his parents（复数）",
+              "前者跟 Tom（就远），后者跟 his parents（就近）",
+              "前者跟 his parents，后者跟 Tom"
+            ],
+            "answer": "C. 前者跟 Tom（就远），后者跟 his parents（就近）",
+            "explain": "with 是陪衬，只作补充，主语还是 Tom → has gone；not only…but also 是就近结构，谓语被拽向 but also 后面的 his parents → 复数。一远一近，方向相反。"
+          }
+        ],
+        "memory": {
+          "front": "就近三剑客是哪三个？就远陪衬团有谁？",
+          "back": "就近：either…or / neither…nor / not only…but also（+ or）→ 谓语跟最近的主语\nthere be + 并列主语 → be 跟第一个主语\n就远：with / together with / as well as / except / but / like 引导的短语 → 谓语只看前面真正的主语\n例：Neither you nor he likes… / Tom with his parents has gone to Beijing.\n口诀：三剑客贪近，陪衬团念旧"
+        }
+      },
+      {
+        "key": "final",
+        "title": "⑦ 综合验收：六关考点一锅端",
+        "explain": "<p>最后一关，不讲新东西——把前面六关的考点混在一起再过一遍。做错哪题，就回哪一关翻口诀卡。</p><p>验收清单：必单数六情况（②）· a number of vs the number of / 陪衬结构（③）· 时间整体 / many a 与 more than one（④）· 两面派 family / means / the + 形容词（⑤）· 就近三剑客（⑥）。</p>",
+        "qs_label": "综合验收（错哪题回哪关）",
+        "general_qs": [
+          {
+            "stem": "One of my friends ________ (be) from Australia.",
+            "answer": "is",
+            "explain": "回第②关：one of + 复数名词，真正主语是 one → 单数 → is。friends 是 of 的陪衬。"
+          },
+          {
+            "stem": "下面哪句是对的？",
+            "options": [
+              "The number of visitors are increasing.",
+              "A number of students is from the countryside.",
+              "The number of the books is three thousand.",
+              "A number of water is wasted here."
+            ],
+            "answer": "C. The number of the books is three thousand.",
+            "explain": "回第③关：the number of = 数量 → 单数，C 对。A 死于 the number of 配了 are；B 死于 a number of（许多）配了 is；D 死于 a number of 只修饰复数可数名词，管不了 water。"
+          },
+          {
+            "stem": "Nobody except the twins ________ (know) the answer.",
+            "answer": "knows",
+            "explain": "回第③关陪衬结构：except the twins 是陪衬，主语 nobody 是 no- 系列不定代词 → 三单 → knows。别被 twins 拽成复数。"
+          },
+          {
+            "stem": "Seventy miles ________ (be) a long distance.",
+            "answer": "is",
+            "explain": "回第④关：七十英里是一段距离，整体概念 → 单数 → is。"
+          },
+          {
+            "stem": "More than one student ________ (make) the same mistake before.",
+            "answer": "has made",
+            "explain": "回第④关：more than one + 单数名词，核心词是 one → 谓语单数；before 提示现在完成时 → has made。意思上「不止一个学生」，形式上偏认单数。"
+          },
+          {
+            "stem": "The wounded ________ (be) still in hospital.",
+            "answer": "are",
+            "explain": "回第⑤关：the + 形容词 = 一类人（受伤的人们）→ 复数 → are。"
+          },
+          {
+            "stem": "Not only the students but also the teacher ________ (be) invited to the party.",
+            "answer": "is",
+            "explain": "回第⑥关：not only…but also 就近，最近的主语 the teacher 单数 → is。和课堂练习里 my parents 复数那题方向相反——全看谁是「近邻」。"
+          },
+          {
+            "stem": "Our team ________ (be) the best one in our school.",
+            "answer": "is",
+            "explain": "回第⑤关：team 指这支队伍整体（the best one 一个整体）→ 单数 → is。要说队员们个个怎样，才切复数。"
+          }
+        ]
+      }
+    ]
+  }
+}
