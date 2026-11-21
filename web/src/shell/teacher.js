@@ -10,6 +10,8 @@ const BACK_BASE = {
   topics: ['/prep', '← 返回备课中心'],
   topicsAdmin: ['/prep', '← 返回备课中心'],
   videoAdmin: ['/prep', '← 返回备课中心'],
+  videoReview: ['/prep', '← 返回备课中心'],
+  nce2Review: ['/prep', '← 返回备课中心'],
 }
 
 // 这三个 Tab 自己有页头，不再叠一条返回。

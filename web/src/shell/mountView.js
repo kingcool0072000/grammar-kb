@@ -68,6 +68,14 @@ export function mountView(route, container, { role, state, ctx, pointsById }) {
     return import('../views/videoAdmin.js').then(({ mountVideoAdmin }) =>
       mountVideoAdmin(container))
   }
+  if (route === 'videoReview') {
+    return import('../views/videoReview.js').then(({ mountVideoReview }) =>
+      mountVideoReview(container))
+  }
+  if (route === 'nce2Review') {
+    return import('../views/nce2Review.js').then(({ mountNce2Review }) =>
+      mountNce2Review(container))
+  }
   if (route === 'videoStudy') {
     return import('../views/videoStudy.js').then(({ mountVideoStudy }) =>
       mountVideoStudy(container, { role }))

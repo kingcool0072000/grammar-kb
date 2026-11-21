@@ -96,13 +96,19 @@ export async function mountRetellQueue(host, ctx) {
     host.innerHTML = '<p class="muted">加载中…</p>'
     const retells = await load()
     const pend = retells.filter((r) => r.status === 'pending')
+    const done = retells.filter((r) => r.status !== 'pending')
+    const more = pend.length
+      ? `<button class="gcard-more" data-open-review>去批复述（${pend.length}）→</button>`
+      : done.length
+        ? `<button class="gcard-more" data-open-review>查看已批成绩（${done.length}）→</button>`
+        : ''
     host.innerHTML = queueBlock(
       'vretell',
       '待批复述',
       pend.length,
       pend.map((r) => videoRetellRow(r)).join(''),
       '没有待批的视频复述',
-      pend.length ? `<button class="gcard-more" data-open-review>去批批复述（${pend.length}）→</button>` : '',
+      more,
     )
     host.querySelector('[data-open-review]')?.addEventListener('click', openReview)
     const list = host.querySelector('.gcard-list')
@@ -203,13 +209,19 @@ export async function mountNce2Queue(host, ctx) {
     host.innerHTML = '<p class="muted">加载中…</p>'
     const subs = pick(await load())
     const pend = subs.filter((r) => r.status === 'pending')
+    const done = subs.filter((r) => r.status !== 'pending')
+    const more = pend.length
+      ? `<button class="gcard-more" data-open-review>去批改听力（${pend.length}）→</button>`
+      : done.length
+        ? `<button class="gcard-more" data-open-review>查看已批成绩（${done.length}）→</button>`
+        : ''
     host.innerHTML = queueBlock(
       'nce2',
       '待批听力',
       pend.length,
       pend.map((r) => nce2SubRow(r)).join(''),
       '没有待批的听力提交',
-      pend.length ? `<button class="gcard-more" data-open-review>去批改听力（${pend.length}）→</button>` : '',
+      more,
     )
     host.querySelector('[data-open-review]')?.addEventListener('click', openReview)
     const list = host.querySelector('.gcard-list')

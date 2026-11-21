@@ -14,10 +14,11 @@ export async function mountVideoAdmin(el) {
     const r = await api.users()
     students = (r.users || []).filter((u) => u.role === 'student').map((u) => u.user)
   } catch { /* 单学生场景隐藏选择条 */ }
+  const qs = new URLSearchParams(location.hash.split('?')[1] || '')
+  const urlUser = qs.get('user') || ''
   const state = {
-    tab: new URLSearchParams(location.hash.split('?')[1] || '').get('tab') === 'progress'
-      ? 'progress' : 'content',
-    student: students[0] || 'malin',
+    tab: qs.get('tab') === 'progress' ? 'progress' : 'content',
+    student: (urlUser && students.includes(urlUser)) ? urlUser : (students[0] || 'malin'),
   }
   render()
 

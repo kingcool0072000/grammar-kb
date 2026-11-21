@@ -114,7 +114,7 @@ async function mountContent(el) {
         <div id="pp-vocab-board"></div>
       </section>
 
-      <!-- ================= 4 · 视频学习（清单 + 待批复述队列） ================= -->
+      <!-- ================= 4 · 视频学习（清单 · 复述成绩 · 学生进度 + 待批复述队列） ================= -->
       <section class="gd-section">
         <header class="gd-section-head">
           <h2>🎬 视频学习 <span class="prep-qbadge" data-qbadge="video" hidden></span></h2>
@@ -125,13 +125,19 @@ async function mountContent(el) {
             <button class="prep-card" data-go="videoAdmin">
               <b>视频管理</b><span>清单 · 生僻词 · 提示 · 上下架</span>
             </button>
+            <button class="prep-card" data-go="videoReview">
+              <b>📝 复述成绩与批改</b><span>历次录音 · 打分改分 · 评语记录</span>
+            </button>
+            <button class="prep-card" data-go="videoAdmin?tab=progress">
+              <b>📊 学生视频进度</b><span>本周安排 · 最高分 · 完成情况</span>
+            </button>
           </div>
-          <p class="reading-hint">维护学生「视频学习」Tab 的视频清单（新增/编辑/上下架）；学生看完视频提交复述录音，复述批改在本区下方队列。</p>
+          <p class="reading-hint">维护学生「视频学习」Tab 的视频清单（新增/编辑/上下架）；点击「复述成绩与批改」或「学生视频进度」可查看各生得分与评语，待批复述也会列在下方队列。</p>
         </div>
         <div class="prep-queue" data-q="retell"><p class="muted">加载中…</p></div>
       </section>
 
-      <!-- ================= 4b · NCE2 听力跟读（学生页预览 + 待批听力队列） ================= -->
+      <!-- ================= 4b · NCE2 听力跟读（课程预览 · 成绩记录 + 待批听力队列） ================= -->
       <section class="gd-section">
         <header class="gd-section-head">
           <h2>🎧 听力跟读（NCE2） <span class="prep-qbadge" data-qbadge="nce2" hidden></span></h2>
@@ -142,8 +148,11 @@ async function mountContent(el) {
             <button class="prep-card" data-go="nce2">
               <b>96 课</b><span>听力跟读 · 学生视角预览</span>
             </button>
+            <button class="prep-card" data-go="nce2Review">
+              <b>📝 听力成绩与批改</b><span>跟读成绩 · 录音回放 · 精听打卡记录</span>
+            </button>
           </div>
-          <p class="reading-hint">学生精听打卡与跟读录音的批改在本区下方队列（与视频批改并排）；点卡片可打开学生视角的课程清单（教师为只读预览）。计划表里给某天排 NCE2 任务后，学生课程表行点击直达对应课。</p>
+          <p class="reading-hint">点击「听力成绩与批改」查看全部学生或单生的跟读打分、过关情况与精听打卡记录；待批跟读可直接在下方队列完成，点「96 课」打开学生视角预览。</p>
         </div>
         <div class="prep-queue" data-q="nce2"><p class="muted">加载中…</p></div>
       </section>
@@ -250,11 +259,16 @@ async function mountContent(el) {
     </div>
   `
 
+  const USER_SCOPED_TARGETS = new Set([
+    'conquered', 'videoReview', 'nce2Review', 'videoAdmin?tab=progress',
+  ])
   el.querySelectorAll('[data-go]').forEach((b) => {
     b.addEventListener('click', () => {
       const target = b.dataset.go
-      if (target === 'conquered' && vocabStudent()) {
-        location.hash = `#/conquered?user=${encodeURIComponent(vocabStudent())}`
+      const stu = vocabStudent()
+      if (stu && USER_SCOPED_TARGETS.has(target)) {
+        const sep = target.includes('?') ? '&' : '?'
+        location.hash = `#/${target}${sep}user=${encodeURIComponent(stu)}`
         return
       }
       location.hash = `#/${target}`

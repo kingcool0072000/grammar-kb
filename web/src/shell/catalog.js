@@ -25,7 +25,7 @@ const TEACHER_ALLOWED = new Set([
   // 备课 / 批改 / 计划跳进来的工具页
   'courses', 'taxonomy', 'fceListen', 'exams', 'vocabLevel', 'vocabExam',
   'students', 'paperAdmin', 'topicsAdmin',
-  'videoAdmin',
+  'videoAdmin', 'videoReview', 'nce2Review',
   'librarySettings',
   // 微练习题库管理 + 完成度 + 句型素材（教师专属，不进顶部 Tab）
   'microAdmin', 'microProgress', 'microPatterns',
