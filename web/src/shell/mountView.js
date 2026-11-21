@@ -30,7 +30,7 @@ export function mountView(route, container, { role, state, ctx, pointsById }) {
   // 词汇表走 Promise（启动时后台预取，见 main.js bootstrap）：recite 页自行 await
   if (route === 'recite') return mountRecite(container, { vocabPromise: state.vocabPromise, role })
   if (route === 'timetable') return mountTimetable(container)
-  if (route === 'conquered') return mountConquered(container)
+  if (route === 'conquered') return mountConquered(container, { role })
   if (route === 'topics') {
     return import('../views/topics.js').then(({ mountTopics }) =>
       mountTopics(container, { role }))
@@ -83,7 +83,9 @@ export function mountView(route, container, { role, state, ctx, pointsById }) {
   }
   if (route === 'librarySettings') return mountLibrarySettings(container)
   if (route === 'vocabLevel') {
-    return mountVocabLevel(container, { level: Number(routeSegs()[1]) || 0 })
+    const raw = routeSegs()[1]
+    const lv = raw != null && raw !== '' && Number.isFinite(Number(raw)) ? Number(raw) : null
+    return mountVocabLevel(container, { level: lv })
   }
   if (route === 'paperAdmin') return mountPaperAdmin(container)
   if (route === 'students') return mountStudents(container)

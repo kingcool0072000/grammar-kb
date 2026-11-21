@@ -3,14 +3,28 @@ import { escapeHtml } from '../render.js'
 import { fillAtlasHost, speakWord } from '../atlas.js'
 import { getWordCard } from '../wordcard.js'
 
-// ✅ 已攻克题本（学生页 #/conquered）：全部背完掌握的单词——
+// ✅ 已攻克题本（学生页 & 教师按学生查看 #/conquered）：全部背完掌握的单词——
 // 一遍背会（从未进错题本）+ 从错题周期六轮复习全对走出来的。
 // 分页在服务端：每页 40 词，浏览器不装下全集。
 const PAGE = 40
 
-export async function mountConquered(el) {
+export async function mountConquered(el, { role } = {}) {
+  const isTeacher = role === 'teacher'
+  let students = []
+  let currentUser = ''
+  if (isTeacher) {
+    try {
+      const r = await api.users()
+      students = (r.users || []).filter((u) => u.role === 'student').map((u) => u.user)
+    } catch { students = [] }
+    const urlUser = new URLSearchParams(location.hash.split('?')[1] || '').get('user') || ''
+    currentUser = (urlUser && students.includes(urlUser))
+      ? urlUser
+      : (students[0] || urlUser || '')
+  }
+
   el.innerHTML = `
-    <button class="fce-back-btn" id="cq-back">← 返回背单词</button>
+    <button class="${isTeacher ? 'fce-back-btn gd-tool-back' : 'fce-back-btn'}" id="cq-back">${isTeacher ? '← 返回备课中心' : '← 返回背单词'}</button>
     <div class="view-head">
       <h1>✅ 已攻克题本</h1>
       <p id="cq-sub">加载中…</p>
@@ -19,15 +33,25 @@ export async function mountConquered(el) {
       <header class="vl-head">
         <h3>📚 已学过的单词</h3>
         <div class="vl-tools">
+          ${isTeacher ? `
+            <label class="vl-scope">学生
+              <select id="cq-user">
+                ${students.map((u) => `<option value="${escapeHtml(u)}" ${u === currentUser ? 'selected' : ''}>${escapeHtml(u)}</option>`).join('') || '<option value="">（无学生账号）</option>'}
+              </select>
+            </label>` : ''}
           <input id="cq-search" placeholder="搜索单词 / 释义…"/>
         </div>
       </header>
+      ${isTeacher && students.length > 1 ? `
+        <div class="vl-lv-filters" id="cq-stu-chips">
+          ${students.map((u) => `<button type="button" class="chip vl-lv-filter ${u === currentUser ? 'on' : ''}" data-stu="${escapeHtml(u)}">🎒 ${escapeHtml(u)}</button>`).join('')}
+        </div>` : ''}
       <div class="vl-words" id="cq-words"><p class="muted">加载中…</p></div>
       <div class="vl-pager" id="cq-pager"></div>
     </section>`
 
   el.querySelector('#cq-back').addEventListener('click', () => {
-    location.hash = '/recite'
+    location.hash = isTeacher ? '/prep' : '/recite'
   })
 
   let page = 1
@@ -45,19 +69,29 @@ export async function mountConquered(el) {
 
   function paintSub() {
     const passed = Math.max(0, summary.total - summary.from_review)
+    const prefix = isTeacher && currentUser ? `${currentUser} · ` : ''
     el.querySelector('#cq-sub').textContent =
-      `共 ${summary.total} 词全部背完掌握 · 一遍过 ${passed} · 从错题攻克 ${summary.from_review}`
+      `${prefix}共 ${summary.total} 词全部背完掌握 · 一遍过 ${passed} · 从错题攻克 ${summary.from_review}`
   }
 
   async function loadPage() {
+    if (isTeacher && !currentUser) {
+      el.querySelector('#cq-sub').textContent = '暂无学生账号（请先在学生管理中添加学生）。'
+      el.querySelector('#cq-words').innerHTML = '<p class="muted">暂无学生数据。</p>'
+      el.querySelector('#cq-pager').innerHTML = ''
+      return
+    }
     const mine = ++seq
     const q = search.value.trim()
     el.querySelector('#cq-words').innerHTML = '<p class="muted">加载中…</p>'
     try {
-      const d = await api.conqueredPage({ page, limit: PAGE, q })
+      const d = await api.conqueredPage({
+        user: isTeacher ? currentUser : undefined,
+        page, limit: PAGE, q,
+      })
       if (mine !== seq) return
       items = (d && d.items) || []
-      summary = (d && d.summary) || summary
+      summary = (d && d.summary) || { total: 0, from_review: 0 }
       const total = Number(d && d.total) || 0
       const pages = Math.max(1, Math.ceil(total / PAGE))
       if (page > pages) {
@@ -67,7 +101,10 @@ export async function mountConquered(el) {
       paintSub()
       el.querySelector('#cq-words').innerHTML = items.length ? items.map((w) => `
         <div class="vl-word" data-word="${escapeHtml(w.word || '')}" title="点击查看完整内容">
-          <b>${escapeHtml(w.word || '')}${w.wrong_count ? `<u class="cq-flag" title="从错题攻克（曾错 ${w.wrong_count} 次）">✓</u>` : ''}</b>
+          <div class="vl-word-top">
+            <b>${escapeHtml(w.word || '')}${w.wrong_count ? `<u class="cq-flag" title="从错题攻克（曾错 ${w.wrong_count} 次）">✓</u>` : ''}</b>
+            ${w.level != null ? `<span class="vl-lv-tag">L${w.level}</span>` : ''}
+          </div>
           <span class="vl-pos">${(w.pos || []).join(' ')}</span>
           <i>${escapeHtml(glossOf(w).slice(0, 36))}</i>
         </div>`).join('') : '<p class="muted">没有匹配的词条。</p>'
@@ -94,6 +131,24 @@ export async function mountConquered(el) {
     }
   }
 
+  function switchStudent(u) {
+    if (!u || u === currentUser) return
+    currentUser = u
+    const userSel = el.querySelector('#cq-user')
+    if (userSel) userSel.value = u
+    el.querySelectorAll('#cq-stu-chips [data-stu]').forEach((b) =>
+      b.classList.toggle('on', b.dataset.stu === u))
+    page = 1
+    loadPage()
+  }
+
+  const userSel = el.querySelector('#cq-user')
+  if (userSel) {
+    userSel.addEventListener('change', (e) => switchStudent(e.target.value))
+  }
+  el.querySelectorAll('#cq-stu-chips [data-stu]').forEach((b) =>
+    b.addEventListener('click', () => switchStudent(b.dataset.stu)))
+
   function openWordDialog(wordStr) {
     const w = items.find((x) => x.word === wordStr)
     if (!w) return
@@ -107,7 +162,7 @@ export async function mountConquered(el) {
     dlg.innerHTML = `
       <div class="plan-editor-mask"></div>
       <div class="plan-editor-body card vl-word-dlg">
-        <h3>${escapeHtml(w.word || '')} <i class="vl-dlg-pos">${(w.pos || []).join(' ')}</i>
+        <h3>${escapeHtml(w.word || '')} ${w.level != null ? `<span class="vl-lv-tag">L${w.level}</span> ` : ''}<i class="vl-dlg-pos">${(w.pos || []).join(' ')}</i>
           <button class="chip" id="cq-dlg-say" title="发音">🔊</button></h3>
         ${card.def ? `<div class="vl-dlg-sec"><b>释义</b><p>${escapeHtml(glossOf(w) || '（暂无）')}</p></div>` : ''}
         ${card.example && ex.en ? `<div class="vl-dlg-sec"><b>例句</b><p class="vl-dlg-en">${escapeHtml(ex.en)}</p>${ex.zh ? `<p class="vl-dlg-zh">${escapeHtml(ex.zh)}</p>` : ''}</div>` : ''}

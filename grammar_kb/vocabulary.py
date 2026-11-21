@@ -954,7 +954,7 @@ def fill_word_gloss(conn, items: list) -> None:
         ph = ",".join("?" * len(chunk))
         try:
             rows = conn.execute(
-                f"SELECT word, gloss, meanings, pos, example FROM vocab_word"
+                f"SELECT word, level, gloss, meanings, pos, example FROM vocab_word"
                 f" WHERE lower(word) IN ({ph})",
                 chunk,
             ).fetchall()
@@ -974,6 +974,7 @@ def fill_word_gloss(conn, items: list) -> None:
             except (ValueError, TypeError):
                 example = {}
             gloss_map[str(r["word"]).lower()] = {
+                "level": r["level"],
                 "gloss": r["gloss"] or "",
                 "meanings": meanings if isinstance(meanings, list) else [],
                 "pos": pos if isinstance(pos, list) else [],
@@ -983,6 +984,8 @@ def fill_word_gloss(conn, items: list) -> None:
         g = gloss_map.get(str(x.get("word") or "").lower())
         if not g:
             continue
+        if x.get("level") is None and g.get("level") is not None:
+            x["level"] = g["level"]
         x["gloss"] = g["gloss"]
         x["meanings"] = g["meanings"]
         x["pos"] = g["pos"]

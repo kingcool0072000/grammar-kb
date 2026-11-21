@@ -5,34 +5,37 @@ import { fillAtlasHost } from '../atlas.js'
 import { getWordCard } from '../wordcard.js'
 import { toast } from '../toast.js'
 
-// 教师版 · 背单词级别详情（备课中心子页）：
-//   2.1 本级单词内容（词表+搜索，L0=哈一课本高频词=原词汇表）
-//   2.2 单词考试设计（卷型预设/配比/生成/打印，sections 动态渲染）
+// 教师版 · 背单词词库与出题（备课中心子页）：
+//   2.1 全量词库（带 L0-L7 级别标签 + 筛选 + 搜索 + 跳转已攻克题本）
+//   2.2 单词考试设计（按学生全部已学单词出题，卷型预设/配比/生成/打印）
 //   2.3 单词级别（教师直接设定，不要求考试 80 分，解锁上限 L7）
-export async function mountVocabLevel(el, { level = 0 } = {}) {
-  const lv = Math.max(0, Math.min(7, Number(level) || 0))
+export async function mountVocabLevel(el, { level = null } = {}) {
+  const initLv = level != null && level !== '' && Number.isFinite(Number(level))
+    ? Math.max(0, Math.min(7, Number(level)))
+    : 'all'
   el.innerHTML = `
     <div class="view-head">
-      <h1>背单词 · L${lv}${lv === 0 ? '（课本高频词）' : ''}</h1>
-      <p>本级词库 · 考试设计 · 解锁配置。</p>
+      <h1>背单词 · 词库与出题</h1>
+      <p>全量分级词库（L0–L7） · 按学生已学单词出题 · 单词级别设定。</p>
       <p class="atlas-footnote">和词光对得上的词可以看插画、听录音。素材来自 <a href="https://github.com/designfuchen/word-atlas" target="_blank" rel="noopener">词光 Word Atlas</a>，<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>，署名 Word Atlas contributors（词光）。词光的雅思词没有并进本级词表。</p>
     </div>
     <div id="vl-body"><p class="muted">加载中…</p></div>
   `
   const body = el.querySelector('#vl-body')
 
-  // ---- 数据：本级词 + 每个学生的单词级别 + 学生列表 ----
+  // ---- 数据：全量分级词库 + 每个学生的单词级别 + 学生列表 ----
   let data, students
   try {
     ;[data, students] = await Promise.all([
-      api.vocabLevels({ maxLevel: 7, level: lv }),
+      api.vocabLevels({ maxLevel: 7 }),
       api.users().catch(() => ({ users: [] })),
     ])
   } catch (e) {
     body.innerHTML = `<p style="color:#b42318">加载失败：${escapeHtml(e.message)}</p>`
     return
   }
-  const words = (data.items || []).filter((w) => w.level === lv)
+  const words = data.items || []
+  const counts = data.counts || {}
   const studs = (students.users || []).filter((u) => u.role === 'student')
   const levelState = {}
   await Promise.all(studs.map(async (u) => {
@@ -54,39 +57,50 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
   }
 
   function render() {
+    let activeLv = initLv
+    const lvCount = (n) => {
+      if (counts[String(n)] != null) return Number(counts[String(n)])
+      return words.filter((w) => w.level === n).length
+    }
     body.innerHTML = `
-      <!-- 2.1 本级单词内容 -->
+      <!-- 2.1 全量词库（带级别标签 + 级别筛选 + 搜索） -->
       <section class="vl-sec card">
         <header class="vl-head">
-          <h3>📚 本级单词 <i>${words.length} 词${lv === 0 ? ' · 哈一课本高频词（原词汇表）' : ''}</i></h3>
+          <h3>📚 分级词库 <i>共 ${words.length} 词 · L0–L7 统一视图（L0=哈一课本高频词）</i></h3>
           <div class="vl-tools">
             <input id="vl-search" placeholder="搜索单词 / 释义…"/>
+            <button class="chip" id="vl-conquered" type="button">✅ 已攻克题本</button>
           </div>
         </header>
+        <div class="vl-lv-filters" id="vl-lv-filters">
+          <button type="button" class="chip vl-lv-filter ${activeLv === 'all' ? 'on' : ''}" data-lv="all">全部 · ${words.length}</button>
+          ${[0, 1, 2, 3, 4, 5, 6, 7].map((n) => `
+            <button type="button" class="chip vl-lv-filter ${activeLv === n ? 'on' : ''}" data-lv="${n}">L${n} · ${lvCount(n)}</button>`).join('')}
+        </div>
         <div class="vl-words" id="vl-words"></div>
         <div class="vl-pager" id="vl-pager"></div>
       </section>
 
-      <!-- 2.2 单词考试 · 试卷生成（卷型预设：标准/复习强化/错词回收；已学混合卷按学生进度） -->
+      <!-- 2.2 单词考试 · 试卷生成（仅按所选学生全部已学单词出题） -->
       <section class="vl-sec card">
         <header class="vl-head">
           <h3>📝 单词考试 · 试卷生成</h3>
           <div class="vl-tools">
-            <label class="vl-scope"><input type="radio" name="vl-scope" value="level" checked>本级（L${lv}）</label>
-            <label class="vl-scope"><input type="radio" name="vl-scope" value="learned">全部已学词</label>
-            <select id="vl-preset" title="卷型预设：标准卷按默认配比；强化卷/回收卷按所选学生的作答记录出题">
+            <label class="vl-scope">学生
+              <select id="vl-scope-user" title="按该学生的全部已学单词出题">
+                ${studs.map((u) => `<option value="${escapeHtml(u.user)}">${escapeHtml(u.user)}</option>`).join('') || '<option value="">（无学生账号）</option>'}
+              </select>
+            </label>
+            <select id="vl-preset" title="卷型预设：标准卷按默认配比；强化卷/回收卷优先混入所选学生的积压错词">
               <option value="standard">标准卷</option>
               <option value="reinforce">复习强化卷</option>
               <option value="recycle">错词回收卷</option>
-            </select>
-            <select id="vl-scope-user" style="display:none" title="按该学生的学习轨迹/错词出题">
-              ${studs.map((u) => `<option value="${escapeHtml(u.user)}">${escapeHtml(u.user)}</option>`).join('') || '<option value="">（无学生账号）</option>'}
             </select>
             <button class="btn-primary" id="vl-gen">🎲 生成试卷</button>
             <button class="chip" id="vl-records" type="button">📋 考试成绩</button>
           </div>
         </header>
-        <p class="muted">随机选词（不同首字母/词性，自动规避人名/地名）· 词形、拼写、中译英给出词性，英译中只给英文 · 标准卷默认 50 题（词形 6 · 拼写 8 · 例句 12 · 中译英 12 · 英译中 12）。<b>复习强化卷 / 错词回收卷</b>按所选学生的作答记录出题（须选学生，本级范围也要选）。<b>本级</b>=L${lv} 词库；<b>全部已学词</b>=所选学生背过的词（出现在进度里即可，含尚未掌握）跨级别混合，卷号 MIX-。题量与五题型配比可在下方「进阶」里自定义。流程：生成 → 预览 → 满意后保存存档。</p>
+        <p class="muted">不再按单个级别设计试卷，仅按所选学生<b>全部已学单词</b>（进度里出现过即可，含尚未掌握）跨 L0–L7 混合出题（卷号 MIX-）。随机选词（不同首字母/词性，自动规避人名/地名）· 词形、拼写、中译英给出词性，英译中只给英文 · 标准卷默认 50 题（词形 6 · 拼写 8 · 例句 12 · 中译英 12 · 英译中 12）。<b>复习强化卷 / 错词回收卷</b>按所选学生的积压错词出题。题量与五题型配比可在下方「进阶」里自定义。流程：生成 → 预览 → 满意后保存存档。</p>
         <details class="vl-paper-adv" style="margin:6px 0 10px">
           <summary style="cursor:pointer;user-select:none;font-size:13px;color:var(--ink)">进阶：题量与配比</summary>
           <div class="vl-adv-row" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px;color:var(--ink)">
@@ -130,14 +144,17 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
         </div>
       </section>`
 
-    // 分页展示（每页 40 词；搜索时按结果分页）
+    // 分页展示（每页 40 词；级别标签筛选 + 搜索时按结果分页）
     const PAGE = 40
     let page = 0
     const search = body.querySelector('#vl-search')
     const curList = () => {
       const q = search.value.trim().toLowerCase()
-      return !q ? words : words.filter((w) =>
-        (w.word || '').toLowerCase().includes(q) || glossOf(w).includes(q))
+      return words.filter((w) => {
+        if (activeLv !== 'all' && Number(w.level) !== activeLv) return false
+        if (!q) return true
+        return (w.word || '').toLowerCase().includes(q) || glossOf(w).toLowerCase().includes(q)
+      })
     }
     function renderPage() {
       const list = curList()
@@ -159,6 +176,15 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
       body.querySelectorAll('.vl-word[data-word]').forEach((w) =>
         w.addEventListener('click', () => openWordDialog(w.dataset.word)))
     }
+    body.querySelectorAll('#vl-lv-filters [data-lv]').forEach((btn) =>
+      btn.addEventListener('click', () => {
+        const raw = btn.dataset.lv
+        activeLv = raw === 'all' ? 'all' : Number(raw)
+        body.querySelectorAll('#vl-lv-filters [data-lv]').forEach((x) =>
+          x.classList.toggle('on', x === btn))
+        page = 0
+        renderPage()
+      }))
     search.addEventListener('input', () => { page = 0; renderPage() })
     renderPage()
 
@@ -184,7 +210,7 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
       dlg.innerHTML = `
         <div class="plan-editor-mask"></div>
         <div class="plan-editor-body card vl-word-dlg">
-          <h3>${escapeHtml(w.word || '')} <i class="vl-dlg-pos">${(w.pos || []).join(' ')}</i></h3>
+          <h3>${escapeHtml(w.word || '')} <span class="vl-lv-tag">L${w.level ?? 0}</span> <i class="vl-dlg-pos">${(w.pos || []).join(' ')}</i></h3>
           ${card.def ? `<div class="vl-dlg-sec"><b>释义</b><p>${escapeHtml(glossOf(w) || '（暂无）')}</p></div>` : ''}
           ${forms ? `<div class="vl-dlg-sec"><b>词形变化</b><p>${escapeHtml(forms)}</p></div>` : ''}
           ${card.example && exEn ? `<div class="vl-dlg-sec"><b>例句</b><p class="vl-dlg-en">${escapeHtml(exEn)}</p>${exZh ? `<p class="vl-dlg-zh">${escapeHtml(exZh)}</p>` : ''}</div>` : ''}
@@ -200,18 +226,14 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
       dlg.querySelector('#vl-dlg-close').addEventListener('click', close)
     }
     // 试卷生成：三步流程 生成（未存档）→ 预览 → 保存
-    // 范围：本级（L{n} 词库） / 全部已学词（进度里出现过的词，含未掌握）
-    // 卷型：standard 标准卷 / reinforce 复习强化卷 / recycle 错词回收卷——
-    //       后两种按所选学生的作答记录出题，本级范围也要求选人
-    const scopeRadios = body.querySelectorAll('input[name="vl-scope"]')
+    // 范围：固定仅按所选学生的全部已学单词（scope='learned'，跨 L0–L7 混合）
+    // 卷型：standard 标准卷 / reinforce 复习强化卷 / recycle 错词回收卷
     const scopeUser = body.querySelector('#vl-scope-user')
     const presetSel = body.querySelector('#vl-preset')
-    const userNeeded = () =>
-      body.querySelector('input[name="vl-scope"]:checked').value === 'learned' ||
-      presetSel.value !== 'standard'
-    const syncUserVis = () => { scopeUser.style.display = userNeeded() ? '' : 'none' }
-    scopeRadios.forEach((r) => r.addEventListener('change', syncUserVis))
-    presetSel.addEventListener('change', syncUserVis)
+    body.querySelector('#vl-conquered').addEventListener('click', () => {
+      const stu = (scopeUser && scopeUser.value || '').trim()
+      location.hash = stu ? `/conquered?user=${encodeURIComponent(stu)}` : '/conquered'
+    })
 
     // 五题型配比：全空 → 不传 ratios（按后端预设默认）；有填 → 只传填了的键
     function readRatios() {
@@ -251,11 +273,11 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
 
     async function genPaper() {
       const out = body.querySelector('#vl-paper-out')
-      const scope = body.querySelector('input[name="vl-scope"]:checked').value
+      const scope = 'learned'
       const preset = presetSel.value
-      const user = userNeeded() ? scopeUser.value : ''
-      if (userNeeded() && !user) {
-        out.innerHTML = '<p style="color:#b42318">请先选择学生（强化卷/回收卷/混合卷都按该学生的记录出题）。</p>'
+      const user = (scopeUser.value || '').trim()
+      if (!user) {
+        out.innerHTML = '<p style="color:#b42318">请先选择学生（试卷仅按所选学生的全部已学单词出题）。</p>'
         return
       }
       const totalRaw = body.querySelector('#vl-total').value.trim()
@@ -263,7 +285,7 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
       out.innerHTML = '<p class="muted">生成中…</p>'
       try {
         // 先不存档；题量/配比留默认（空）时不传，按后端预设走
-        const r = await api.vocabPaperGenerate(lv, false, {
+        const r = await api.vocabPaperGenerate(0, false, {
           scope, user, preset,
           ...(totalRaw !== '' ? { total: Number(totalRaw) } : {}),
           ...(ratios ? { ratios } : {}),
@@ -275,7 +297,7 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
           <div class="vl-paper-card">
             <div class="vl-paper-meta">
               <b title="${escapeHtml(p.paper_id)}">${escapeHtml(vocabPaperShort(p).short)}</b>
-              <span>${p.scope === 'learned' ? `已学全部混合卷 · ${escapeHtml(p.user || '')} · ` : ''}${sections.map((s) => `${escapeHtml(s.title)} ${(s.items || []).length}`).join(' · ')} · 与历史重复 ${p.overlap_with_history} 词${p.seed != null && p.seed !== '' ? ` · seed ${escapeHtml(String(p.seed))}` : ''}</span>
+              <span>${p.user ? `${escapeHtml(p.user)} · ` : ''}已学全部混合卷 · ${sections.map((s) => `${escapeHtml(s.title)} ${(s.items || []).length}`).join(' · ')} · 与历史重复 ${p.overlap_with_history} 词${p.seed != null && p.seed !== '' ? ` · seed ${escapeHtml(String(p.seed))}` : ''}</span>
               <i class="vl-paper-state">${saved ? '已存档' : '未存档（预览态）'}</i>
             </div>
             <details class="vl-paper-preview">
@@ -327,21 +349,21 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
     async function loadHistory() {
       const host = body.querySelector('#vl-paper-history')
       try {
-        // 本级 + 混合卷分桶返回，避免全局最近 N 条把本级卷挤掉
-        const r = await api.vocabPaperHistory(lv, { includeMix: true, limit: 80 })
+        const r = await api.vocabPaperHistory(-1, { limit: 80 })
         const items = r.papers || []
-        const levelItems = items.filter((x) => x.level === lv).slice(0, 8)
-        const mixItems = items.filter((x) => Number(x.level) < 0).slice(0, 8)
-        const shown = [...levelItems, ...mixItems]
+        const shown = items.slice(0, 16)
         host.innerHTML = items.length ? `
           <div class="vl-hist">
-            <b>📚 已生成 ${items.length} 卷（本级 + 混合）</b>
-            ${shown.map((x) => `
+            <b>📚 已生成 ${items.length} 卷</b>
+            ${shown.map((x) => {
+              const who = x.user ? ` · ${escapeHtml(x.user)}` : ''
+              return `
               <span class="vl-hist-item" title="${escapeHtml(x.paper_id)}">
-                <em class="vl-hist-name">${escapeHtml(vocabPaperShort(x).short)} · ${x.count} 词</em>
+                <em class="vl-hist-name">${escapeHtml(vocabPaperShort(x).short)}${who} · ${x.count} 词</em>
                 <button class="chip vl-hist-op" data-hprev="${escapeHtml(x.paper_id)}">👁</button>
                 <button class="chip vl-hist-op del" data-hdel="${escapeHtml(x.paper_id)}">🗑</button>
-              </span>`).join('')}
+              </span>`
+            }).join('')}
           </div>` : '<p class="muted">尚无生成记录。</p>'
         host.querySelectorAll('[data-hprev]').forEach((b) =>
           b.addEventListener('click', async () => {
@@ -388,7 +410,10 @@ export async function mountVocabLevel(el, { level = 0 } = {}) {
     if (!list.length) return '<p class="muted">没有匹配的词条。</p>'
     return list.map((w) => `
       <div class="vl-word" data-word="${escapeHtml(w.word || '')}" title="点击查看完整内容">
-        <b>${escapeHtml(w.word || '')}</b>
+        <div class="vl-word-top">
+          <b>${escapeHtml(w.word || '')}</b>
+          <span class="vl-lv-tag">L${w.level ?? 0}</span>
+        </div>
         <span class="vl-pos">${(w.pos || []).join(' ')}</span>
         <i>${escapeHtml(glossOf(w).slice(0, 36))}</i>
       </div>`).join('')

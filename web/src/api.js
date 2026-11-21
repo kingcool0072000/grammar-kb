@@ -249,13 +249,13 @@ export const api = {
   planRules: ({ user } = {}) => req('/plan/rules', { searchParams: { user } }),
   planRuleSet: (ruleId, { value, user } = {}) =>
     reqJson(`/plan/rules/${encodeURIComponent(ruleId)}`, 'PUT', { value, user }),
-  // scope: 'level' 本级 | 'learned' 已学词混合卷（进度里出现过即可，含未掌握；须带 user）
+  // scope: 'learned' 已学词混合卷（进度里出现过即可，含未掌握；须带 user）| 'level' 本级（仅历史接口兼容）
   // opts（全部可选）：preset 'standard'|'reinforce'|'recycle'（非 standard 须带 user）；
   //   ratios {form,spell,ctx,zh2en,en2zh} 五题型配比；total 题量；seed 复现同一卷
-  vocabPaperGenerate: (level, save = true, opts = {}) => {
-    const { scope = 'level', user = '', seed, preset, ratios, total } = opts
+  vocabPaperGenerate: (level = 0, save = true, opts = {}) => {
+    const { scope = 'learned', user = '', seed, preset, ratios, total } = opts
     return reqJson('/vocab-papers/generate', 'POST', {
-      level, save, scope, user,
+      level: level ?? 0, save, scope, user,
       ...(seed !== undefined ? { seed } : {}),
       ...(preset ? { preset } : {}),
       ...(ratios ? { ratios } : {}),

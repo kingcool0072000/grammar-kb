@@ -62,27 +62,29 @@ def register_vocab(app, ctx):
 
     @app.post("/vocab-papers/generate")
     def vocab_paper_generate(rec: dict, request: "fastapi.Request"):
-        """生成一份考试卷（三题型+历史去重）。save=0 仅预览。教师专属。
+        """生成一份考试卷（五题型+历史去重）。save=0 仅预览。教师专属。
 
-        scope="level"（默认）本级出题；scope="learned" 按某学生已学词
-        （进度里出现过的词，含未掌握）跨级别混合出题，须带 user。
-        learned 仍要求 body.level 为有效级别（占位，不决定词池）。
+        scope="learned"（默认）按某学生已学词（进度里出现过的词，含未掌握）
+        跨级别混合出题，须带 user（level 缺省按 0 占位，不决定词池）。
+        仍保留 scope="level" 历史兼容。
         可选 seed（复现同一份卷）/ preset（选词来源预设）/
         ratios（各题型数量配比 dict）/ total（总题量 10-200，按比例
         缩放配比），原样透传给出题器。
         """
         _require_teacher(request)
         body = rec if isinstance(rec, dict) else {}
+        scope = str(body.get("scope") or "learned")
+        if scope not in ("level", "learned"):
+            raise HTTPException(status_code=422, detail="scope 须为 level 或 learned")
         level = body.get("level")
+        if scope == "learned" and level is None:
+            level = 0
         if not isinstance(level, int) or isinstance(level, bool) \
                 or not (0 <= level <= MAX_UNLOCK_LEVEL):
             raise HTTPException(
                 status_code=422, detail=f"level 须为 0-{MAX_UNLOCK_LEVEL} 整数")
         save = bool(body.get("save", True))
-        scope = str(body.get("scope") or "level")
         user = str(body.get("user") or "").strip()
-        if scope not in ("level", "learned"):
-            raise HTTPException(status_code=422, detail="scope 须为 level 或 learned")
         if scope == "learned" and not user:
             raise HTTPException(status_code=422, detail="learned 范围须指定 user（学生账号）")
         seed = body.get("seed")

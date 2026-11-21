@@ -1021,7 +1021,7 @@ class VocabPaperStore:
         时本级卷被别的级别挤出窗口。
         """
         limit = max(1, min(int(limit), 200))
-        cols = "id, paper_id, level, words, created_at"
+        cols = "id, paper_id, level, words, created_at, scope, user"
         with dbreg_connect(self.db_path) as conn:
             if level is None:
                 rows = conn.execute(
@@ -1051,7 +1051,9 @@ class VocabPaperStore:
                 ws = []
             out.append({"paper_id": r["paper_id"], "level": r["level"],
                         "words": ws, "count": len(ws),
-                        "created_at": r["created_at"]})
+                        "created_at": r["created_at"],
+                        "scope": r["scope"] or "",
+                        "user": r["user"] or ""})
         return out
 
     def list_for_grading(self, level: int | None = None) -> list[dict]:

@@ -27,6 +27,8 @@ async function mountContent(el) {
   } catch { /* FCE 数据不可用时仍展示哈1板块 */ }
   const libCount = lib?.books?.length ?? 0
   const vocabCounts = vlevels?.counts || {}
+  const vocabTotal = [0, 1, 2, 3, 4, 5, 6, 7].reduce(
+    (s, lv) => s + (Number(vocabCounts[String(lv)]) || 0), 0)
 
   const lecCount = stats ? stats.lectures : '—'
   const kpCount = stats ? stats.knowledge_points : '—'
@@ -88,25 +90,26 @@ async function mountContent(el) {
         </div>
       </section>
 
-      <!-- ================= 2 · 背单词（分级词库 + 考试打分队列） ================= -->
+      <!-- ================= 2 · 背单词（统一词库/出题 + 已攻克 + 考试打分队列） ================= -->
       <section class="gd-section">
         <header class="gd-section-head">
           <h2>🔤 背单词 <span class="prep-qbadge" data-qbadge="vocab" hidden></span></h2>
         </header>
         <div class="gd-subgroup">
-          <h3>📚 分级词库 L0-L7</h3>
+          <h3>📚 分级词库 · 已攻克 · 试卷与成绩</h3>
           <div class="prep-cards">
-            ${[0, 1, 2, 3, 4, 5, 6, 7].map((lv) => {
-              const n = vocabCounts[String(lv)] ?? 0
-              return `<button class="prep-card vocab-lv" data-vlv="${lv}">
-                <b>${n}</b><span>L${lv} · ${lv === 0 ? '课本高频词' : '级别词库'}</span>
-              </button>`
-            }).join('')}
+            <button class="prep-card vocab-unified" data-go="vocabLevel">
+              <b>${vocabTotal}</b><span>分级词库 · 试卷生成 · 级别设定</span>
+              <span class="prep-lv-tags">${[0, 1, 2, 3, 4, 5, 6, 7].map((lv) => `<i class="vl-lv-tag">L${lv} · ${vocabCounts[String(lv)] ?? 0}</i>`).join('')}</span>
+            </button>
+            <button class="prep-card" data-go="conquered">
+              <b>✅ 已攻克题本</b><span>按学生查看已学掌握的单词</span>
+            </button>
             <button class="prep-card" data-go="vocabExam">
               <b>📈 考试成绩记录</b><span>单词考试 · 成绩与趋势</span>
             </button>
           </div>
-          <p class="reading-hint">词表规定能看见哪一级。出卷后先存档，再挂到某周计划（一般周日）；线下做完，在下面按试卷编号登记分数和错词。还没存档的卷不能记分。</p>
+          <p class="reading-hint">词库带 L0–L7 级别标签；出卷按学生已学所有单词混合抽取并存档，再挂到某周计划（一般周日）；线下做完，在下面按试卷编号登记分数和错词。还没存档的卷不能记分。</p>
         </div>
         <div id="pp-vocab-board"></div>
         <div class="prep-queue" data-q="vocabGrading"><p class="muted">加载中…</p></div>
@@ -250,11 +253,14 @@ async function mountContent(el) {
 
   el.querySelectorAll('[data-go]').forEach((b) => {
     b.addEventListener('click', () => {
-      location.hash = `#/${b.dataset.go}`
+      const target = b.dataset.go
+      if (target === 'conquered' && vocabStudent()) {
+        location.hash = `#/conquered?user=${encodeURIComponent(vocabStudent())}`
+        return
+      }
+      location.hash = `#/${target}`
     })
   })
-  el.querySelectorAll('[data-vlv]').forEach((b) =>
-    b.addEventListener('click', () => { location.hash = `/vocabLevel/${b.dataset.vlv}` }))
 
   const sel = el.querySelector('#pp-user')
   if (sel) {
@@ -315,7 +321,16 @@ async function mountContent(el) {
       <p>${escapeHtml(masteredLine)}</p>
       <p>错词曲线：在周期 ${inCycle} · 到期 ${due} · 逾期 ${over}</p>
       <p class="reading-hint">${escapeHtml(paperLine)}。掌握是练对累计达标，用来算本周新词；攻克是六个复习节点走完，才离开错词本。</p>
+      <div class="chip-row" style="margin-top:8px">
+        <button type="button" class="chip" data-cq-user="${escapeHtml(student)}">✅ 查看已攻克题本 ›</button>
+      </div>
     </section>`
+    const cqBtn = host.querySelector('[data-cq-user]')
+    if (cqBtn) {
+      cqBtn.addEventListener('click', () => {
+        location.hash = `#/conquered?user=${encodeURIComponent(cqBtn.dataset.cqUser)}`
+      })
+    }
   }
 
   remountQueues()
