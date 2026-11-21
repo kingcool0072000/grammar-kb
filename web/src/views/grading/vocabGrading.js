@@ -3,12 +3,12 @@ import { escapeHtml, escAttr, todayIso } from '../../render.js'
 import { vocabPaperShort } from '../../fmt.js'
 import { toast } from '../../toast.js'
 
-// 背单词 · 考试打分卡（自原批改看板视图整体平移，挂进备课中心背单词分区）。
+// 背单词 · 考试打分卡（已嵌入词汇考试页 vocabExam.js）。
 //
-// 签名：mountExamGrading(host, { state, students, refresh })
+// 签名：mountExamGrading(host, { state, students, student, refresh })
 //   students  学生名单（登记表单的下拉选项；缺省回落 state.students）
-//   refresh   可选，登记/修改/删除成功后调用——宿主可用来刷新分区角标
-//             或重挂分区；不传则无操作。
+//   refresh   可选，登记/修改/删除成功后调用——宿主可用来刷新历史成绩列表
+//             或状态；不传则无操作。
 // 卡片壳（gcard gd-exam-grading）由本函数渲染，宿主给一个空容器即可。
 
 // ---- 考试打分卡：已存档单词试卷 + 逐卷登记成绩（关联学生，手动填分） ----
@@ -165,8 +165,7 @@ export async function mountExamGrading(host, { state, students, student, refresh
   host.innerHTML = `
     <section class="gcard gd-exam-grading">
       <header class="gcard-head">
-        <h2>📝 考试打分 <i>单词试卷 · 登记、修改、删除</i></h2>
-        <button class="chip" data-geg-all type="button">全部记录</button>
+        <h2>✍️ 考试打分 <i>按存档试卷登记分数与标记错词</i></h2>
         <b class="gcard-n" data-geg-count>…</b>
       </header>
       <div class="gcard-list"><p class="reading-hint">加载试卷…</p></div>
@@ -213,7 +212,7 @@ export async function mountExamGrading(host, { state, students, student, refresh
   notify()
 
   if (!papers.length) {
-    list.innerHTML = '<p class="reading-hint">还没有存档试卷——备课中心 → 背单词 → 生成试卷并保存后，在这里登记线下考试成绩。</p>'
+    list.innerHTML = '<p class="reading-hint">还没有存档试卷——在上方「试卷生成」生成试卷并保存后，在这里登记分数与标记错词。</p>'
     return
   }
 
@@ -279,8 +278,6 @@ export async function mountExamGrading(host, { state, students, student, refresh
     </div>`
   }
   list.innerHTML = papers.map(rowHtml).join('')
-  const allBtn = card.querySelector('[data-geg-all]')
-  if (allBtn) allBtn.addEventListener('click', () => { location.hash = '/vocabExam' })
 
   // 换学生时，混合卷登记级别跟着该生当前解锁级别走
   list.addEventListener('change', (e) => {

@@ -1,22 +1,20 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
-import { FORM_CN, vocabPaperShort } from '../fmt.js'
 import { fillAtlasHost } from '../atlas.js'
 import { getWordCard } from '../wordcard.js'
 import { toast } from '../toast.js'
 
-// 教师版 · 背单词词库与出题（备课中心子页）：
-//   2.1 全量词库（带 L0-L7 级别标签 + 筛选 + 搜索 + 跳转已攻克题本）
-//   2.2 单词考试设计（按学生全部已学单词出题，卷型预设/配比/生成/打印）
-//   2.3 单词级别（教师直接设定，不要求考试 80 分，解锁上限 L7）
+// 教师版 · 背单词词库与级别（备课中心子页）：
+//   2.1 全量词库（带 L0-L7 级别标签 + 筛选 + 搜索）
+//   2.2 单词级别（教师直接设定，不要求考试 80 分，解锁上限 L7）
 export async function mountVocabLevel(el, { level = null } = {}) {
   const initLv = level != null && level !== '' && Number.isFinite(Number(level))
     ? Math.max(0, Math.min(7, Number(level)))
     : 'all'
   el.innerHTML = `
     <div class="view-head">
-      <h1>背单词 · 词库与出题</h1>
-      <p>全量分级词库（L0–L7） · 按学生已学单词出题 · 单词级别设定。</p>
+      <h1>背单词 · 词库与级别</h1>
+      <p>全量分级词库（L0–L7） · 学生单词级别设定。</p>
       <p class="atlas-footnote">和词光对得上的词可以看插画、听录音。素材来自 <a href="https://github.com/designfuchen/word-atlas" target="_blank" rel="noopener">词光 Word Atlas</a>，<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>，署名 Word Atlas contributors（词光）。词光的雅思词没有并进本级词表。</p>
     </div>
     <div id="vl-body"><p class="muted">加载中…</p></div>
@@ -69,7 +67,6 @@ export async function mountVocabLevel(el, { level = null } = {}) {
           <h3>📚 分级词库 <i>共 ${words.length} 词 · L0–L7 统一视图（L0=哈一课本高频词）</i></h3>
           <div class="vl-tools">
             <input id="vl-search" placeholder="搜索单词 / 释义…"/>
-            <button class="chip" id="vl-conquered" type="button">✅ 已攻克题本</button>
           </div>
         </header>
         <div class="vl-lv-filters" id="vl-lv-filters">
@@ -81,43 +78,7 @@ export async function mountVocabLevel(el, { level = null } = {}) {
         <div class="vl-pager" id="vl-pager"></div>
       </section>
 
-      <!-- 2.2 单词考试 · 试卷生成（仅按所选学生全部已学单词出题） -->
-      <section class="vl-sec card">
-        <header class="vl-head">
-          <h3>📝 单词考试 · 试卷生成</h3>
-          <div class="vl-tools">
-            <label class="vl-scope">学生
-              <select id="vl-scope-user" title="按该学生的全部已学单词出题">
-                ${studs.map((u) => `<option value="${escapeHtml(u.user)}">${escapeHtml(u.user)}</option>`).join('') || '<option value="">（无学生账号）</option>'}
-              </select>
-            </label>
-            <select id="vl-preset" title="卷型预设：标准卷按默认配比；强化卷/回收卷优先混入所选学生的积压错词">
-              <option value="standard">标准卷</option>
-              <option value="reinforce">复习强化卷</option>
-              <option value="recycle">错词回收卷</option>
-            </select>
-            <button class="btn-primary" id="vl-gen">🎲 生成试卷</button>
-            <button class="chip" id="vl-records" type="button">📋 考试成绩</button>
-          </div>
-        </header>
-        <p class="muted">不再按单个级别设计试卷，仅按所选学生<b>全部已学单词</b>（进度里出现过即可，含尚未掌握）跨 L0–L7 混合出题（卷号 MIX-）。随机选词（不同首字母/词性，自动规避人名/地名）· 词形、拼写、中译英给出词性，英译中只给英文 · 标准卷默认 50 题（词形 6 · 拼写 8 · 例句 12 · 中译英 12 · 英译中 12）。<b>复习强化卷 / 错词回收卷</b>按所选学生的积压错词出题。题量与五题型配比可在下方「进阶」里自定义。流程：生成 → 预览 → 满意后保存存档。</p>
-        <details class="vl-paper-adv" style="margin:6px 0 10px">
-          <summary style="cursor:pointer;user-select:none;font-size:13px;color:var(--ink)">进阶：题量与配比</summary>
-          <div class="vl-adv-row" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px;color:var(--ink)">
-            <label>题量 <input id="vl-total" type="number" min="10" max="200" value="50" style="width:64px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
-            <label>词形 <input id="vl-r-form" type="number" min="0" value="6" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
-            <label>拼写 <input id="vl-r-spell" type="number" min="0" value="8" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
-            <label>例句 <input id="vl-r-ctx" type="number" min="0" value="12" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
-            <label>中译英 <input id="vl-r-zh2en" type="number" min="0" value="12" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
-            <label>英译中 <input id="vl-r-en2zh" type="number" min="0" value="12" style="width:52px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg-soft);font-size:13px"></label>
-            <span class="muted">全部留空则不传配比，按卷型预设默认出题。</span>
-          </div>
-        </details>
-        <div id="vl-paper-out"></div>
-        <div id="vl-paper-history"></div>
-      </section>
-
-      <!-- 2.3 单词级别：教师直接设定，不看考试是否到 80 分 -->
+      <!-- 2.2 单词级别：教师直接设定，不看考试是否到 80 分 -->
       <section class="vl-sec card">
         <header class="vl-head"><h3>🔤 单词级别 <i>决定学生能看见哪几级。周计划里的级别只决定本周新词记到哪，不改这里</i></h3></header>
         <div class="vl-unlock-rows">
@@ -225,167 +186,6 @@ export async function mountVocabLevel(el, { level = null } = {}) {
       dlg.querySelector('.plan-editor-mask').addEventListener('click', close)
       dlg.querySelector('#vl-dlg-close').addEventListener('click', close)
     }
-    // 试卷生成：三步流程 生成（未存档）→ 预览 → 保存
-    // 范围：固定仅按所选学生的全部已学单词（scope='learned'，跨 L0–L7 混合）
-    // 卷型：standard 标准卷 / reinforce 复习强化卷 / recycle 错词回收卷
-    const scopeUser = body.querySelector('#vl-scope-user')
-    const presetSel = body.querySelector('#vl-preset')
-    body.querySelector('#vl-conquered').addEventListener('click', () => {
-      const stu = (scopeUser && scopeUser.value || '').trim()
-      location.hash = stu ? `/conquered?user=${encodeURIComponent(stu)}` : '/conquered'
-    })
-
-    // 五题型配比：全空 → 不传 ratios（按后端预设默认）；有填 → 只传填了的键
-    function readRatios() {
-      const ratios = {}
-      ;['form', 'spell', 'ctx', 'zh2en', 'en2zh'].forEach((k) => {
-        const v = body.querySelector(`#vl-r-${k}`).value.trim()
-        if (v !== '') ratios[k] = Number(v)
-      })
-      return Object.keys(ratios).length ? ratios : null
-    }
-
-    // 预览行：和打印卷同一套问法（词面 + 要求 + 横线）。答案淡显示，方便教师核对。
-    const PV_CN = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
-    function pvLine(type, it) {
-      const pos = it.pos_cn || (Array.isArray(it.pos) ? it.pos.join(' ') : '') || ''
-      const gloss = it.gloss || ''
-      const word = it.word || ''
-      const blank = '<span class="vl-pv-blank"></span>'
-      const ans = it.answer ? `<i class="vl-pv-ans">${escapeHtml(it.answer)}</i>` : ''
-      if (type === 'form') {
-        const key = it.form_key || it.form || ''
-        const label = FORM_CN[key] || key || '词形'
-        return `<span class="vl-pv-en">${escapeHtml(word)}</span><span class="vl-pv-ask">的${escapeHtml(label)}</span>${blank}${ans}`
-      }
-      if (type === 'spell')
-        return `<span class="vl-pv-pos">${escapeHtml(pos)}</span><span class="vl-pv-zh">${escapeHtml(String(gloss).slice(0, 18))}</span><code>${escapeHtml(it.blanked || it.answer || '')}</code>`
-      if (type === 'ctx') {
-        const sent = it.sentence || it.ctx || it.prompt || ''
-        return `<span class="vl-pv-en">${escapeHtml(String(sent))}</span>${ans}`
-      }
-      if (type === 'zh2en')
-        return `<span class="vl-pv-pos">${escapeHtml(pos)}</span><span class="vl-pv-zh">${escapeHtml(gloss)}</span>${blank}`
-      if (type === 'en2zh')
-        return `<span class="vl-pv-en">${escapeHtml(word)}</span>${blank}`
-      return escapeHtml(it.prompt || it.question || word || gloss || '（未知题型）')
-    }
-
-    async function genPaper() {
-      const out = body.querySelector('#vl-paper-out')
-      const scope = 'learned'
-      const preset = presetSel.value
-      const user = (scopeUser.value || '').trim()
-      if (!user) {
-        out.innerHTML = '<p style="color:#b42318">请先选择学生（试卷仅按所选学生的全部已学单词出题）。</p>'
-        return
-      }
-      const totalRaw = body.querySelector('#vl-total').value.trim()
-      const ratios = readRatios()
-      out.innerHTML = '<p class="muted">生成中…</p>'
-      try {
-        // 先不存档；题量/配比留默认（空）时不传，按后端预设走
-        const r = await api.vocabPaperGenerate(0, false, {
-          scope, user, preset,
-          ...(totalRaw !== '' ? { total: Number(totalRaw) } : {}),
-          ...(ratios ? { ratios } : {}),
-        })
-        const p = r.paper
-        const sections = p.sections || []
-        let saved = false
-        out.innerHTML = `
-          <div class="vl-paper-card">
-            <div class="vl-paper-meta">
-              <b title="${escapeHtml(p.paper_id)}">${escapeHtml(vocabPaperShort(p).short)}</b>
-              <span>${p.user ? `${escapeHtml(p.user)} · ` : ''}已学全部混合卷 · ${sections.map((s) => `${escapeHtml(s.title)} ${(s.items || []).length}`).join(' · ')} · 与历史重复 ${p.overlap_with_history} 词${p.seed != null && p.seed !== '' ? ` · seed ${escapeHtml(String(p.seed))}` : ''}</span>
-              <i class="vl-paper-state">${saved ? '已存档' : '未存档（预览态）'}</i>
-            </div>
-            <details class="vl-paper-preview">
-              <summary>预览试卷内容</summary>
-              ${sections.map((s, si) => `
-                <div class="vl-pv-sec"><b>${PV_CN[si] || (si + 1)}、${escapeHtml(s.title)}<span>${(s.items || []).length} 题</span></b>${(s.items || []).slice(0, 5).map((it, i) => `<p><em>${i + 1}.</em> ${pvLine(s.type, it)}</p>`).join('')}${(s.items || []).length > 5 ? `<p class="muted">…共 ${(s.items || []).length} 题</p>` : ''}</div>`).join('') || '<p class="muted">（本卷没有返回任何 section）</p>'}
-            </details>
-            <div class="vl-paper-ops">
-              <button class="chip" id="vl-preview">👁 预览试卷</button>
-              <button class="btn-primary" id="vl-save">💾 保存存档</button>
-              <button class="chip" id="vl-print">🖨 打印</button>
-            </div>
-          </div>`
-        const stateEl = out.querySelector('.vl-paper-state')
-        // 预览：新标签页看完整卷
-        out.querySelector('#vl-preview').addEventListener('click', () => {
-          const w = window.open('', '_blank')
-          w.document.write(r.html)
-          w.document.close()
-        })
-        // 保存：调存档端点 → 状态变已存档 + 刷新历史
-        out.querySelector('#vl-save').addEventListener('click', async () => {
-          try {
-            await api.vocabPaperSave(p)
-            saved = true
-            stateEl.textContent = '已存档 ✓'
-            out.querySelector('#vl-save').disabled = true
-            out.querySelector('#vl-save').textContent = '已保存'
-            toast(`✅ 试卷 ${p.paper_id} 已存档`)
-            loadHistory()
-          } catch (e) { alert('保存失败：' + e.message) }
-        })
-        // 打印：新窗口写 HTML 直接打印
-        out.querySelector('#vl-print').addEventListener('click', () => {
-          const w = window.open('', '_blank')
-          w.document.write(r.html)
-          w.document.close()
-          setTimeout(() => w.print(), 400)
-        })
-      } catch (e) {
-        out.innerHTML = `<p style="color:#b42318">生成失败：${escapeHtml(e.message)}</p>`
-      }
-    }
-    body.querySelector('#vl-gen').addEventListener('click', () => genPaper())
-    body.querySelector('#vl-records').addEventListener('click', () => {
-      location.hash = '/vocabExam'
-    })
-
-    async function loadHistory() {
-      const host = body.querySelector('#vl-paper-history')
-      try {
-        const r = await api.vocabPaperHistory(-1, { limit: 80 })
-        const items = r.papers || []
-        const shown = items.slice(0, 16)
-        host.innerHTML = items.length ? `
-          <div class="vl-hist">
-            <b>📚 已生成 ${items.length} 卷</b>
-            ${shown.map((x) => {
-              const who = x.user ? ` · ${escapeHtml(x.user)}` : ''
-              return `
-              <span class="vl-hist-item" title="${escapeHtml(x.paper_id)}">
-                <em class="vl-hist-name">${escapeHtml(vocabPaperShort(x).short)}${who} · ${x.count} 词</em>
-                <button class="chip vl-hist-op" data-hprev="${escapeHtml(x.paper_id)}">👁</button>
-                <button class="chip vl-hist-op del" data-hdel="${escapeHtml(x.paper_id)}">🗑</button>
-              </span>`
-            }).join('')}
-          </div>` : '<p class="muted">尚无生成记录。</p>'
-        host.querySelectorAll('[data-hprev]').forEach((b) =>
-          b.addEventListener('click', async () => {
-            try {
-              const r = await api.vocabPaperPreview(b.dataset.hprev)
-              const w = window.open('', '_blank')
-              w.document.write(r.html)
-              w.document.close()
-            } catch (e) { alert('预览失败：' + e.message) }
-          }))
-        host.querySelectorAll('[data-hdel]').forEach((b) =>
-          b.addEventListener('click', async () => {
-            if (!confirm(`删除试卷 ${b.dataset.hdel}？`)) return
-            try {
-              await api.vocabPaperDelete(b.dataset.hdel)
-              toast('已删除')
-              loadHistory()
-            } catch (e) { alert(e.message) }
-          }))
-      } catch { host.innerHTML = '' }
-    }
-    loadHistory()
     // 单词级别：点哪一级就设成哪一级，不看考试分数
     body.querySelectorAll('.vl-unlock-row').forEach((row) => {
       const stu = row.dataset.stu

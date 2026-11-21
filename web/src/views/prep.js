@@ -4,8 +4,8 @@ import { escapeHtml } from '../render.js'
 
 // 教师版 · 备课中心：按学科闭环重组——
 //   每个学科分区 = 内容入口卡 + 待批队列（内嵌批改）+ 成绩入口。
-//   批改中心不再单独占顶栏 Tab；待批队列懒挂载自 grading/queues.js 与
-//   grading/vocabGrading.js（车道A实现），学情分析/学习日志仍跳独立批改页。
+//   批改中心不再单独占顶栏 Tab；待批队列懒挂载自 grading/queues.js，
+//   背单词的出题/打分/成绩合并到 vocabExam 页，学情分析/学习日志仍跳独立批改页。
 export async function mountPrep(el, ctx) {
   await mountContent(el)
 }
@@ -90,29 +90,28 @@ async function mountContent(el) {
         </div>
       </section>
 
-      <!-- ================= 2 · 背单词（统一词库/出题 + 已攻克 + 考试打分队列） ================= -->
+      <!-- ================= 2 · 背单词（词库级别 + 已攻克 + 单词考试） ================= -->
       <section class="gd-section">
         <header class="gd-section-head">
           <h2>🔤 背单词 <span class="prep-qbadge" data-qbadge="vocab" hidden></span></h2>
         </header>
         <div class="gd-subgroup">
-          <h3>📚 分级词库 · 已攻克 · 试卷与成绩</h3>
+          <h3>📚 分级词库 · 已攻克 · 单词考试</h3>
           <div class="prep-cards">
             <button class="prep-card vocab-unified" data-go="vocabLevel">
-              <b>${vocabTotal}</b><span>分级词库 · 试卷生成 · 级别设定</span>
+              <b>${vocabTotal}</b><span>分级词库 · 单词级别设定</span>
               <span class="prep-lv-tags">${[0, 1, 2, 3, 4, 5, 6, 7].map((lv) => `<i class="vl-lv-tag">L${lv} · ${vocabCounts[String(lv)] ?? 0}</i>`).join('')}</span>
             </button>
             <button class="prep-card" data-go="conquered">
               <b>✅ 已攻克题本</b><span>按学生查看已学掌握的单词</span>
             </button>
             <button class="prep-card" data-go="vocabExam">
-              <b>📈 考试成绩记录</b><span>单词考试 · 成绩与趋势</span>
+              <b>📝 单词考试</b><span>出卷 · 考试打分 · 成绩记录</span>
             </button>
           </div>
-          <p class="reading-hint">词库带 L0–L7 级别标签；出卷按学生已学所有单词混合抽取并存档，再挂到某周计划（一般周日）；线下做完，在下面按试卷编号登记分数和错词。还没存档的卷不能记分。</p>
+          <p class="reading-hint">词库带 L0–L7 级别标签；「单词考试」集中处理按学生已学词出卷、线下考完按卷打分标错词及历史成绩。</p>
         </div>
         <div id="pp-vocab-board"></div>
-        <div class="prep-queue" data-q="vocabGrading"><p class="muted">加载中…</p></div>
       </section>
 
       <!-- ================= 4 · 视频学习（清单 + 待批复述队列） ================= -->
@@ -283,7 +282,7 @@ async function mountContent(el) {
     if (!student) {
       host.innerHTML = `<section class="pp-vocab-board">
         <h3>单词这一周</h3>
-        <p class="reading-hint">先在上面选一个学生。这里看他本周新掌握、错词曲线里的到期和逾期，下面的待打分也只留他的卷。</p>
+        <p class="reading-hint">先在上面选一个学生。这里看他本周新掌握、错词曲线里的到期和逾期。</p>
       </section>`
       return
     }
@@ -363,10 +362,7 @@ async function mountContent(el) {
         location.hash = '#/grading?tab=analytics'
       }
     }
-    Promise.all([
-      import('./grading/queues.js'),
-      import('./grading/vocabGrading.js'),
-    ]).then(([queues, vocabGrading]) => {
+    import('./grading/queues.js').then((queues) => {
       if (seq !== mountSeq) return // 学生已再次切换，本轮作废
       const base = { state: qstate, snapshots, go }
       // 单个队列挂载失败只标记自己的宿主，不连坐其它队列；
@@ -390,10 +386,6 @@ async function mountContent(el) {
       // 最近已批（录音/复述/作文 前3条）：非待办，不驱动待批角标
       mountOne('recentGraded', (h) =>
         queues.mountRecentGraded(h, { ...base, onCount: () => {} }))
-      mountOne('vocabGrading', (h) =>
-        vocabGrading.mountExamGrading(h, {
-          state: qstate, students, student: vocabStudent(),
-        }))
     }).catch((e) => {
       if (seq !== mountSeq) return
       hosts.forEach((host) => {

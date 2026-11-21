@@ -5,7 +5,7 @@ const BACK_BASE = {
   students: ['/plan', '← 返回计划表'],
   vocabLevel: ['/prep', '← 返回备课中心'],
   paperAdmin: ['/prep', '← 返回备课中心'],
-  vocabExam: ['/vocabLevel', '← 返回背单词'],
+  vocabExam: ['/prep', '← 返回备课中心'],
   exams: ['/prep', '← 返回备课中心'],
   topics: ['/prep', '← 返回备课中心'],
   topicsAdmin: ['/prep', '← 返回备课中心'],
