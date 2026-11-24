@@ -14,6 +14,21 @@ from ..vocab_exam import MAX_UNLOCK_LEVEL
 from .util import _paper_short
 
 
+def scope_level(scope) -> Optional[int]:
+    """背词会话的 ``scope`` → 单词级别号；不是级别返回 None。
+
+    背词页上报的是裸数字（``"1"``；0 级那个按钮是 ``"all"``，见
+    views/recite.js 的 data-scope）。复习会话的 scope 是 ``"wrongbook"``，
+    ``advanced`` / ``verb`` / ``special`` 是进阶筛选，都不是级别。早期的
+    ``"L1"`` 写法也认。
+    """
+    text = str(scope or "").strip()
+    if text.lower() == "all":
+        return 0
+    m = re.match(r"^L?(\d{1,2})$", text, re.IGNORECASE)
+    return int(m.group(1)) if m else None
+
+
 class GoalsEditorMixin:
     """editor_data / goal_assets。完成态与总目标读写在 GoalsMixin。"""
 
@@ -240,7 +255,12 @@ class GoalsEditorMixin:
         }
 
     def _practicing_vocab_level(self, user: str) -> Optional[int]:
-        """最近一次背词会话的 L{n}。没有就空，编辑器不猜。"""
+        """最近一次背词会话的级别（认背词页真实上报的 scope，见 scope_level）。
+
+        没有就空，编辑器不猜。——这里曾经只认 "L1"，而页面上报的是 "1"，
+        结果永远为空，编辑器把新一周的词汇行默认落到 0 级（孩子早已背完的
+        那一级），那一周的背词全部不算进度（2026-11-23 那周）。
+        """
         try:
             with self._connect() as conn:
                 names = {r[0] for r in conn.execute(
@@ -255,10 +275,9 @@ class GoalsEditorMixin:
         except sqlite3.Error:
             return None
         for r in rows:
-            m = re.match(r"^L(\d)$", str(r["scope"] or "").strip())
-            if not m:
+            lv = scope_level(r["scope"])
+            if lv is None:
                 continue
-            lv = int(m.group(1))
             if 0 <= lv <= MAX_UNLOCK_LEVEL:
                 return lv
         return None

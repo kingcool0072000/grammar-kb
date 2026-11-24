@@ -4,6 +4,7 @@ import { vocabPaperShort } from '../fmt.js'
 import {
   PLAN_ADD_TYPES, appendPlanItem, removePlanItem, applyVocabTarget,
   vocabRowTitle, hwMismatchWarning, completionLine, copyTasks,
+  defaultVocabLevel, vocabLevelWarning,
   migrateLegacyUnits, tasksForSave, appendVideoUnit,
   appendNce2Unit, removeVideoUnit, removeNce2Unit,
   toggleMicroGroup,
@@ -104,10 +105,14 @@ export async function openWeekEditor({
   }
 
   function defaultLevel() {
-    if (tasks.vocab_lv != null) return Number(tasks.vocab_lv)
-    if (vocabWeek.practicing_level != null) return Number(vocabWeek.practicing_level)
-    const withWords = vLevels.find((v) => v.words)
-    return withWords ? withWords.level : (vLevels[0]?.level ?? 0)
+    return defaultVocabLevel(tasks, vocabWeek, vLevels)
+  }
+
+  // 清单下方的提示：作业讲次对不上（黄条，不拦保存）+ 词汇选了孩子已背完的
+  // 级别（红条，保存前再确认一次）
+  function warnText() {
+    return [hwMismatchWarning(tasks, recentWeeks, ws), vocabLevelWarning(tasks, vocabWeek)]
+      .filter(Boolean).join(' ')
   }
 
   function vocabCountFor(level) {
@@ -133,7 +138,9 @@ export async function openWeekEditor({
       bits.push(`孩子最近就在背 L${practicing}。`)
     }
     const left = Math.max(0, s.words - s.base)
-    if (shown > 0 && s.words > 0 && shown > left) {
+    if (left <= 0 && s.words > 0) {
+      bits.push('这一级的词周初已经全部掌握，选它这周不会有「本周新掌握」。')
+    } else if (shown > 0 && s.words > 0 && shown > left) {
       bits.push(`这一级还剩 ${left} 个没掌握，本周目标比剩下的多。`)
     }
     return bits.join('')
@@ -390,7 +397,8 @@ export async function openWeekEditor({
     const prev = dlg.querySelector('.plan-editor-body')
     const sc = prev?.scrollTop || 0
     const list = rows()
-    const warn = hwMismatchWarning(tasks, recentWeeks, ws)
+    const warn = warnText()
+    const danger = !!vocabLevelWarning(tasks, vocabWeek)
     dlg.innerHTML = `
       <div class="plan-editor-mask"></div>
       <div class="plan-editor-body card pe-body pe-week">
@@ -406,7 +414,7 @@ export async function openWeekEditor({
             ${addOpen
               ? addPanelHtml()
               : '<button class="chip" id="pe-add-open" type="button">＋ 添加</button>'}
-            <div class="pe-warn" id="pe-warn" ${warn ? '' : 'hidden'}>${escapeHtml(warn)}</div>
+            <div class="pe-warn${danger ? ' pe-warn-danger' : ''}" id="pe-warn" ${warn ? '' : 'hidden'}>${escapeHtml(warn)}</div>
             <details class="pe-boost" id="pe-boost" ${boostOpen ? 'open' : ''}>
               <summary>⭐ 提升档 <i>排进本周即可，学生哪天做完都算</i></summary>
               <div class="pe-boost-body">${boostBodyHtml()}</div>
@@ -878,11 +886,12 @@ export async function openWeekEditor({
     })
     const title = dlg.querySelector('[data-row="vocab"] .pe-row-title')
     if (title) title.textContent = `🔤 ${vocabRowTitle(tasks, vocabWeek)}`
-    const warn = hwMismatchWarning(tasks, recentWeeks, ws)
+    const warn = warnText()
     const box = dlg.querySelector('#pe-warn')
     if (box) {
       box.textContent = warn
       box.hidden = !warn
+      box.classList.toggle('pe-warn-danger', !!vocabLevelWarning(tasks, vocabWeek))
     }
     schedulePreview()
   }
@@ -990,6 +999,8 @@ export async function openWeekEditor({
   }
 
   async function save() {
+    const danger = vocabLevelWarning(tasks, vocabWeek)
+    if (danger && !confirm(`${danger}\n\n仍要这样保存吗？`)) return
     try {
       await api.planWeekPut(ws, { tasks: tasksForSave(tasks), notes: week?.notes || '', user: student })
       close()

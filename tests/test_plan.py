@@ -1101,10 +1101,11 @@ def test_leveled_vocab_quota_matches_weekly_new(plan_env, weekday_clock):
     c = _client(plan_env)
     hs = _login(c, "malin", "123456")
     ht = _login(c, "teacher", "123456")
-    # 先走背词接口把表建出来，再把掌握时间拨到周初之前
+    # 先走背词接口把表建出来，再把掌握时间拨到周初之前。
+    # scope 用背词页真实上报的写法：裸数字（views/recite.js），不是 "L2"。
     c.post("/recite/sessions", headers=hs, json={
         "total": 1, "wrong": 0, "acc": 100, "duration_sec": 5,
-        "wrong_words": [], "mode": "flip", "scope": "L2",
+        "wrong_words": [], "mode": "flip", "scope": "2",
         "details": [{"word": "l1a", "correct": True}],
     })
     old = (date.fromisoformat(MON) - timedelta(days=2)).isoformat() + "T12:00:00+00:00"
@@ -1137,6 +1138,43 @@ def test_leveled_vocab_quota_matches_weekly_new(plan_env, weekday_clock):
     assert l1["words"] == 1 and l1["base"] == 1 and l1["gained"] == 0
     bad = c.get("/plan/editor-data?user=malin&week_start=not-a-date", headers=ht)
     assert bad.status_code == 422
+
+
+def test_practicing_vocab_level_reads_scope_as_recite_page_sends(plan_env):
+    """编辑器「孩子最近在背哪一级」要认背词页真实上报的 scope。
+
+    页面上报的是裸数字（"1"；0 级的按钮是 "all"）。这里曾只认 "L1"，
+    永远匹配不到，新一周的词汇行被默认到孩子早已背完的 0 级——
+    2026-11-23 那周背了 99 个 1 级词，计划进度却一直是 0。
+    """
+    c = _client(plan_env)
+    ht = _login(c, "teacher", "123456")
+    con = sqlite3.connect(plan_env / "fce.db")
+
+    def add_session(scope, mode="flip"):
+        con.execute(
+            "INSERT INTO recite_sessions (user, total, wrong, acc, duration_sec,"
+            " wrong_words, mode, scope, created_at)"
+            " VALUES ('malin', 3, 0, 100, 5, '[]', ?, ?, '2026-11-02T00:00:00+00:00')",
+            (mode, scope),
+        )
+        con.commit()
+
+    def practicing():
+        ed = c.get(f"/plan/editor-data?user=malin&week_start={MON}", headers=ht).json()["data"]
+        return ed["vocab_week"]["practicing_level"]
+
+    assert practicing() is None            # 没背过：不猜
+    add_session("L2")                      # 早期写法也认
+    assert practicing() == 2
+    add_session("wrongbook", "conquer")    # 复习会话不是级别
+    add_session("advanced")                # 进阶筛选不是级别
+    assert practicing() == 2
+    add_session("1")                       # 页面真实写法
+    assert practicing() == 1
+    add_session("all")                     # 0 级那个按钮是 all
+    assert practicing() == 0
+    con.close()
 
 
 def test_week_preview_spreads_draft_without_saving(plan_env, weekday_clock):

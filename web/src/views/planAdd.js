@@ -292,6 +292,45 @@ export function vocabRowTitle(tasks, vocabWeek) {
   return lv == null ? `本周新掌握 ${n} 个词` : `本周新掌握 L${lv} 词 ${n} 个`
 }
 
+/**
+ * 词汇行默认选哪一级：已经选过就不动 → 孩子最近在背的级别 → 第一个还有词
+ * 没掌握的级别。
+ * 不能退到「第一个有词的级别」：那是 0 级，而 0 级多半早就背完了。选它，
+ * 这一周的「本周新掌握」永远是 0，孩子背的词全不算进度（2026-11-23 那周）。
+ */
+export function defaultVocabLevel(tasks, vocabWeek, vLevels = []) {
+  if (tasks?.vocab_lv != null) return Number(tasks.vocab_lv)
+  const practicing = vocabWeek?.practicing_level
+  if (practicing != null && practicing !== '') return Number(practicing)
+  const stats = vocabWeek?.levels?.length ? vocabWeek.levels : vLevels
+  const withWords = stats.find((x) => Number(x.words) > 0)
+  if (!withWords) return vLevels[0]?.level ?? 0
+  // base（周初已会）只有带周次取数时才有；没有就不猜，照旧取第一个有词的
+  const open = withWords.base != null
+    ? stats.find((x) => Number(x.words) > 0 && Number(x.base || 0) < Number(x.words))
+    : null
+  return (open || withWords).level
+}
+
+/**
+ * 词汇这一行选了孩子已经背完的级别：给红条，保存前再让老师确认。
+ * 只在老师真要「本周新掌握」时管（vocab_new > 0）。
+ */
+export function vocabLevelWarning(tasks, vocabWeek) {
+  const lv = tasks?.vocab_lv
+  if (lv == null || !(Number(tasks.vocab_new) > 0)) return ''
+  const s = (vocabWeek?.levels || []).find((x) => Number(x.level) === Number(lv))
+  if (!s || !(Number(s.words) > 0)) return ''
+  if (Number(s.words) - Number(s.base || 0) > 0) return ''
+  const practicing = vocabWeek?.practicing_level
+  const hint = practicing != null && Number(practicing) !== Number(lv)
+    ? `孩子最近在背 L${practicing}。`
+    : ''
+  return `词汇这一行选的是 L${lv}。这一级一共 ${s.words} 个词，周初已经全部掌握，`
+    + `选它这周的「本周新掌握」会一直是 0，孩子背的词不算进度。${hint}`
+    + '请换成孩子正在背的级别。'
+}
+
 export function completionLine(type, { topicCounts = true, mode = '', count = 0, taskMode = '' } = {}) {
   if (type === 'lecture') {
     return topicCounts
