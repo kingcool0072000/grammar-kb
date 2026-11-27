@@ -5,6 +5,7 @@ import { openBoostRetell } from './boostRetell.js'
 import {
   boostClickFromRows, boostTasksForDate, openBoostFromClick,
 } from './boostNav.js'
+import { mountVocabCalendar } from './recite/calendar.js'
 
 // 学生版 · 课程表：教师计划看板-周计划的只读镜像（/plan/my-week，
 // week_view 同源数据）。只看自己 + 本周；展示周拆解汇总 + 周一至周日
@@ -461,9 +462,14 @@ async function renderReviewStrip(host) {
       <button type="button" class="rc-loop-card cq" data-go="conquered">
         <b>${d7}</b><span>近7日攻克</span><small>打开词本</small>
       </button>
-    </div>`
+    </div>
+    <div id="tt-cal"></div>`
   host.querySelectorAll('[data-go]').forEach((btn) => {
     btn.addEventListener('click', () => go(btn.dataset.go))
+  })
+  mountVocabCalendar(host.querySelector('#tt-cal'), s, {
+    compact: true,
+    onTodayReview: () => go(over > 0 ? 'overdue' : 'due'),
   })
 }
 

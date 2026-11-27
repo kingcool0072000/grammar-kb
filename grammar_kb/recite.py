@@ -889,6 +889,31 @@ class ReciteStore:
             and _within_days(_cn_day_of(x["conquered_at"]), today, ALERT_QUIET_DAYS)
         )
         cap = effective_new_cap(len(overdue), new_word_base())
+        # 未来 14 天（含今天）艾宾浩斯复习日程：今天汇总到期+逾期，其余日按 next_review 统计
+        due_by_day: dict[str, int] = {}
+        for x in in_cycle:
+            nr = x.get("next_review") or ""
+            if nr and nr >= today:
+                due_by_day[nr] = due_by_day.get(nr, 0) + 1
+        try:
+            start_d = date.fromisoformat(today[:10])
+        except ValueError:
+            start_d = today_cn()
+        calendar_14d: list[dict] = []
+        for offset in range(14):
+            d = start_d + timedelta(days=offset)
+            di = d.isoformat()
+            rev_due = due_by_day.get(di, 0)
+            rev_over = len(overdue) if offset == 0 else 0
+            calendar_14d.append({
+                "date": di,
+                "weekday": d.weekday(),  # 0=周一 .. 6=周日
+                "is_today": offset == 0,
+                "review": rev_due + rev_over,
+                "review_due": rev_due,
+                "overdue": rev_over,
+                "new_words": None,
+            })
         with self._connect() as conn:
             new_used = self._count_new_used_conn(conn, user, today)
             sessions_n = conn.execute(
@@ -908,6 +933,7 @@ class ReciteStore:
             "conquer_pool": pool,
             "new_used": new_used,
             "new_cap": cap,
+            "calendar_14d": calendar_14d,
             "alert": (
                 len(in_cycle) >= ALERT_IN_CYCLE
                 and conquered_14 == 0

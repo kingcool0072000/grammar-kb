@@ -3,6 +3,7 @@ import { escapeHtml, escAttr, todayIso, studyGoalMin, taskWhy, taskWhyShort } fr
 import { subTabBar, bindSubTabs } from '../tabs.js'
 import { openWeekEditor } from './planEditor.js'
 import { toast } from '../toast.js'
+import { mountVocabCalendar } from './recite/calendar.js'
 
 // 教师版 · 计划表：周历视图。本周大卡（今日任务）+ 月历式周网格往下排，
 // 学情分析并入为子 Tab（#/plan?tab=analytics / #/plan 切换）。
@@ -102,6 +103,7 @@ export async function mountPlan(el) {
       </div>
       ${'' /* 目标卡容器：周/总切换内容由 renderGoalCard 填充 */}
       <div id="review-alert"></div>
+      <div id="review-calendar"></div>
       <div id="goal-card"></div>
       <div id="rules-card"><p class="muted">规则加载中…</p></div>
       <div id="plan-view"></div>
@@ -205,11 +207,16 @@ export async function mountPlan(el) {
     // 消费第 2 波已发出的 review-summary Promise（不再自行发请求）
     async function renderReviewAlert(summaryPromise) {
       const host = body.querySelector('#review-alert')
-      if (!host) return
+      const calHost = body.querySelector('#review-calendar')
+      if (!host && !calHost) return
       const who = state.student
       let s = null
       try { s = await summaryPromise } catch { s = null }
-      if (state.student !== who || !body.querySelector('#review-alert')) return
+      if (state.student !== who) return
+      if (calHost) {
+        mountVocabCalendar(calHost, s, { title: `📅 ${who} 近两周背词与复习`, compact: true })
+      }
+      if (!host) return
       if (!s || !s.alert) { host.innerHTML = ''; return }
       host.innerHTML = `
         <div class="pw-alert">

@@ -597,3 +597,57 @@ def test_enter_review_recycles_cycle_and_conquered_words(recite_env):
     assert (right, wrong, mastered) == (5, 3, None)  # 掌握标记清空、wrong+1
     assert first_seen == past_seen  # 首见不动 → 回炉词不占新词额度
     assert level_p == 1
+
+
+def test_calendar_14d_review_and_new_word_plan(recite_env):
+    """/recite/review-summary 返回未来 14 天日历：每天复习词数 + 周计划摊派新词数。"""
+    from grammar_kb.clock import monday_of
+    from grammar_kb.plan.store import PlanStore
+
+    c = _client(recite_env)
+    h = _login(c, "malin", "123456")
+    th = _login(c, "teacher", "123456")
+    today_d = today_cn()
+    today = today_d.isoformat()
+
+    # 造 4 个周期错词：1 逾期、1 今日到期、2 个 3 天后到期
+    _submit(c, h, [
+        {"word": "cal_over", "correct": False},
+        {"word": "cal_due", "correct": False},
+        {"word": "cal_d3_a", "correct": False},
+        {"word": "cal_d3_b", "correct": False},
+    ])
+    _set_next(recite_env, "cal_over", (today_d - timedelta(days=2)).isoformat())
+    _set_next(recite_env, "cal_due", today)
+    d3 = (today_d + timedelta(days=3)).isoformat()
+    _set_next(recite_env, "cal_d3_a", d3)
+    _set_next(recite_env, "cal_d3_b", d3)
+
+    # 给本周和下周配置词汇目标（不指定 vocab_lv，直接按周预算摊派）
+    this_ws = monday_of(today_d)
+    next_ws = this_ws + timedelta(days=7)
+    ps = PlanStore(str(recite_env / "fce.db"))
+    ps.put_week(this_ws.isoformat(), {"vocab_goal": 70}, "", user="malin")
+    ps.put_week(next_ws.isoformat(), {"vocab_goal": 140}, "", user="malin")
+
+    # 学生和教师查同一学生得到一致的 14 天日历
+    s_stu = _summary(c, h)
+    s_tea = _summary(c, th, user="malin")
+    assert s_stu["calendar_14d"] == s_tea["calendar_14d"]
+
+    cal = s_stu["calendar_14d"]
+    assert len(cal) == 14
+    assert cal[0]["date"] == today and cal[0]["is_today"] is True
+    assert cal[0]["review_due"] == 1 and cal[0]["overdue"] == 1 and cal[0]["review"] == 2
+    assert cal[3]["date"] == d3 and cal[3]["review"] == 2 and cal[3]["overdue"] == 0
+    assert cal[1]["review"] == 0
+
+    # 本周剩余天数摊 70 词；下周 7 天摊 140 词 = 每天 20 词；下下周未配 = None
+    days_left = max(1, 7 - (today_d - this_ws).days)
+    expected_this_week = -(-70 // days_left)
+    by_date = {x["date"]: x for x in cal}
+    assert by_date[today]["new_words"] == expected_this_week
+    assert by_date[next_ws.isoformat()]["new_words"] == 20
+    after_next = next_ws + timedelta(days=7)
+    if after_next.isoformat() in by_date:
+        assert by_date[after_next.isoformat()]["new_words"] is None

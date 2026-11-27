@@ -3895,3 +3895,148 @@ button.tt-task {
 }
 .nce2-his-row audio { height: 32px; width: 220px; }
 .nce2-his-comment { font-size: 13px; color: var(--ink-soft); flex-basis: 100%; white-space: pre-wrap; }
+
+
+/* ---- 近两周背词与艾宾浩斯复习日历（学生端 + 教师端共用） ---- */
+.rc-cal {
+  margin: 10px 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card, #fff);
+}
+.rc-cal.compact {
+  margin: 10px 0 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+.rc-cal-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin-bottom: 10px;
+}
+.rc-cal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.rc-cal-meta {
+  font-size: 12px;
+  color: var(--ink-faint, #64748b);
+}
+.rc-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.rc-cal-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 8px 7px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg-soft, #f8fafc);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  min-width: 0;
+}
+.rc-cal-cell.wknd {
+  background: #fbfbfc;
+}
+.rc-cal-cell.today {
+  border-color: var(--accent, #2563eb);
+  background: #eff6ff;
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.12);
+}
+.rc-cal-cell.has-rev {
+  border-color: rgba(179, 84, 30, 0.35);
+}
+.rc-cal-cell.has-over {
+  border-color: rgba(180, 35, 24, 0.45);
+  background: #fef2f2;
+}
+.rc-cal-cell.clickable {
+  cursor: pointer;
+}
+.rc-cal-cell.clickable:hover {
+  border-color: var(--ink);
+}
+.rc-cal-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 11.5px;
+  line-height: 1.2;
+}
+.rc-cal-date {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.rc-cal-wd {
+  color: var(--ink-faint, #64748b);
+}
+.rc-cal-wd b {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--accent, #2563eb);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.rc-cal-nums {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rc-cal-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--ink-faint, #94a3b8);
+  font-variant-numeric: tabular-nums;
+}
+.rc-cal-row i {
+  font-style: normal;
+  font-size: 11px;
+}
+.rc-cal-row b {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.rc-cal-row.new.on {
+  color: #1d4ed8;
+}
+.rc-cal-row.rev.on {
+  color: #b3541e;
+}
+.rc-cal-row.rev.over {
+  color: #b42318;
+}
+.rc-cal-row.na b {
+  font-weight: 500;
+  opacity: 0.65;
+}
+@media (max-width: 720px) {
+  .rc-cal-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 440px) {
+  .rc-cal {
+    padding: 10px;
+  }
+  .rc-cal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

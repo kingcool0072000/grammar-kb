@@ -85,13 +85,23 @@ def register_study(app, ctx):
 
     @app.get("/recite/review-summary")
     def recite_review_summary(request: "fastapi.Request", user: Optional[str] = None):
-        """复习闭环摘要：到期 / 逾期 / 在周期 / 近 7 日与累计攻克 / 最近错词活动。
+        """复习闭环摘要：到期 / 逾期 / 在周期 / 近 7 日与累计攻克 / 最近错词活动 / 未来 14 天日历。
 
         学生只看自己的；教师可带 user。口径与 /recite/wrongbook 相同。
         逾期未清时附带今日新词 new_used / new_cap。
         """
         u = user if (request.state.role == "teacher" and user) else request.state.user
-        return _ok(recite.review_summary(u))
+        data = recite.review_summary(u)
+        cal = data.get("calendar_14d") or []
+        if cal and plan is not None:
+            try:
+                from ..plan.loop import upcoming_new_word_plan
+                nw_map = upcoming_new_word_plan(plan, u, data["today"], days=len(cal))
+                for day in cal:
+                    day["new_words"] = nw_map.get(day["date"])
+            except Exception:
+                logger.warning("upcoming_new_word_plan failed for %s", u, exc_info=True)
+        return _ok(data)
 
     @app.get("/recite/wrongbook")
     def recite_wrongbook(request: "fastapi.Request", user: Optional[str] = None, limit: int = 500):

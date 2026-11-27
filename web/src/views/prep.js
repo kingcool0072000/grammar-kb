@@ -1,5 +1,6 @@
 import { api } from '../api.js'
 import { escapeHtml } from '../render.js'
+import { vocabCalendarHtml } from './recite/calendar.js'
 // 专题数从 topics-admin/list 接口取（v2 结构化专题；v1 静态手册已退役）。
 
 // 教师版 · 备课中心：按学科闭环重组——
@@ -334,6 +335,7 @@ async function mountContent(el) {
       <p>${escapeHtml(masteredLine)}</p>
       <p>错词曲线：在周期 ${inCycle} · 到期 ${due} · 逾期 ${over}</p>
       <p class="reading-hint">${escapeHtml(paperLine)}。掌握是练对累计达标，用来算本周新词；攻克是六个复习节点走完，才离开错词本。</p>
+      ${vocabCalendarHtml(summary, { title: `📅 ${student} 近两周背词与复习`, compact: true })}
       <div class="chip-row" style="margin-top:8px">
         <button type="button" class="chip" data-cq-user="${escapeHtml(student)}">✅ 查看已攻克题本 ›</button>
       </div>

@@ -447,6 +447,93 @@ def _streak(store, recite, micro, user: str, day: date, *,
     return streak
 
 
+def upcoming_new_word_plan(store, user: str, start_day: str,
+                           days: int = 14) -> dict[str, int | None]:
+    """从 start_day 起连续 days 天，每天按周计划摊派的新词目标数。
+
+    与 ``_new_word_day`` / ``week_daily_tasks`` 同一口径：
+    - 本周：按本周剩余待掌握词数摊到从今天到本周日的剩余天数；
+    - 未来周：若已配置 ``vocab_goal``，按该周预计需新掌握词数摊到 7 天；
+    - 未配置 ``vocab_goal`` 的周返回 ``None``（前端展示为未排计划，不误报 0）。
+    """
+    user = (user or "").strip()[:60]
+    try:
+        start_d = date.fromisoformat(str(start_day)[:10])
+    except ValueError:
+        start_d = today_cn()
+    if days <= 0 or not store or not user:
+        return {}
+    this_ws = monday_of(start_d).isoformat()
+    upto_today = (start_d + timedelta(days=1)).isoformat()
+    by_week: dict[str, list[date]] = {}
+    for offset in range(days):
+        d = start_d + timedelta(days=offset)
+        ws = monday_of(d).isoformat()
+        by_week.setdefault(ws, []).append(d)
+
+    out: dict[str, int | None] = {}
+    projected_lv_gain: dict[int, int] = {}
+    lv_words_cache: dict[int, set[str] | None] = {}
+    cur_mastered_cache: dict[int, int] = {}
+
+    for ws in sorted(by_week):
+        week_days = by_week[ws]
+        try:
+            week = store._get_week(ws, user)
+            t = week.get("tasks") or {}
+            vg = int(t.get("vocab_goal") or 0)
+        except (TypeError, ValueError, AttributeError, sqlite3.Error):
+            for d in week_days:
+                out[d.isoformat()] = None
+            continue
+        if vg <= 0:
+            for d in week_days:
+                out[d.isoformat()] = None
+            continue
+        lv_raw = t.get("vocab_lv")
+        lv_int: int | None = None
+        if lv_raw is not None:
+            try:
+                lv_int = int(lv_raw)
+            except (TypeError, ValueError):
+                lv_int = None
+
+        if ws == this_ws:
+            try:
+                rem = int(store._vocab_week_remaining(t, ws, upto_today, user))
+            except (TypeError, ValueError, AttributeError, sqlite3.Error):
+                rem = 0
+            days_left = max(1, 7 - (start_d - monday_of(start_d)).days)
+            quota = -(-rem // days_left) if rem > 0 else 0
+            if lv_int is not None and rem > 0:
+                projected_lv_gain[lv_int] = projected_lv_gain.get(lv_int, 0) + rem
+        else:
+            if lv_int is None:
+                week_rem = vg
+            else:
+                if lv_int not in lv_words_cache:
+                    try:
+                        lv_words_cache[lv_int] = store._vocab_level_words(lv_int)
+                    except (TypeError, ValueError, AttributeError, sqlite3.Error):
+                        lv_words_cache[lv_int] = None
+                words = lv_words_cache[lv_int]
+                if lv_int not in cur_mastered_cache:
+                    try:
+                        cur_mastered_cache[lv_int] = int(
+                            store._vocab_mastered_before(upto_today, user, words)
+                        )
+                    except (TypeError, ValueError, AttributeError, sqlite3.Error):
+                        cur_mastered_cache[lv_int] = 0
+                already = cur_mastered_cache[lv_int] + projected_lv_gain.get(lv_int, 0)
+                week_rem = max(0, vg - already)
+                projected_lv_gain[lv_int] = projected_lv_gain.get(lv_int, 0) + week_rem
+            quota = -(-week_rem // 7) if week_rem > 0 else 0
+
+        for d in week_days:
+            out[d.isoformat()] = quota
+    return out
+
+
 def _recite_backlog(recite, user: str, hi_iso: str) -> list[str]:
     """当前在周期（conquered_at 为空）且 next_review ≤ hi 的日程列表。"""
     try:

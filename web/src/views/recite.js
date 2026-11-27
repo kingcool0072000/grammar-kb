@@ -3,6 +3,7 @@ import { escapeHtml, todayIso } from '../render.js'
 import { fmtDuration } from '../fmt.js'
 import { rememberAtlas } from '../atlas.js'
 import { migrateLegacyProgress, shuffle, startSession } from './recite/engine.js'
+import { mountVocabCalendar } from './recite/calendar.js'
 
 // 背单词：全屏沉浸卡片。三种题型——中译英（看释义拼单词）、英译中（认词）、
 // 拼写挖空（缺字母补全），统一「翻面自评」作答；错词间隔重现直到答对。
@@ -83,6 +84,7 @@ export async function mountRecite(el, { vocabPromise, role }) {
     </div>
     <div id="rc-today"></div>
     <div id="rc-loop"></div>
+    <div id="rc-calendar"></div>
     <div class="card recite-dash recite-dash-secondary" id="rc-dash"></div>
     <div class="recite-setup card">
       <div class="recite-field">
@@ -344,6 +346,9 @@ export async function mountRecite(el, { vocabPromise, role }) {
     if (overBtn) overBtn.addEventListener('click', () => startConquer(s.overdue_words || []))
     const cqBtn = host.querySelector('#rc-loop-cq')
     if (cqBtn) cqBtn.addEventListener('click', () => { location.hash = '/conquered' })
+    mountVocabCalendar(el.querySelector('#rc-calendar'), s, {
+      onTodayReview: () => startConquer([...(s.overdue_words || []), ...(s.due_words || [])]),
+    })
   }
 
   function maybeAutoReview() {
