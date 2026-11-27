@@ -365,9 +365,10 @@ def _new_word_day(store, user: str, day_iso: str) -> dict:
         week = store._get_week(ws, user)
         t = week.get("tasks") or {}
         vg = int(t.get("vocab_goal") or 0)
+        vnew = int(t.get("vocab_new") or 0)
     except (TypeError, ValueError, AttributeError, sqlite3.Error):
         return empty
-    if vg <= 0:
+    if vg <= 0 and vnew <= 0:
         return empty
     lv = t.get("vocab_lv")
     words = None
@@ -382,7 +383,10 @@ def _new_word_day(store, user: str, day_iso: str) -> dict:
         week_gained = store._vocab_actuals(ws, week_hi, user, words)
     except (TypeError, ValueError, sqlite3.Error):
         base, week_gained = 0, 0
-    week_target = vg if lv is None else max(0, vg - base)
+    if lv is None:
+        week_target = vnew if vnew > 0 else vg
+    else:
+        week_target = max(0, vg - base)
     out = {
         "scheduled": False, "done": True,
         "gained": 0, "quota": 0,
@@ -482,11 +486,12 @@ def upcoming_new_word_plan(store, user: str, start_day: str,
             week = store._get_week(ws, user)
             t = week.get("tasks") or {}
             vg = int(t.get("vocab_goal") or 0)
+            vnew = int(t.get("vocab_new") or 0)
         except (TypeError, ValueError, AttributeError, sqlite3.Error):
             for d in week_days:
                 out[d.isoformat()] = None
             continue
-        if vg <= 0:
+        if vg <= 0 and vnew <= 0:
             for d in week_days:
                 out[d.isoformat()] = None
             continue
@@ -509,7 +514,7 @@ def upcoming_new_word_plan(store, user: str, start_day: str,
                 projected_lv_gain[lv_int] = projected_lv_gain.get(lv_int, 0) + rem
         else:
             if lv_int is None:
-                week_rem = vg
+                week_rem = vnew if vnew > 0 else vg
             else:
                 if lv_int not in lv_words_cache:
                     try:

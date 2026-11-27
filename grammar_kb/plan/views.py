@@ -212,7 +212,8 @@ class ViewsMixin:
         # 词数；分子 = 周内该级别新掌握词数。目标本身就是「L几 内掌握
         # N 词」，周初已超额的显示满格。
         vg = t.get("vocab_goal")
-        if vg:
+        vnew = t.get("vocab_new")
+        if vg or vnew:
             lv = t.get("vocab_lv")
             lv_words = (ctx.level_words(lv) if ctx is not None
                         else self._vocab_level_words(lv))
@@ -220,22 +221,26 @@ class ViewsMixin:
                                         lv_words) if ctx is not None else
                       self._vocab_actuals(week_start, add_days(week_start, 7),
                                           user, lv_words))
-            base = (ctx.vocab_mastered_before(week_start, lv_words)
-                    if ctx is not None else
-                    self._vocab_mastered_before(week_start, user, lv_words))
-            # 分母就是「本周新掌握」个数。编辑器按 base + N 写入 vocab_goal，
-            # 老师看到的 N 和这里的 total 是同一个数。
-            if lv is None:
-                fresh = "本周新掌握"
-                done_note = "周初已达成"
-            else:
-                fresh = f"L{int(lv)} 本周新掌握"
-                done_note = f"L{int(lv)} · 周初已达成"
-            if base >= vg:
-                dim("🔤", "词汇", vg, vg, extra=done_note)
-            else:
-                denom = vg - base
-                dim("🔤", "词汇", min(gained, denom), denom, extra=fresh)
+            if lv is None and vnew is not None and int(vnew or 0) > 0:
+                denom = int(vnew)
+                dim("🔤", "词汇", min(gained, denom), denom, extra="本周新掌握")
+            elif vg:
+                base = (ctx.vocab_mastered_before(week_start, lv_words)
+                        if ctx is not None else
+                        self._vocab_mastered_before(week_start, user, lv_words))
+                # 分母就是「本周新掌握」个数。编辑器按 base + N 写入 vocab_goal，
+                # 老师看到的 N 和这里的 total 是同一个数。
+                if lv is None:
+                    fresh = "本周新掌握"
+                    done_note = "周初已达成"
+                else:
+                    fresh = f"L{int(lv)} 本周新掌握"
+                    done_note = f"L{int(lv)} · 周初已达成"
+                if base >= vg:
+                    dim("🔤", "词汇", vg, vg, extra=done_note)
+                else:
+                    denom = vg - base
+                    dim("🔤", "词汇", min(gained, denom), denom, extra=fresh)
 
         fce = t.get("fce") or []
         if fce:

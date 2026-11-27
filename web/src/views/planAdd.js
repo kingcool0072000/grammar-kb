@@ -250,7 +250,7 @@ function capSub(s) {
  * 周进度分母 = vocab_goal − 周初该级已会，所以 vocab_goal = base + N。
  * vocab_pct 只留给旧数据回看，界面不再让老师填百分比。
  */
-export function applyVocabTarget(tasks, { level, count, base, words }) {
+export function applyVocabTarget(tasks, { level = null, count, base, words } = {}) {
   const t = copyTasks(tasks)
   const n = Math.max(0, Math.round(Number(count) || 0))
   if (!n) {
@@ -261,8 +261,15 @@ export function applyVocabTarget(tasks, { level, count, base, words }) {
     return t
   }
   const b = Math.max(0, Math.round(Number(base) || 0))
-  const w = Number(words) || 0
   const goal = b + n
+  if (level == null || level === '') {
+    delete t.vocab_lv
+    delete t.vocab_pct
+    t.vocab_goal = goal
+    t.vocab_new = n
+    return t
+  }
+  const w = Number(words) || 0
   const pct = w > 0 ? Math.min(100, Math.max(1, Math.round((goal / w) * 100))) : 100
   t.vocab_lv = Number(level) || 0
   t.vocab_pct = pct
@@ -279,10 +286,13 @@ function vocabBaseFor(tasks, vocabWeek) {
 }
 
 export function vocabRowTitle(tasks, vocabWeek) {
-  if (tasks?.vocab_goal == null) return ''
+  if (tasks?.vocab_goal == null && !(Number(tasks?.vocab_new) > 0)) return ''
+  const lv = tasks.vocab_lv
+  if (lv == null && Number(tasks.vocab_new) > 0) {
+    return `本周新掌握 ${Number(tasks.vocab_new)} 个词`
+  }
   const base = vocabBaseFor(tasks, vocabWeek)
   const goal = Number(tasks.vocab_goal)
-  const lv = tasks.vocab_lv
   if (base >= goal) {
     return lv == null
       ? '词汇：周初已经达到目标，这周进度算满格'
@@ -342,7 +352,7 @@ export function completionLine(type, { topicCounts = true, mode = '', count = 0,
   }
   if (type === 'focus_kp') return '攻坚标注：不参与完成判定，供周验收对照，微练习优先出这些讲的题。'
   if (type === 'vocab') {
-    return '怎么算完成：本周在这一级新掌握的词达到这个个数，周一到周日都算。周初已经会的不算进这周，下一周才掌握的词也不挪回来。过了周日夜里，这一周的个数就定了。这里选的级别只决定新词记到哪一级。'
+    return '怎么算完成：本周新掌握的词达到这个个数（不限级别），周一到周日都算。周初已经会的不算进这周，下一周才掌握的词也不挪回来。过了周日夜里，这一周的个数就定了。'
   }
   if (type === 'fce') return '怎么算完成：这一周里交了这一道 FCE 就记在这一周。过了周日夜里再交，记在下一周。'
   if (type === 'video') {

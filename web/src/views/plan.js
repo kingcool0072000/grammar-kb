@@ -488,8 +488,10 @@ export async function mountPlan(el) {
       if (t.focus_kps?.length) chips.push(`🎯 攻坚 ${t.focus_kps.map((l) => '第' + l + '讲').join('、')}`)
       if (t.lectures?.length) chips.push(`📚 语法课程 ${[...t.lectures].sort((a, b) => a - b).join('/')}讲`)
       if (t.hw_papers?.length) chips.push(`📝 作业卷 ${[...t.hw_papers].sort((a, b) => a - b).join('/')}卷`)
-      if (t.vocab_new != null && t.vocab_lv != null) {
-        chips.push(`🔤 本周新掌握 L${t.vocab_lv} 词 ${t.vocab_new} 个`)
+      if (t.vocab_new != null) {
+        chips.push(t.vocab_lv != null
+          ? `🔤 本周新掌握 L${t.vocab_lv} 词 ${t.vocab_new} 个`
+          : `🔤 本周新掌握 ${t.vocab_new} 个词`)
       } else if (t.vocab_goal != null) {
         chips.push(t.vocab_lv != null
           ? `🔤 词汇 L${t.vocab_lv}（进度按本周新掌握算）`

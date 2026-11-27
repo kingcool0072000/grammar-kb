@@ -254,14 +254,19 @@ class ScheduleMixin:
         try:
             vg = int(t.get("vocab_goal") or 0)
         except (TypeError, ValueError):
-            return 0
-        if vg <= 0:
+            vg = 0
+        try:
+            vnew = int(t.get("vocab_new") or 0)
+        except (TypeError, ValueError):
+            vnew = 0
+        if vg <= 0 and vnew <= 0:
             return 0
         lv = t.get("vocab_lv")
         if lv is None:
+            budget = vnew if vnew > 0 else vg
             gained = self._vocab_actuals(lo, upto, user) if ctx is None \
                 else ctx.vocab_actuals(lo, upto)
-            return max(0, vg - gained)
+            return max(0, budget - gained)
         try:
             level = int(lv)
         except (TypeError, ValueError):

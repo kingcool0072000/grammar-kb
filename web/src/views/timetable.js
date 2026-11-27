@@ -52,8 +52,10 @@ export async function mountTimetable(el) {
   const summary = []
   if (tasks.lectures?.length) summary.push(`📚 语法 ${tasks.lectures.length} 讲`)
   if (tasks.hw_papers?.length) summary.push(`🗒 作业卷 ${tasks.hw_papers.length} 卷`)
-  if (tasks.vocab_new != null && tasks.vocab_lv != null) {
-    summary.push(`🔤 本周新掌握 L${tasks.vocab_lv} 词 ${tasks.vocab_new} 个`)
+  if (tasks.vocab_new != null) {
+    summary.push(tasks.vocab_lv != null
+      ? `🔤 本周新掌握 L${tasks.vocab_lv} 词 ${tasks.vocab_new} 个`
+      : `🔤 本周新掌握 ${tasks.vocab_new} 个词`)
   } else if (tasks.vocab_goal) summary.push(`🔤 词汇目标 ${tasks.vocab_goal} 词`)
   if (tasks.fce?.length) summary.push(`🎧 FCE真题 ${tasks.fce.length} 项`)
   const vidTitles = (d.video_titles || []).filter((v) => v.title)

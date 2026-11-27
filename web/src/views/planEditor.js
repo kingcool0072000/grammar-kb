@@ -115,43 +115,49 @@ export async function openWeekEditor({
       .filter(Boolean).join(' ')
   }
 
-  function vocabCountFor(level) {
+  function currentVocabLevel() {
+    const practicing = vocabWeek.practicing_level
+    if (practicing != null && practicing !== '') return Number(practicing)
+    const stats = vocabWeek.levels?.length ? vocabWeek.levels : vLevels
+    const open = stats.find((x) => {
+      const w = Number(x.words) || 0
+      const done = (Number(x.base) || 0) + (Number(x.gained) || 0)
+      return w > 0 && done < w
+    })
+    if (open) return Number(open.level)
+    const withWords = [...stats].reverse().find((x) => Number(x.words) > 0)
+    return withWords ? Number(withWords.level) : defaultLevel()
+  }
+
+  function vocabCountFor() {
+    if (Number(tasks.vocab_new) > 0) return Number(tasks.vocab_new)
     if (tasks.vocab_goal == null) return 40
-    const base = tasks.vocab_lv == null && Number(level) === defaultLevel()
+    const base = tasks.vocab_lv == null
       ? (Number(vocabWeek.base_all) || 0)
-      : levelStat(level).base
+      : levelStat(Number(tasks.vocab_lv)).base
     const n = Number(tasks.vocab_goal) - base
     return n > 0 ? n : 40
   }
 
-  function vocabHint(level, count) {
-    const s = levelStat(level)
+  function vocabHint(count) {
     const shown = Math.max(0, Math.round(Number(count) || 0))
+    const baseAll = Number(vocabWeek.base_all) || 0
+    const gainedAll = Number(vocabWeek.gained_all) || 0
+    const totalLearned = baseAll + gainedAll
+    const curLv = currentVocabLevel()
+    const s = levelStat(curLv)
+    const lvDone = s.base + s.gained
+    const lvPart = s.words > 0
+      ? `当前已到 L${curLv}（${lvDone}/${s.words} 词）`
+      : `当前已到 L${curLv}`
     const bits = [
-      `L${level} 一共 ${s.words} 个词。周初已经会 ${s.base} 个，本周又新掌握 ${s.gained} 个。`,
-      `进度条看的就是「本周新掌握」：大约 ${Math.min(s.gained, shown)}/${shown || 0}。周初会的不算进这周。`,
+      `已学 ${totalLearned} 词（本周已新掌握 ${gainedAll} 词），${lvPart}。`,
+      `本周进度按不限级别新掌握计：${Math.min(gainedAll, shown)}/${shown}。`,
     ]
-    const practicing = vocabWeek.practicing_level
-    if (practicing != null && Number(practicing) !== Number(level)) {
-      bits.push(`孩子最近在背 L${practicing}。这里选的是 L${level}，只数这一级里新会的词。`)
-    } else if (practicing != null) {
-      bits.push(`孩子最近就在背 L${practicing}。`)
-    }
-    const left = Math.max(0, s.words - s.base)
-    if (left <= 0 && s.words > 0) {
-      bits.push('这一级的词周初已经全部掌握，选它这周不会有「本周新掌握」。')
-    } else if (shown > 0 && s.words > 0 && shown > left) {
-      bits.push(`这一级还剩 ${left} 个没掌握，本周目标比剩下的多。`)
+    if (tasks.vocab_lv != null) {
+      bits.push(`（原先按 L${tasks.vocab_lv} 单独计数；修改词数后将自动改为不限级别。）`)
     }
     return bits.join('')
-  }
-
-  function levelOptions(selected) {
-    const levels = vLevels.length
-      ? vLevels
-      : [0, 1, 2, 3, 4, 5].map((level) => ({ level, words: 0 }))
-    return levels.map((v) =>
-      `<option value="${v.level}" ${Number(selected) === Number(v.level) ? 'selected' : ''}>L${v.level}（${v.words || 0} 词）</option>`).join('')
   }
 
   function readingTitle(bookId, value) {
@@ -511,29 +517,12 @@ export async function openWeekEditor({
   }
 
   function vocabFormHtml(prefix, inList) {
-    const level = inList && tasks.vocab_lv != null ? Number(tasks.vocab_lv) : defaultLevel()
-    const count = inList ? vocabCountFor(level) : 40
-    const legacy = inList && tasks.vocab_lv == null && tasks.vocab_goal != null
-    const reached = inList && !legacy && tasks.vocab_goal != null
-      && levelStat(level).base >= Number(tasks.vocab_goal)
-    const s = levelStat(level)
-    let hint = vocabHint(level, count)
-    if (legacy) {
-      const base = Number(vocabWeek.base_all) || 0
-      const goal = Number(tasks.vocab_goal)
-      const n = Math.max(0, goal - base)
-      hint = base >= goal
-        ? '这周还没指定级别，按全部单词算，周初已经达到目标，进度是满格。选好级别再改个数，之后只数那一级。'
-        : `这周还没指定级别，进度目前按全部单词算：本周新掌握大约 ${n} 个（目标 ${goal} 减去周初已会 ${base}）。选好级别再改个数，之后只数那一级。`
-    } else if (reached) {
-      hint = `周初已经达到原来的目标，进度现在是满格。改上面的个数后，进度条和右边课表按新的「本周新掌握」重算。L${level} 一共 ${s.words} 个词，周初已会 ${s.base} 个，本周已新掌握 ${s.gained} 个。`
-    }
+    const count = inList ? vocabCountFor() : 40
+    const hint = vocabHint(count)
     return `<div class="pe-vocab-row">
         <span>本周新掌握</span>
-        <select id="${prefix}-lv">${levelOptions(level)}</select>
-        <span>词</span>
         <input id="${prefix}-n" type="number" min="1" max="5000" value="${count}">
-        <span>个</span>
+        <span>个词</span>
         ${inList ? '' : '<button class="btn-primary" id="pe-vocab-add" type="button">放入清单</button>'}
       </div>
       <p class="pe-wiz-hint" id="${prefix}-hint">${escapeHtml(hint)}</p>`
@@ -624,9 +613,10 @@ export async function openWeekEditor({
       <button type="button" class="chip pe-chchip ${on ? 'primary' : ''}" id="pe-micro-toggle" ${on ? 'disabled' : ''}>${on ? '已在本周' : '放入清单（一组）'}</button>`
   }
 
-  function placeVocab(level, count) {
-    const s = levelStat(level)
-    tasks = applyVocabTarget(tasks, { level, count, base: s.base, words: s.words })
+  function placeVocab(count) {
+    tasks = applyVocabTarget(tasks, {
+      level: null, count, base: Number(vocabWeek.base_all) || 0, words: 0,
+    })
     openKey = tasks.vocab_goal != null ? 'vocab' : null
     addOpen = false
     paint()
@@ -683,7 +673,7 @@ export async function openWeekEditor({
     const vocabAdd = dlg.querySelector('#pe-vocab-add')
     if (vocabAdd) vocabAdd.addEventListener('click', () => {
       const form = readVocab('pe-add')
-      if (form) placeVocab(form.level, form.count)
+      if (form) placeVocab(form.count)
     })
     const swapLec = dlg.querySelector('#pe-swap-lec')
     if (swapLec) swapLec.addEventListener('change', () => swapScalar('lec', Number(swapLec.value)))
@@ -850,17 +840,12 @@ export async function openWeekEditor({
   }
 
   function bindVocab(prefix, live) {
-    const lv = dlg.querySelector(`#${prefix}-lv`)
     const n = dlg.querySelector(`#${prefix}-n`)
     const hint = dlg.querySelector(`#${prefix}-hint`)
-    if (!lv || !n) return
+    if (!n) return
     const refreshHint = () => {
-      if (hint) hint.textContent = vocabHint(Number(lv.value), Number(n.value))
+      if (hint) hint.textContent = vocabHint(Number(n.value))
     }
-    lv.addEventListener('change', () => {
-      refreshHint()
-      if (live) commitLiveVocab()
-    })
     n.addEventListener('input', () => {
       refreshHint()
       if (live) commitLiveVocab()
@@ -868,11 +853,9 @@ export async function openWeekEditor({
   }
 
   function readVocab(prefix) {
-    const lv = dlg.querySelector(`#${prefix}-lv`)
     const n = dlg.querySelector(`#${prefix}-n`)
-    if (!lv || !n) return null
+    if (!n) return null
     return {
-      level: Number(lv.value),
       count: Math.min(5000, Math.max(1, Math.round(Number(n.value) || 1))),
     }
   }
@@ -880,9 +863,8 @@ export async function openWeekEditor({
   function commitLiveVocab() {
     const form = readVocab('pe-v')
     if (!form) return
-    const s = levelStat(form.level)
     tasks = applyVocabTarget(tasks, {
-      level: form.level, count: form.count, base: s.base, words: s.words,
+      level: null, count: form.count, base: Number(vocabWeek.base_all) || 0, words: 0,
     })
     const title = dlg.querySelector('[data-row="vocab"] .pe-row-title')
     if (title) title.textContent = `🔤 ${vocabRowTitle(tasks, vocabWeek)}`

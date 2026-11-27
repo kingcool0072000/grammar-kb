@@ -71,7 +71,11 @@ class WeekCredit:
             vg = int(t.get("vocab_goal") or 0)
         except (TypeError, ValueError):
             vg = 0
-        if vg <= 0:
+        try:
+            vnew = int(t.get("vocab_new") or 0)
+        except (TypeError, ValueError):
+            vnew = 0
+        if vg <= 0 and vnew <= 0:
             self._vocab = (0, 0, False)
             return self._vocab
         lv = t.get("vocab_lv")
@@ -82,10 +86,14 @@ class WeekCredit:
             except (TypeError, ValueError):
                 words = None
         try:
-            base = self.store._vocab_mastered_before(self.ws, self.user, words)
             gained = self.store._vocab_actuals(self.ws, self.we, self.user, words)
+            base = (0 if (lv is None and vnew > 0)
+                    else self.store._vocab_mastered_before(self.ws, self.user, words))
         except (TypeError, ValueError, sqlite3.Error):
             base, gained = 0, 0
+        if lv is None and vnew > 0:
+            self._vocab = (gained, vnew, gained >= vnew)
+            return self._vocab
         # 与周进度同一差额：分母 = 目标 − 周初已会；分子只数本周内新掌握。
         if base >= vg:
             self._vocab = (gained, vg, True)
